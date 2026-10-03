@@ -1,0 +1,53 @@
+# Venture Factory settings. Every value here has a NOTES.md entry explaining the default.
+fx_usd_zar: 18.50           # rand per US dollar, used to convert API spend
+niche_limit: 5              # first-run constraint: only the first N niches in niches.yaml are active
+
+models:
+  scout: claude-haiku-4-5
+  judge: claude-sonnet-4-6
+
+# USD per million tokens (input, output). Opus is deliberately absent: never Opus.
+pricing:
+  claude-haiku-4-5: [1.00, 5.00]
+  claude-sonnet-4-6: [3.00, 15.00]
+
+caps:
+  scout_zar_per_niche: 0.60   # per niche per night (distill call)
+  stage_zar: 20.00            # stop a stage if it would cost more than this
+  cards_per_niche: 5
+  signals_to_distill: 25      # top-ranked signals sent to Haiku per niche
+  signal_chars: 700           # truncation per signal in the distill prompt
+
+retention_days: 30            # raw Signal rows
+
+thresholds:
+  proof_min_score: 6
+  craft_min_score: 6
+  win_buy_click_rate: 0.05
+  win_min_visitors: 150
+
+smoke:
+  budget_zar: 200
+  duration_hours: 48
+  variants: 3
+
+sources:                      # tonight: reddit + hn only; others are TODO stubs
+  reddit: true
+  hn: true
+  upwork: false
+  fiverr: false
+  appstore: false
+  hellopeter: false
+  trends: false
+
+reddit:
+  lookback: year              # reddit time_filter
+  per_query_limit: 25
+  request_pause_s: 2.0
+hn:
+  lookback_days: 365
+  hits_per_query: 20
+
+schedule:                     # Africa/Johannesburg (SAST)
+  scout: "01:00"
+  gates: "02:00"

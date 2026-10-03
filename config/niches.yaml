@@ -1,0 +1,205 @@
+# One entry = one scout. Start with these 40; add to 112 once the first
+# nights produce cards. Keep SA-heavy where law or language gives an edge.
+# subreddits: where to listen. competitors: apps whose 1-2 star reviews to read.
+# keywords: used across upwork/fiverr/hn/trends searches.
+
+- slug: sa-landlords
+  region: ZA
+  keywords: [landlord South Africa, lease agreement, rental deposit, tenant eviction]
+  subreddits: [southafrica, PersonalFinanceZA, capetown]
+  competitors: [PayProp, TPN]
+- slug: sa-small-companies
+  region: ZA
+  keywords: [CIPC annual return, company registration, BEE certificate, tax clearance]
+  subreddits: [southafrica, PersonalFinanceZA, Entrepreneur]
+  competitors: [Govchain, Company Partners]
+- slug: body-corporates
+  region: ZA
+  keywords: [sectional title, body corporate levies, trustees, managing agent]
+  subreddits: [southafrica]
+  competitors: [WeconnectU, Pay@]
+- slug: sa-guesthouses
+  region: ZA
+  keywords: [guesthouse bookings, channel manager, Airbnb South Africa]
+  subreddits: [airbnb_hosts, AirBnBHosts]
+  competitors: [NightsBridge, Lodgify]
+- slug: solar-installers
+  region: ZA
+  keywords: [solar installer quotes, COC certificate, load shedding inverter]
+  subreddits: [southafrica, solar]
+  competitors: []
+- slug: shopify-stores
+  region: GLOBAL
+  keywords: [Shopify product photos, Shopify inventory, Shopify returns]
+  subreddits: [shopify, ecommerce]
+  competitors: [Pixc, Loop Returns]
+- slug: etsy-sellers
+  region: GLOBAL
+  keywords: [Etsy listing, Etsy SEO, Etsy bookkeeping]
+  subreddits: [Etsy, EtsySellers]
+  competitors: [eRank, Marmalead]
+- slug: airbnb-hosts
+  region: GLOBAL
+  keywords: [Airbnb cleaning schedule, guest messaging, pricing tool]
+  subreddits: [airbnb_hosts, AirBnB]
+  competitors: [Hospitable, PriceLabs]
+- slug: podcasters
+  region: GLOBAL
+  keywords: [podcast show notes, podcast clips, podcast transcription]
+  subreddits: [podcasting]
+  competitors: [Descript, Castmagic]
+- slug: twitch-streamers
+  region: GLOBAL
+  keywords: [stream clips, VOD highlights, stream schedule]
+  subreddits: [Twitch, streaming]
+  competitors: [Eklipse, Opus Clip]
+- slug: youtubers
+  region: GLOBAL
+  keywords: [YouTube thumbnails, title ideas, sponsorship outreach]
+  subreddits: [NewTubers, youtubers, PartneredYoutube]
+  competitors: [vidIQ, TubeBuddy]
+- slug: newsletter-writers
+  region: GLOBAL
+  keywords: [newsletter growth, sponsorship rates, Beehiiv Substack]
+  subreddits: [Newsletters, Substack]
+  competitors: [SparkLoop, Beehiiv]
+- slug: freelance-designers
+  region: GLOBAL
+  keywords: [design contract, client feedback, invoice late payment]
+  subreddits: [freelance, graphic_design]
+  competitors: [Bonsai, HoneyBook]
+- slug: photographers
+  region: GLOBAL
+  keywords: [photo gallery delivery, client proofing, wedding photography contract]
+  subreddits: [photography, WeddingPhotography]
+  competitors: [Pixieset, ShootProof]
+- slug: wedding-planners
+  region: GLOBAL
+  keywords: [wedding timeline, vendor management, seating chart]
+  subreddits: [weddingplanning]
+  competitors: [Aisle Planner, Zola]
+- slug: tutors
+  region: GLOBAL
+  keywords: [tutoring scheduling, tutor invoicing, lesson notes parents]
+  subreddits: [Tutoring, Teachers]
+  competitors: [TutorBird, Teachworks]
+- slug: physios
+  region: GLOBAL
+  keywords: [physio exercise program, home exercise app, patient adherence]
+  subreddits: [physicaltherapy]
+  competitors: [Physitrack, PhysiApp]
+- slug: dentists
+  region: GLOBAL
+  keywords: [dental recall, patient reminders, dental practice no-shows]
+  subreddits: [Dentistry]
+  competitors: [Dentrix, Weave]
+- slug: vets
+  region: GLOBAL
+  keywords: [vet clinic reminders, pet vaccination tracking, vet software]
+  subreddits: [veterinaryprofession]
+  competitors: [ezyVet, Covetrus]
+- slug: gyms
+  region: GLOBAL
+  keywords: [gym membership software, class booking, personal trainer app]
+  subreddits: [GYM, personaltraining]
+  competitors: [Mindbody, Glofox]
+- slug: padel-clubs
+  region: ZA
+  keywords: [padel court booking, padel league, padel club software]
+  subreddits: [padel]
+  competitors: [Playtomic, Matchi]
+- slug: running-clubs
+  region: GLOBAL
+  keywords: [running club management, race entries, club membership]
+  subreddits: [running, RunningCirclejerk]
+  competitors: [Strava, RunSignup]
+- slug: churches
+  region: GLOBAL
+  keywords: [church management software, tithing, volunteer roster]
+  subreddits: [Christianity, pastors]
+  competitors: [Planning Center, Tithe.ly]
+- slug: ngos
+  region: ZA
+  keywords: [NPO compliance, donor reporting, Section 18A]
+  subreddits: [nonprofit]
+  competitors: [Bloomerang, Salesforce NPSP]
+- slug: schools
+  region: ZA
+  keywords: [school communication app, fee collection, parent portal]
+  subreddits: [Teachers, education]
+  competitors: [d6, Karri]
+- slug: daycares
+  region: GLOBAL
+  keywords: [daycare attendance, parent updates, childcare billing]
+  subreddits: [ECEProfessionals]
+  competitors: [Brightwheel, HiMama]
+- slug: restaurants
+  region: ZA
+  keywords: [restaurant rostering, menu costing, Google reviews reply]
+  subreddits: [restaurateur, KitchenConfidential]
+  competitors: [7shifts, Lightspeed]
+- slug: coffee-roasters
+  region: GLOBAL
+  keywords: [coffee subscription, roast scheduling, wholesale ordering]
+  subreddits: [roasting, Coffee]
+  competitors: [Cropster, Shopify]
+- slug: food-trucks
+  region: GLOBAL
+  keywords: [food truck schedule, event booking, menu pricing]
+  subreddits: [FoodTruck]
+  competitors: [Square, Toast]
+- slug: barbers
+  region: GLOBAL
+  keywords: [barber booking, no-show deposits, barber shop software]
+  subreddits: [Barber]
+  competitors: [Booksy, Fresha]
+- slug: tattoo-artists
+  region: GLOBAL
+  keywords: [tattoo deposit, consent form, tattoo booking]
+  subreddits: [TattooArtists]
+  competitors: [Tattoodo, Square]
+- slug: plumbers
+  region: ZA
+  keywords: [plumber quotes, job card app, invoicing on site]
+  subreddits: [Plumbing, Construction]
+  competitors: [Jobber, ServiceM8]
+- slug: garden-services
+  region: ZA
+  keywords: [garden service routes, recurring invoices, lawn care software]
+  subreddits: [lawncare]
+  competitors: [Jobber, Yardbook]
+- slug: car-dealers
+  region: ZA
+  keywords: [used car listings, dealer stock, AutoTrader South Africa]
+  subreddits: [askcarsales]
+  competitors: [AutoTrader, Cars.co.za]
+- slug: estate-agents
+  region: ZA
+  keywords: [property listing descriptions, show house, mandate]
+  subreddits: [realtors, RealEstate]
+  competitors: [Property24, Private Property]
+- slug: bookkeepers
+  region: GLOBAL
+  keywords: [bookkeeping clients, receipt capture, month-end close]
+  subreddits: [Bookkeeping, Accounting]
+  competitors: [Dext, Xero]
+- slug: recruiters
+  region: GLOBAL
+  keywords: [candidate screening, interview scheduling, applicant tracking]
+  subreddits: [recruiting]
+  competitors: [Greenhouse, Workable]
+- slug: indie-game-devs
+  region: GLOBAL
+  keywords: [Steam wishlist, game marketing, playtest feedback]
+  subreddits: [gamedev, IndieDev]
+  competitors: [Keymailer, Impress]
+- slug: saas-founders
+  region: GLOBAL
+  keywords: [SaaS onboarding, churn, customer feedback tool]
+  subreddits: [SaaS, microsaas, indiehackers]
+  competitors: [Canny, Intercom]
+- slug: sneaker-resellers
+  region: GLOBAL
+  keywords: [sneaker inventory, cross listing, resale profit tracking]
+  subreddits: [Sneakers, Flipping]
+  competitors: [Vendoo, List Perfectly]
