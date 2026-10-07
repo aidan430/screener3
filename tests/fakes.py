@@ -1,0 +1,183 @@
+"""Test doubles. FAKE DATA: never written to data/factory.db.
+
+FakeClaude stands in for anthropic.Anthropic and answers by output schema.
+FAKE_POSTS are invented forum posts used only to exercise the pipeline.
+"""
+from __future__ import annotations
+
+import os
+import tempfile
+from types import SimpleNamespace
+
+from factory.scouts.sources.base import RawSignal
+
+FAKE_POSTS = [
+    RawSignal(source="reddit", external_id="reddit:t1", url="https://www.reddit.com/r/test/comments/t1/",
+              title="Is there a tool for lease renewals?",
+              text="I pay someone R450 a month just to send lease renewal reminders to my six tenants. "
+                   "Is there a tool that does this automatically for South African leases?",
+              score=14, replies=9, matched=["is there a tool", "I pay someone to"]),
+    RawSignal(source="hn", external_id="hn:t2", url="https://news.ycombinator.com/item?id=2",
+              title="Ask HN: deposit interest calculation",
+              text="Tracking rental deposit interest by hand in a spreadsheet takes me hours every quarter.",
+              score=4, replies=3, matched=["takes me hours", "rental deposit"]),
+]
+
+
+COMMERCE_POST = RawSignal(source="reddit", external_id="reddit:c1",
+                          url="https://www.reddit.com/r/southafrica/comments/c1/",
+                          title="Where can I buy a collapsible dog water bottle?",
+                          text="Takealot has been out of stock for months and the import ones cost R899 with "
+                               "shipping. Where can I buy a collapsible dog water bottle for hikes in SA?",
+                          score=21, replies=14, matched=["where can I buy", "out of stock"])
+
+
+def commerce_draft(signal_ids: list[int]):
+    from factory.scouts.distill import CardDraft, Distilled
+    return Distilled(cards=[CardDraft(
+        signal_id=signal_ids[0], title="Collapsible dog water bottle",
+        problem="SA dog owners who hike cannot get one locally.",
+        quote="Takealot has been out of stock for months and the import ones cost R899 with shipping.",
+        pay_evidence="the import ones cost R899 with shipping", pay_amount=899, pay_currency="R",
+        business_model="local_stock")])
+
+
+def fake_draft(signal_ids: list[int]):
+    from factory.scouts.distill import CardDraft, Distilled
+    a, b = signal_ids[0], signal_ids[-1]  # one post is fine: the second draft then fails the verbatim check
+    return Distilled(cards=[
+        CardDraft(signal_id=a, title="Lease renewal reminders", problem="Small SA landlords pay people to chase renewals.",
+                  quote="I pay someone R450 a month just to send lease renewal reminders to my six tenants.",
+                  pay_evidence="I pay someone R450 a month", pay_amount=450, pay_currency="R",
+                  business_model="micro_saas"),
+        CardDraft(signal_id=b, title="Invented card", problem="This quote does not exist in the post.",
+                  quote="Landlords everywhere are begging for an app and would pay R999.",
+                  pay_evidence="", pay_amount=None),
+    ])
+
+
+class FakeMessages:
+    def __init__(self, owner):
+        self.owner = owner
+
+    def parse(self, *, model, max_tokens, system, messages, output_format):
+        self.owner.calls.append(SimpleNamespace(model=model, schema=output_format.__name__, prompt=messages[0]["content"]))
+        name = output_format.__name__
+        prompt = messages[0]["content"]
+        if name == "Distilled":
+            import re
+            ids = [int(x) for x in re.findall(r'<post id="(\d+)"', prompt)]
+            out = commerce_draft(ids) if "product scout" in system else fake_draft(ids)
+        elif name == "Verdict":
+            out = self.owner.verdict(system, prompt)
+        elif name == "PageDraft":
+            from factory.smoke.page import AdVariant, PageDraft, Targeting
+            name_ = "Trail Flask" if "physical product" in prompt else "Lease Nudge"
+            out = PageDraft(product_name=name_, headline="Lease renewals that send themselves",
+                            subhead="Reminders for SA landlords.", benefits=["a", "b", "c"],
+                            price_label="R99 / month", cta="Buy now",
+                            ads=[AdVariant(primary_text=f"v{i}", headline=f"h{i}") for i in range(3)],
+                            targeting=Targeting(countries=["ZA"], interests=["Property"]))
+        elif name == "Plan":
+            from factory.dive.demand import Plan
+            out = (Plan(terms=["collapsible dog water bottle"], business_model="local_stock")
+                   if "dog water bottle" in prompt else
+                   Plan(terms=["lease renewal reminders", "rent reminder"], business_model="micro_saas"))
+        elif name == "Econ":
+            out = self.owner.econ(prompt)
+        elif name == "Risks":
+            from factory.dive.risk import RiskItem, Risks
+            out = Risks(risks=[RiskItem(risk="Tenant data must follow POPIA.", severity="medium",
+                                        hard_kill=self.owner.hard_kill)], summary="One data-protection risk.")
+        elif name in ("Sops", "Catalogue", "Scenarios", "Replies", "Grades", "Revision"):
+            out = self.owner.training(name, system, prompt)
+        elif name == "Spec":
+            from factory.build.spec import Spec
+            out = Spec(claude_md="# Lease Nudge\n\nFAKE SPEC FOR TESTS")
+        else:
+            raise AssertionError(name)
+        usage = SimpleNamespace(input_tokens=len(system + prompt) // 4, output_tokens=300,
+                                cache_read_input_tokens=0, cache_creation_input_tokens=0)
+        return SimpleNamespace(parsed_output=out, usage=usage, stop_reason="end_turn")
+
+
+class FakeClaude:
+    def __init__(self):
+        self.calls = []
+        self.messages = FakeMessages(self)
+        self.price = 9.0          # anchored to E1 (9.99 USD) unless a test changes it
+        self.commerce_price = 599.0  # rand, anchored to E0 (R899 in the post)
+        self.hard_kill = False
+        self.exam_mode = "pass"   # pass | fail_once | fail_always (the Support agent)
+        self.graded = {}
+
+    def training(self, name, system, prompt):
+        from factory.training import exam, writer
+        roles = ["store", "content", "ads", "support", "books", "stock"]
+        if name == "Sops":
+            return writer.Sops(brand_voice="Plain and friendly.", offer_summary="Lease renewal reminders.",
+                               refund_policy="Full refund within 14 days (our default).",
+                               delivery_policy="Instant access after payment.", escalation="Legal questions go to the owner.",
+                               faqs=[writer.FAQ(question="Can I cancel?", answer="Yes, any time.")],
+                               role_rules=[writer.RoleRules(role=r, rules=[f"{r} rule"]) for r in roles + ["boss"]])
+        if name == "Catalogue":  # deliberately off-price: the builder must restore the Deep Dive price
+            return writer.Catalogue(items=[writer.Item(name="Lease Nudge", description="Renewal reminders.", price=12,
+                                                       currency="USD", unit="per month", includes=["reminders"])])
+        if name == "Scenarios":
+            return exam.Scenarios(scenarios=[exam.Scenario(situation=f"drill {i}", message=f"message {i}", good=["helps"],
+                                                           must_not=["breaks policy"], tests_guardrail=i <= 2)
+                                             for i in range(1, 6)])
+        if name == "Replies":
+            return exam.Replies(replies=[exam.Reply(n=i, reply=f"reply {i}") for i in range(1, 6)])
+        if name == "Grades":
+            role = next(r for r in ("Store agent", "Content agent", "Ads agent", "Support agent", "Bookkeeper",
+                                    "Stock agent") if r in system)
+            self.graded[role] = self.graded.get(role, 0) + 1
+            fail = role == "Support agent" and (self.exam_mode == "fail_always"
+                                                or (self.exam_mode == "fail_once" and self.graded[role] == 1))
+            return exam.Grades(grades=[exam.Grade(n=i, score=4 if fail else 10, breached=fail and i == 1,
+                                                  feedback="Offered a refund outside policy." if fail else "Good.")
+                                       for i in range(1, 6)])
+        # Revision: a rewrite that (wrongly) drops the guardrails; the code must put them back
+        return exam.Revision(prompt="You are the Support agent. New rule: never refund outside policy.",
+                             changes="Added a refund rule.")
+
+    def econ(self, prompt=""):
+        from factory.dive.economics import Econ
+        if "dog water bottle" in prompt:
+            return Econ(business_model="local_stock", price_point=self.commerce_price, currency="R",
+                        price_unit="one-off", price_basis_id="E0", weight_kg=0.3, duty_category="default",
+                        demand_score=7, competition_score=7, score=8,
+                        reasoning="Out of stock locally; imports cost R899.",
+                        evidence=["the import ones cost R899 with shipping"])
+        return Econ(business_model="micro_saas", price_point=self.price, currency="USD", price_unit="per month",
+                    price_basis_id="E1", demand_score=7, competition_score=6, score=8,
+                    reasoning="Landlords pay R450 a month for a person; apps charge $9.99.",
+                    evidence=["I pay someone R450 a month", "an invented snippet"])
+
+    def verdict(self, system, prompt):
+        from factory.gates.common import Verdict
+        if "Gate of Proof" in system:
+            if "dog water bottle" in prompt:
+                return Verdict(score=7, verdict="pass", reasoning="A priced import and an out-of-stock shop.",
+                               evidence=["Takealot has been out of stock for months"])
+            if "Lease renewal" in prompt:
+                return Verdict(score=7, verdict="pass", reasoning="Rule 3: pays a person R450/month.",
+                               evidence=["I pay someone R450 a month", "a quote the model made up"])
+            return Verdict(score=2, verdict="kill", reasoning="No money.", evidence=[])
+        return Verdict(score=8, verdict="pass", reasoning="Cron + SMS, 3 days.", evidence=["no sales calls"])
+
+
+def fake_probe(term, market="us", limit=10, http=None):
+    """FAKE App Store search result used instead of the network."""
+    from factory.market.base import Listing, Probe
+    return Probe(source="appstore", market=market, term=term, total=12, listings=[
+        Listing(source="appstore", market=market, title="RentReminder Pro", price=9.99, currency="USD",
+                url=f"https://apps.apple.com/{market}/app/rentreminder/id1", metric=1200,
+                metric_label="ratings", rating=3.1, ext_id="1")])
+
+
+def temp_env():
+    d = tempfile.mkdtemp(prefix="vf-test-")
+    os.environ["FACTORY_DB"] = os.path.join(d, "test.db")
+    return d

@@ -1,0 +1,58 @@
+# South Africa, stock held by a fulfilment warehouse (the `local_stock` model).
+# Every number is an ASSUMPTION unless marked "benchmark"; Dossiers label each
+# one, and NOTES.md says where it came from. Your stock cap lives in
+# settings.yaml (caps.stock_batch_zar) with the other money caps.
+market: ZA
+
+tax:
+  vat: 0.15                     # SA VAT
+  import_vat_uplift: 0.10       # import VAT is charged on customs value + 10% + duty
+  vat_registered: false         # not registered: import VAT is a cost and sales carry no VAT
+
+duty:                           # customs duty as a share of the supplier price (SA values imports FOB)
+  default: 0.20                 # the real rate depends on the tariff code; the broker confirms it
+  apparel: 0.45
+  footwear: 0.30
+  electronics: 0.10
+
+inbound:                        # supplier to warehouse
+  air_freight_zar_per_kg: 120   # consolidated air cargo, China to Johannesburg
+  clearing_zar_per_shipment: 600
+  receiving_zar_per_unit: 3     # warehouse booking stock in
+  storage_zar_per_unit_month: 2
+  default_weight_kg: 0.5        # when nobody knows the packed weight
+  sample_shipping_zar: 350      # samples come by express courier
+
+per_order:                      # each order that leaves the warehouse
+  pick_pack_zar: 30
+  packaging_zar: 8
+  courier_zar: 70               # door to door, small parcel; delivery is free to the buyer
+  payment_pct: 0.03
+  store_fee_pct: 0.02           # Shopify's extra fee when Shopify Payments is not offered
+  returns_pct: 0.03             # revenue lost to returns and refunds
+
+ads:                            # cost per click per market lives in settings.yaml (smoke.cpc_zar)
+  conversion_average: 0.015     # benchmark: the average Shopify store
+  conversion_good: 0.032        # benchmark: the top fifth of Shopify stores
+
+stock:
+  first_batch_units: 40         # what the first order aims for
+  min_first_batch_units: 20     # fewer than this under your cap is not a fair test
+  samples: 3                    # bought first, to check quality
+  months_to_sell_batch: 2       # for storage cost
+
+gate:
+  max_break_even_conversion: 0.025   # kill if more than 2.5 in 100 visitors must buy just to break even
+
+research:
+  phrases:                      # Reddit searches for commerce niches (first 8 are queried)
+    - where can I buy
+    - where to buy
+    - anyone know where
+    - can't find
+    - out of stock
+    - ships to South Africa
+    - worth buying
+    - recommend a
+    - Takealot
+    - looking for a
