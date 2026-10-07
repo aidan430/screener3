@@ -1,4 +1,4 @@
-"""One full night: scout -> gates -> smoke (prepare only) -> state refresh.
+"""One full night: scout -> gates -> Deep Dive -> smoke (prepare only) -> state refresh.
 
 Stops early if a stage hits the R20 cap. Usage: python -m factory.night
 """
@@ -10,6 +10,7 @@ from sqlmodel import select
 
 from factory import config, costs
 from factory.api import state
+from factory.dive import run as dive
 from factory.gates import run as gates
 from factory.models import RunLog, session, tonight
 from factory.scouts import runner
@@ -31,6 +32,10 @@ def run() -> dict:
     res = gates.run()
     if any("cap" in r["note"] for r in res.values()):
         print("\nNIGHT HALTED after gates: stage cap reached")
+        return state.snapshot()
+    res = dive.run()
+    if "cap" in res["note"]:
+        print("\nNIGHT HALTED after Deep Dive: stage cap reached")
         return state.snapshot()
     smoke.run()
     st = state.snapshot()

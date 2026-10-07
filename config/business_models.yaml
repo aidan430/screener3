@@ -1,0 +1,107 @@
+# Lanes and business models. Every number here is an ASSUMPTION the factory
+# uses when evidence is missing; Dossiers mark them as such. Edit freely.
+#
+# Per model:
+#   fee_pct     platform + payment fees as a share of price
+#   cac_pct     assumed ad cost to win one sale, as a share of price
+#   unit_cost_pct  assumed cost of goods as a share of price when no evidence
+#   min_margin  Economics gate minimum (price - fees - unit cost - ad cost) / price
+#   samples     units bought before launch (physical models)
+#   ad_test     rand for the first proper ad test after the smoke test
+#   capital     fixed start-up lines in rand
+#   probes      marketplaces the Demand analyst checks for this model
+
+lanes:
+  - id: digital
+    name: Digital lane
+    position: top
+    models: [digital_product, micro_saas]
+  - id: commerce
+    name: Commerce lane
+    position: mid
+    models: [dropshipping, print_on_demand]
+  - id: content
+    name: Content lane
+    position: bot
+    models: [newsletter, affiliate_site]
+
+models:
+  digital_product:
+    label: Digital product
+    physical: false
+    fee_pct: 0.12
+    cac_pct: 0.25
+    unit_cost_pct: 0.0
+    min_margin: 0.40
+    samples: 0
+    ad_test: 500
+    capital:
+      - ["Shop setup and first listings", 300]
+      - ["Design tool, first month", 300]
+    probes: [etsy, appstore]
+  micro_saas:
+    label: Micro-SaaS
+    physical: false
+    fee_pct: 0.05
+    cac_pct: 0.30
+    unit_cost_pct: 0.05
+    min_margin: 0.40
+    samples: 0
+    ad_test: 1300
+    capital:
+      - ["Domain", 250]
+      - ["Hosting, 3 months", 350]
+    probes: [appstore]
+  dropshipping:
+    label: Dropshipping
+    physical: true
+    fee_pct: 0.05
+    cac_pct: 0.30
+    unit_cost_pct: 0.35
+    min_margin: 0.15
+    samples: 6
+    ad_test: 6000
+    capital:
+      - ["Store and apps, first month", 1100]
+      - ["Domain and logo", 400]
+      - ["Returns buffer", 500]
+    probes: [ebay, etsy]
+  print_on_demand:
+    label: Print on demand
+    physical: true
+    fee_pct: 0.05
+    cac_pct: 0.25
+    unit_cost_pct: 0.45
+    min_margin: 0.10
+    samples: 3
+    ad_test: 2000
+    capital:
+      - ["Store, first month", 600]
+      - ["Design tool, first month", 300]
+    probes: [etsy, ebay]
+  newsletter:
+    label: Email newsletter
+    physical: false
+    fee_pct: 0.10
+    cac_pct: 0.20
+    unit_cost_pct: 0.05
+    min_margin: 0.40
+    samples: 0
+    ad_test: 900
+    capital:
+      - ["Email platform, 3 months", 300]
+    probes: [appstore]
+  affiliate_site:
+    label: Affiliate site
+    physical: false
+    fee_pct: 0.0
+    cac_pct: 0.0
+    unit_cost_pct: 0.10
+    min_margin: 0.50
+    samples: 0
+    ad_test: 0
+    capital:
+      - ["Domain", 250]
+      - ["Hosting, 3 months", 350]
+      - ["Writing tools, first month", 300]
+    probes: [ebay]

@@ -22,6 +22,7 @@ T = TypeVar("T", bound=BaseModel)
 
 _client = None
 _stage: dict[str, Any] = {"name": None, "spent_zar": 0.0}
+_process = {"zar": 0.0}  # everything this process has spent; agents.run() diffs it per AgentRun
 
 
 class StageOverBudget(RuntimeError):
@@ -85,6 +86,10 @@ def stage(name: str):
         _stage.update(prev)
 
 
+def process_spent() -> float:
+    return _process["zar"]
+
+
 def stage_cap() -> float:
     return float(config.settings()["caps"]["stage_zar"])
 
@@ -125,6 +130,7 @@ def call(
     usd = usd_for(model, in_tok, out_tok)
     rand = config.zar(usd)
     record(stage_name, model, in_tok, out_tok, usd, rand, niche_slug, card_id, note)
+    _process["zar"] += rand
     if _stage["name"]:
         _stage["spent_zar"] += rand
     print(f"    [cost] {stage_name:<6} {model:<18} in={in_tok:>6} out={out_tok:>5} "

@@ -3,7 +3,79 @@
 Each default below was chosen without asking, as the kickoff instructed. Change any of them in
 `config/settings.yaml` or tell me and I will rework it.
 
-## Status of tonight's run (2026-10-03)
+## Phase 2: Deep Dive and the arena (2026-10-07)
+
+| Step | Result |
+|---|---|
+| CLAUDE.md | Rewritten for six departments, the arena (lanes, towers, river), the cycle from first signal to final verdict, two money approvals, dashboard contract v2 and the build phases. |
+| `make dive` | Runs five Deep Dive analysts on each card at tower 3, writes a Dossier and applies the Economics gate. |
+| `make night` | Now scout → gates → Deep Dive → smoke prep → state. Ran for real: Reddit, HN and the App Store all refused (HTTP 403 from this container's proxy), so 0 cards and R0.00. The 20 research jobs are logged as agent runs. |
+| `make serve` | New MOBA arena dashboard, still read only from `/api/state`. |
+| `make test` | 27 offline tests pass: pipeline 9, Deep Dive 7, marketplaces 5, arena 6. |
+
+### Phase 2 defaults
+- **Lanes:** top Digital (digital products, micro-SaaS), mid Commerce (dropshipping,
+  print-on-demand), bottom Content (newsletters, affiliate sites). A card with no
+  business-model guess stands on the mid lane, marked "guessed".
+- **Towers:** 1 Proof, 2 Craft, 3 Economics are free checks on your side (green).
+  4 Fund test, 5 Smoke test, 6 Certify and fund launch are past the river, where money is
+  at stake (red).
+- **Order:** the smoke test now comes before Training, so squads are only built for niches
+  that won a test. The blueprint preview showed Training first. A niche needs two money
+  approvals: the test budget, then the launch capital.
+- **Craft gate:** now allows dropshipping and print-on-demand, because the supplier stores
+  and ships. It still kills anything where we hold our own stock. Rubric version
+  2026-10-07.1.
+- **Sources:**
+  - The App Store (no key needed) is now a Research source: the latest 1-2 star reviews of
+    each niche's named competitor apps.
+  - Deep Dive checks the App Store, Etsy and eBay, depending on the business model.
+  - Markets: App Store us, gb, au, ca, de (za first for ZA niches); eBay US, GB, DE, AU.
+- **Not built:**
+  - Google Trends: keyword interest has no open official API. The unofficial endpoints
+    pytrends uses are rate limited and not meant for automated use.
+  - Amazon and TikTok: no open API, and scraping breaks their terms.
+  - Upwork, Fiverr and HelloPeter stay TODO stubs.
+- **Deep Dive cost:**
+  - Haiku plans up to 3 search terms per card. The Sonnet Economics analyst gets up to
+    1,200 output tokens and the Sonnet Risk analyst 600.
+  - Cap: R1.50 per card (`caps.dive_zar_per_card`), plus the R20 stage cap.
+  - Expected cost is about R0.80-1.00 per card.
+- **Price anchoring:** the price must cite an evidence item, in the same currency, and be at
+  most 25% above it. Otherwise the gate kills.
+- **Unit cost and fees:**
+  - Unit cost comes from cited evidence if any. There's no supplier source yet, so it
+    usually falls back to the model's `unit_cost_pct` assumption.
+  - Ad cost per sale = `cac_pct` of price. Fees = `fee_pct`. Both are assumptions.
+- **Start-up capital:** the model's fixed lines + samples × unit cost + R200 smoke test +
+  the first ad test after a win. All values are labelled assumptions in
+  `config/business_models.yaml`; edit freely.
+- **Economics gate:** passes only with score ≥ 7, margin ≥ the model's minimum, capital
+  ≤ R10,000 (`caps.niche_capital_zar`) and break-even within 80 sales.
+- **Payback days:** not shown. There's no sales-velocity data before a smoke test, so a
+  Dossier shows break-even sales instead. The payback days in the blueprint preview were
+  sample data.
+- **FX (`fx_zar`):** USD 18.50, GBP 24.50, EUR 21.50, AUD 12.00, CAD 13.50. These are rough;
+  edit them.
+- **Agent runs:**
+  - Every scout, the Distiller, both gatekeepers, the five analysts, the smoke-test builder
+    and the playbook writer write an `AgentRun` row. The map draws only these.
+  - A row still "running" after 2 hours counts as failed (its process died).
+  - Each run's cost comes from the process's spend counter.
+- **Agent counts are real:**
+  - Research = active niches × enabled sources + Distiller + 2 gatekeepers (18 today).
+  - Deep Dive 5, Training 1, Operations 1.
+  - Treasury and Warden have 0 and appear as construction sites until Phases 6 and 3.
+- **Arena behaviour:**
+  - Idle agents stand by their camp, working agents stand at the tower they work on, and
+    finished ones walk home over 9 seconds.
+  - "Replay last night" plays the last 36 hours of agent runs in 40 seconds.
+- **Niche money table:** revenue, costs (that niche's agent spend plus any funded test
+  budget) and profit, to date. Figures per 30 days arrive with the Treasury in Phase 6.
+- **Database upgrade:** on start, missing columns are added to an existing
+  `data/factory.db` and new tables are created. Nothing is deleted.
+
+## Phase 1 status (2026-10-03)
 
 | Step | Command | Result |
 |---|---|---|
@@ -24,21 +96,26 @@ as an environment variable.
 2. **Reddit API app**: at https://www.reddit.com/prefs/apps create a "script" app, then set
    `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET` and `REDDIT_USER_AGENT` (`venture-factory/0.1 by u/<you>`).
    Without it the scout falls back to the public JSON search, which is more rate-limited.
-3. **Factory domain**: buy it and set `FACTORY_DOMAIN`. Pages go to `{slug}.{FACTORY_DOMAIN}`.
+3. **Etsy developer app**: at https://www.etsy.com/developers create an app and set
+   `ETSY_API_KEY` to the value Etsy says to send in the `x-api-key` header. Without it Deep
+   Dive skips Etsy and notes why.
+4. **eBay developer app**: at https://developer.ebay.com create a production keyset and set
+   `EBAY_CLIENT_ID` and `EBAY_CLIENT_SECRET`. Without it Deep Dive skips eBay.
+5. **Factory domain**: buy it and set `FACTORY_DOMAIN`. Pages go to `{slug}.{FACTORY_DOMAIN}`.
    Add a wildcard `*` CNAME to `cname.vercel-dns.com`.
-4. **Vercel project**: create a team or project and a token. Set `VERCEL_TOKEN` (and
+6. **Vercel project**: create a team or project and a token. Set `VERCEL_TOKEN` (and
    `VERCEL_SCOPE` for a team), add the domain to the project, and run `npm i -g vercel` on the
    factory host.
-5. **Plausible account**: create it and an API key (`PLAUSIBLE_API_KEY`). Add the site(s) for
+7. **Plausible account**: create it and an API key (`PLAUSIBLE_API_KEY`). Add the site(s) for
    your domain and a custom-event goal named `buy_click`.
-6. **Meta developer app**: create the app and a Business ad account, pass the ID and phone
+8. **Meta developer app**: create the app and a Business ad account, pass the ID and phone
    checks, and get a system-user token with `ads_management`. Set `META_ACCESS_TOKEN` and
    `META_AD_ACCOUNT_ID`. Keep `META_ADS_ENABLED=false` until the Marketing API code is written
    (it is a TODO; approvals print manual steps).
-7. **Paystack webhook**: complete Paystack KYC, set `PAYSTACK_SECRET_KEY`, and point the
+9. **Paystack webhook**: complete Paystack KYC, set `PAYSTACK_SECRET_KEY`, and point the
    webhook at `https://<factory host>/api/paystack/webhook`. Charges must carry
    `metadata.venture = <venture slug>`.
-8. **Fund each smoke test**: click FUND TEST on the dashboard. This is the only path to spend.
+10. **Fund each smoke test and each launch**: click FUND TEST on the dashboard. This is the only path to spend.
 
 ## Defaults I chose
 
@@ -55,7 +132,7 @@ as an environment variable.
   tokens). The stack says not to deviate, so I have not switched; it is a one-line change in
   settings.yaml if you want it.
 - Pricing (USD per M tokens): Haiku 4.5 $1 in / $5 out; Sonnet 4.6 $3 / $15.
-- **FX: R18.50 per USD** (`fx_usd_zar`). Every Cost row stores both USD and rand.
+- **FX: R18.50 per USD** (now part of the `fx_zar` table). Every Cost row stores both USD and rand.
 - Times are stored as timezone-aware UTC. A "night" is the SAST calendar date.
 - The API binds to 127.0.0.1 unless `HOST` is set.
 
@@ -134,27 +211,11 @@ as an environment variable.
   Venture row (status `building`). You start that Claude Code session; the exact command is
   printed. `ventures/` is gitignored.
 
-### Dashboard (`dashboard/index.html`)
-- The visuals and drawing code are unchanged. The hard-coded `B` array and treasury rows are
-  gone; everything comes from `/api/state`, polled every 60 s.
-- The JSON has no coordinates, so the page maps `kind` to the original look (hq castle, camp
-  tents, gate towers, archive ruins, test "?", site scaffolding, gold mine) and places
-  buildings on fixed plots. The HQ, camp, 2 gates and archive sit where they were in the
-  mockup. Mines, then sites, then tests fill 4 large plots, then 5 small ones; anything beyond
-  that shows as "+N more off-map".
-- Optional extra JSON keys the page uses: `lvl` (the badge text), `builders`, `foot`, `float`
-  (floating "+R" text on mines), `msg` (for local-only buttons), and `cards`, `night` and
-  `generated_at` (for debugging).
-- Endpoints starting with `#` are local: `#side_quests` lists the side quests and `#msg`
-  shows a message. All other actions are POSTs. Spend-style buttons ask for confirmation.
-- The gate panels list tonight's real cards by name with their scores, plus the cards still
-  waiting at each gate.
-- Side quests are derived from missing env vars, plus one per test awaiting funding.
-- Elixir pill = this calendar month's spend (UTC). The treasury's elixir row projects the
-  last 7 days × 30/7.
-- Fonts still load from Google Fonts, as in the mockup.
+### Dashboard (Phase 1)
+- Replaced in Phase 2 by the arena (`dashboard/index.html`, `arena.js`, `app.js`). See
+  "Phase 2 defaults" above.
 
 ### Scheduler
-- `make schedule` runs APScheduler in Africa/Johannesburg: scouts at 01:00, gates plus smoke
-  prep at 02:00, and a state snapshot to `data/state.json` every 5 min. `/api/state` is built
+- `make schedule` runs APScheduler in Africa/Johannesburg: scouts at 01:00, then gates, Deep
+  Dive and smoke prep at 02:00, and a state snapshot to `data/state.json` every 5 min. `/api/state` is built
   live on each request, so the dashboard is always current.

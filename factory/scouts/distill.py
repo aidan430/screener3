@@ -34,6 +34,8 @@ Hard rules:
   `pay_currency` is its symbol or code as written ("R", "$", "USD"...), else "".
 - Skip posts that are jokes, news, self-promotion, or problems needing physical
   work, licences or sales teams. Fewer good cards beat many weak ones.
+- `business_model` is your best guess at how a solo founder would sell the fix:
+  one of {models}.
 - Return at most {max_cards} cards, each from a different post where possible."""
 
 
@@ -45,6 +47,7 @@ class CardDraft(BaseModel):
     pay_evidence: str
     pay_amount: float | None = None
     pay_currency: str = ""
+    business_model: str = Field(default="", description="one of the allowed business models")
 
 
 class Distilled(BaseModel):
@@ -108,7 +111,7 @@ def distill_niche(niche: Niche) -> list[Card]:
         return []
     cap = float(caps["scout_zar_per_niche"]) - costs.niche_zar(niche.slug)
     model = config.settings()["models"]["scout"]
-    system = SYSTEM.format(max_cards=max_cards)
+    system = SYSTEM.format(max_cards=max_cards, models=", ".join(config.business_models()["models"]))
     chars = int(caps["signal_chars"])
     # Trim the batch until the worst-case estimate fits the per-niche cap.
     while signals:
@@ -145,7 +148,9 @@ def save_cards(niche: Niche, signals: list[Signal], drafts: list[CardDraft]) -> 
                 continue
             pay_ev = d.pay_evidence if verbatim(d.pay_evidence, source_text) else ""
             amount = d.pay_amount if pay_ev and amount_in(d.pay_amount, pay_ev) else None
+            model = d.business_model if d.business_model in config.business_models()["models"] else ""
             card = Card(niche_id=niche.id, signal_id=sig.id, title=d.title.strip()[:120],
+                        business_model=model, lane=config.lane_of(model),
                         problem=d.problem.strip(), quote=d.quote.strip(), url=sig.url,
                         pay_evidence=pay_ev, pay_amount=amount,
                         pay_currency=d.pay_currency if amount is not None else "", source=sig.source)

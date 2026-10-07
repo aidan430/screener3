@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import textwrap
 
-from factory import config, costs
+from factory import agents, config, costs
 from factory.gates import craft, proof
 from factory.models import Card, GateResult, RunLog, session, utcnow
 
@@ -31,7 +31,10 @@ def run_gate(gate) -> tuple[int, int, str]:
     with costs.stage(gate.NAME) as st:
         for card in cards:
             try:
-                r = gate.run_card(card)
+                with agents.run("research", f"{gate.NAME.title()} gatekeeper", subject=card.title,
+                                card=card, tower=gate.TOWER) as job:
+                    r = gate.run_card(card)
+                    job.summary = f"{r.verdict.upper()} {r.score}/10: {r.reasoning[:160]}"
             except costs.StageOverBudget as e:
                 note = f"STOPPED: {e}"
                 print(f"  {note}")

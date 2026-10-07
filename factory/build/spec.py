@@ -11,7 +11,7 @@ import json
 from pydantic import BaseModel
 from sqlmodel import select
 
-from factory import config, costs
+from factory import agents, config, costs
 from factory.models import Build, Card, GateResult, Niche, SmokeTest, session
 
 SYSTEM = """You write the operational brief (a CLAUDE.md) that a Claude Code session
@@ -69,7 +69,11 @@ def run() -> list[Build]:
     builds = []
     with costs.stage("spec"):
         for t in winners:
-            b = write(t)
+            with session() as s:
+                card = s.get(Card, t.card_id)
+            with agents.run("train", "Playbook writer", subject=t.name, card=card, tower=6) as job:
+                b = write(t)
+                job.summary = f"wrote the venture brief for {t.name}"
             from factory.build import launch
             launch.scaffold(b)
             builds.append(b)

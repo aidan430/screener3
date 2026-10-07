@@ -1,132 +1,203 @@
 # Venture Factory — operational brief
 
 ## What this is
-An unattended system that runs nightly: 100+ scout agents mine evidence of
-problems people already pay to solve, gatekeeper agents kill weak ideas,
-survivors get a landing page and ad set prepared for a human-funded smoke
-test, and winners get a build spec. A game-styled dashboard (dashboard/
-index.html) shows the live state. The human (the "player") does only what
-agents cannot: spend money, pass KYC, own accounts.
+An agent factory that runs unattended and aims to build a side income. Six
+departments of agents work in a cycle: Research finds niches people already
+pay in, anywhere in the world; Deep Dive studies each one and prices what it
+would cost to start; Training builds and certifies a squad of agents for the
+niche; Operations runs it; the Treasury counts every rand per niche; the
+Warden oversees all of it, fixes what it can and reports the rest.
 
-Money is never spent and nothing is posted publicly without a human click.
+The dashboard is a MOBA-style arena (see "The arena") so the player can see
+in real time which agents are working, where every niche is in the cycle,
+and which niches make or lose money.
+
+The human (the "player") does only what agents cannot: approve spending,
+pass ID checks, own accounts, and answer the Warden's weekly report. Target:
+about 20 minutes a week. Money is never spent and nothing is posted publicly
+without a human click.
+
+## Departments
+| Department | Agents (roles) | Input | Output | Passes on when |
+|---|---|---|---|---|
+| Research | one scout per niche per source, Distiller, Proof gatekeeper, Craft gatekeeper | niches.yaml categories, global sources | Cards with verbatim evidence | Proof gate and Craft gate pass |
+| Deep Dive | Demand analyst, Competitor analyst, Economics analyst, Risk analyst, Capital estimator | Cards past Craft | Dossier: demand, competitors, price, margin, start-up capital, risks | Economics gate passes |
+| Training | Playbook writer, then (Phase 4) Prompt engineer, Catalogue builder, Simulator, Examiner, Certifier | Smoke-test winners | Certified squad + venture CLAUDE.md | Every agent passes its exam |
+| Operations | Smoke-test builder; per live niche a squad: Store, Content, Ads, Support, Bookkeeper | Dossiers, certified squads | Smoke tests; daily running of live niches | Monthly review keeps it |
+| Treasury | Ledger, Auditor | Sales, refunds, ad and agent bills | Revenue, costs, profit per niche | Books match providers |
+| Warden | Health check, Cost guard, Fixer, Reporter | Every AgentRun, Cost and GateResult | Automatic fixes, alerts, weekly + monthly reports | n/a (oversees) |
+
+Departments not built yet show on the map as construction sites. Never show
+an agent as working unless an AgentRun row says it is.
+
+## The arena (dashboard map)
+A square, top-down map like a MOBA:
+- **Your base** bottom-left (HQ and Treasury). **The Market** top-right: live
+  niches sit there as gold mines and send gold back down their lane.
+- **Three lanes**, one per business-model family. Top = Digital (digital
+  products, micro-SaaS). Mid = Commerce (dropshipping, print-on-demand).
+  Bot = Content (newsletters, affiliate sites). A card's lane comes from its
+  business model.
+- **Six towers per lane** = the six checks a niche must pass, in order:
+  1 Proof, 2 Craft, 3 Economics (free, on your side, green), then
+  4 Fund test, 5 Smoke test, 6 Certify & fund launch (money at stake, red).
+- **The river** runs corner to corner between towers 3 and 4: nothing crosses
+  it without your gold.
+- **Jungle camps** = departments: Research and Deep Dive on your side,
+  Training and Operations on the market side, the Warden at the centre where
+  mid lane crosses the river, the Archive at the river mouth.
+- **Units**: each card is a unit standing at the tower it is waiting at.
+  Killed cards fall at that tower and go to the Archive. Agent units (in
+  their department colour) walk from their camp to the tower or niche they
+  are working on, driven only by real AgentRun rows. "Replay last night"
+  plays back the night's AgentRuns at speed.
+
+## The cycle (start to finish)
+Card status -> tower:
+1. `scouted` waits at tower 1. Proof gate -> `proof_passed` or `killed_proof`.
+2. `proof_passed` at tower 2. Craft gate -> `craft_passed` or `killed_craft`.
+3. `craft_passed` at tower 3. Deep Dive + Economics gate -> `dive_passed` or `killed_dive`.
+4. `dive_passed` -> smoke prep -> `awaiting_funding` at tower 4 (blocked on you).
+5. `testing` at tower 5 after you fund the test. Settles `won` or `lost` (archived).
+6. `won` at tower 6: Training writes the playbook; you fund the launch -> `building`.
+7. `building` / `live`: a mine at the Market. Operations runs it; Treasury counts it.
+8. Monthly Warden review: scale, hold or kill. Killed niches go to the Archive.
+Killed or lost cards are archived, never deleted.
+
+## Money rules
+- Two money gates per niche, both human clicks: Fund test (smoke budget,
+  R200 to R1,000) and Fund launch (the rest of the start-up capital, only
+  after a smoke-test win).
+- `caps.niche_capital_zar` is the most a niche may ask for to start; above it,
+  the Economics gate kills.
+- The R20 stage cap and R0.60 scout cap from Phase 1 stay. The Warden (Phase 3)
+  adds a daily agent-spend cap it cannot raise itself.
 
 ## Stack (do not deviate without asking)
 - Python 3.11, `uv` for deps
 - SQLite via `sqlmodel`, file at `data/factory.db`
-- `anthropic` SDK. Scouts use `claude-haiku-4-5`. Gatekeepers, spec writer
-  and page writer use `claude-sonnet-4-6`. Never Opus.
+- `anthropic` SDK. Scouts and the Demand analyst's query planner use
+  `claude-haiku-4-5`. Gatekeepers, Deep Dive judges, spec writer and page
+  writer use `claude-sonnet-4-6`. Never Opus.
 - `httpx` for HTTP, `praw` for Reddit, `feedparser` for RSS, `playwright`
-  only where an API does not exist (app store reviews, Upwork search pages)
+  only where an API does not exist
+- Official APIs only for marketplaces: App Store (iTunes Search + reviews
+  RSS, no key), Etsy Open API v3 (`ETSY_API_KEY`), eBay Browse API
+  (`EBAY_CLIENT_ID` / `EBAY_CLIENT_SECRET`). No scraping that breaks a site's
+  terms (this rules out Amazon and TikTok pages until official access exists).
 - FastAPI serving `/api/state` and the static dashboard, port 8000
-- APScheduler: scouts 01:00 SAST, gates 02:00, dashboard refresh continuous
+- APScheduler: scouts 01:00 SAST, gates and Deep Dive 02:00, dashboard live
 - `.env` for secrets, never committed
 
 ## Repo layout
 ```
 factory/
-  models.py          # Niche, Signal, Card, GateResult, SmokeTest, Build, Venture, Cost
-  seed.py            # loads config/niches.yaml into Niche rows
-  scouts/
-    runner.py        # runs every active Niche through the source adapters
-    sources/
-      reddit.py      # subreddit + search for pain phrases
-      hn.py          # Algolia HN API, "ask hn" + pain phrases
-      upwork.py      # public job search pages (playwright), price extraction
-      fiverr.py      # gig search pages, price extraction
-      appstore.py    # 1-2 star reviews for competitor apps named in niche config
-      hellopeter.py  # SA complaints site, public pages
-      trends.py      # Google Trends rising queries via pytrends
-    distill.py       # Haiku: raw signals -> Card rows with quote, url, pay_evidence
-  gates/
-    proof.py         # Sonnet judge: is there evidence someone pays today? score 0-10
-    craft.py         # Sonnet judge: solo-buildable in <7 days, no humans in loop?
-    rubric.md        # the exact rubrics, versioned
-  smoke/
-    page.py          # Sonnet writes a single-file landing page with price + buy button
-    ads.py           # drafts 3 ad variants + targeting as JSON; never calls Meta API unless APPROVED
-    deploy.py        # pushes page to Vercel via CLI under a subdomain of the factory domain
-    track.py         # reads Plausible/umami events for buy-clicks
-  build/
-    spec.py          # Sonnet: writes a CLAUDE.md for the winning venture
-    launch.py        # scaffolds a sibling repo from the spec, hands off to a Claude Code session
-  api/
-    server.py        # FastAPI: /api/state, /api/approve/{id}, /api/collect/{id}, static dashboard
-    state.py         # builds the JSON the dashboard consumes
-  scheduler.py
-  costs.py           # logs every API call's tokens and rand cost to Cost table
+  models.py        # Niche, Signal, Card, GateResult, Dossier, SmokeTest, TrackEvent,
+                   # Build, Venture, Cost, RunLog, AgentRun
+  agents.py        # AgentRun logging + department rosters (who exists, who is working)
+  seed.py, costs.py, config.py, night.py, scheduler.py
+  market/          # official marketplace probes shared by scouts and Deep Dive
+    appstore.py etsy.py ebay.py base.py
+  scouts/          # Research: runner.py, distill.py, sources/{reddit,hn,appstore,...}.py
+  gates/           # proof.py, craft.py, rubric.md, run.py
+  dive/            # Deep Dive: demand.py, economics.py, risk.py, capital.py, run.py
+  smoke/           # page.py, ads.py, deploy.py, track.py, run.py
+  build/           # spec.py, launch.py (Training's playbook writer)
+  api/             # server.py, state.py, arena.py (map JSON)
 config/
-  niches.yaml
-  pain_phrases.yaml  # "is there a tool", "I pay someone to", "I hate how", "any alternative to"
-  settings.yaml      # kill thresholds, daily caps, fx rate
+  niches.yaml, pain_phrases.yaml, settings.yaml
+  business_models.yaml   # lanes, models, fee/cost assumptions, capital lines
 dashboard/
-  index.html         # the game UI; read-only template provided, you make it live
-data/
-logs/
+  index.html       # panels, treasury, polling
+  arena.js         # the MOBA map renderer (also used by the blueprint preview)
 ```
 
 ## Pipeline rules
 
-### Scouts
-- One Niche row = one scout. Each night, for each active niche, every source
-  adapter runs with the niche's keywords and competitor names.
-- Raw Signal rows are kept for 30 days with url, source, text, score fields.
-- `distill.py` turns a niche's signals into at most 5 Card rows per night.
-  A Card must have: title, problem, quote (verbatim), url, pay_evidence
-  (text), pay_amount (numeric if found), source. No url, no card.
+### Research (scouts)
+- One Niche row = one scout per enabled source. Raw Signal rows kept 30 days.
+- `distill.py` (Haiku) turns a niche's signals into at most 5 Cards a night,
+  each with a guessed business model (and so a lane). Quote and pay evidence
+  must be verbatim substrings of the stored signal. No url, no card.
 - Scout cost cap: R0.60 per niche per night. Over cap, skip and log.
 
-### Gate of Proof (`gates/proof.py`)
-Kill unless at least one of:
-- a job post or gig with a price for this exact task,
-- a paid competitor with pricing and evidence of complaints,
-- a direct request to pay in a forum, with upvotes or replies.
-Output: score 0-10, verdict, reasoning, evidence list. Score < 6 is killed.
-Killed cards are archived, never deleted.
+### Gate of Proof (tower 1)
+Kill unless at least one of: a job post or gig with a price for this exact
+task; a paid competitor with pricing and evidence of complaints; a direct
+request to pay in a forum, with upvotes or replies. Score 0-10, < 6 killed.
+Evidence must be verbatim; a pass with no evidence left becomes a kill.
 
-### Gate of Craft (`gates/craft.py`)
-Kill if any of: needs sales calls, physical inventory, a licence, personal
-data categories requiring registration, a marketplace with two sides to
-seed, more than 7 build-days, or ongoing human support. Output same shape.
+### Gate of Craft (tower 2)
+Kill if any of: sales calls, holding our own stock (dropshipping and
+print-on-demand are allowed: the supplier ships), a licence, personal data
+categories requiring registration, a two-sided marketplace to seed, more
+than 7 build-days, or ongoing human support.
 
-### Smoke test
-- For each card passing both gates, generate a landing page: headline,
-  three benefits, one price, one "Buy" button that records a `buy_click`
-  event then shows "We are onboarding founders this week, leave your email".
-- Draft ad set JSON (3 variants, audience, R200 budget, 48 h).
-- Deploy page to `{slug}.{FACTORY_DOMAIN}`. Status = `awaiting_funding`.
-- Nothing is spent until `/api/approve/{id}` is hit from the dashboard.
-  After approval, if `META_ADS_ENABLED=true`, create the campaign via the
-  Marketing API, else print the manual steps to logs and the dashboard.
-- Win condition: buy_click / visitors >= 5% with >= 150 visitors.
-  Losers archive with their numbers.
+### Deep Dive and Economics gate (tower 3)
+- Demand analyst: Haiku plans up to 3 search terms; probes App Store, Etsy and
+  eBay in the configured markets; records counts, prices, ratings with urls.
+- Competitor analyst: top competitors with prices, ratings and 1-2 star
+  review quotes, from the probes and the niche's named competitors.
+- Economics analyst (Sonnet): picks the business model and a price point
+  anchored to a cited evidence item; unit cost comes from cited evidence or
+  is marked as an assumption from business_models.yaml.
+- Risk analyst (Sonnet): legal, platform and IP risks; any `hard_kill` risk kills.
+- Capital estimator (code): start-up lines from business_models.yaml plus
+  samples and ad test; break-even sales = capital / unit profit.
+- Economics gate (code): score >= 7, margin >= the model's minimum, capital
+  <= `niche_capital_zar`, break-even <= `max_break_even_sales`, no hard kill.
+- Every number in a Dossier is tagged `evidence` (with url) or `assumption`.
 
-### Build
-- Winners get `build/spec.py`: a full CLAUDE.md, data model, stack, pricing,
-  payment provider (Paystack default), first 5 SEO pages. Written to
-  `ventures/{slug}/CLAUDE.md`. The human starts that Claude Code session.
-- Venture rows track status: building, live, paused. Revenue is entered via
-  Paystack webhook or manually through `/api/collect`.
+### Smoke test (towers 4-5)
+- For each `dive_passed` card: landing page at the Dossier's price, three
+  benefits, one Buy button that records `buy_click` then shows "We are
+  onboarding founders this week, leave your email". 3 ad variants, R200, 48 h.
+- Deploy to `{slug}.{FACTORY_DOMAIN}`. Status `awaiting_funding`. Nothing is
+  spent until `/api/approve/{id}`. If `META_ADS_ENABLED=true` create the
+  campaign, else print the manual steps to logs and the dashboard.
+- Win: buy_click / visitors >= 5% with >= 150 visitors. Losers archive.
 
-### Dashboard contract
-`/api/state` returns:
+### Training and launch (tower 6)
+- Winners get `build/spec.py`: a full venture CLAUDE.md (data model, stack,
+  pricing, Paystack, first 5 SEO pages) at `ventures/{slug}/CLAUDE.md`.
+- Phase 4 adds certification: playbooks, exams, practice runs.
+- Venture rows: building, live, paused. Revenue via Paystack webhook or `/api/collect`.
+
+### Agent activity
+Every agent's unit of work is wrapped in `agents.run(dept, role, ...)`, which
+writes an AgentRun row (start, finish, status, one-line summary, rand cost,
+lane and tower when it works on a card). The dashboard draws only these.
+
+## Dashboard contract
+`/api/state` returns the Phase 1 keys (`gold, elixir_month, scouts_active,
+buildings, treasury, net_30d, concentration_pct, side_quests`) plus:
 ```
-{ gold, elixir_month, scouts_active,
-  buildings: [ {id, kind: hq|mine|site|test|camp|gate|archive, name, level,
-                desc, kv: [[v,label]x3], actions: [{label, endpoint, style}],
-                pile: 0-3, rate: 0-1} ],
-  treasury: [ {name, sub, projected_30d, kind: income|soon|cost, pct} ],
-  net_30d, concentration_pct, side_quests: [str] }
+agents_total, departments: [{id, name, agents, working, built}],
+arena: { lanes: [{id, name, position: top|mid|bot}],
+         towers: [{n: 1-6, id, name, side: free|money, waiting, passed_7d, killed_7d}],
+         units: [{card_id, title, lane, tower: 1-6, state: waiting|blocked|testing|dead}],
+         mines: [{venture_id, name, lane, revenue_30d}],
+         runs: [{id, dept, role, subject, lane, tower, started, finished, status, summary}] },
+niches: [{name, lane, model, stage, revenue, costs, profit, capital}],   # to date, rand
+dossiers: [{card_id, title, model, lane, capital, lines, break_even, margin, score, verdict}]
 ```
-Convert `dashboard/index.html` from its hard-coded `B` array and treasury
-rows to render from this JSON, polling every 60 s. Keep the visuals exactly;
-change only the data source. Buttons call the endpoints in `actions`.
+`buildings` carries the panel for each camp, base and tower (id, name, level,
+desc, kv, actions). Buttons call the endpoints in `actions`. Poll every 60 s.
+
+## Build phases
+1. Research scouts (Reddit, HN), Proof + Craft gates, smoke prep, dashboard. Done.
+2. Deep Dive + Economics gate + capital estimator, App Store/Etsy/eBay probes,
+   AgentRun logging, MOBA arena dashboard. In progress.
+3. Warden v1: health checks, cost guard, retries, Monday report.
+4. Training Academy: playbooks, exams, certification.
+5. Operations squads, digital products first.
+6. Treasury sync: Stripe, Paystack, Shopify, Meta, agent bills per niche.
+7. More business models.
 
 ## Working style
-- Build in this order: models + seed -> reddit + hn scouts -> distill ->
-  proof gate -> craft gate -> api/state + live dashboard -> remaining
-  sources -> smoke -> build spec -> scheduler.
-- After each stage, run it for real on 5 niches and show me actual cards.
-- Every Claude call goes through `costs.py`. Print nightly rand total.
-- Never invent evidence. If a source fails, the card does not exist.
+- After each stage, run it for real on the active niches and show real output.
+- Every Claude call goes through `costs.py`. Print the nightly rand total.
+  Stop and report if a stage would cost more than R20.
+- Never invent evidence. If a source fails, the card or number does not exist.
 - No external dependency beyond the stack list without asking.
-- Keep files under 300 lines.
+- Keep files under 300 lines. Record every default in NOTES.md.

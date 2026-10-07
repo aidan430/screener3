@@ -104,6 +104,13 @@ def dashboard() -> FileResponse:
     return FileResponse(config.DASHBOARD_DIR / "index.html")
 
 
+@app.get("/{name}.js")
+def dashboard_js(name: str) -> FileResponse:
+    if name not in ("arena", "app"):
+        raise HTTPException(404, "not found")
+    return FileResponse(config.DASHBOARD_DIR / f"{name}.js", media_type="text/javascript")
+
+
 config.PAGES_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/pages", StaticFiles(directory=config.PAGES_DIR, html=True), name="pages")
 

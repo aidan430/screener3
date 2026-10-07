@@ -73,8 +73,10 @@ class Card(SQLModel, table=True):
     pay_amount: Optional[float] = None
     pay_currency: str = ""
     source: str
-    # scouted -> proof_passed -> craft_passed -> awaiting_funding -> testing -> won/lost
-    # killed_proof / killed_craft / archived are terminal (never deleted)
+    business_model: str = ""                   # key in config/business_models.yaml
+    lane: str = ""                             # digital | commerce | content
+    # scouted -> proof_passed -> craft_passed -> dive_passed -> awaiting_funding
+    #   -> testing -> won -> building ; killed_* / archived are terminal (never deleted)
     status: str = Field(default="scouted", index=True)
     created_at: datetime = Field(default_factory=utcnow)
 
@@ -82,7 +84,7 @@ class Card(SQLModel, table=True):
 class GateResult(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     card_id: int = Field(foreign_key="card.id", index=True)
-    gate: str                                  # proof | craft
+    gate: str                                  # proof | craft | economics
     score: int
     verdict: str                               # pass | kill
     reasoning: str
@@ -94,6 +96,44 @@ class GateResult(SQLModel, table=True):
     @property
     def evidence(self) -> list[str]:
         return json.loads(self.evidence_json)
+
+
+class Dossier(SQLModel, table=True):
+    """Deep Dive output for one card. Every number is evidence (with url) or assumption."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    card_id: int = Field(foreign_key="card.id", index=True)
+    night: str = Field(default_factory=tonight, index=True)
+    business_model: str = ""
+    lane: str = ""
+    search_terms_json: str = "[]"
+    evidence_json: str = "[]"                  # [{id, source, market, title, price, currency, url, metric}]
+    demand_json: str = "{}"                    # per-source counts and price spread
+    competitors_json: str = "[]"
+    price_point: Optional[float] = None
+    currency: str = ""
+    price_unit: str = ""                       # one-off | per month | per year
+    price_basis: str = ""                      # evidence id the price is anchored to
+    price_zar: Optional[float] = None
+    unit_cost_zar: Optional[float] = None
+    unit_cost_basis: str = ""                  # "evidence E4" or "assumption: 35% of price"
+    fees_zar: Optional[float] = None
+    cac_zar: Optional[float] = None
+    unit_profit_zar: Optional[float] = None
+    margin: Optional[float] = None
+    capital_zar: Optional[float] = None
+    capital_lines_json: str = "[]"             # [[label, rand, basis]]
+    break_even_sales: Optional[int] = None
+    risks_json: str = "[]"                     # [{risk, severity, hard_kill}]
+    demand_score: int = 0
+    competition_score: int = 0
+    score: int = 0
+    verdict: str = ""                          # pass | kill
+    reasoning: str = ""
+    kill_reasons_json: str = "[]"
+    created_at: datetime = Field(default_factory=utcnow)
+
+    def j(self, field: str):
+        return json.loads(getattr(self, field + "_json"))
 
 
 class SmokeTest(SQLModel, table=True):
@@ -173,7 +213,44 @@ class RunLog(SQLModel, table=True):
     summary: str = ""
 
 
+class AgentRun(SQLModel, table=True):
+    """One unit of work by one agent. The dashboard only ever draws these."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    night: str = Field(default_factory=tonight, index=True)
+    dept: str = Field(index=True)              # research | dive | train | ops | treasury | warden
+    role: str
+    subject: str = ""                          # niche slug or card title
+    card_id: Optional[int] = None
+    lane: str = ""
+    tower: Optional[int] = None                # 1-6 when working at a tower
+    started_at: datetime = Field(default_factory=utcnow, index=True)
+    finished_at: Optional[datetime] = None
+    status: str = "running"                    # running | ok | failed | skipped | blocked
+    summary: str = ""
+    cost_zar: float = 0.0
+
+
 _engine = None
+
+
+def _migrate(eng) -> None:
+    """Add columns that newer code expects to tables an older run created."""
+    from sqlalchemy import inspect, text
+    insp = inspect(eng)
+    with eng.begin() as conn:
+        for table in SQLModel.metadata.sorted_tables:
+            if not insp.has_table(table.name):
+                continue
+            have = {c["name"] for c in insp.get_columns(table.name)}
+            for col in table.columns:
+                if col.name in have:
+                    continue
+                arg = col.default.arg if col.default is not None else None
+                default = None if callable(arg) else arg
+                ddl = f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {col.type.compile(eng.dialect)}'
+                if default is not None:
+                    ddl += " DEFAULT " + (f"'{default}'" if isinstance(default, str) else str(default))
+                conn.execute(text(ddl))
 
 
 def engine():
@@ -181,6 +258,7 @@ def engine():
     if _engine is None:
         config.DATA_DIR.mkdir(exist_ok=True)
         _engine = create_engine(config.db_url(), connect_args={"check_same_thread": False})
+        _migrate(_engine)
         SQLModel.metadata.create_all(_engine)
     return _engine
 

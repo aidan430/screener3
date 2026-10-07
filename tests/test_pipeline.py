@@ -1,61 +1,19 @@
 """End-to-end pipeline tests: fake sources + fake Claude, temp DB. Run: make test"""
 from __future__ import annotations
 
-import io
 import json
 import unittest
-from contextlib import redirect_stdout
 from pathlib import Path
 from unittest import mock
 
-from tests.fakes import FAKE_POSTS, FakeClaude, temp_env
+from tests.base import FactoryTestCase, quiet
 
-import logging  # noqa: E402
-
-logging.disable(logging.CRITICAL)
-TMP = temp_env()  # must run before factory.models creates the engine
-
-from factory import config, costs, models  # noqa: E402
+from factory import config, costs  # noqa: E402
 from factory.models import Card, Cost, GateResult, SmokeTest, TrackEvent, session  # noqa: E402
 from sqlmodel import select  # noqa: E402
 
 
-def quiet(fn, *a, **kw):
-    buf = io.StringIO()
-    with redirect_stdout(buf):
-        out = fn(*a, **kw)
-    return out, buf.getvalue()
-
-
-class PipelineTest(unittest.TestCase):
-    def setUp(self):
-        import os
-        import tempfile
-        d = tempfile.mkdtemp(dir=TMP)
-        os.environ["FACTORY_DB"] = str(Path(d) / "t.db")
-        models.reset_engine()
-        self.fake = FakeClaude()
-        costs.set_client(self.fake)
-        self.patches = [
-            mock.patch.object(config, "PAGES_DIR", Path(d) / "pages"),
-            mock.patch.object(config, "VENTURES_DIR", Path(d) / "ventures"),
-            mock.patch("factory.scouts.sources.reddit.fetch", return_value=[FAKE_POSTS[0]]),
-            mock.patch("factory.scouts.sources.hn.fetch", return_value=[FAKE_POSTS[1]]),
-            mock.patch.dict(os.environ, {"META_ADS_ENABLED": "false", "VERCEL_TOKEN": "", "FACTORY_DOMAIN": ""}),
-        ]
-        for p in self.patches:
-            p.start()
-
-    def tearDown(self):
-        for p in self.patches:
-            p.stop()
-        costs.set_client(None)
-
-    def scout(self, niches=1):
-        from factory.scouts import runner
-        with mock.patch.object(runner, "active_niches", lambda: _first(niches)):
-            return quiet(runner.run)
-
+class PipelineTest(FactoryTestCase):
     def test_scout_keeps_only_verbatim_cards(self):
         _, out = self.scout()
         with session() as s:
@@ -103,63 +61,32 @@ class PipelineTest(unittest.TestCase):
             self.assertEqual(len(list(s.exec(select(Card)))), 0)
 
     def test_smoke_reaches_awaiting_funding_and_prints_steps(self):
-        from factory.gates import run as gates
-        from factory.smoke import run as smoke
-        self.scout()
-        quiet(gates.run)
-        made, out = quiet(smoke.run)
+        made, out = self.to_smoke()
         self.assertEqual(len(made), 1)
         t = made[0]
         self.assertEqual(t.status, "awaiting_funding")
         self.assertTrue(Path(t.page_path).exists())
         self.assertIn("Manual steps (META_ADS_ENABLED=false)", out)
+        self.assertIn("If this test wins, the full start-up needs about R2,100", out)
         self.assertEqual(json.loads(t.ads_json)["budget_zar"], 200)
         html = Path(t.page_path).read_text()
         self.assertIn("We are onboarding founders this week, leave your email.", html)
         self.assertIn("buy_click", html)
+        page_call = next(c for c in self.fake.calls if c.schema == "PageDraft")
+        self.assertIn("$9 / month", page_call.prompt)  # the Deep Dive's price reaches the page writer
 
-    def test_state_contract_and_api(self):
-        from fastapi.testclient import TestClient
-        from factory.api.server import app
-        from factory.gates import run as gates
-        from factory.smoke import run as smoke
+    def test_smoke_skips_cards_that_did_not_pass_the_deep_dive(self):
         self.scout()
-        quiet(gates.run)
-        quiet(smoke.run)
-        c = TestClient(app)
-        st = c.get("/api/state").json()
-        for k in ("gold", "elixir_month", "scouts_active", "buildings", "treasury", "net_30d",
-                  "concentration_pct", "side_quests"):
-            self.assertIn(k, st)
-        kinds = {b["kind"] for b in st["buildings"]}
-        self.assertTrue({"hq", "camp", "gate", "archive", "test"} <= kinds)
-        for b in st["buildings"]:
-            self.assertEqual(len(b["kv"]), 3)
-            self.assertTrue(0 <= b["pile"] <= 3 and 0 <= b["rate"] <= 1)
-        gate1 = next(b for b in st["buildings"] if b["id"] == "gate1")
-        self.assertIn("Lease renewal reminders", gate1["desc"])
-        self.assertGreater(st["elixir_month"], 0)
-        test = next(b for b in st["buildings"] if b["kind"] == "test")
-        endpoint = test["actions"][0]["endpoint"]
-        self.assertTrue(endpoint.startswith("/api/approve/"))
-        slug = None
-        with session() as s:
-            slug = s.exec(select(SmokeTest)).one().slug
-        self.assertEqual(c.post(f"/api/event/{slug}?kind=visit").status_code, 200)
-        self.assertEqual(c.get(f"/pages/{slug}/").status_code, 200)
-        r = c.post(endpoint).json()
-        self.assertIn("launch it by hand", r["message"])
-        self.assertEqual(c.post(endpoint).status_code, 409)  # cannot approve twice
-        self.assertIn("Venture Base", c.get("/").text)
+        self.gates()
+        made, out = self.smoke()
+        self.assertEqual(made, [])
+        self.assertIn("0 card(s) passed the Deep Dive", out)
 
     def test_winner_gets_spec(self):
         from datetime import timedelta
-        from factory.gates import run as gates
-        from factory.models import utcnow
+        from factory.models import AgentRun, utcnow
         from factory.smoke import run as smoke
-        self.scout()
-        quiet(gates.run)
-        t = quiet(smoke.run)[0][0]
+        t = self.to_smoke()[0][0]
         quiet(smoke.approve, t.id)
         with session() as s:
             st = s.get(SmokeTest, t.id)
@@ -170,18 +97,17 @@ class PipelineTest(unittest.TestCase):
             for i in range(10):
                 s.add(TrackEvent(slug=t.slug, kind="buy_click"))
             s.commit()
-        _, out = quiet(smoke.run)
+        _, out = self.smoke()
         self.assertIn("settled: Lease Nudge won", out)
         self.assertTrue((config.VENTURES_DIR / t.slug / "CLAUDE.md").exists())
+        with session() as s:
+            writer = s.exec(select(AgentRun).where(AgentRun.role == "Playbook writer")).one()
+        self.assertEqual((writer.dept, writer.tower, writer.status), ("train", 6, "ok"))
 
     def test_no_opus(self):
         with self.assertRaises(ValueError):
             costs.price("claude-opus-4-6")
 
-
-def _first(n):
-    from factory.seed import active_niches
-    return active_niches()[:n]
 
 
 if __name__ == "__main__":

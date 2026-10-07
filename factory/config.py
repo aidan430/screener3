@@ -57,7 +57,25 @@ def niches_config() -> list[dict]:
 
 
 def zar(usd: float) -> float:
-    return usd * float(settings()["fx_usd_zar"])
+    return usd * float(settings()["fx_zar"]["USD"])
+
+
+def to_zar(amount: float, currency: str) -> float | None:
+    """Convert using settings.fx_zar; None if the currency is not configured."""
+    rate = settings()["fx_zar"].get((currency or "").upper())
+    return None if rate is None else amount * float(rate)
+
+
+@lru_cache
+def business_models() -> dict:
+    return yaml.safe_load((CONFIG_DIR / "business_models.yaml").read_text())
+
+
+def lane_of(model: str) -> str:
+    for lane in business_models()["lanes"]:
+        if model in lane["models"]:
+            return lane["id"]
+    return ""
 
 
 def db_url() -> str:

@@ -4,7 +4,7 @@ Both gates read this file at runtime. The section text is sent to the judge
 verbatim. Bump the version line when you change a rubric; every GateResult
 records the version it was judged under.
 
-<!-- version: 2026-10-03.1 -->
+<!-- version: 2026-10-07.1 -->
 
 ## proof
 
@@ -42,7 +42,8 @@ loop.
 
 KILL if any of these is needed:
 - sales calls or a sales team to close customers,
-- physical inventory, shipping or on-site work,
+- holding our own stock, a warehouse, shipping it ourselves, or on-site work
+  (dropshipping and print-on-demand are fine: the supplier stores and ships),
 - a licence, regulatory registration or professional sign-off to operate,
 - processing personal data categories that require registration (health
   records, children's data, biometric, credit records),

@@ -30,7 +30,8 @@ def fake_draft(signal_ids: list[int]):
     return Distilled(cards=[
         CardDraft(signal_id=a, title="Lease renewal reminders", problem="Small SA landlords pay people to chase renewals.",
                   quote="I pay someone R450 a month just to send lease renewal reminders to my six tenants.",
-                  pay_evidence="I pay someone R450 a month", pay_amount=450, pay_currency="R"),
+                  pay_evidence="I pay someone R450 a month", pay_amount=450, pay_currency="R",
+                  business_model="micro_saas"),
         CardDraft(signal_id=b, title="Invented card", problem="This quote does not exist in the post.",
                   quote="Landlords everywhere are begging for an app and would pay R999.",
                   pay_evidence="", pay_amount=None),
@@ -58,6 +59,15 @@ class FakeMessages:
                             price_label="R99 / month", cta="Buy now",
                             ads=[AdVariant(primary_text=f"v{i}", headline=f"h{i}") for i in range(3)],
                             targeting=Targeting(countries=["ZA"], interests=["Property"]))
+        elif name == "Plan":
+            from factory.dive.demand import Plan
+            out = Plan(terms=["lease renewal reminders", "rent reminder"], business_model="micro_saas")
+        elif name == "Econ":
+            out = self.owner.econ()
+        elif name == "Risks":
+            from factory.dive.risk import RiskItem, Risks
+            out = Risks(risks=[RiskItem(risk="Tenant data must follow POPIA.", severity="medium",
+                                        hard_kill=self.owner.hard_kill)], summary="One data-protection risk.")
         elif name == "Spec":
             from factory.build.spec import Spec
             out = Spec(claude_md="# Lease Nudge\n\nFAKE SPEC FOR TESTS")
@@ -72,6 +82,15 @@ class FakeClaude:
     def __init__(self):
         self.calls = []
         self.messages = FakeMessages(self)
+        self.price = 9.0          # anchored to E1 (9.99 USD) unless a test changes it
+        self.hard_kill = False
+
+    def econ(self):
+        from factory.dive.economics import Econ
+        return Econ(business_model="micro_saas", price_point=self.price, currency="USD", price_unit="per month",
+                    price_basis_id="E1", demand_score=7, competition_score=6, score=8,
+                    reasoning="Landlords pay R450 a month for a person; apps charge $9.99.",
+                    evidence=["I pay someone R450 a month", "an invented snippet"])
 
     def verdict(self, system, prompt):
         from factory.gates.common import Verdict
@@ -81,6 +100,15 @@ class FakeClaude:
                                evidence=["I pay someone R450 a month", "a quote the model made up"])
             return Verdict(score=2, verdict="kill", reasoning="No money.", evidence=[])
         return Verdict(score=8, verdict="pass", reasoning="Cron + SMS, 3 days.", evidence=["no sales calls"])
+
+
+def fake_probe(term, market="us", limit=10, http=None):
+    """FAKE App Store search result used instead of the network."""
+    from factory.market.base import Listing, Probe
+    return Probe(source="appstore", market=market, term=term, total=12, listings=[
+        Listing(source="appstore", market=market, title="RentReminder Pro", price=9.99, currency="USD",
+                url=f"https://apps.apple.com/{market}/app/rentreminder/id1", metric=1200,
+                metric_label="ratings", rating=3.1, ext_id="1")])
 
 
 def temp_env():

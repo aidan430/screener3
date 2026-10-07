@@ -9,6 +9,7 @@ from factory.gates.common import cards_with_status, judge, save
 from factory.models import Card, GateResult
 
 NAME = "craft"
+TOWER = 2
 
 
 def run_card(card: Card) -> GateResult:

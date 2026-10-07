@@ -55,12 +55,13 @@ def slugify(s: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")[:40] or "venture"
 
 
-def draft(card: Card) -> PageDraft:
+def draft(card: Card, price_label: str = "") -> PageDraft:
     with session() as s:
         niche = s.get(Niche, card.niche_id)
     prompt = (f"Niche: {niche.slug} (region {niche.region})\nCard title: {card.title}\n"
               f"Problem: {card.problem}\nBuyer quote: \"{card.quote}\"\n"
-              f"Pay evidence: {card.pay_evidence or 'none'}\nSource: {card.url}")
+              f"Pay evidence: {card.pay_evidence or 'none'}\nSource: {card.url}"
+              + (f"\nPrice to use, exactly as written (set by the Deep Dive): {price_label}" if price_label else ""))
     return costs.call(stage_name="smoke", model=config.settings()["models"]["judge"], system=SYSTEM,
                       prompt=prompt, output=PageDraft, max_tokens=1500, card_id=card.id)
 

@@ -2,7 +2,7 @@
 PY := uv run python
 export PYTHONUNBUFFERED=1
 
-.PHONY: setup seed scout gates smoke spec serve night schedule state costs test
+.PHONY: setup seed scout gates dive smoke spec serve night schedule state costs test
 
 setup:            ## install deps, create .env from template, create DB, seed niches
 	uv sync
@@ -19,7 +19,10 @@ scout:            ## run the active scouts (reddit + hn) and print the Card rows
 gates:            ## Gate of Proof then Gate of Craft, with verdicts and reasoning
 	$(PY) -m factory.gates.run
 
-smoke:            ## prepare smoke tests for survivors -> awaiting_funding (+ manual steps)
+dive:             ## Deep Dive: demand, competitors, economics, risk, start-up capital -> Economics gate
+	$(PY) -m factory.dive.run
+
+smoke:            ## prepare smoke tests for Deep Dive survivors -> awaiting_funding (+ manual steps)
 	$(PY) -m factory.smoke.run
 
 spec:             ## write CLAUDE.md for smoke-test winners
@@ -28,10 +31,10 @@ spec:             ## write CLAUDE.md for smoke-test winners
 serve:            ## dashboard + API at http://localhost:8000
 	$(PY) -m factory.api.server
 
-night:            ## scout -> gates -> smoke prep -> state refresh, end to end
+night:            ## scout -> gates -> Deep Dive -> smoke prep -> state refresh, end to end
 	$(PY) -m factory.night
 
-schedule:         ## nightly scheduler (01:00 scouts, 02:00 gates, SAST)
+schedule:         ## nightly scheduler (01:00 scouts; 02:00 gates, Deep Dive, smoke prep; SAST)
 	$(PY) -m factory.scheduler
 
 state:            ## print /api/state JSON

@@ -1,4 +1,4 @@
-"""APScheduler: scouts 01:00 SAST, gates (+smoke prep) 02:00. The dashboard
+"""APScheduler: scouts 01:00 SAST; gates, Deep Dive and smoke prep 02:00. The dashboard
 state is built on every /api/state request, so it is always current; a
 snapshot is also written to data/state.json after each job.
 
@@ -25,10 +25,11 @@ def scout_job() -> None:
 
 
 def gates_job() -> None:
+    from factory.dive import run as dive
     from factory.gates import run as gates
     from factory.smoke import run as smoke
     res = gates.run()
-    if not any("cap" in r["note"] for r in res.values()):
+    if not any("cap" in r["note"] for r in res.values()) and "cap" not in dive.run()["note"]:
         smoke.run()
     state.snapshot()
 

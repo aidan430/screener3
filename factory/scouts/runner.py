@@ -11,7 +11,7 @@ from datetime import timedelta
 
 from sqlmodel import delete, select
 
-from factory import config, costs
+from factory import agents, config, costs
 from factory.models import Card, Niche, RunLog, Signal, session, tonight, utcnow
 from factory.scouts import distill
 from factory.scouts.sources import appstore, fiverr, hellopeter, hn, reddit, trends, upwork
@@ -63,18 +63,24 @@ def scout_niche(niche: Niche) -> dict:
     enabled = [k for k, v in config.settings()["sources"].items() if v]
     report = {"niche": niche.slug, "sources": {}, "new_signals": 0, "cards": []}
     for name in enabled:
-        try:
-            raws = ADAPTERS[name].fetch(niche)
-            relevant = [r for r in raws if r.matched]
-            n = store(niche, relevant)
-            report["sources"][name] = f"{len(raws)} fetched, {len(relevant)} relevant, {n} new"
-            report["new_signals"] += n
-        except NotImplementedSource as e:
-            report["sources"][name] = f"TODO: {e}"
-        except SourceError as e:
-            report["sources"][name] = f"FAILED: {e}"
-            log.warning("source %s failed for %s: %s", name, niche.slug, e)
-    report["cards"] = distill.distill_niche(niche)
+        with agents.run("research", f"{name} scout", subject=niche.slug) as job:
+            try:
+                raws = ADAPTERS[name].fetch(niche)
+                relevant = [r for r in raws if r.matched]
+                n = store(niche, relevant)
+                job.summary = f"{len(raws)} fetched, {len(relevant)} relevant, {n} new"
+                report["new_signals"] += n
+            except NotImplementedSource as e:
+                job.status, job.summary = "skipped", f"TODO: {e}"
+            except SourceError as e:
+                job.status, job.summary = "failed", f"FAILED: {e}"
+                log.warning("source %s failed for %s: %s", name, niche.slug, e)
+            report["sources"][name] = job.summary
+    with agents.run("research", "Distiller", subject=niche.slug) as job:
+        report["cards"] = distill.distill_niche(niche)
+        job.summary = f"{len(report['cards'])} cards ({distill.last_note.get(niche.slug, '')})"
+        if not report["cards"] and "skipped" in distill.last_note.get(niche.slug, ""):
+            job.status = "skipped"
     return report
 
 
@@ -84,6 +90,7 @@ def print_card(c: Card) -> None:
     print(f"          problem: {c.problem}")
     print(f"          quote:   \"{c.quote[:220]}{'...' if len(c.quote) > 220 else ''}\"")
     print(f"          pay:     {c.pay_evidence or '-'}  (amount: {pay})")
+    print(f"          model:   {c.business_model or '-'} ({c.lane or 'no lane'})")
     print(f"          source:  {c.source}  {c.url}")
 
 
