@@ -11,7 +11,7 @@ import json
 import logging
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import select
 
@@ -97,6 +97,56 @@ def event(slug: str, kind: str, detail: str = "") -> dict:
         s.add(TrackEvent(slug=slug, kind=kind, detail=detail[:200]))
         s.commit()
     return {"ok": True}
+
+
+@app.get("/api/reports")
+def reports() -> list[dict]:
+    from factory.warden.tables import WardenReport
+    with session() as s:
+        rows = s.exec(select(WardenReport).order_by(WardenReport.id.desc()).limit(20))
+        return [{"id": r.id, "kind": r.kind, "title": r.title, "created": r.created_at.isoformat(),
+                 "url": f"/reports/{r.id}", "emailed": r.emailed} for r in rows]
+
+
+@app.get("/reports/{report_id}", response_class=HTMLResponse)
+def report_page(report_id: int) -> HTMLResponse:
+    from factory.warden.tables import WardenReport
+    with session() as s:
+        r = s.get(WardenReport, report_id)
+    if not r:
+        raise HTTPException(404, "No such report")
+    return HTMLResponse(r.body_html)
+
+
+@app.post("/api/warden/check")
+def warden_check() -> dict:
+    from factory.warden import health
+    res = health.check(catch_up=False)
+    lines = [f"{'Needs you' if i.outcome == 'needs_you' else 'Watching'}: {i.detail}" for i in res["open"]][:5]
+    return {"ok": True, "message": "Health check done: " + res["summary"] + "." + ("\n" + "\n".join(lines) if lines else "")}
+
+
+@app.post("/api/warden/report")
+def warden_report() -> dict:
+    from factory.warden import report
+    rep = report.save("weekly")
+    return {"ok": True, "url": f"/reports/{rep.id}",
+            "message": f"Report written: {rep.title}." + (" Emailed to you." if rep.emailed else "")}
+
+
+@app.post("/api/incidents/{incident_id}/resolve")
+def resolve_incident(incident_id: int) -> dict:
+    from factory.warden import incidents
+    if not incidents.dismiss(incident_id):
+        raise HTTPException(404, "No open incident with that id")
+    return {"ok": True, "message": "Marked as handled. If the problem is still there, the Warden reopens it at its next check."}
+
+
+@app.post("/api/warden/holds/release")
+def release_holds() -> dict:
+    from factory.warden import holds
+    n = holds.release_all()
+    return {"ok": True, "message": f"Released {n} paused source{'' if n == 1 else 's'}. Scouts try them tonight."}
 
 
 @app.get("/")

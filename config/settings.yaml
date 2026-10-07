@@ -68,6 +68,20 @@ dive:
   search_terms: 3             # planned by Haiku per card
   evidence_items: 24          # most listings shown to the Economics analyst
 
+warden:                       # Phase 3. The Warden reads these; it never writes them.
+  daily_cap_zar: 50           # most the factory may spend on agents per SAST day; only you can raise it
+  check_every_min: 15         # health check cadence
+  stale_run_hours: 2          # a job still "running" after this long died with its process
+  retry_delay_s: 60           # wait before retrying sources that hit a rate limit or server error
+  hold_after_runs: 2          # pause a source after it failed in every niche on this many runs in a row
+  hold_hours: 24              # how long a paused source sits out
+  missed_night_after: "03:30" # SAST; no scouting run by then means the night is caught up once
+  stuck_funding_days: 7       # a smoke test waiting for your R200 longer than this is flagged
+  silent_test_hours: 24       # a funded test with 0 visitors after this long needs you
+  spend_spike_ratio: 2.0      # tonight above this multiple of the 7-night average is flagged
+  report_day: mon             # weekly report (SAST)
+  report_time: "07:00"
+
 schedule:                     # Africa/Johannesburg (SAST)
   scout: "01:00"
   gates: "02:00"              # gates, then Deep Dive, then smoke prep

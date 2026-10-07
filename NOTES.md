@@ -3,6 +3,52 @@
 Each default below was chosen without asking, as the kickoff instructed. Change any of them in
 `config/settings.yaml` or tell me and I will rework it.
 
+## Phase 3: the Warden (2026-10-07)
+
+| Step | Result |
+|---|---|
+| `make night` | Now ends with a Warden health check, even when a stage stopped early. Ran for real twice. Reddit and HN were refused (403) in every niche on the last 2 runs, so the Warden paused both for 24 hours and flagged them as needing you. The App Store failed in 4 of 5 niches (watching). The missing `ANTHROPIC_API_KEY` needs you. |
+| `make warden` | Runs a health check now and prints what is fixed, what needs you and what is being watched. |
+| `make report` | Writes the weekly report now. The real one: "Week 41: 3 decisions for you, R0.00 agent spend". Its "Done without you" lists the two paused sources. |
+| `make schedule` | Adds the Warden check every 15 minutes, the Monday 07:00 report and the monthly review on the 1st at 07:30. Temporary source failures are retried at 02:00. |
+| Dashboard | The Warden camp is built: a beacon on its island, and beams to every camp while a real check runs. A red banner lists what only you can do, each with "I handled it". The Warden panel has run-check, write-report and release-sources buttons and a link to the latest report. |
+| `make test` | 38 offline tests pass (11 new for the Warden). |
+
+### Phase 3 defaults (all in `config/settings.yaml -> warden`)
+- **Daily agent-spend cap: R50 per SAST day**, about 3× a normal night for 5 niches. It is
+  enforced in `costs.call` before every Claude call, so it covers every department. When
+  it is reached, every stage stops with "daily agent-spend cap" and work resumes after
+  midnight. The Warden reads this value and never writes it.
+- **Health checks** run every 15 minutes and after every night. Each one is an
+  `AgentRun`, so it shows on the map; the activity feed shows only the latest.
+- **Stale jobs:** a job still "running" after 2 hours is closed as failed (its process died).
+- **Retries:** a scout job that failed with 429, 5xx or a timeout is retried once per
+  niche per night. Manual `make night` waits 60 s first; the scheduler retries at 02:00.
+  A 403 is not temporary, so it is never retried.
+- **Paused sources:** a source that failed in every niche on the last 2 scouting runs is
+  paused for 24 hours and scouts skip it. If the error was 401 or 403, the incident is
+  "needs you", because it usually means a network block or missing credentials. You can
+  release pauses from the Warden panel or with `uv run python -m factory.warden.run release`.
+- **Missed night:** if no scouting run has happened by 03:30 SAST, the next scheduled check
+  runs the night once. This only happens if the factory has run before, so a fresh
+  install doesn't start a night on its own.
+- **Waiting on you:** a smoke test waiting more than 7 days for your R200 is "needs you".
+  So is a funded test with 0 visitors after 24 hours.
+- **Spend spike:** tonight's spend above 2× the average of the previous nights (with at
+  least 3 nights of history and over R5) is "watching".
+- **Reports** use no model call: they cost R0 and can only state what is in the database.
+  - Revenue appears as a total to date; weekly revenue needs the Treasury (Phase 6).
+  - Monthly verdicts: scale if profit > 0 and revenue is at least 3× costs; kill if it has
+    lost money for 30+ days; otherwise hold.
+- **Email** is optional, using Python's built-in `smtplib` (no new dependency). Reports and
+  each needs-you incident are emailed once when `SMTP_HOST` and `REPORT_EMAIL_TO` are set.
+  Otherwise reports are only on the dashboard (`/reports/{id}`) and in `data/reports/`.
+- **Dismissing:** "I handled it" closes an incident; if the problem is still there, the
+  next check opens it again.
+- **The Warden never** spends, approves, publishes, deletes data, or writes
+  `settings.yaml`. Losing ventures get a kill recommendation in the report, not an
+  automatic pause, until Operations squads exist (Phase 5).
+
 ## Phase 2: Deep Dive and the arena (2026-10-07)
 
 | Step | Result |
@@ -115,7 +161,10 @@ as an environment variable.
 9. **Paystack webhook**: complete Paystack KYC, set `PAYSTACK_SECRET_KEY`, and point the
    webhook at `https://<factory host>/api/paystack/webhook`. Charges must carry
    `metadata.venture = <venture slug>`.
-10. **Fund each smoke test and each launch**: click FUND TEST on the dashboard. This is the only path to spend.
+10. **Email for the Warden (optional)**: set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
+    `SMTP_PASSWORD` and `REPORT_EMAIL_TO` (for Gmail, use an app password). Without them,
+    reports stay on the dashboard.
+11. **Fund each smoke test and each launch**: click FUND TEST on the dashboard. This is the only path to spend.
 
 ## Defaults I chose
 

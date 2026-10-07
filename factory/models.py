@@ -271,3 +271,6 @@ def reset_engine() -> None:
 
 def session() -> Session:
     return Session(engine(), expire_on_commit=False)
+
+
+from factory.warden import tables as _warden_tables  # noqa: E402,F401  (registers Warden tables)

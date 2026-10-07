@@ -46,6 +46,7 @@ class FactoryTestCase(unittest.TestCase):
         self.fake = FakeClaude()
         costs.set_client(self.fake)
         self.patches = [
+            mock.patch.object(config, "DATA_DIR", Path(d)),
             mock.patch.object(config, "PAGES_DIR", Path(d) / "pages"),
             mock.patch.object(config, "VENTURES_DIR", Path(d) / "ventures"),
             mock.patch("factory.scouts.sources.reddit.fetch", return_value=[FAKE_POSTS[0]]),
@@ -55,7 +56,8 @@ class FactoryTestCase(unittest.TestCase):
             mock.patch("factory.market.appstore.find_app", return_value=None),
             mock.patch("factory.market.etsy.search", side_effect=_no_key),
             mock.patch("factory.market.ebay.search", side_effect=_no_key),
-            mock.patch.dict(os.environ, {"META_ADS_ENABLED": "false", "VERCEL_TOKEN": "", "FACTORY_DOMAIN": ""}),
+            mock.patch.dict(os.environ, {"META_ADS_ENABLED": "false", "VERCEL_TOKEN": "", "FACTORY_DOMAIN": "",
+                                         "SMTP_HOST": "", "REPORT_EMAIL_TO": ""}),
         ]
         for p in self.patches:
             p.start()

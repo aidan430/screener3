@@ -34,7 +34,7 @@
     if (p.link) { var ln = el('a', null, p.link.label); ln.href = p.link.url; ln.target = '_blank'; ln.rel = 'noopener'; act.appendChild(ln); }
     var ro = $('i-roster'); ro.textContent = '';
     (p.roster || []).forEach(function (r) { var li = el('li'), mid = el('div'); mid.appendChild(el('div', 'who', r.who)); if (r.task) mid.appendChild(el('div', 'task', r.task)); li.appendChild(mid);
-      li.appendChild(el('span', 'state ' + r.state, {work: '▶ Working', idle: '■ Idle', block: '▲ Needs attention'}[r.state] || r.state)); ro.appendChild(li); });
+      li.appendChild(el('span', 'state ' + r.state, {work: '▶ Working', idle: '■ Idle', block: '▲ Needs you', watch: '● Watching', fixed: '✔ Fixed', done: '✔ Handled'}[r.state] || r.state)); ro.appendChild(li); });
   }
   function unitPanel(u) {
     if (!u) return null;
@@ -63,7 +63,8 @@
 
   function feed() {
     var ol = $('feed'); ol.textContent = '';
-    var runs = S.arena.runs.slice(0, 12);
+    var seenCheck = false, runs = S.arena.runs.filter(function (r) {  // show only the latest of the 15-minute health checks
+      if (r.dept === 'warden' && r.role === 'Health check') { if (seenCheck) return false; seenCheck = true; } return true; }).slice(0, 12);
     if (!runs.length) { ol.appendChild(el('li', null, 'No agent has worked in the last 36 hours. The night run starts at 01:00.')); return; }
     runs.forEach(function (r) { var li = el('li'), dt = el('i', 'dot'); dt.style.background = COLOR[r.dept] || '#999';
       li.appendChild(el('time', null, hhmm(r.started))); li.appendChild(dt);
@@ -118,12 +119,20 @@
     $('net').textContent = (Math.round(S.net_30d) < 0 ? '−' : Math.round(S.net_30d) > 0 ? '+' : '') + R(Math.abs(S.net_30d));
     $('foot').textContent = S.foot || '';
   }
+  function alerts() {
+    var box = $('alerts'); box.textContent = '';
+    var list = S.alerts || []; box.hidden = !list.length; if (!list.length) return;
+    box.appendChild(el('b', null, '▲ ' + list.length + ' thing' + (list.length === 1 ? '' : 's') + ' only you can do'));
+    list.forEach(function (a) { var row = el('div', 'alert'); row.appendChild(el('span', null, a.detail));
+      var b = el('button', 'small', 'I HANDLED IT'); b.onclick = function () { fetch('/api/incidents/' + a.id + '/resolve', {method: 'POST'}).then(load); }; row.appendChild(b); box.appendChild(row); });
+    var w = el('button', 'small', 'OPEN THE WARDEN'); w.onclick = function () { current = {kind: 'camp', id: 'warden'}; panel(); $('info').scrollIntoView({behavior: 'smooth', block: 'nearest'}); }; box.appendChild(w);
+  }
   function apply(st) {
     S = st; arena.update(st);
     $('p-gold').textContent = R(st.gold); $('p-elixir').textContent = R(st.elixir_month);
-    $('p-agents').textContent = st.agents_total; $('p-agents-sub').textContent = 'AGENTS · ' + st.agents_working + ' WORKING NOW';
+    $('p-agents').textContent = st.agents_total; $('p-agents-sub').textContent = 'AGENTS · ' + st.agents_working + ' WORKING';
     $('p-niches').textContent = st.arena.units.filter(function (u) { return u.state !== 'dead'; }).length;
-    hint(); panel(); feed(); depts(); niches(); caps(); treasury();
+    hint(); alerts(); panel(); feed(); depts(); niches(); caps(); treasury();
   }
   function load() { return fetch('/api/state', {cache: 'no-store'}).then(function (r) { if (!r.ok) throw r; return r.json(); }).then(apply).catch(function () { $('hint').textContent = 'Factory offline, retrying…'; }); }
   load(); setInterval(load, 60000);

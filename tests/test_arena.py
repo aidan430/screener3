@@ -54,7 +54,9 @@ class ArenaStateTest(FactoryTestCase):
         dive = next(d for d in st["departments"] if d["id"] == "dive")
         self.assertEqual((dive["agents"], dive["working"]), (5, 0))
         warden = next(d for d in st["departments"] if d["id"] == "warden")
-        self.assertFalse(warden["built"])  # Phase 3: shown as a construction site
+        self.assertEqual((warden["built"], warden["agents"]), (True, 4))  # built in Phase 3
+        treasury = next(d for d in st["departments"] if d["id"] == "treasury")
+        self.assertFalse(treasury["built"])  # Phase 6: shown as a construction site
 
     def test_approve_moves_the_unit_to_tower_5(self):
         self.to_smoke()

@@ -30,6 +30,7 @@ DEPARTMENTS = [
     ("treasury", "Treasury", 6),
     ("warden", "Warden", 3),
 ]
+BUILT_PHASE = 3   # departments whose phase is <= this are fully built
 DIVE_ROLES = ["Demand analyst", "Competitor analyst", "Economics analyst", "Risk analyst", "Capital estimator"]
 
 
@@ -79,8 +80,8 @@ def roster() -> dict[str, list[str]]:
         "dive": list(DIVE_ROLES),
         "train": ["Playbook writer"],
         "ops": ["Smoke-test builder"],          # per-niche squads arrive in Phase 5
-        "treasury": [],
-        "warden": [],
+        "treasury": [],                        # Phase 6
+        "warden": ["Health check", "Cost guard", "Fixer", "Reporter"],
     }
 
 
@@ -109,7 +110,7 @@ def departments() -> list[dict]:
     for dept, name, phase in DEPARTMENTS:
         working = sum(1 for r in runs if r.dept == dept and effective_status(r) == "running")
         out.append({"id": dept, "name": name, "agents": len(ros[dept]), "working": working,
-                    "built": bool(ros[dept]), "complete": phase <= 2, "phase": phase})
+                    "built": bool(ros[dept]), "complete": phase <= BUILT_PHASE, "phase": phase})
     return out
 
 

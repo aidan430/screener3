@@ -151,7 +151,13 @@
     function agentsLayer() {
       var depts = {}; (S.departments || []).forEach(function (d) { depts[d.id] = d; });
       ['research', 'dive', 'train', 'ops', 'treasury', 'warden', 'archive'].forEach(function (id) { camp(CAMP[id], id, depts[id]); hits.push({kind: id === 'archive' ? 'archive' : 'camp', id: id, p: CAMP[id], r: 20}); });
-      var at = mode === 'replay' ? rp.clock() : now(), busy = {};
+      var at = mode === 'replay' ? rp.clock() : now(), busy = {}, beam = 0;
+      (S.arena.runs || []).forEach(function (r) { if (r.dept !== 'warden') return; var s = Date.parse(r.started), w = mode === 'replay' ? rp.walk : 9000,
+        f = r.finished ? Date.parse(r.finished) : (r.status === 'running' ? at + 1 : s); if (at >= s - w && at <= f + w) beam = Math.max(beam, at <= f ? 1 : 1 - (at - f) / w); });
+      if (beam > 0 && depts.warden && depts.warden.built) { var wp = CAMP.warden, pulse = reduce ? .5 : (t % 60) / 60;
+        ['research', 'dive', 'train', 'ops', 'treasury', 'archive'].forEach(function (id) { var p = CAMP[id];
+          g.strokeStyle = 'rgba(213,81,129,' + (.55 * beam) + ')'; g.lineWidth = 1.5; g.setLineDash([4, 4]); g.beginPath(); g.moveTo(wp[0], wp[1] - 10); g.lineTo(p[0], p[1]); g.stroke(); g.setLineDash([]);
+          g.strokeStyle = 'rgba(213,81,129,' + (.7 * beam * (1 - pulse)) + ')'; g.beginPath(); g.arc(p[0], p[1], 8 + pulse * 18, 0, 7); g.stroke(); }); }
       (S.arena.runs || []).forEach(function (r) {
         var s = Date.parse(r.started), f = r.finished ? Date.parse(r.finished) : (r.status === 'running' ? at + 1 : s), walk = mode === 'replay' ? rp.walk : 9000;
         if (at < s - walk || at > f + walk) return;

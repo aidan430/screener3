@@ -1,4 +1,4 @@
-"""One full night: scout -> gates -> Deep Dive -> smoke (prepare only) -> state refresh.
+"""One full night: scout -> gates -> Deep Dive -> smoke (prepare only) -> Warden check -> state.
 
 Stops early if a stage hits the R20 cap. Usage: python -m factory.night
 """
@@ -15,6 +15,8 @@ from factory.gates import run as gates
 from factory.models import RunLog, session, tonight
 from factory.scouts import runner
 from factory.smoke import run as smoke
+from factory.warden import fixer, health
+from factory.warden import run as warden_cli
 
 
 def stopped_on_cap(stage: str) -> str | None:
@@ -23,26 +25,32 @@ def stopped_on_cap(stage: str) -> str | None:
     return row.summary if row is not None and not row.ok and "cap" in (row.summary or "") else None
 
 
-def run() -> dict:
-    print(f"=== Venture Factory night {tonight()} ===")
+def pipeline() -> str:
+    """Scout -> gates -> Deep Dive -> smoke prep. Returns why it halted, or ""."""
     runner.run()
+    fixer.retry_failed_sources()
     if (msg := stopped_on_cap("scout")):
-        print(f"\nNIGHT HALTED after scout: {msg}")
-        return state.snapshot()
+        return f"after scout: {msg}"
     res = gates.run()
     if any("cap" in r["note"] for r in res.values()):
-        print("\nNIGHT HALTED after gates: stage cap reached")
-        return state.snapshot()
-    res = dive.run()
-    if "cap" in res["note"]:
-        print("\nNIGHT HALTED after Deep Dive: stage cap reached")
-        return state.snapshot()
+        return "after gates: a spending cap was reached"
+    if "cap" in dive.run()["note"]:
+        return "after Deep Dive: a spending cap was reached"
     smoke.run()
+    return ""
+
+
+def run() -> dict:
+    print(f"=== Venture Factory night {tonight()} ===")
+    halted = pipeline()
+    if halted:
+        print(f"\nNIGHT HALTED {halted}")
+    warden_cli.print_check(health.check())  # the Warden always looks, halted or not
     st = state.snapshot()
     print("\n=== State refresh (data/state.json, served at /api/state) ===")
-    print(json.dumps({k: st[k] for k in ("gold", "elixir_month", "scouts_active", "net_30d", "night")}))
+    print(json.dumps({k: st[k] for k in ("gold", "elixir_month", "agents_total", "net_30d", "night")}))
     for b in st["buildings"]:
-        print(f"  {b['kind']:<8} {b['name']:<20} " + " | ".join(f"{v} {k}" for v, k in b["kv"]))
+        print(f"  {b['kind']:<8} {b['name']:<24} " + " | ".join(f"{v} {k}" for v, k in b["kv"]))
     print("  side quests:")
     for q in st["side_quests"]:
         print(f"   - {q}")

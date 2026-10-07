@@ -70,8 +70,8 @@ Killed or lost cards are archived, never deleted.
   after a smoke-test win).
 - `caps.niche_capital_zar` is the most a niche may ask for to start; above it,
   the Economics gate kills.
-- The R20 stage cap and R0.60 scout cap from Phase 1 stay. The Warden (Phase 3)
-  adds a daily agent-spend cap it cannot raise itself.
+- The R20 stage cap and R0.60 scout cap from Phase 1 stay. The Warden adds a
+  daily agent-spend cap (`warden.daily_cap_zar`, R50) it cannot raise itself.
 
 ## Stack (do not deviate without asking)
 - Python 3.11, `uv` for deps
@@ -86,7 +86,9 @@ Killed or lost cards are archived, never deleted.
   (`EBAY_CLIENT_ID` / `EBAY_CLIENT_SECRET`). No scraping that breaks a site's
   terms (this rules out Amazon and TikTok pages until official access exists).
 - FastAPI serving `/api/state` and the static dashboard, port 8000
-- APScheduler: scouts 01:00 SAST, gates and Deep Dive 02:00, dashboard live
+- APScheduler: scouts 01:00 SAST; Warden retries, gates, Deep Dive and smoke
+  prep 02:00; Warden check every 15 min; Monday report 07:00; dashboard live
+- Email via the standard library's smtplib (optional, SMTP_* in .env)
 - `.env` for secrets, never committed
 
 ## Repo layout
@@ -103,7 +105,8 @@ factory/
   dive/            # Deep Dive: demand.py, economics.py, risk.py, capital.py, run.py
   smoke/           # page.py, ads.py, deploy.py, track.py, run.py
   build/           # spec.py, launch.py (Training's playbook writer)
-  api/             # server.py, state.py, arena.py (map JSON)
+  api/             # server.py, state.py, arena.py (map JSON), panels.py
+  warden/          # health.py, fixer.py, holds.py, incidents.py, report.py, mailer.py, tables.py, run.py
 config/
   niches.yaml, pain_phrases.yaml, settings.yaml
   business_models.yaml   # lanes, models, fee/cost assumptions, capital lines
@@ -163,6 +166,26 @@ than 7 build-days, or ongoing human support.
 - Phase 4 adds certification: playbooks, exams, practice runs.
 - Venture rows: building, live, paused. Revenue via Paystack webhook or `/api/collect`.
 
+### Warden (Phase 3)
+- Health check every 15 minutes and after every night, itself an AgentRun.
+  It records incidents with an outcome: `fixed` (the Warden handled it),
+  `needs_you` (only a human can) or `watching`. Cleared conditions resolve
+  themselves; a human can mark an incident handled from the dashboard.
+- The Fixer may only: close jobs still "running" after 2 hours, retry a scout
+  job that failed with a temporary error (429, 5xx, timeout) once per niche per
+  night, pause a source that failed in every niche on the last 2 runs (24 h),
+  and run a missed night once (only if the factory has run before).
+- Cost guard: `warden.daily_cap_zar` in settings.yaml, enforced in `costs.call`
+  for every Claude call (DailyCapReached stops all stages for the day). Only a
+  human can raise it.
+- Reporter: Monday 07:00 SAST weekly report and a monthly review on the 1st,
+  built from the database with no model call: decisions for you, money,
+  niches, pipeline, done without you, watching, sources. Saved to the
+  WardenReport table and data/reports/, shown on the dashboard, emailed when
+  SMTP is configured. Needs-you incidents are emailed once each.
+- The Warden never spends, approves, publishes, deletes data, or writes
+  settings.yaml.
+
 ### Agent activity
 Every agent's unit of work is wrapped in `agents.run(dept, role, ...)`, which
 writes an AgentRun row (start, finish, status, one-line summary, rand cost,
@@ -179,7 +202,9 @@ arena: { lanes: [{id, name, position: top|mid|bot}],
          mines: [{venture_id, name, lane, revenue_30d}],
          runs: [{id, dept, role, subject, lane, tower, started, finished, status, summary}] },
 niches: [{name, lane, model, stage, revenue, costs, profit, capital}],   # to date, rand
-dossiers: [{card_id, title, model, lane, capital, lines, break_even, margin, score, verdict}]
+dossiers: [{card_id, title, model, lane, capital, lines, break_even, margin, score, verdict}],
+warden: {checks_24h, fixes_7d, needs_you, watching, today_zar, daily_cap_zar, holds, incidents, report},
+alerts: [{id, kind, label, subject, detail, action, outcome}]   # open needs-you incidents
 ```
 `buildings` carries the panel for each camp, base and tower (id, name, level,
 desc, kv, actions). Buttons call the endpoints in `actions`. Poll every 60 s.
@@ -187,8 +212,9 @@ desc, kv, actions). Buttons call the endpoints in `actions`. Poll every 60 s.
 ## Build phases
 1. Research scouts (Reddit, HN), Proof + Craft gates, smoke prep, dashboard. Done.
 2. Deep Dive + Economics gate + capital estimator, App Store/Etsy/eBay probes,
-   AgentRun logging, MOBA arena dashboard. In progress.
-3. Warden v1: health checks, cost guard, retries, Monday report.
+   AgentRun logging, MOBA arena dashboard. Done.
+3. Warden v1: health checks, cost guard, retries, source pauses, catch-up,
+   Monday report and monthly review, alerts, optional email. Done.
 4. Training Academy: playbooks, exams, certification.
 5. Operations squads, digital products first.
 6. Treasury sync: Stripe, Paystack, Shopify, Meta, agent bills per niche.

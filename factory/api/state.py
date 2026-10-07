@@ -12,7 +12,9 @@ from sqlmodel import func, select
 from factory import agents, config, costs
 from factory.api import arena as arena_mod
 from factory.api import panels
-from factory.models import Card, Cost, Dossier, Niche, RunLog, SmokeTest, Venture, session, tonight, utcnow
+from factory.models import AgentRun, Card, Cost, Dossier, Niche, RunLog, SmokeTest, Venture, session, tonight, utcnow
+from factory.warden import holds, incidents
+from factory.warden.tables import Incident, WardenReport
 
 
 def _night(s) -> str:
@@ -34,7 +36,30 @@ def side_quests(s) -> list[str]:
     q += [text for key, text in need if not config.env(key)]
     for t in s.exec(select(SmokeTest).where(SmokeTest.status == "awaiting_funding")):
         q.append(f"Fund the {t.name} smoke test (R{config.settings()['smoke']['budget_zar']}).")
+    for i in incidents.open_items():  # what the Warden could not fix (keys and funding are listed above)
+        if i.outcome == "needs_you" and i.kind not in ("missing_key", "stuck_funding"):
+            q.append(f"{i.detail} {i.action}")
     return q
+
+
+def warden(s) -> dict:
+    day, week = utcnow() - timedelta(days=1), utcnow() - timedelta(days=7)
+    checks = s.exec(select(func.count()).select_from(AgentRun).where(
+        AgentRun.dept == "warden", AgentRun.role == "Health check", AgentRun.started_at >= day)).one()
+    fixes = s.exec(select(func.count()).select_from(Incident).where(
+        Incident.outcome == "fixed", Incident.created_at >= week)).one()
+    open_items = incidents.open_items()
+    recent = open_items + [i for i in incidents.since(7) if i.resolved_at is not None and i.outcome == "fixed"]
+    rep = s.exec(select(WardenReport).order_by(WardenReport.id.desc())).first()
+    return {"built": True, "checks_24h": checks, "fixes_7d": fixes,
+            "needs_you": sum(1 for i in open_items if i.outcome == "needs_you"),
+            "watching": sum(1 for i in open_items if i.outcome == "watching"),
+            "today_zar": round(costs.spent_today(), 2), "daily_cap_zar": costs.daily_cap(),
+            "holds": [{"source": k, "until": agents._aware(h.until).isoformat(), "reason": h.reason}
+                      for k, h in holds.active().items()],
+            "incidents": [incidents.as_dict(i) for i in recent[:12]],
+            "report": {"id": rep.id, "title": rep.title, "created": rep.created_at.isoformat(),
+                       "url": f"/reports/{rep.id}"} if rep else None}
 
 
 def treasury(s) -> tuple[list[dict], float, float]:
@@ -119,6 +144,8 @@ def build_state() -> dict:
         gold = float(s.exec(select(func.coalesce(func.sum(Venture.revenue_collected), 0.0))).one())
         blds = (panels.bases(s, arena, quests, gold, elixir) + panels.camps(s, depts)
                 + panels.tower_panels(arena) + [panels.archive(s, night)])
+        w = warden(s)
+        panels.warden_panel(next(b for b in blds if b["id"] == "warden"), w)
         research = next(b for b in blds if b["id"] == "research")
         research["desc"] += f" Live sources: {panels.sources_line()}. {panels.last_scout(s)}"
         niche_rows, doss = niches(s), dossiers(s)
@@ -133,7 +160,8 @@ def build_state() -> dict:
     return {"gold": round(gold), "elixir_month": round(elixir, 2), "scouts_active": scouts,
             "agents_total": total, "agents_working": working, "departments": depts,
             "buildings": blds, "arena": arena, "treasury": rows, "net_30d": net, "concentration_pct": conc,
-            "side_quests": quests, "niches": niche_rows, "dossiers": doss,
+            "side_quests": quests, "niches": niche_rows, "dossiers": doss, "warden": w,
+            "alerts": [i for i in w["incidents"] if i["open"] and i["outcome"] == "needs_you"],
             "builders": f"{working} of {total} agents working", "night": night,
             "generated_at": utcnow().isoformat(), "foot": foot, "cards": cards}
 

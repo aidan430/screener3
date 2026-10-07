@@ -20,8 +20,9 @@ CAMP_DESC = {
     "train": "Writes the venture brief for every smoke-test winner. Agent exams and certification arrive in Phase 4.",
     "ops": "Builds each smoke test: landing page, ad drafts and deploy. Per-niche squads arrive in Phase 5.",
     "treasury": "Will pull sales, refunds, ad bills and agent bills per niche. Under construction (Phase 6).",
-    "warden": "Will check every agent every 15 minutes, fix what it can and send your Monday report. "
-              "Under construction (Phase 3).",
+    "warden": "Checks every agent every 15 minutes. It closes jobs that died, retries sources that hit a "
+              "temporary error, pauses sources that keep failing, catches up a missed night and enforces the "
+              "daily spend cap. Anything it may not do comes to you, and every Monday it writes your report.",
 }
 STATE_LABEL = {"running": "work", "ok": "idle", "skipped": "idle", "failed": "block", "blocked": "block"}
 
@@ -56,6 +57,27 @@ def camps(s, departments: list[dict]) -> list[dict]:
                            [_r(spend.get(d["id"], 0.0)), "spend, 24 h"]],
                     "actions": [], "roster": _roster(d["id"])})
     return out
+
+
+def warden_panel(panel: dict, w: dict) -> dict:
+    """The Warden's camp shows its incidents instead of a role list."""
+    cap = f" of R{w['daily_cap_zar']:,.0f}" if w["daily_cap_zar"] else ""
+    panel["kv"] = [[str(w["checks_24h"]), "checks, 24 h"], [str(w["fixes_7d"]), "fixes, 7 days"],
+                   [str(w["needs_you"]), "need you"]]
+    panel["lvl"] = f"{_r(w['today_zar'])}{cap} spent today"
+    state = {"needs_you": "block", "watching": "watch", "fixed": "fixed"}
+    panel["roster"] = [{"who": i["label"] + (f": {i['subject']}" if i["subject"] else ""),
+                        "task": f"{i['detail']} → {i['action']}",
+                        "state": state[i["outcome"]] if i["open"] or i["outcome"] == "fixed" else "done"}
+                       for i in w["incidents"][:8]]
+    panel["actions"] = [{"label": "RUN CHECK NOW", "endpoint": "/api/warden/check", "style": "grey"},
+                        {"label": "WRITE REPORT NOW", "endpoint": "/api/warden/report", "style": "grey"}]
+    if w["holds"]:
+        panel["actions"].append({"label": "RELEASE PAUSED SOURCES", "endpoint": "/api/warden/holds/release",
+                                 "style": "grey"})
+    if w["report"]:
+        panel["link"] = {"label": "Open the latest report", "url": w["report"]["url"]}
+    return panel
 
 
 def tower_panels(arena: dict) -> list[dict]:

@@ -2,7 +2,7 @@
 PY := uv run python
 export PYTHONUNBUFFERED=1
 
-.PHONY: setup seed scout gates dive smoke spec serve night schedule state costs test
+.PHONY: setup seed scout gates dive smoke spec serve night schedule warden report state costs test
 
 setup:            ## install deps, create .env from template, create DB, seed niches
 	uv sync
@@ -34,7 +34,13 @@ serve:            ## dashboard + API at http://localhost:8000
 night:            ## scout -> gates -> Deep Dive -> smoke prep -> state refresh, end to end
 	$(PY) -m factory.night
 
-schedule:         ## nightly scheduler (01:00 scouts; 02:00 gates, Deep Dive, smoke prep; SAST)
+warden:           ## Warden health check now: what broke, what it fixed, what needs you
+	$(PY) -m factory.warden.run check
+
+report:           ## write the Warden's weekly report now (also runs Mondays 07:00 SAST)
+	$(PY) -m factory.warden.run report
+
+schedule:         ## scheduler (SAST): 01:00 scouts; 02:00 retries, gates, Deep Dive, smoke prep; Warden every 15 min; Monday report
 	$(PY) -m factory.scheduler
 
 state:            ## print /api/state JSON

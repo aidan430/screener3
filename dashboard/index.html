@@ -65,12 +65,18 @@ canvas{display:block;width:100%;height:auto;cursor:pointer;touch-action:manipula
 .roster .task{color:var(--mute);font-weight:700;overflow-wrap:anywhere}
 .state{font-size:11px;font-weight:800;border-radius:999px;padding:2px 8px;white-space:nowrap;color:#fff}
 .state.work{background:#2F7A2E}.state.idle{background:#6E7C86}.state.block{background:#B23A2B}
+.state.watch{background:#8A6A10}.state.fixed{background:#2F7A2E}.state.done{background:#6E7C86}
 .act{display:flex;gap:8px;flex-wrap:wrap}
 .btn{flex:1;border:0;border-radius:10px;padding:11px 8px;font-family:var(--f-display);font-size:15px;color:#fff;letter-spacing:.02em;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.35),inset 0 2px 0 rgba(255,255,255,.3)}
 .btn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
 .btn.gold{background:var(--good)}.btn.spend{background:var(--gold2)}.btn.grey{background:#8E7A5F}
 .okmsg{font-size:13px;font-weight:800;color:#5A3A12;white-space:pre-line}
 .panel a{color:#3B2A14;font-weight:800}
+.alerts{margin-top:12px;background:#4A1D1A;border:2px solid #B23A2B;border-radius:12px;padding:10px 12px;display:grid;gap:8px;color:#FFE3DD}
+.alerts b{font-family:var(--f-display);font-weight:400;font-size:17px;color:#fff}
+.alerts .alert{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;font-size:14px;font-weight:700}
+.alerts .alert span{min-width:0;flex:1 1 260px}
+.alerts>.small{justify-self:start;background:var(--d-warden)}
 .feed{background:var(--night);border:2px solid var(--night2);border-radius:12px;padding:10px 12px;display:grid;gap:4px;margin-top:12px}
 .feed h3{font-size:16px;color:#fff}
 .feed ol{list-style:none;margin:0;padding:0;display:grid;gap:2px}
@@ -127,6 +133,7 @@ td.neg{color:var(--loss)} td.pos{color:var(--gold)}
     <div class="pill"><i style="background:var(--good)"></i><div><span class="disp" id="p-niches">–</span><small>NICHES IN THE LANES</small></div></div>
   </div>
 
+  <div class="alerts" id="alerts" role="status" hidden></div>
   <div class="top">
     <div>
       <div class="map">

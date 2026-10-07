@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from typing import Any, Type, TypeVar
 
 from pydantic import BaseModel
@@ -27,6 +28,10 @@ _process = {"zar": 0.0}  # everything this process has spent; agents.run() diffs
 
 class StageOverBudget(RuntimeError):
     pass
+
+
+class DailyCapReached(StageOverBudget):
+    """The Warden's daily agent-spend cap. Only a human can raise it (settings.yaml)."""
 
 
 class CapExceeded(RuntimeError):
@@ -90,6 +95,22 @@ def process_spent() -> float:
     return _process["zar"]
 
 
+def day_start_utc() -> datetime:
+    """Midnight SAST today, in UTC: the daily cap resets at local midnight."""
+    from zoneinfo import ZoneInfo
+    local = datetime.now(ZoneInfo("Africa/Johannesburg")).replace(hour=0, minute=0, second=0, microsecond=0)
+    return local.astimezone(timezone.utc)
+
+
+def daily_cap() -> float | None:
+    value = (config.settings().get("warden") or {}).get("daily_cap_zar")
+    return float(value) if value else None
+
+
+def spent_today() -> float:
+    return total_zar(since=day_start_utc())
+
+
 def stage_cap() -> float:
     return float(config.settings()["caps"]["stage_zar"])
 
@@ -111,6 +132,11 @@ def call(
     est = estimate_zar(model, len(system) + len(prompt), max_tokens)
     if cap_zar is not None and est > cap_zar:
         raise CapExceeded(f"{stage_name}/{niche_slug}: est R{est:.2f} > cap R{cap_zar:.2f}")
+    cap = daily_cap()
+    if cap is not None and spent_today() + est > cap:
+        raise DailyCapReached(
+            f"daily agent-spend cap: R{spent_today():.2f} spent today and the next call (est R{est:.2f}) "
+            f"would pass the R{cap:.0f} cap. Only you can raise warden.daily_cap_zar in settings.yaml.")
     if _stage["name"] and _stage["spent_zar"] + est > stage_cap():
         raise StageOverBudget(
             f"stage '{_stage['name']}' has spent R{_stage['spent_zar']:.2f}; next call "

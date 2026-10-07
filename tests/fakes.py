@@ -26,7 +26,7 @@ FAKE_POSTS = [
 
 def fake_draft(signal_ids: list[int]):
     from factory.scouts.distill import CardDraft, Distilled
-    a, b = signal_ids[0], signal_ids[1]
+    a, b = signal_ids[0], signal_ids[-1]  # one post is fine: the second draft then fails the verbatim check
     return Distilled(cards=[
         CardDraft(signal_id=a, title="Lease renewal reminders", problem="Small SA landlords pay people to chase renewals.",
                   quote="I pay someone R450 a month just to send lease renewal reminders to my six tenants.",

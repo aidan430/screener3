@@ -59,28 +59,45 @@ def store(niche: Niche, raws: list[RawSignal]) -> int:
     return new
 
 
+def fetch_source(niche: Niche, name: str, job) -> int:
+    """One source for one niche, inside an AgentRun. Returns new signals stored."""
+    try:
+        raws = ADAPTERS[name].fetch(niche)
+        relevant = [r for r in raws if r.matched]
+        n = store(niche, relevant)
+        job.summary = f"{len(raws)} fetched, {len(relevant)} relevant, {n} new"
+        return n
+    except NotImplementedSource as e:
+        job.status, job.summary = "skipped", f"TODO: {e}"
+    except SourceError as e:
+        job.status, job.summary = "failed", f"FAILED: {e}"
+        log.warning("source %s failed for %s: %s", name, niche.slug, e)
+    return 0
+
+
+def distill_job(niche: Niche) -> list[Card]:
+    with agents.run("research", "Distiller", subject=niche.slug) as job:
+        cards = distill.distill_niche(niche)
+        job.summary = f"{len(cards)} cards ({distill.last_note.get(niche.slug, '')})"
+        if not cards and "skipped" in distill.last_note.get(niche.slug, ""):
+            job.status = "skipped"
+    return cards
+
+
 def scout_niche(niche: Niche) -> dict:
+    from factory.warden import holds
     enabled = [k for k, v in config.settings()["sources"].items() if v]
+    held = holds.active()
     report = {"niche": niche.slug, "sources": {}, "new_signals": 0, "cards": []}
     for name in enabled:
         with agents.run("research", f"{name} scout", subject=niche.slug) as job:
-            try:
-                raws = ADAPTERS[name].fetch(niche)
-                relevant = [r for r in raws if r.matched]
-                n = store(niche, relevant)
-                job.summary = f"{len(raws)} fetched, {len(relevant)} relevant, {n} new"
-                report["new_signals"] += n
-            except NotImplementedSource as e:
-                job.status, job.summary = "skipped", f"TODO: {e}"
-            except SourceError as e:
-                job.status, job.summary = "failed", f"FAILED: {e}"
-                log.warning("source %s failed for %s: %s", name, niche.slug, e)
+            if name in held:
+                job.status = "skipped"
+                job.summary = f"paused by the Warden until {holds.local(held[name].until)}: {held[name].reason}"
+            else:
+                report["new_signals"] += fetch_source(niche, name, job)
             report["sources"][name] = job.summary
-    with agents.run("research", "Distiller", subject=niche.slug) as job:
-        report["cards"] = distill.distill_niche(niche)
-        job.summary = f"{len(report['cards'])} cards ({distill.last_note.get(niche.slug, '')})"
-        if not report["cards"] and "skipped" in distill.last_note.get(niche.slug, ""):
-            job.status = "skipped"
+    report["cards"] = distill_job(niche)
     return report
 
 
