@@ -1,4 +1,4 @@
-"""APScheduler (SAST): scouts 01:00; Warden retries, gates, Deep Dive and smoke prep 02:00;
+"""APScheduler (SAST): scouts 01:00; Warden retries, gates, Deep Dive, smoke prep, Training 02:00;
 Warden health check every 15 minutes; Monday report 07:00; monthly review on the 1st.
 
 The dashboard state is built on every /api/state request; a snapshot is also
@@ -34,6 +34,8 @@ def gates_job() -> None:
     res = gates.run()
     if not any("cap" in r["note"] for r in res.values()) and "cap" not in dive.run()["note"]:
         smoke.run()
+        from factory.training import run as training
+        training.run()
     state.snapshot()
 
 

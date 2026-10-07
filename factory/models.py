@@ -273,4 +273,5 @@ def session() -> Session:
     return Session(engine(), expire_on_commit=False)
 
 
+from factory.training import tables as _training_tables  # noqa: E402,F401  (registers Training tables)
 from factory.warden import tables as _warden_tables  # noqa: E402,F401  (registers Warden tables)

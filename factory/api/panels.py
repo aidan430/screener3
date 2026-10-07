@@ -17,7 +17,9 @@ CAMP_DESC = {
                 "Distiller writes evidence cards, and two gatekeepers judge them at towers 1 and 2.",
     "dive": "Five analysts study every card at tower 3: demand, competitors, price and margin, risks and "
             "start-up capital. Only niches that pass the Economics gate cross the river.",
-    "train": "Writes the venture brief for every smoke-test winner. Agent exams and certification arrive in Phase 4.",
+    "train": "Prepares the squad for every smoke-test winner: the venture brief, policies and catalogue, then "
+             "five agents' instructions. Each agent sits drills that include attempts to make it break a rule; "
+             "it needs 90% and no rule broken. One retake after a rewrite, then the Certifier decides.",
     "ops": "Builds each smoke test: landing page, ad drafts and deploy. Per-niche squads arrive in Phase 5.",
     "treasury": "Will pull sales, refunds, ad bills and agent bills per niche. Under construction (Phase 6).",
     "warden": "Checks every agent every 15 minutes. It closes jobs that died, retries sources that hit a "

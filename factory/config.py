@@ -71,6 +71,11 @@ def business_models() -> dict:
     return yaml.safe_load((CONFIG_DIR / "business_models.yaml").read_text())
 
 
+@lru_cache
+def squad() -> dict:
+    return yaml.safe_load((CONFIG_DIR / "squad.yaml").read_text())
+
+
 def lane_of(model: str) -> str:
     for lane in business_models()["lanes"]:
         if model in lane["models"]:

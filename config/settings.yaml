@@ -25,6 +25,7 @@ caps:
   signal_chars: 700           # truncation per signal in the distill prompt
   dive_zar_per_card: 1.50     # Deep Dive spend per card (planner + 2 Sonnet analysts)
   niche_capital_zar: 10000    # most a niche may ask for to start; above it the Economics gate kills
+  training_zar_per_squad: 12  # Training spend per winning niche (writers, exams, one retake)
 
 retention_days: 30            # raw Signal rows
 

@@ -36,7 +36,7 @@ def build(kind: str = "weekly", now=None) -> dict:
         tests = dict(s.exec(select(SmokeTest.status, func.count()).group_by(SmokeTest.status)).all())
         waiting = list(s.exec(select(SmokeTest).where(SmokeTest.status == "awaiting_funding")))
         doss = {d.card_id: d for d in s.exec(select(Dossier).order_by(Dossier.id))}
-        won = list(s.exec(select(Card).where(Card.status == "won")))
+        tower6 = list(s.exec(select(Card).where(Card.status.in_(["certified", "training_failed"]))))
         runs = list(s.exec(select(AgentRun).where(AgentRun.started_at >= start)))
         niches = state_mod.niches(s)
         ventures = {v.slug: v for v in s.exec(select(Venture))}
@@ -49,9 +49,16 @@ def build(kind: str = "weekly", now=None) -> dict:
                  f"{d.break_even_sales or '?'} sales)." if d and d.capital_zar else "")
         decisions.append({"text": f"Fund the {t.name} smoke test? R{budget} for 48 hours.{extra}",
                           "label": f"FUND TEST R{budget}", "endpoint": f"/api/approve/{t.id}"})
-    for c in won:
-        decisions.append({"text": f"Fund the launch of “{c.title}”? It won its smoke test and Training wrote its brief.",
-                          "label": None, "endpoint": None})
+    from factory.build.launch import shopping_list
+    for c in tower6:
+        if c.status == "certified":
+            _, rest = shopping_list(c.id)
+            decisions.append({"text": f"Fund the launch of “{c.title}”? It won its smoke test and its squad passed every "
+                                      f"exam. The rest of the start-up is R{rest:,.0f}; nothing is bought automatically.",
+                              "label": f"FUND LAUNCH R{rest:,.0f}", "endpoint": f"/api/launch/{c.id}"})
+        else:
+            decisions.append({"text": f"Retry training for “{c.title}”? Its squad was not certified.",
+                              "label": "RETRY TRAINING", "endpoint": f"/api/train/{c.id}/retry"})
     verdicts = []
     for n in niches:
         v = ventures.get(slugs.get(n["name"], ""))
@@ -65,8 +72,8 @@ def build(kind: str = "weekly", now=None) -> dict:
             decisions.append({"text": f"Kill “{n['name']}”? It has lost {_r(-n['profit'])} over {days} days.",
                               "label": None, "endpoint": None})
     open_items = incidents.open_items()
-    for i in open_items:
-        if i.outcome == "needs_you":
+    for i in open_items:  # what the Warden could not fix (funding and launches are listed above)
+        if i.outcome == "needs_you" and i.kind not in ("stuck_funding", "stuck_launch", "training_failed"):
             decisions.append({"text": f"{i.detail} {i.action}", "label": None, "endpoint": None})
     fixed = [i for i in incidents.since((now - start).days) if i.outcome == "fixed"]
     by_dept, failed = defaultdict(float), sum(1 for r in runs if agents.effective_status(r) in ("failed", "blocked"))

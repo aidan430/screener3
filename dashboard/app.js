@@ -34,17 +34,22 @@
     if (p.link) { var ln = el('a', null, p.link.label); ln.href = p.link.url; ln.target = '_blank'; ln.rel = 'noopener'; act.appendChild(ln); }
     var ro = $('i-roster'); ro.textContent = '';
     (p.roster || []).forEach(function (r) { var li = el('li'), mid = el('div'); mid.appendChild(el('div', 'who', r.who)); if (r.task) mid.appendChild(el('div', 'task', r.task)); li.appendChild(mid);
-      li.appendChild(el('span', 'state ' + r.state, {work: '▶ Working', idle: '■ Idle', block: '▲ Needs you', watch: '● Watching', fixed: '✔ Fixed', done: '✔ Handled'}[r.state] || r.state)); ro.appendChild(li); });
+      li.appendChild(el('span', 'state ' + r.state, r.label || {work: '▶ Working', idle: '■ Idle', block: '▲ Needs you', watch: '● Watching', fixed: '✔ Fixed', done: '✔ Handled'}[r.state] || r.state)); ro.appendChild(li); });
   }
   function unitPanel(u) {
     if (!u) return null;
     var tw = S.arena.towers[u.tower - 1], lane = S.arena.lanes.filter(function (l) { return l.id === u.lane; })[0];
-    var states = {waiting: 'Waiting to be judged', blocked: 'Waiting on you', testing: 'Smoke test running', dead: 'Killed here, now in the Archive'};
+    var states = {waiting: u.status === 'won' ? 'Training is preparing its squad' : 'Waiting to be judged', testing: 'Smoke test running', dead: 'Killed here, now in the Archive',
+      blocked: {certified: 'Squad certified, waiting for you to fund the launch', training_failed: 'Squad not certified: retry or leave it'}[u.status] || 'Waiting on you'};
     var d = u.dossier, kv = [['T' + u.tower, tw.name], [d ? R(d.capital) : '–', 'start-up'], [d ? pct(d.margin) : '–', 'margin']];
     if (u.smoke && u.state === 'testing') kv = [[String(u.smoke.visitors), 'visitors'], [String(u.smoke.buy_clicks), 'buy-clicks'], [u.smoke.visitors ? pct(u.smoke.buy_clicks / u.smoke.visitors) : '–', 'rate']];
     return {id: 'unit', name: u.title, lvl: (lane ? lane.name : u.lane) + (u.lane_guessed ? ' (guessed)' : ''),
             desc: states[u.state] + ' at tower ' + u.tower + ': ' + tw.rule + (d ? ' Deep Dive score ' + d.score + '/10, break-even after ' + (d.break_even || 'never') + ' sales.' : ''),
-            kv: kv, actions: u.actions, link: {label: 'Open the evidence', url: u.url}, roster: []};
+            kv: kv, actions: u.actions, link: {label: 'Open the evidence', url: u.url},
+            roster: u.squad ? u.squad.agents.map(function (a) { return {who: a.name + ' (' + a.model.replace('claude-', '') + ')',
+              task: 'exam ' + pct(a.score) + ', ' + a.breaches + ' rule' + (a.breaches === 1 ? '' : 's') + ' broken, instructions v' + a.version,
+              state: a.status === 'passed' ? 'fixed' : a.status === 'failed' ? 'block' : 'watch',
+              label: a.status === 'passed' ? '✔ Passed' : a.status === 'failed' ? '▲ Failed' : '● In training'}; }) : []};
   }
   function minePanel(m) {
     if (!m) return null;

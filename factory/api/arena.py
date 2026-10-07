@@ -12,6 +12,7 @@ from sqlmodel import func, select
 
 from factory import agents, config
 from factory.models import Build, Card, Dossier, GateResult, SmokeTest, Venture, utcnow
+from factory.training.tables import Squad, SquadAgent
 
 TOWERS = [  # n, id, name, side, owner, rule
     (1, "proof", "Gate of Proof", "free", "research", "Someone already pays for this: a priced job, a paid competitor with complaints, or a forum request to pay."),
@@ -19,11 +20,12 @@ TOWERS = [  # n, id, name, side, owner, rule
     (3, "economics", "Economics gate", "free", "dive", "Deep Dive score 7+, margin above the model's minimum, start-up capital under your cap, break-even in 80 sales or fewer."),
     (4, "fund", "Fund test", "money", "you", "You approve the smoke-test budget (R200). Nothing is spent before your click."),
     (5, "smoke", "Smoke test", "money", "ops", "5%+ of 150+ visitors click Buy within 48 hours."),
-    (6, "launch", "Certify & fund launch", "money", "train", "Training writes the venture brief; you approve the rest of the start-up capital."),
+    (6, "launch", "Certify & fund launch", "money", "train", "Training writes the brief and certifies a five-agent squad (90%+ on drills, no rule broken); then you approve the rest of the start-up capital."),
 ]
 PLACE = {"scouted": (1, "waiting"), "proof_passed": (2, "waiting"), "craft_passed": (3, "waiting"),
          "dive_passed": (4, "waiting"), "awaiting_funding": (4, "blocked"), "testing": (5, "testing"),
-         "won": (6, "blocked"), "killed_proof": (1, "dead"), "killed_craft": (2, "dead"),
+         "won": (6, "waiting"), "certified": (6, "blocked"), "training_failed": (6, "blocked"),
+         "killed_proof": (1, "dead"), "killed_craft": (2, "dead"),
          "killed_dive": (3, "dead"), "archived": (5, "dead")}
 LANE_FALLBACK = "commerce"  # mid lane until a business model is known
 
@@ -67,8 +69,26 @@ def units(s, night: str) -> list[dict]:
         if d:
             u["dossier"] = {"capital": d.capital_zar, "break_even": d.break_even_sales, "margin": d.margin,
                             "score": d.score, "verdict": d.verdict}
+        if c.status in ("certified", "training_failed", "won"):
+            u.update(squad_info(s, c, d))
         out.append(u)
     return out
+
+
+def squad_info(s, c: Card, d: Dossier | None) -> dict:
+    sq = s.exec(select(Squad).where(Squad.card_id == c.id).order_by(Squad.id.desc())).first()
+    if not sq:
+        return {}
+    crew = list(s.exec(select(SquadAgent).where(SquadAgent.squad_id == sq.id)))
+    info = {"squad": {"status": sq.status, "score": sq.score, "notes": sq.notes,
+                      "agents": [{"name": a.name, "model": a.model, "score": a.score, "breaches": a.breaches,
+                                  "status": a.status, "version": a.version} for a in crew]}}
+    if c.status == "certified":
+        rest = sum(x[1] for x in (d.j("capital_lines") if d else []) if not x[0].startswith("Smoke test"))
+        info["actions"] = [{"label": f"FUND LAUNCH R{rest:,.0f}", "endpoint": f"/api/launch/{c.id}", "style": "spend"}]
+    elif c.status == "training_failed":
+        info["actions"] = [{"label": "RETRY TRAINING", "endpoint": f"/api/train/{c.id}/retry", "style": "grey"}]
+    return info
 
 
 def towers(s, unit_list: list[dict]) -> list[dict]:

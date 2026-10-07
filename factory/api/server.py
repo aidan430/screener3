@@ -17,7 +17,7 @@ from sqlmodel import select
 
 from factory import config
 from factory.api.state import build_state
-from factory.models import SmokeTest, TrackEvent, Venture, session
+from factory.models import Card, SmokeTest, TrackEvent, Venture, session
 
 log = logging.getLogger("factory.api")
 app = FastAPI(title="Venture Factory", docs_url="/api/docs")
@@ -37,6 +37,28 @@ def approve(smoke_id: int) -> dict:
     if not res["ok"]:
         raise HTTPException(409, res["message"])
     return res
+
+
+@app.post("/api/launch/{card_id}")
+def launch(card_id: int) -> dict:
+    """Your second money approval: fund the launch of a certified niche. Nothing is bought automatically."""
+    from factory.build import launch as launcher
+    res = launcher.launch(card_id)
+    if not res["ok"]:
+        raise HTTPException(409, res["message"])
+    return res
+
+
+@app.post("/api/train/{card_id}/retry")
+def retry_training(card_id: int) -> dict:
+    with session() as s:
+        card = s.get(Card, card_id)
+        if not card or card.status != "training_failed":
+            raise HTTPException(409, "Only a niche whose training failed can be retried.")
+        card.status = "won"
+        s.add(card)
+        s.commit()
+    return {"ok": True, "message": "Training will try again tonight with a fresh budget."}
 
 
 @app.post("/api/collect/{venture_id}")

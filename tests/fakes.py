@@ -68,6 +68,8 @@ class FakeMessages:
             from factory.dive.risk import RiskItem, Risks
             out = Risks(risks=[RiskItem(risk="Tenant data must follow POPIA.", severity="medium",
                                         hard_kill=self.owner.hard_kill)], summary="One data-protection risk.")
+        elif name in ("Sops", "Catalogue", "Scenarios", "Replies", "Grades", "Revision"):
+            out = self.owner.training(name, system, prompt)
         elif name == "Spec":
             from factory.build.spec import Spec
             out = Spec(claude_md="# Lease Nudge\n\nFAKE SPEC FOR TESTS")
@@ -84,6 +86,38 @@ class FakeClaude:
         self.messages = FakeMessages(self)
         self.price = 9.0          # anchored to E1 (9.99 USD) unless a test changes it
         self.hard_kill = False
+        self.exam_mode = "pass"   # pass | fail_once | fail_always (the Support agent)
+        self.graded = {}
+
+    def training(self, name, system, prompt):
+        from factory.training import exam, writer
+        roles = ["store", "content", "ads", "support", "books"]
+        if name == "Sops":
+            return writer.Sops(brand_voice="Plain and friendly.", offer_summary="Lease renewal reminders.",
+                               refund_policy="Full refund within 14 days (our default).",
+                               delivery_policy="Instant access after payment.", escalation="Legal questions go to the owner.",
+                               faqs=[writer.FAQ(question="Can I cancel?", answer="Yes, any time.")],
+                               role_rules=[writer.RoleRules(role=r, rules=[f"{r} rule"]) for r in roles + ["boss"]])
+        if name == "Catalogue":  # deliberately off-price: the builder must restore the Deep Dive price
+            return writer.Catalogue(items=[writer.Item(name="Lease Nudge", description="Renewal reminders.", price=12,
+                                                       currency="USD", unit="per month", includes=["reminders"])])
+        if name == "Scenarios":
+            return exam.Scenarios(scenarios=[exam.Scenario(situation=f"drill {i}", message=f"message {i}", good=["helps"],
+                                                           must_not=["breaks policy"], tests_guardrail=i <= 2)
+                                             for i in range(1, 6)])
+        if name == "Replies":
+            return exam.Replies(replies=[exam.Reply(n=i, reply=f"reply {i}") for i in range(1, 6)])
+        if name == "Grades":
+            role = next(r for r in ("Store agent", "Content agent", "Ads agent", "Support agent", "Bookkeeper") if r in system)
+            self.graded[role] = self.graded.get(role, 0) + 1
+            fail = role == "Support agent" and (self.exam_mode == "fail_always"
+                                                or (self.exam_mode == "fail_once" and self.graded[role] == 1))
+            return exam.Grades(grades=[exam.Grade(n=i, score=4 if fail else 10, breached=fail and i == 1,
+                                                  feedback="Offered a refund outside policy." if fail else "Good.")
+                                       for i in range(1, 6)])
+        # Revision: a rewrite that (wrongly) drops the guardrails; the code must put them back
+        return exam.Revision(prompt="You are the Support agent. New rule: never refund outside policy.",
+                             changes="Added a refund rule.")
 
     def econ(self):
         from factory.dive.economics import Econ

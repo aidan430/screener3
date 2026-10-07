@@ -15,10 +15,11 @@ from sqlmodel import func, select
 from factory import agents, config, costs
 from factory.models import AgentRun, Card, Cost, RunLog, SmokeTest, session, tonight, utcnow
 from factory.warden import fixer, holds, incidents
+from factory.training.tables import Squad
 from factory.warden.tables import Incident
 
 CHECKED = {"source_down", "source_flaky", "missing_key", "stuck_funding", "stuck_cards", "silent_test",
-           "daily_cap", "spend_spike"}
+           "daily_cap", "spend_spike", "training_failed", "stuck_launch"}
 SAST = ZoneInfo("Africa/Johannesburg")
 
 
@@ -90,6 +91,8 @@ def stuck() -> list[Incident]:
     out, days = [], int(cfg()["stuck_funding_days"])
     with session() as s:
         tests = list(s.exec(select(SmokeTest).where(SmokeTest.status == "awaiting_funding")))
+        tower6 = list(s.exec(select(Card, Squad).join(Squad, Squad.card_id == Card.id).where(
+            Card.status.in_(["certified", "training_failed"])).order_by(Squad.id)))
         old = dict(s.exec(select(Card.status, func.count()).where(
             Card.status.in_(["scouted", "proof_passed", "craft_passed"]),
             Card.created_at < utcnow() - timedelta(days=2)).group_by(Card.status)).all())
@@ -99,6 +102,17 @@ def stuck() -> list[Incident]:
             out.append(incidents.record("stuck_funding", t.name, f"“{t.name}” has waited {age} days at tower 4 for your R200.",
                                         "Kept it waiting and put it in your Monday report. Nothing is spent without your click.",
                                         "needs_you", key=f"stuck_funding:{t.id}"))
+    for c, sq in {c.id: (c, sq) for c, sq in tower6}.values():  # latest squad per card
+        if c.status == "training_failed":
+            out.append(incidents.record("training_failed", c.title, f"Training could not certify a squad for "
+                                        f"“{c.title}”: {sq.notes or 'see the exam report'}",
+                                        "Kept it at tower 6. Retry training from its unit on the map, or leave it.",
+                                        "needs_you", key=f"training_failed:{c.id}"))
+        elif sq.certified_at and (utcnow() - agents._aware(sq.certified_at)).days >= days:
+            out.append(incidents.record("stuck_launch", c.title, f"“{c.title}” has a certified squad and has waited "
+                                        f"{(utcnow() - agents._aware(sq.certified_at)).days} days for you to fund the launch.",
+                                        "Kept it at tower 6 and put it in your Monday report.", "needs_you",
+                                        key=f"stuck_launch:{c.id}"))
     if old:
         where = ", ".join(f"{n} at tower {['scouted', 'proof_passed', 'craft_passed'].index(k) + 1}" for k, n in old.items())
         out.append(incidents.record("stuck_cards", "towers 1-3", f"{sum(old.values())} cards have waited more than 2 days ({where}).",

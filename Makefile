@@ -2,7 +2,7 @@
 PY := uv run python
 export PYTHONUNBUFFERED=1
 
-.PHONY: setup seed scout gates dive smoke spec serve night schedule warden report state costs test
+.PHONY: setup seed scout gates dive smoke train serve night schedule warden report state costs test
 
 setup:            ## install deps, create .env from template, create DB, seed niches
 	uv sync
@@ -25,13 +25,13 @@ dive:             ## Deep Dive: demand, competitors, economics, risk, start-up c
 smoke:            ## prepare smoke tests for Deep Dive survivors -> awaiting_funding (+ manual steps)
 	$(PY) -m factory.smoke.run
 
-spec:             ## write CLAUDE.md for smoke-test winners
-	$(PY) -m factory.build.spec
+train:            ## Training Academy: brief, policies, catalogue, squad exams, certification for winners
+	$(PY) -m factory.training.run
 
 serve:            ## dashboard + API at http://localhost:8000
 	$(PY) -m factory.api.server
 
-night:            ## scout -> gates -> Deep Dive -> smoke prep -> state refresh, end to end
+night:            ## scout -> gates -> Deep Dive -> smoke prep -> Training -> Warden -> state, end to end
 	$(PY) -m factory.night
 
 warden:           ## Warden health check now: what broke, what it fixed, what needs you

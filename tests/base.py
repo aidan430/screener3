@@ -89,3 +89,24 @@ class FactoryTestCase(unittest.TestCase):
         self.gates()
         self.dive()
         return self.smoke()
+
+    def to_won(self):
+        """Through a funded smoke test that wins (FAKE visits and clicks)."""
+        from datetime import timedelta
+        from factory.models import SmokeTest, TrackEvent, session, utcnow
+        from factory.smoke import run as smoke
+        t = self.to_smoke()[0][0]
+        quiet(smoke.approve, t.id)
+        with session() as s:
+            st = s.get(SmokeTest, t.id)
+            st.approved_at = utcnow() - timedelta(hours=10)
+            s.add(st)
+            s.add_all([TrackEvent(slug=t.slug, kind="visit") for _ in range(160)]
+                      + [TrackEvent(slug=t.slug, kind="buy_click") for _ in range(10)])
+            s.commit()
+        self.smoke()
+        return t
+
+    def train(self):
+        from factory.training import run
+        return quiet(run.run)

@@ -82,9 +82,9 @@ class PipelineTest(FactoryTestCase):
         self.assertEqual(made, [])
         self.assertIn("0 card(s) passed the Deep Dive", out)
 
-    def test_winner_gets_spec(self):
+    def test_winner_waits_for_training(self):
         from datetime import timedelta
-        from factory.models import AgentRun, utcnow
+        from factory.models import utcnow
         from factory.smoke import run as smoke
         t = self.to_smoke()[0][0]
         quiet(smoke.approve, t.id)
@@ -99,10 +99,9 @@ class PipelineTest(FactoryTestCase):
             s.commit()
         _, out = self.smoke()
         self.assertIn("settled: Lease Nudge won", out)
-        self.assertTrue((config.VENTURES_DIR / t.slug / "CLAUDE.md").exists())
         with session() as s:
-            writer = s.exec(select(AgentRun).where(AgentRun.role == "Playbook writer")).one()
-        self.assertEqual((writer.dept, writer.tower, writer.status), ("train", 6, "ok"))
+            self.assertEqual(s.exec(select(Card)).one().status, "won")  # now waits at tower 6 for Training
+        self.assertFalse((config.VENTURES_DIR / t.slug / "CLAUDE.md").exists())  # Training writes the brief
 
     def test_no_opus(self):
         with self.assertRaises(ValueError):

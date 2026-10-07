@@ -115,9 +115,6 @@ def run() -> list[SmokeTest]:
     settled = track.refresh()
     for t in settled:
         print(f"  settled: {t.name} {t.status} ({t.buy_clicks}/{t.visitors} buy-clicks)")
-    if any(t.status == "won" for t in settled):
-        from factory.build import spec
-        spec.run()
     row.summary = row.summary or f"{len(made)} prepared, {len(settled)} settled"
     row.finished_at = utcnow()
     with session() as s:

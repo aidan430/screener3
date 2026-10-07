@@ -102,6 +102,8 @@ def niches(s) -> list[dict]:
     doss, bm, out = _latest_dossiers(s), config.business_models()["models"], []
     stage = {"awaiting_funding": "waiting for your R200", "approved": "smoke test running",
              "won": "won its smoke test", "lost": "lost its smoke test"}
+    by_card = {"won": "in Training", "certified": "squad certified: fund the launch",
+               "training_failed": "training failed: retry?"}
     for t in s.exec(select(SmokeTest)):
         c = s.get(Card, t.card_id)
         v = s.exec(select(Venture).where(Venture.slug == t.slug)).first()
@@ -111,7 +113,8 @@ def niches(s) -> list[dict]:
         d = doss.get(c.id)
         out.append({"name": t.name, "card_id": c.id, "lane": c.lane or arena_mod.LANE_FALLBACK,
                     "model": bm.get(c.business_model, {}).get("label", "Unknown"),
-                    "stage": v.status if v else stage.get(t.status, t.status), "revenue": round(revenue, 2),
+                    "stage": v.status if v else by_card.get(c.status, stage.get(t.status, t.status)),
+                    "revenue": round(revenue, 2),
                     "costs": round(spent, 2), "profit": round(revenue - spent, 2),
                     "capital": d.capital_zar if d else None})
     return out

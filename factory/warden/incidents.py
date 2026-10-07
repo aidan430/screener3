@@ -18,6 +18,7 @@ LABEL = {
     "stuck_funding": "Waiting for your R200", "stuck_cards": "Cards waiting too long",
     "silent_test": "Funded test with no visitors", "daily_cap": "Daily spend cap",
     "spend_spike": "Unusual spend", "missed_night": "Missed night run", "retry": "Retried a source",
+    "training_failed": "Squad not certified", "stuck_launch": "Waiting for you to fund a launch",
 }
 
 

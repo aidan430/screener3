@@ -1,4 +1,4 @@
-"""One full night: scout -> gates -> Deep Dive -> smoke (prepare only) -> Warden check -> state.
+"""One full night: scout -> gates -> Deep Dive -> smoke prep -> Training -> Warden check -> state.
 
 Stops early if a stage hits the R20 cap. Usage: python -m factory.night
 """
@@ -15,6 +15,7 @@ from factory.gates import run as gates
 from factory.models import RunLog, session, tonight
 from factory.scouts import runner
 from factory.smoke import run as smoke
+from factory.training import run as training
 from factory.warden import fixer, health
 from factory.warden import run as warden_cli
 
@@ -37,6 +38,8 @@ def pipeline() -> str:
     if "cap" in dive.run()["note"]:
         return "after Deep Dive: a spending cap was reached"
     smoke.run()
+    if "cap" in training.run()["note"]:
+        return "after Training: a spending cap was reached"
     return ""
 
 

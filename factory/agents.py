@@ -17,6 +17,7 @@ from sqlmodel import select
 
 from factory import config, costs
 from factory.models import AgentRun, Niche, session, utcnow
+from factory.training.tables import Squad, SquadAgent
 
 log = logging.getLogger("factory.agents")
 STALE = timedelta(hours=2)   # a "running" row older than this died with its process
@@ -30,7 +31,7 @@ DEPARTMENTS = [
     ("treasury", "Treasury", 6),
     ("warden", "Warden", 3),
 ]
-BUILT_PHASE = 3   # departments whose phase is <= this are fully built
+BUILT_PHASE = 4   # departments whose phase is <= this are fully built
 DIVE_ROLES = ["Demand analyst", "Competitor analyst", "Economics analyst", "Risk analyst", "Capital estimator"]
 
 
@@ -74,12 +75,15 @@ def roster() -> dict[str, list[str]]:
     enabled = [k for k, v in config.settings()["sources"].items() if v]
     with session() as s:
         niches = list(s.exec(select(Niche.slug).where(Niche.active == True)))  # noqa: E712
+        squads = [f"{a.name} · {q.slug}" for q, a in s.exec(
+            select(Squad, SquadAgent).join(SquadAgent, SquadAgent.squad_id == Squad.id)
+            .where(Squad.status.in_(["certified", "launched"])))]
     scouts = [f"{src} scout · {slug}" for slug in niches for src in enabled]
     return {
         "research": scouts + ["Distiller", "Proof gatekeeper", "Craft gatekeeper"],
         "dive": list(DIVE_ROLES),
-        "train": ["Playbook writer"],
-        "ops": ["Smoke-test builder"],          # per-niche squads arrive in Phase 5
+        "train": ["Playbook writer", "Catalogue builder", "Prompt engineer", "Simulator", "Examiner", "Certifier"],
+        "ops": ["Smoke-test builder"] + squads,  # certified squads stand by until Phase 5 runs them
         "treasury": [],                        # Phase 6
         "warden": ["Health check", "Cost guard", "Fixer", "Reporter"],
     }

@@ -1,8 +1,8 @@
-"""Sonnet writes a full CLAUDE.md for each smoke-test winner.
+"""Training's Playbook writer, part 1: the venture brief.
 
-Output: ventures/{slug}/CLAUDE.md (data model, stack, pricing, Paystack, first
-5 SEO pages). The human starts that Claude Code session.
-Usage: python -m factory.build.spec
+Sonnet writes ventures/{slug}/CLAUDE.md for a smoke-test winner (data model,
+stack, pricing, Paystack, first 5 SEO pages). Called by factory/training/run.py.
+The human starts the Claude Code session that builds it, after funding the launch.
 """
 from __future__ import annotations
 
@@ -11,8 +11,8 @@ import json
 from pydantic import BaseModel
 from sqlmodel import select
 
-from factory import agents, config, costs
-from factory.models import Build, Card, GateResult, Niche, SmokeTest, session
+from factory import config, costs
+from factory.models import Card, GateResult, Niche, SmokeTest, session
 
 SYSTEM = """You write the operational brief (a CLAUDE.md) that a Claude Code session
 will follow to build a small paid web product in under 7 days, solo, with no
@@ -35,7 +35,8 @@ class Spec(BaseModel):
     claude_md: str
 
 
-def write(t: SmokeTest) -> Build:
+def write_brief(t: SmokeTest, cap_zar: float | None = None) -> str:
+    """Write ventures/{slug}/CLAUDE.md for a smoke-test winner. Returns its path."""
     with session() as s:
         card = s.get(Card, t.card_id)
         niche = s.get(Niche, card.niche_id)
@@ -47,42 +48,10 @@ def write(t: SmokeTest) -> Build:
               f"Smoke test: {t.visitors} visitors, {t.buy_clicks} buy-clicks ({rate:.1%})\n"
               f"Gate notes: " + " | ".join(f"{g.gate} {g.score}/10: {g.reasoning}" for g in gates) +
               f"\nAd set used: {json.dumps(json.loads(t.ads_json).get('variants', []))}")
-    out = costs.call(stage_name="spec", model=config.settings()["models"]["judge"], system=SYSTEM,
-                     prompt=prompt, output=Spec, max_tokens=6000, card_id=card.id)
+    out = costs.call(stage_name="train", model=config.settings()["models"]["judge"], system=SYSTEM,
+                     prompt=prompt, output=Spec, max_tokens=6000, card_id=card.id, cap_zar=cap_zar,
+                     note="venture brief")
     d = config.VENTURES_DIR / t.slug
     d.mkdir(parents=True, exist_ok=True)
     (d / "CLAUDE.md").write_text(out.claude_md)
-    b = Build(smoke_id=t.id, slug=t.slug, spec_path=str(d / "CLAUDE.md"))
-    with session() as s:
-        s.add(b)
-        c = s.get(Card, card.id)
-        c.status = "building"
-        s.add(c)
-        s.commit()
-    return b
-
-
-def run() -> list[Build]:
-    with session() as s:
-        done = {b.smoke_id for b in s.exec(select(Build))}
-        winners = [t for t in s.exec(select(SmokeTest).where(SmokeTest.status == "won")) if t.id not in done]
-    builds = []
-    with costs.stage("spec"):
-        for t in winners:
-            with session() as s:
-                card = s.get(Card, t.card_id)
-            with agents.run("train", "Playbook writer", subject=t.name, card=card, tower=6) as job:
-                b = write(t)
-                job.summary = f"wrote the venture brief for {t.name}"
-            from factory.build import launch
-            launch.scaffold(b)
-            builds.append(b)
-            print(f"  spec written: {b.spec_path}")
-    if not winners:
-        print("  no smoke-test winners waiting for a spec")
-    return builds
-
-
-if __name__ == "__main__":
-    config.setup_logging()
-    run()
+    return str(d / "CLAUDE.md")
