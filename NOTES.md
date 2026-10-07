@@ -3,15 +3,42 @@
 Each default below was chosen without asking, as the kickoff instructed. Change any of them in
 `config/` or tell me and I will rework it. Phases 1 to 3 are in `notes/phases-1-3.md`.
 
+## Go-live kit (2026-10-07)
+
+`SETUP.md` is the step-by-step guide. Your choices: DigitalOcean, Caddy for the padlock, a
+laptop for the install step, stock cap R10,000 and start-up cap R15,000.
+- **Dashboard lock:** with `DASHBOARD_PASSWORD` set, everything needs it (HTTP Basic, user
+  `owner`) except test pages, their beacons and the Paystack webhook (which checks
+  Paystack's signature). The server refuses to listen beyond the machine without a password.
+- **Test pages** are served by the factory at `https://<domain>/pages/<slug>/`, so Vercel
+  and Plausible are optional; with Vercel they work as before.
+- **Installer** (`scripts/install.sh`, Ubuntu 24.04, run as root): 1 GB swap, user `factory`
+  in `/opt/factory/screener3`, `uv sync --frozen`, asks for the Claude key (hidden) and the
+  domain, generates a 20-character dashboard password and shows it once, two systemd
+  services (`factory-web` on 127.0.0.1:8000, `factory-scheduler`), Caddy (`admin.<domain>`
+  is the dashboard; `<domain>` exposes only the public paths, anything else is a 404), and
+  a firewall that allows SSH, 80 and 443. It installs `main`, so PR #1 must be merged
+  first. Running it again updates the code and keeps `.env`.
+- **Keys later:** `scripts/set-key.sh NAME` reads the value hidden, never via shell history
+  or the process list, writes `.env` and restarts both services.
+- **.env reader:** trailing `# comments` are ignored and quoted values kept as written;
+  the writer quotes a value that starts with `#` or contains ` #`.
+- **Checked here:** the real Caddy 2.10.2 accepts the generated Caddyfile. A local run of
+  Caddy in front of a locked factory showed: the public domain serves only pages, beacons
+  and the webhook; the dashboard needs the password; a browser logs in and loads it.
+  Not checkable here: apt, systemd and certificates on a real domain. Step 4 is the first
+  real run.
+
 ## Phase 5: commerce, South Africa first (2026-10-07)
 
 Your choices: sell in South Africa first; a fulfilment warehouse holds the stock and packs every
-order; at most R5,000 per first stock batch; commerce first, with digital and content niches
+order; at most R10,000 per first stock batch and R15,000 per product's whole start-up (both
+raised on 2026-10-07, from R5,000 and R10,000); commerce first, with digital and content niches
 still running at a lower volume.
 
 | Step | Result |
 |---|---|
-| `make landed` | New what-if calculator for one product. R499 product, R75 supplier price, 0.4 kg: R180 landed, R171 left per order before ads, breaks even if 2.3% of visitors buy, first batch 27 units for R4,856. A R299 product is killed (12.3% would need to buy). A R899 product (R160, 0.9 kg) has the best economics (1.2%) but is killed: R5,000 buys only 13 units. |
+| `make landed` | New what-if calculator for one product. R499 product, R75 supplier price, 0.4 kg: R180 landed, R171 left per order before ads, breaks even if 2.3% of visitors buy, first batch 27 units for R4,856. A R299 product is killed (12.3% would need to buy). A R899 product (R160, 0.9 kg) has the best economics (1.2%); with your raised caps (R10,000 stock, R15,000 start-up) it gets 27 units for R9,677, R14,007 all in. |
 | `make seed` | 6 active niches: sa-home-kitchen, sa-pets, sa-baby-kids, sa-outdoors-fitness, sa-landlords, sa-small-companies. |
 | `make night` | Ran for real. Commerce niches scout Reddit only; every source is still blocked here (403), so 0 cards and R0.00. |
 | Dashboard | A commerce unit shows "must buy to break even" and FUND STOCK at tower 6; its capital card lists the first stock batch and the landed numbers. |
@@ -38,7 +65,8 @@ still running at a lower volume.
   the US and UK ($0.70, WordStream, 2025); AU and CA R12 are assumptions. Conversion 1.5% for
   an average Shopify store, 3.2% for the top fifth.
 - **Economics gate for local stock:** at most 2.5% of visitors may need to buy to break even,
-  and the R5,000 cap must buy a first batch of 20+ units (it aims for 40). Profit per order is
+  and the caps must leave room for a first batch of 20+ units (it aims for 40). The batch is
+  sized to fit both the stock cap and the start-up cap (`capital.stock_room`). Profit per order is
   judged at the top-fifth rate; break-even sales count only money that does not come back
   (everything but the stock batch).
 - **Smoke tests:** budget = 150 visitors x cost per click x 1.15, rounded up to R50, at most
@@ -54,9 +82,9 @@ still running at a lower volume.
   the warehouse's Shopify app and free delivery, and asks to confirm the current return rules.
 - **Rubric 2026-10-07.2:** commerce Proof and Craft rules; the judge now sees each card's
   business model. Currency symbols in posts are normalised ("R" -> ZAR).
-- **Worth your decision:** with R5,000, a product landing above R250 a unit cannot get a
-  20-unit first batch, yet pricier products have the best economics. Raise
-  `caps.stock_batch_zar` to R10,000, or lower `stock.min_first_batch_units`, to let them in.
+- **Caps (your choice, 2026-10-07):** stock batch up to R10,000 (`caps.stock_batch_zar`) and
+  each product's whole start-up up to R15,000 (`caps.niche_capital_zar`), so pricier products
+  with better economics get a full first batch. You still approve every launch.
 
 ## Phase 4: the Training Academy (2026-10-07)
 
@@ -96,6 +124,8 @@ still running at a lower volume.
 
 
 ## What only you can do
+
+The order to do these in, explained step by step, is in `SETUP.md`.
 
 1. **Anthropic API key**: put it in `.env` as `ANTHROPIC_API_KEY`. Nothing that thinks runs without it.
 2. **Reddit API app**: at https://www.reddit.com/prefs/apps create a "script" app, then set

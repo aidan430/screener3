@@ -26,9 +26,9 @@ caps:
   signals_to_distill: 25      # top-ranked signals sent to Haiku per niche
   signal_chars: 700           # truncation per signal in the distill prompt
   dive_zar_per_card: 1.50     # Deep Dive spend per card (planner + 2 Sonnet analysts)
-  niche_capital_zar: 10000    # most a niche may ask for to start; above it the Economics gate kills
+  niche_capital_zar: 15000    # most a niche may ask for to start (your choice); above it the Economics gate kills
   training_zar_per_squad: 12  # Training spend per winning niche (writers, exams, one retake)
-  stock_batch_zar: 5000       # most one winning product may ask for its first stock batch (your choice)
+  stock_batch_zar: 10000      # most one winning product may ask for its first stock batch (your choice)
 
 retention_days: 30            # raw Signal rows
 

@@ -76,7 +76,8 @@ Killed or lost cards are archived, never deleted.
   most R1,000) and Fund launch (the rest of the start-up capital, only after a
   smoke-test win and a certified squad). Launching buys nothing: it returns
   the shopping list. For a local-stock product the button is FUND STOCK and
-  includes the first stock batch, capped by `caps.stock_batch_zar` (R5,000).
+  includes the first stock batch: at most `caps.stock_batch_zar` (R10,000) and
+  sized so the whole start-up stays within `niche_capital_zar`.
 - `caps.niche_capital_zar` is the most a niche may ask for to start; above it,
   the Economics gate kills.
 - The R20 stage cap and R0.60 scout cap from Phase 1 stay. The Warden adds a
@@ -96,7 +97,9 @@ Killed or lost cards are archived, never deleted.
   RSS, no key), Etsy Open API v3 (`ETSY_API_KEY`), eBay Browse API
   (`EBAY_CLIENT_ID` / `EBAY_CLIENT_SECRET`). No scraping that breaks a site's
   terms (this rules out Amazon and TikTok pages until official access exists).
-- FastAPI serving `/api/state` and the static dashboard, port 8000
+- FastAPI serving `/api/state` and the static dashboard, port 8000, locked by
+  `DASHBOARD_PASSWORD` (public: test pages, their beacons, the signed Paystack
+  webhook). Server: Ubuntu, systemd, Caddy for https (`scripts/install.sh`).
 - APScheduler: scouts 01:00 SAST; Warden retries, gates, Deep Dive, smoke
   prep and Training 02:00; Warden check every 15 min; Monday report 07:00; dashboard live
 - Email via the standard library's smtplib (optional, SMTP_* in .env)
@@ -125,6 +128,7 @@ config/
   business_models.yaml   # lanes, models, fee/cost assumptions, capital lines
   squad.yaml             # squad roles and models, guardrails, exam rules
   commerce.yaml          # SA tax, duty, freight, warehouse, courier, conversion benchmarks
+scripts/           # install.sh (server), set-key.sh, env_set.py; SETUP.md is the human guide
 dashboard/
   index.html       # layout, styles, polling
   app.js           # panels, alerts, feed, departments, niches, treasury
@@ -187,9 +191,10 @@ weapon, is branded or a copy, or is over 5 kg, fragile or sold in sizes.
   onboarding founders this week, leave your email" (local stock: "we will tell
   you the day it ships"). 3 ad variants, 48 h, budget from `smoke/budget.py`.
   Ads target `smoke.market` (ZA) and pages show the costed price in rand.
-- Deploy to `{slug}.{FACTORY_DOMAIN}`. Status `awaiting_funding`. Nothing is
-  spent until `/api/approve/{id}`. If `META_ADS_ENABLED=true` create the
-  campaign, else print the manual steps to logs and the dashboard.
+- The factory serves each page at `https://{FACTORY_DOMAIN}/pages/{slug}/`
+  (Vercel at `{slug}.{FACTORY_DOMAIN}` if `VERCEL_TOKEN` is set). Status
+  `awaiting_funding`; nothing is spent until `/api/approve/{id}`. Ads are made
+  by hand from the printed steps unless `META_ADS_ENABLED=true`.
 - Win: buy_click / visitors >= 5% with >= 150 visitors, and the ads must pay:
   a click-win whose cost per real sale (cost per visitor / (buy-click rate x
   0.4)) is above what an order leaves is lost. Losers archive; every test
@@ -243,13 +248,11 @@ weapon, is branded or a copy, or is over 5 kg, fragile or sold in sizes.
   niches, pipeline, done without you, watching, sources. Saved to the
   WardenReport table and data/reports/, shown on the dashboard, emailed when
   SMTP is configured. Needs-you incidents are emailed once each.
-- The Warden never spends, approves, publishes, deletes data, or writes
-  settings.yaml.
+- The Warden never spends, approves, publishes, deletes data or writes settings.yaml.
 
 ### Agent activity
-Every agent's unit of work is wrapped in `agents.run(dept, role, ...)`, which
-writes an AgentRun row (start, finish, status, one-line summary, rand cost,
-lane and tower when it works on a card). The dashboard draws only these.
+Every agent's unit of work is wrapped in `agents.run(dept, role, ...)`: an AgentRun row
+(start, finish, status, summary, rand cost, lane and tower). The dashboard draws only these.
 
 ## Dashboard contract
 `/api/state` returns the Phase 1 keys (`gold, elixir_month, scouts_active,
@@ -261,8 +264,7 @@ arena: { lanes: [{id, name, position: top|mid|bot}],
          units: [{card_id, title, lane, tower: 1-6, state: waiting|blocked|testing|dead,
                   status, actions: [{label, endpoint, style}], dossier?, smoke?,
                   squad?: {status, score, notes, agents: [{name, model, score, breaches, status, version}]}}],
-                  # dossier.stock and dossiers[].stock (local stock): {landed_zar, contribution_zar,
-                  #   break_even_conversion, batch_units, batch_zar}
+                  # dossier.stock, dossiers[].stock: {landed_zar, contribution_zar, break_even_conversion, batch_units, batch_zar}
          mines: [{venture_id, name, lane, revenue_30d}],
          runs: [{id, dept, role, subject, lane, tower, started, finished, status, summary}] },
 niches: [{name, lane, model, stage, revenue, costs, profit, capital}],   # to date, rand

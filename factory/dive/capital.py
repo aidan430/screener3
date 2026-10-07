@@ -17,22 +17,35 @@ SRC = "assumption: business_models.yaml"
 STOCK = "First stock batch"
 
 
-def estimate(model: str, unit_cost_zar: float | None, unit: dict | None = None) -> tuple[list[list], float]:
+def _lines(model: str, unit_cost_zar: float | None, supplier_zar: float | None) -> tuple[list[list], list[list]]:
+    """Every capital line except the stock batch: (the lines before it, the lines after it)."""
     m = config.business_models()["models"][model]
-    lines = [[label, float(amount), SRC] for label, amount in m["capital"]]
+    head = [[label, float(amount), SRC] for label, amount in m["capital"]]
     n = int(m.get("samples") or 0)
-    if unit:  # local stock: samples by express courier, then the first batch for the warehouse
+    if supplier_zar is not None:  # local stock: samples come by express courier
         if n:
             ship = float(config.commerce()["inbound"]["sample_shipping_zar"])
-            lines.append([f"Product samples x{n}, express courier", round(n * unit["supplier_zar"] + ship, 2),
-                          "samples x supplier price + courier (assumption)"])
-        lines.append([f"{STOCK}, {unit['batch_units']} units", unit["batch_zar"], "units x landed cost"])
+            head.append([f"Product samples x{n}, express courier", round(n * supplier_zar + ship, 2),
+                         "samples x supplier price + courier (assumption)"])
     elif n and unit_cost_zar:
-        lines.append([f"Product samples x{n}", round(n * unit_cost_zar, 2), "samples x unit cost"])
-    lines.append(["Smoke test ads, 48 h", float(budget.for_market()), "settings.yaml (smoke)"])
+        head.append([f"Product samples x{n}", round(n * unit_cost_zar, 2), "samples x unit cost"])
+    tail = [["Smoke test ads, 48 h", float(budget.for_market()), "settings.yaml (smoke)"]]
     if m.get("ad_test"):
-        lines.append(["First ad test after a win", float(m["ad_test"]), SRC])
+        tail.append(["First ad test after a win", float(m["ad_test"]), SRC])
+    return head, tail
+
+
+def estimate(model: str, unit_cost_zar: float | None, unit: dict | None = None) -> tuple[list[list], float]:
+    head, tail = _lines(model, unit_cost_zar, unit["supplier_zar"] if unit else None)
+    stock = [[f"{STOCK}, {unit['batch_units']} units", unit["batch_zar"], "units x landed cost"]] if unit else []
+    lines = head + stock + tail
     return lines, round(sum(x[1] for x in lines), 2)
+
+
+def stock_room(model: str, supplier_zar: float) -> float:
+    """What the start-up cap (caps.niche_capital_zar) leaves for a local-stock product's first batch."""
+    head, tail = _lines(model, None, supplier_zar)
+    return round(float(config.settings()["caps"]["niche_capital_zar"]) - sum(x[1] for x in head + tail), 2)
 
 
 def sunk(lines: list[list]) -> float:

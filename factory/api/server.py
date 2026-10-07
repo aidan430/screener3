@@ -1,17 +1,22 @@
 """FastAPI: /api/state, /api/approve/{id}, /api/collect/{id}, Paystack webhook,
 local page beacons, and the static dashboard. Port 8000.
 
+With DASHBOARD_PASSWORD set, everything except the public paths (test pages,
+their beacons, the signed Paystack webhook) needs that password (HTTP Basic,
+user DASHBOARD_USER, default "owner"). It refuses to listen beyond this
+machine without one, because the dashboard has money buttons.
 Usage: python -m factory.api.server   (binds 127.0.0.1 unless HOST is set)
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
 import json
 import logging
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import select
 
@@ -22,6 +27,28 @@ from factory.models import Card, SmokeTest, TrackEvent, Venture, session
 log = logging.getLogger("factory.api")
 app = FastAPI(title="Venture Factory", docs_url="/api/docs")
 KINDS = {"visit", "buy_click", "email"}
+PUBLIC = ("/pages/", "/api/event/", "/api/paystack/webhook")  # what strangers may reach
+
+
+def authorised(header: str) -> bool:
+    if not header.startswith("Basic "):
+        return False
+    try:
+        user, _, password = base64.b64decode(header[6:]).decode("utf-8").partition(":")
+    except ValueError:
+        return False
+    ok_user = hmac.compare_digest(user.encode(), config.env("DASHBOARD_USER", "owner").encode())
+    ok_password = hmac.compare_digest(password.encode(), config.env("DASHBOARD_PASSWORD").encode())
+    return ok_user and ok_password
+
+
+@app.middleware("http")
+async def lock(request: Request, call_next):
+    if (config.env("DASHBOARD_PASSWORD") and not request.url.path.startswith(PUBLIC)
+            and not authorised(request.headers.get("authorization", ""))):
+        return Response("Password needed.", status_code=401,
+                        headers={"WWW-Authenticate": 'Basic realm="Venture Factory", charset="UTF-8"'})
+    return await call_next(request)
 
 
 @app.get("/api/state")
@@ -190,7 +217,10 @@ app.mount("/pages", StaticFiles(directory=config.PAGES_DIR, html=True), name="pa
 def main() -> None:
     import uvicorn
     config.setup_logging()
-    uvicorn.run(app, host=config.env("HOST", "127.0.0.1"), port=int(config.env("PORT", "8000")))
+    host = config.env("HOST", "127.0.0.1")
+    if host not in ("127.0.0.1", "localhost") and not config.env("DASHBOARD_PASSWORD"):
+        raise SystemExit(f"Refusing to listen on {host} without DASHBOARD_PASSWORD: the dashboard has money buttons.")
+    uvicorn.run(app, host=host, port=int(config.env("PORT", "8000")))
 
 
 if __name__ == "__main__":

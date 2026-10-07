@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from factory import config, costs
 from factory.commerce import landed
+from factory.dive import capital
 
 SYSTEM = """You are the Economics analyst in a venture studio's Deep Dive department.
 Decide how this niche would make money and whether the numbers can work for one
@@ -146,7 +147,9 @@ def _local_stock(e: Econ, items: dict, out: dict, m: dict) -> dict:
     if sup is None:
         pct = float(m["unit_cost_pct"])
         sup, basis = price * pct, f"assumption: {pct:.0%} of price (business_models.yaml)"
-    u = landed.unit_economics(price, sup, basis, e.weight_kg, e.duty_category)
+    room = capital.stock_room(e.business_model, sup)  # the batch must fit both caps
+    cap = min(float(config.settings()["caps"]["stock_batch_zar"]), room)
+    u = landed.unit_economics(price, sup, basis, e.weight_kg, e.duty_category, cap=cap)
     out["flags"] += landed.gate_flags(u)
     profit = u["profit_good_zar"]  # if it converts like the top fifth of stores
     out.update(price_zar=price, fees_zar=u["per_order_zar"], cac_zar=u["cac_good_zar"], unit_cost_zar=u["landed_zar"],

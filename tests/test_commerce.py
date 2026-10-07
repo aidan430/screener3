@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import unittest
+from unittest import mock
 
 from tests.base import FactoryTestCase
 
@@ -20,7 +21,7 @@ def one(table):
 
 class LandedCostTest(unittest.TestCase):
     def test_numbers_for_a_light_product(self):
-        u = landed.unit_economics(599, 89.85, "assumption", weight_kg=0.3)
+        u = landed.unit_economics(599, 89.85, "assumption", weight_kg=0.3, cap=5000)
         # supplier 89.85 + freight 36 + duty 17.97 + import VAT 17.52 + clearing 600/26 + receiving and storage 5
         self.assertEqual(u["batch_units"], 26)
         self.assertAlmostEqual(u["landed_zar"], 189.42, places=1)
@@ -32,8 +33,19 @@ class LandedCostTest(unittest.TestCase):
     def test_cheap_product_and_heavy_product_are_killed(self):
         cheap = landed.unit_economics(299, 55.5, "assumption", weight_kg=0.3)
         self.assertIn("must buy just to break even", landed.gate_flags(cheap)[0])
-        heavy = landed.unit_economics(899, 160, "assumption", weight_kg=0.9)
-        self.assertIn("stock cap buys only 13 units", landed.gate_flags(heavy)[0])
+        heavy = landed.unit_economics(899, 160, "assumption", weight_kg=0.9, cap=5000)
+        self.assertIn("buys only 13 units", landed.gate_flags(heavy)[0])
+
+    def test_the_first_batch_fits_both_caps(self):
+        from factory.dive import capital
+        room = capital.stock_room("local_stock", 160)
+        self.assertEqual(room, 10670)  # R15,000 start-up cap minus store, domain, photos, samples, test, ad test
+        u = landed.unit_economics(899, 160, "assumption", weight_kg=0.9, cap=min(10000, room))
+        self.assertEqual((u["batch_units"], landed.gate_flags(u)), (27, []))
+        with mock.patch.dict(config.settings()["caps"], {"niche_capital_zar": 10000}):
+            room = capital.stock_room("local_stock", 160)
+        u = landed.unit_economics(899, 160, "assumption", weight_kg=0.9, cap=min(10000, room))
+        self.assertIn("start-up cap leaves R5,670 for stock", landed.gate_flags(u)[0])
 
     def test_shop_price_and_test_budget(self):
         self.assertEqual((landed.retail_price(462), landed.retail_price(599)), (449, 599))
@@ -66,13 +78,14 @@ class CommerceTest(FactoryTestCase):
         self.assertEqual((d.business_model, d.verdict), ("local_stock", "pass"), d.kill_reasons_json)
         self.assertEqual(d.currency, "ZAR")  # "R" in the post, normalised
         u = d.j("unit")
-        self.assertEqual((u["batch_units"], d.break_even_sales), (26, 33))  # sunk R4,120 / R128.66 a sale
+        self.assertEqual((u["batch_units"], d.break_even_sales), (40, 31))  # sunk R4,120 / R136.74 a sale
+        self.assertLessEqual(d.capital_zar, 15000)  # the batch was sized to fit the start-up cap
         labels = [x[0] for x in d.j("capital_lines")]
-        self.assertIn("First stock batch, 26 units", labels)
+        self.assertIn("First stock batch, 40 units", labels)
         t = one(SmokeTest)
         ads = json.loads(t.ads_json)
         self.assertEqual((t.price_label, ads["budget_zar"], ads["audience"]["countries"]), ("R599", 700, ["ZA"]))
-        self.assertIn("first stock batch of 26 units", t.manual_steps)
+        self.assertIn("first stock batch of 40 units", t.manual_steps)
         self.assertIn("We are taking first orders this week", open(t.page_path).read())
         gate_prompt = next(c for c in self.fake.calls if c.schema == "Verdict").prompt
         self.assertIn("Business model (scout's guess): local_stock (Local-stock store)", gate_prompt)
@@ -86,7 +99,7 @@ class CommerceTest(FactoryTestCase):
         self.assertEqual(one(Card).status, "killed_dive")
 
     def test_a_click_win_that_cannot_pay_for_its_ads_is_lost(self):
-        self.fake.commerce_price = 549.0  # R220 left per order
+        self.fake.commerce_price = 549.0  # R226 left per order
         self.to_won("commerce", visits=160, clicks=8)  # 5% click Buy: about R230 of ads per real sale
         t = one(SmokeTest)
         self.assertEqual(t.status, "lost")
@@ -106,7 +119,7 @@ class CommerceTest(FactoryTestCase):
         self.assertTrue(unit["actions"][0]["label"].startswith("FUND STOCK R"))
         msg = c.post(f"/api/launch/{one(Card).id}").json()["message"]
         self.assertIn("Stock approved", msg)
-        self.assertIn("First stock batch, 26 units", msg)
+        self.assertIn("First stock batch, 40 units", msg)
         order = config.VENTURES_DIR / one(SmokeTest).slug / "stock" / "first-order.md"
         self.assertIn("Nothing has been ordered or paid", order.read_text())
         spec_call = next(c for c in self.fake.calls if c.schema == "Spec")

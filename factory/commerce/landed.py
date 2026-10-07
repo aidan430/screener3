@@ -50,10 +50,12 @@ def first_batch(supplier: float, weight: float, rate: float, cap: float) -> tupl
 
 
 def unit_economics(price_zar: float, supplier_zar: float, supplier_basis: str, weight_kg: float | None = None,
-                   duty_category: str = "default", market: str | None = None) -> dict:
+                   duty_category: str = "default", market: str | None = None, cap: float | None = None) -> dict:
+    """`cap`: most the first batch may cost (default: caps.stock_batch_zar)."""
     c = config.commerce()
     market = market or c["market"]
-    cap = float(config.settings()["caps"]["stock_batch_zar"])
+    stock_cap = float(config.settings()["caps"]["stock_batch_zar"])
+    cap = stock_cap if cap is None else max(0.0, float(cap))
     weight = float(weight_kg) if weight_kg and weight_kg > 0 else float(c["inbound"]["default_weight_kg"])
     category = duty_category if duty_category in c["duty"] else "default"
     units, landed, lines = first_batch(supplier_zar, weight, float(c["duty"][category]), cap)
@@ -76,7 +78,7 @@ def unit_economics(price_zar: float, supplier_zar: float, supplier_basis: str, w
             "conversion_average": avg, "conversion_good": good,
             "profit_average_zar": round(left - cpc / avg, 2), "profit_good_zar": round(left - cpc / good, 2),
             "cac_good_zar": round(cpc / good, 2), "batch_units": units,
-            "batch_zar": round(units * landed, 2), "batch_cap_zar": cap}
+            "batch_zar": round(units * landed, 2), "batch_cap_zar": cap, "stock_cap_zar": stock_cap}
 
 
 def gate_flags(u: dict) -> list[str]:
@@ -90,8 +92,11 @@ def gate_flags(u: dict) -> list[str]:
     elif be > top:
         out.append(f"{be:.1%} of visitors must buy just to break even (most allowed {top:.1%})")
     if u["batch_units"] < need:
-        out.append(f"your R{u['batch_cap_zar']:,.0f} stock cap buys only {u['batch_units']} units at "
-                   f"R{u['landed_zar']:,.0f} landed (a fair first batch is {need}+)")
+        cap, stock_cap = u["batch_cap_zar"], u.get("stock_cap_zar", u["batch_cap_zar"])
+        why = (f"your R{cap:,.0f} stock cap" if cap >= stock_cap
+               else f"your start-up cap leaves R{cap:,.0f} for stock, which")
+        out.append(f"{why} buys only {u['batch_units']} units at R{u['landed_zar']:,.0f} landed "
+                   f"(a fair first batch is {need}+)")
     return out
 
 
@@ -112,7 +117,7 @@ def lines(u: dict) -> list[str]:
     out.append(f"  profit per order: {rand(u['profit_average_zar'])} if {u['conversion_average']:.1%} buy (average "
                f"store), {rand(u['profit_good_zar'])} if {u['conversion_good']:.1%} buy (top fifth of stores)")
     out.append(f"  first stock batch: {u['batch_units']} units for R{u['batch_zar']:,.0f} "
-               f"(your cap R{u['batch_cap_zar']:,.0f})")
+               f"(room for stock R{u['batch_cap_zar']:,.0f})")
     return out
 
 
@@ -131,7 +136,10 @@ def main(argv: list[str] | None = None) -> None:
     else:
         pct = float(config.business_models()["models"]["local_stock"]["unit_cost_pct"])
         sup, basis = a.price * pct, f"assumption: {pct:.0%} of price"
-    u = unit_economics(a.price, sup, basis, a.weight, a.category)
+    from factory.dive import capital
+    room = capital.stock_room("local_stock", sup)  # what the start-up cap leaves after the other lines
+    u = unit_economics(a.price, sup, basis, a.weight, a.category,
+                       cap=min(float(config.settings()["caps"]["stock_batch_zar"]), room))
     print("\n".join(lines(u)))
     flags = gate_flags(u)
     print("  commerce checks: " + ("pass" if not flags else "KILL: " + "; ".join(flags)))

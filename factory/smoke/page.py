@@ -77,8 +77,8 @@ def render(d: PageDraft, slug: str, api_base: str | None = "", physical: bool = 
                     "Thanks. We will email you the day it ships.") if physical else
                    ("We are onboarding founders this week, leave your email.", "Thanks. We will be in touch this week."))
     plausible = ""
-    if config.env("FACTORY_DOMAIN"):
-        dom = f"{slug}.{config.env('FACTORY_DOMAIN')}"
+    if config.env("FACTORY_DOMAIN") and config.env("VERCEL_TOKEN") and config.env("PLAUSIBLE_API_KEY"):
+        dom = f"{slug}.{config.env('FACTORY_DOMAIN')}"  # Plausible counts Vercel pages; self-hosted ones use beacons
         plausible = (f'<script defer data-domain="{e(dom)}" src="https://plausible.io/js/script.tagged-events.js">'
                      "</script>\n<script>window.plausible=window.plausible||function(){(window.plausible.q="
                      "window.plausible.q||[]).push(arguments)}</script>")

@@ -1,9 +1,10 @@
 """Put a smoke page online.
 
-With VERCEL_TOKEN and FACTORY_DOMAIN set, deploys data/pages/{slug}/ with the
-Vercel CLI and aliases it to {slug}.{FACTORY_DOMAIN}. Otherwise the page is
-served locally by `make serve` at /pages/{slug}/ (status is still
-awaiting_funding; ads cannot point at localhost, so funding needs the domain).
+With FACTORY_DOMAIN set and no VERCEL_TOKEN, the factory serves the page itself
+at https://{FACTORY_DOMAIN}/pages/{slug}/ (Caddy in front, see scripts/install.sh).
+With VERCEL_TOKEN as well, deploys data/pages/{slug}/ with the Vercel CLI and
+aliases it to {slug}.{FACTORY_DOMAIN}. With neither, the page is only served
+locally at /pages/{slug}/ (ads cannot point at localhost, so funding needs a domain).
 """
 from __future__ import annotations
 
@@ -28,8 +29,10 @@ def local_url(slug: str) -> str:
 
 
 def deploy(slug: str) -> tuple[str, str]:
-    """Returns (target, url)."""
+    """Returns (target, url): self, vercel or local."""
     token, domain = config.env("VERCEL_TOKEN"), config.env("FACTORY_DOMAIN")
+    if domain and not token:
+        return "self", f"https://{domain}/pages/{slug}/"
     if not (token and domain):
         return "local", local_url(slug)
     if not shutil.which("vercel"):

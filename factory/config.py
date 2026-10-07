@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from functools import lru_cache
 from pathlib import Path
 
@@ -26,7 +27,10 @@ def load_dotenv(path: Path = ROOT / ".env") -> None:
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, _, value = line.partition("=")
-        value = value.strip().strip('"').strip("'")
+        if value.strip()[:1] in ('"', "'"):
+            value = value.strip().strip(value.strip()[0])
+        else:  # "KEY=value  # comment" and "KEY=   # comment"; a # inside a value is kept
+            value = re.split(r"(?:^|\s)#", value, maxsplit=1)[0].strip()
         if value:
             os.environ.setdefault(key.strip(), value)
 
