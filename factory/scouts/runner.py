@@ -23,9 +23,10 @@ ADAPTERS = {m.NAME: m for m in (reddit, hn, upwork, fiverr, appstore, hellopeter
 PRICE = re.compile(r"(\$|R|£|€)\s?\d|\d+\s?(/mo|per month|a month|/month|per year|/yr)|\bpay(ing)?\b", re.I)
 
 
-def rank(sig: RawSignal) -> float:
+def rank(sig: RawSignal, phrases: list[str] | None = None) -> float:
     text = f"{sig.title} {sig.text}"
-    pains = sum(1 for m in sig.matched if m.lower() in [p.lower() for p in config.pain_phrases()])
+    phrases = [p.lower() for p in (phrases if phrases is not None else config.pain_phrases())]
+    pains = sum(1 for m in sig.matched if m.lower() in phrases)
     others = len(sig.matched) - pains
     money = 2.0 if PRICE.search(text) else 0.0
     return 3 * pains + others + money + math.log1p(max(sig.score, 0)) + 0.5 * math.log1p(sig.replies)
@@ -41,19 +42,19 @@ def purge_old_signals() -> int:
 
 
 def store(niche: Niche, raws: list[RawSignal]) -> int:
-    new = 0
+    new, phrases = 0, config.phrases_for(niche)
     with session() as s:
         for r in raws:
             existing = s.exec(select(Signal).where(Signal.niche_id == niche.id,
                                                    Signal.external_id == r.external_id)).first()
             if existing:
-                existing.score, existing.replies, existing.rank = r.score, r.replies, rank(r)
+                existing.score, existing.replies, existing.rank = r.score, r.replies, rank(r, phrases)
                 existing.fetched_at = utcnow()
                 s.add(existing)
                 continue
             s.add(Signal(niche_id=niche.id, source=r.source, external_id=r.external_id, url=r.url,
                          title=r.title[:500], text=r.text[:6000], score=r.score, replies=r.replies,
-                         rank=rank(r), posted_at=r.posted_at))
+                         rank=rank(r, phrases), posted_at=r.posted_at))
             new += 1
         s.commit()
     return new
@@ -86,7 +87,7 @@ def distill_job(niche: Niche) -> list[Card]:
 
 def scout_niche(niche: Niche) -> dict:
     from factory.warden import holds
-    enabled = [k for k, v in config.settings()["sources"].items() if v]
+    enabled = [k for k, v in config.settings()["sources"].items() if v and (not niche.sources or k in niche.sources)]
     held = holds.active()
     report = {"niche": niche.slug, "sources": {}, "new_signals": 0, "cards": []}
     for name in enabled:

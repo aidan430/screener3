@@ -12,13 +12,14 @@ from sqlmodel import func, select
 
 from factory import agents, config
 from factory.models import Build, Card, Dossier, GateResult, SmokeTest, Venture, utcnow
+from factory.smoke import budget
 from factory.training.tables import Squad, SquadAgent
 
 TOWERS = [  # n, id, name, side, owner, rule
     (1, "proof", "Gate of Proof", "free", "research", "Someone already pays for this: a priced job, a paid competitor with complaints, or a forum request to pay."),
     (2, "craft", "Gate of Craft", "free", "research", "One founder with agents can build it in 7 days: no sales calls, no own stock, no licence, no human support."),
     (3, "economics", "Economics gate", "free", "dive", "Deep Dive score 7+, margin above the model's minimum, start-up capital under your cap, break-even in 80 sales or fewer."),
-    (4, "fund", "Fund test", "money", "you", "You approve the smoke-test budget (R200). Nothing is spent before your click."),
+    (4, "fund", "Fund test", "money", "you", "You approve the smoke-test budget ({budget}). Nothing is spent before your click."),
     (5, "smoke", "Smoke test", "money", "ops", "5%+ of 150+ visitors click Buy within 48 hours."),
     (6, "launch", "Certify & fund launch", "money", "train", "Training writes the brief and certifies a five-agent squad (90%+ on drills, no rule broken); then you approve the rest of the start-up capital."),
 ]
@@ -50,7 +51,6 @@ def lanes() -> list[dict]:
 def units(s, night: str) -> list[dict]:
     smoke = {t.card_id: t for t in s.exec(select(SmokeTest))}
     doss = {d.card_id: d for d in s.exec(select(Dossier).order_by(Dossier.id))}
-    budget = config.settings()["smoke"]["budget_zar"]
     out = []
     for c in s.exec(select(Card).where(Card.status.in_(list(PLACE))).order_by(Card.id)):
         tower, state = PLACE[c.status]
@@ -64,15 +64,23 @@ def units(s, night: str) -> list[dict]:
             u["smoke"] = {"name": t.name, "price": t.price_label, "url": t.url, "visitors": t.visitors,
                           "buy_clicks": t.buy_clicks}
             if c.status == "awaiting_funding":
-                u["actions"] = [{"label": f"FUND TEST R{budget}", "endpoint": f"/api/approve/{t.id}", "style": "spend"}]
+                u["actions"] = [{"label": f"FUND TEST R{budget.of(t)}", "endpoint": f"/api/approve/{t.id}",
+                                 "style": "spend"}]
         d = doss.get(c.id)
         if d:
             u["dossier"] = {"capital": d.capital_zar, "break_even": d.break_even_sales, "margin": d.margin,
-                            "score": d.score, "verdict": d.verdict}
+                            "score": d.score, "verdict": d.verdict, "stock": stock_summary(d)}
         if c.status in ("certified", "training_failed", "won"):
             u.update(squad_info(s, c, d))
         out.append(u)
     return out
+
+
+def stock_summary(d: Dossier) -> dict | None:
+    """A local-stock product's key numbers for the dashboard (None for other models)."""
+    u = d.j("unit")
+    keys = ("landed_zar", "contribution_zar", "break_even_conversion", "batch_units", "batch_zar")
+    return {k: u[k] for k in keys} if u else None
 
 
 def squad_info(s, c: Card, d: Dossier | None) -> dict:
@@ -85,7 +93,9 @@ def squad_info(s, c: Card, d: Dossier | None) -> dict:
                                   "status": a.status, "version": a.version} for a in crew]}}
     if c.status == "certified":
         rest = sum(x[1] for x in (d.j("capital_lines") if d else []) if not x[0].startswith("Smoke test"))
-        info["actions"] = [{"label": f"FUND LAUNCH R{rest:,.0f}", "endpoint": f"/api/launch/{c.id}", "style": "spend"}]
+        from factory.build.launch import fund_label
+        info["actions"] = [{"label": f"{fund_label(d)} R{rest:,.0f}", "endpoint": f"/api/launch/{c.id}",
+                            "style": "spend"}]
     elif c.status == "training_failed":
         info["actions"] = [{"label": "RETRY TRAINING", "endpoint": f"/api/train/{c.id}/retry", "style": "grey"}]
     return info
@@ -107,6 +117,7 @@ def towers(s, unit_list: list[dict]) -> list[dict]:
     out = []
     for n, tid, name, side, owner, rule in TOWERS:
         waiting = sum(1 for u in unit_list if u["tower"] == n and u["state"] != "dead")
+        rule = rule.replace("{budget}", f"R{budget.for_market()} in {config.settings()['smoke']['market']}")
         out.append({"n": n, "id": tid, "name": name, "side": side, "owner": owner, "rule": rule,
                     "waiting": waiting, "passed_7d": stats[n][0], "killed_7d": stats[n][1]})
     return out

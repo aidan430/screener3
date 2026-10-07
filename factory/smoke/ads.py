@@ -1,4 +1,4 @@
-"""Draft the ad set JSON (3 variants, audience, R200, 48 h) and the manual steps.
+"""Draft the ad set JSON (3 variants, audience, budget for the test market, 48 h) and the manual steps.
 
 Never calls the Meta API unless the test is APPROVED *and* META_ADS_ENABLED=true.
 """
@@ -8,6 +8,7 @@ import json
 import logging
 
 from factory import config
+from factory.smoke import budget
 from factory.smoke.page import PageDraft
 
 log = logging.getLogger("factory.smoke.ads")
@@ -18,10 +19,10 @@ def ad_set(d: PageDraft, url: str, slug: str) -> dict:
     return {
         "name": f"smoke-{slug}",
         "objective": "OUTCOME_TRAFFIC",
-        "budget_zar": sm["budget_zar"],
+        "budget_zar": budget.for_market(),
         "duration_hours": sm["duration_hours"],
         "destination_url": url,
-        "audience": d.targeting.model_dump(),
+        "audience": {**d.targeting.model_dump(), "countries": [sm["market"]]},  # the budget is priced for it
         "placements": "advantage_plus",
         "variants": [v.model_dump() for v in d.ads[: sm["variants"]]],
         "success_metric": {

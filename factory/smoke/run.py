@@ -14,7 +14,7 @@ from sqlmodel import select
 from factory import agents, config, costs
 from factory.gates.common import cards_with_status
 from factory.models import Card, Dossier, RunLog, SmokeTest, session, utcnow
-from factory.smoke import ads, deploy, page, track
+from factory.smoke import ads, budget, deploy, page, track
 
 log = logging.getLogger("factory.smoke")
 
@@ -35,25 +35,42 @@ def dossier_for(card_id: int) -> Dossier | None:
         return s.exec(select(Dossier).where(Dossier.card_id == card_id).order_by(Dossier.id.desc())).first()
 
 
+def page_price(d: Dossier) -> tuple[float, str]:
+    """The price a test page shows. Tests in South Africa show rand: a local-stock
+    product its shop price, anything else its Deep Dive price converted, ending in 9."""
+    if d.j("unit"):
+        return float(d.price_zar), "ZAR"  # the shop price the landed costs were worked out for
+    if d.currency != "ZAR" and d.price_zar and config.settings()["smoke"]["market"] == "ZA":
+        return float(max(9, round(d.price_zar / 10) * 10 - 1)), "ZAR"
+    return float(d.price_point), d.currency
+
+
 def price_label(d: Dossier | None) -> str:
     if not d or not d.price_point:
         return ""
     unit = {"per month": " / month", "per year": " / year"}.get(d.price_unit, "")
-    return f"{SYMBOL.get(d.currency, d.currency + ' ')}{d.price_point:g}{unit}"
+    price, currency = page_price(d)
+    return f"{SYMBOL.get(currency, currency + ' ')}{price:,.0f}{unit}" if currency == "ZAR" else \
+        f"{SYMBOL.get(currency, currency + ' ')}{price:g}{unit}"
 
 
 def prepare(card: Card) -> SmokeTest:
     dossier = dossier_for(card.id)
-    d = page.draft(card, price_label(dossier))
+    stock, label = (dossier.j("unit") if dossier else {}), price_label(dossier)
+    d = page.draft(card, label, physical=bool(stock))
+    d.price_label = label or d.price_label  # the page shows the price the Deep Dive costed, whatever the writer wrote
     slug = unique_slug(page.slugify(d.product_name))
     vercel = bool(config.env("VERCEL_TOKEN") and config.env("FACTORY_DOMAIN"))
-    path = deploy.write_local(slug, page.render(d, slug, api_base=None if vercel else ""))
+    path = deploy.write_local(slug, page.render(d, slug, api_base=None if vercel else "", physical=bool(stock)))
     target, url = deploy.deploy(slug)
     ad_json = ads.ad_set(d, url, slug)
     steps = ads.manual_steps(ad_json)
     if dossier and dossier.capital_zar:
         steps += (f"\nIf this test wins, the full start-up needs about R{dossier.capital_zar:,.0f} "
                   f"(break-even after {dossier.break_even_sales or '?'} sales). That is a separate approval.")
+    if stock:
+        steps += (f"\nThat includes a first stock batch of {stock['batch_units']} units for R{stock['batch_zar']:,.0f}. "
+                  f"Each order leaves about R{stock['contribution_zar']:,.0f} before ads.")
     if target == "local":
         steps += ("\nNOTE: page is only on localhost. Set FACTORY_DOMAIN + VERCEL_TOKEN and re-run "
                   "`make smoke` before funding, or ads will point nowhere.")
@@ -100,7 +117,7 @@ def run() -> list[SmokeTest]:
             try:
                 with agents.run("ops", "Smoke-test builder", subject=card.title, card=card, tower=4) as job:
                     t = prepare(card)
-                    job.summary = f"{t.name} at {t.price_label}: page {t.deploy_target}, waiting for your R200"
+                    job.summary = f"{t.name} at {t.price_label}: page {t.deploy_target}, waiting for your R{budget.of(t)}"
             except (costs.StageOverBudget, costs.NoApiKey) as e:
                 print(f"  STOPPED: {e}")
                 row.ok, row.summary = False, str(e)
@@ -114,7 +131,7 @@ def run() -> list[SmokeTest]:
             print("    " + t.manual_steps.replace("\n", "\n    "))
     settled = track.refresh()
     for t in settled:
-        print(f"  settled: {t.name} {t.status} ({t.buy_clicks}/{t.visitors} buy-clicks)")
+        print(f"  settled: {t.name} {t.status}: {t.result}")
     row.summary = row.summary or f"{len(made)} prepared, {len(settled)} settled"
     row.finished_at = utcnow()
     with session() as s:

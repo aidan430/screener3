@@ -38,7 +38,9 @@ def material(card: Card) -> tuple[str, str]:
         post = (f"\n<source_post url=\"{sig.url}\" source=\"{sig.source}\" score=\"{sig.score:g}\" "
                 f"replies=\"{sig.replies}\">\nTITLE: {sig.title}\nTEXT: {sig.text[:4000]}\n</source_post>")
     pay = f"{card.pay_currency}{card.pay_amount:g}" if card.pay_amount is not None else "none extracted"
+    label = config.business_models()["models"].get(card.business_model, {}).get("label", "not guessed")
     block = (f"<card id=\"{card.id}\">\nNiche: {niche.slug} (region {niche.region})\n"
+             f"Business model (scout's guess): {card.business_model or 'none'} ({label})\n"
              f"Known competitors in this niche: {', '.join(niche.competitors) or 'none'}\n"
              f"Title: {card.title}\nProblem: {card.problem}\nQuote: \"{card.quote}\"\n"
              f"Pay evidence: {card.pay_evidence or 'none'}\nPay amount: {pay}\nURL: {card.url}\n</card>{post}")

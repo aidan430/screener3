@@ -67,13 +67,14 @@ class PipelineTest(FactoryTestCase):
         self.assertEqual(t.status, "awaiting_funding")
         self.assertTrue(Path(t.page_path).exists())
         self.assertIn("Manual steps (META_ADS_ENABLED=false)", out)
-        self.assertIn("If this test wins, the full start-up needs about R2,100", out)
-        self.assertEqual(json.loads(t.ads_json)["budget_zar"], 200)
+        self.assertIn("If this test wins, the full start-up needs about R2,600", out)
+        self.assertEqual(json.loads(t.ads_json)["budget_zar"], 700)  # 150 visitors x R4 x 1.15, rounded up
+        self.assertEqual(json.loads(t.ads_json)["audience"]["countries"], ["ZA"])
         html = Path(t.page_path).read_text()
         self.assertIn("We are onboarding founders this week, leave your email.", html)
         self.assertIn("buy_click", html)
         page_call = next(c for c in self.fake.calls if c.schema == "PageDraft")
-        self.assertIn("$9 / month", page_call.prompt)  # the Deep Dive's price reaches the page writer
+        self.assertIn("R169 / month", page_call.prompt)  # the Deep Dive's $9, in rand for a ZA test
 
     def test_smoke_skips_cards_that_did_not_pass_the_deep_dive(self):
         self.scout()

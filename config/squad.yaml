@@ -23,6 +23,14 @@ roles:
     name: Bookkeeper
     model: claude-haiku-4-5
     job: Records every sale, refund and bill for this niche and flags anything that does not add up.
+  stock:
+    name: Stock agent
+    model: claude-haiku-4-5
+    job: Watches stock in the fulfilment warehouse and days of cover from sales, drafts reorders and supplier messages for the owner to approve, and tells buyers when an item is back. It never orders or pays.
+
+default_roles: [store, content, ads, support, books]
+lanes:                      # a lane may name its own squad
+  commerce: [store, ads, support, stock, books]   # a local-stock store: the Stock agent replaces Content
 
 # Added to every squad agent's instructions, word for word.
 guardrails:

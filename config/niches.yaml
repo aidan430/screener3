@@ -1,7 +1,55 @@
-# One entry = one scout. Start with these 40; add to 112 once the first
-# nights produce cards. Keep SA-heavy where law or language gives an edge.
+# One entry = one scout. settings.yaml (niche_limit) decides how many are active:
+# the first N commerce niches, then the first M others.
 # subreddits: where to listen. competitors: apps whose 1-2 star reviews to read.
 # keywords: used across upwork/fiverr/hn/trends searches.
+# kind: commerce = physical products for South African buyers, sold from stock
+# held by a fulfilment warehouse. Their scouts search buying phrases
+# (config/commerce.yaml), name no competitor apps, and use Reddit only.
+
+- slug: sa-home-kitchen
+  kind: commerce
+  region: ZA
+  keywords: [kitchen gadget, home organisation, storage solution, cleaning tool]
+  subreddits: [southafrica, askSouthAfrica, capetown, johannesburg]
+  competitors: []
+  sources: [reddit]
+- slug: sa-pets
+  kind: commerce
+  region: ZA
+  keywords: [dog harness, dog bed, cat toy, pet accessories]
+  subreddits: [southafrica, askSouthAfrica, dogs, cats]
+  competitors: []
+  sources: [reddit]
+- slug: sa-baby-kids
+  kind: commerce
+  region: ZA
+  keywords: [baby products, toddler, kids toys, lunch box]
+  subreddits: [southafrica, askSouthAfrica, beyondthebump, Parenting]
+  competitors: []
+  sources: [reddit]
+- slug: sa-outdoors-fitness
+  kind: commerce
+  region: ZA
+  keywords: [camping gear, hiking gear, home gym, cycling accessories]
+  subreddits: [southafrica, askSouthAfrica, CampingandHiking, homegym]
+  competitors: []
+  sources: [reddit]
+- slug: sa-car-accessories
+  kind: commerce
+  region: ZA
+  keywords: [car organiser, car cleaning, phone mount, boot organiser]
+  subreddits: [southafrica, askSouthAfrica, cars]
+  competitors: []
+  sources: [reddit]
+- slug: sa-gifts
+  kind: commerce
+  region: ZA
+  keywords: [gift ideas, birthday gift, personalised gift, christmas gift]
+  subreddits: [southafrica, askSouthAfrica, GiftIdeas]
+  competitors: []
+  sources: [reddit]
+
+# Software and content niches (kind left empty).
 
 - slug: sa-landlords
   region: ZA

@@ -37,11 +37,11 @@ class ArenaStateTest(FactoryTestCase):
         u = alive[0]
         self.assertEqual((u["tower"], u["state"], u["lane"]), (4, "blocked", "digital"))
         self.assertTrue(u["actions"][0]["endpoint"].startswith("/api/approve/"))
-        self.assertEqual(u["dossier"]["capital"], 2100)
+        self.assertEqual(u["dossier"]["capital"], 2600)  # R700 test in ZA
         t4 = next(t for t in st["arena"]["towers"] if t["n"] == 4)
         self.assertEqual(t4["waiting"], 1)
-        self.assertEqual(st["dossiers"][0]["capital"], 2100)
-        self.assertEqual(st["niches"][0]["stage"], "waiting for your R200")
+        self.assertEqual(st["dossiers"][0]["capital"], 2600)
+        self.assertEqual(st["niches"][0]["stage"], "waiting for your R700")
 
     def test_runs_are_real_agent_runs_only(self):
         st = self.client().get("/api/state").json()

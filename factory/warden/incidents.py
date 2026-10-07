@@ -15,7 +15,7 @@ from factory.warden.tables import Incident
 LABEL = {
     "stale_run": "Job that never finished", "source_down": "Source not answering",
     "source_flaky": "Source failing in some niches", "missing_key": "Missing key",
-    "stuck_funding": "Waiting for your R200", "stuck_cards": "Cards waiting too long",
+    "stuck_funding": "Waiting for your test money", "stuck_cards": "Cards waiting too long",
     "silent_test": "Funded test with no visitors", "daily_cap": "Daily spend cap",
     "spend_spike": "Unusual spend", "missed_night": "Missed night run", "retry": "Retried a source",
     "training_failed": "Squad not certified", "stuck_launch": "Waiting for you to fund a launch",

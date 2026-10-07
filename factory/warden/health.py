@@ -14,6 +14,7 @@ from sqlmodel import func, select
 
 from factory import agents, config, costs
 from factory.models import AgentRun, Card, Cost, RunLog, SmokeTest, session, tonight, utcnow
+from factory.smoke import budget
 from factory.warden import fixer, holds, incidents
 from factory.training.tables import Squad
 from factory.warden.tables import Incident
@@ -99,7 +100,7 @@ def stuck() -> list[Incident]:
     for t in tests:
         age = (utcnow() - agents._aware(t.created_at)).days
         if age >= days:
-            out.append(incidents.record("stuck_funding", t.name, f"“{t.name}” has waited {age} days at tower 4 for your R200.",
+            out.append(incidents.record("stuck_funding", t.name, f"“{t.name}” has waited {age} days at tower 4 for your R{budget.of(t)}.",
                                         "Kept it waiting and put it in your Monday report. Nothing is spent without your click.",
                                         "needs_you", key=f"stuck_funding:{t.id}"))
     for c, sq in {c.id: (c, sq) for c, sq in tower6}.values():  # latest squad per card

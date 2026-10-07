@@ -6,7 +6,9 @@ fx_zar:                     # rand per unit of currency (API spend is billed in 
   EUR: 21.50
   AUD: 12.00
   CAD: 13.50
-niche_limit: 5              # first-run constraint: only the first N niches in niches.yaml are active
+niche_limit:                # active niches: the first N of each kind in niches.yaml
+  commerce: 4               # physical products for South Africa come first
+  other: 2                  # digital and content niches keep running at a lower volume
 
 models:
   scout: claude-haiku-4-5     # scouts, distill, Deep Dive query planner
@@ -26,6 +28,7 @@ caps:
   dive_zar_per_card: 1.50     # Deep Dive spend per card (planner + 2 Sonnet analysts)
   niche_capital_zar: 10000    # most a niche may ask for to start; above it the Economics gate kills
   training_zar_per_squad: 12  # Training spend per winning niche (writers, exams, one retake)
+  stock_batch_zar: 5000       # most one winning product may ask for its first stock batch (your choice)
 
 retention_days: 30            # raw Signal rows
 
@@ -38,7 +41,17 @@ thresholds:
   win_min_visitors: 150
 
 smoke:
-  budget_zar: 200
+  market: ZA                  # where test ads run; cheapest clicks of the markets below
+  max_budget_zar: 1000        # budget = visitors needed x cost per click x headroom, up to this
+  headroom: 1.15              # extra clicks for page-load drop-off
+  cpc_zar:                    # benchmark Meta traffic-campaign cost per click, 2025 (NOTES.md)
+    ZA: 4.0
+    US: 13.0
+    GB: 13.0
+    AU: 12.0
+    CA: 12.0
+  click_to_purchase: 0.4      # share of buy-clickers assumed to pay at a real checkout
+  ltv_months: 6               # months a monthly subscriber is assumed to stay
   duration_hours: 48
   variants: 3
 

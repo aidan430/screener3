@@ -51,7 +51,7 @@ def _to_signal(hit: dict, terms: list[str]) -> RawSignal | None:
 def fetch(niche) -> list[RawSignal]:
     cfg = config.settings()["hn"]
     since = int(time.time()) - int(cfg["lookback_days"]) * 86400
-    terms = niche.keywords + niche.competitors + config.pain_phrases()
+    terms = niche.keywords + niche.competitors + config.phrases_for(niche)
     seen: dict[str, RawSignal] = {}
     errors: list[str] = []
     with http_client() as client:

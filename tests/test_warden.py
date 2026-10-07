@@ -116,8 +116,8 @@ class WardenTest(FactoryTestCase):
         self.to_smoke()
         rep = quiet(report.save, "weekly")[0]
         self.assertIn("1 decision for you", rep.title)
-        self.assertIn("Fund the Lease Nudge smoke test? R200 for 48 hours. If it wins, the launch needs about "
-                      "R2,100 (break-even after 22 sales).", rep.body_md)
+        self.assertIn("Fund the Lease Nudge smoke test? R700 for 48 hours. If it wins, the launch needs about "
+                      "R2,600 (break-even after 27 sales).", rep.body_md)
         self.assertIn("## Done without you", rep.body_md)
         self.assertNotIn("<script", rep.body_html)
         self.assertTrue(any(p.suffix == ".md" for p in (config.DATA_DIR / "reports").iterdir()))

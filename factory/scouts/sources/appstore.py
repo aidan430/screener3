@@ -27,7 +27,7 @@ def fetch(niche) -> list[RawSignal]:
     if not niche.competitors:
         return []
     limit = int(config.settings()["markets"]["reviews_per_app"])
-    terms = niche.keywords + niche.competitors + config.pain_phrases()
+    terms = niche.keywords + niche.competitors + config.phrases_for(niche)
     found: dict[str, RawSignal] = {}
     errors: list[str] = []
     with client() as http:

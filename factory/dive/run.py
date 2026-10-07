@@ -10,6 +10,7 @@ import logging
 import textwrap
 
 from factory import agents, config, costs
+from factory.commerce import landed
 from factory.dive import capital, demand, economics, risk
 from factory.gates.common import cards_with_status
 from factory.models import Card, Dossier, GateResult, Niche, RunLog, session, utcnow
@@ -44,16 +45,21 @@ def dive_card(card: Card) -> Dossier:
         econ, material = economics.analyse(card, niche, plan.business_model, items, stats, comps,
                                            _left(cap, spent0))
         numbers = economics.compute(econ, items)
-        m = numbers["margin"]
+        m, u = numbers["margin"], numbers.get("unit")
         job.summary = (f"{econ.business_model}: {econ.price_point:g} {econ.currency} {econ.price_unit}, "
                        f"margin {'unknown' if m is None else f'{m:.0%}'}, score {econ.score}/10")
+        if u:
+            be_cr = u["break_even_conversion"]
+            job.summary = (f"local stock at R{u['price_zar']:,.0f}: R{u['landed_zar']:,.0f} landed, "
+                           f"R{u['contribution_zar']:,.0f} left per order, break-even "
+                           f"{'never' if be_cr is None else f'{be_cr:.1%} of visitors'}, score {econ.score}/10")
     with agents.run("dive", "Risk analyst", **ctx) as job:
         risks = risk.assess(card, niche, econ.business_model, comps, _left(cap, spent0))
         hard = [r for r in risks.risks if r.hard_kill]
         job.summary = risks.summary + (f" Hard kill: {hard[0].risk}" if hard else "")
     with agents.run("dive", "Capital estimator", **ctx) as job:
-        lines, total = capital.estimate(econ.business_model, numbers["unit_cost_zar"])
-        be = capital.break_even(total, numbers["unit_profit_zar"])
+        lines, total = capital.estimate(econ.business_model, numbers["unit_cost_zar"], numbers.get("unit"))
+        be = capital.break_even(capital.sunk(lines), numbers["unit_profit_zar"])
         verdict, reasons = capital.gate(econ.business_model, econ.score, numbers, total, be, risks.risks)
         job.summary = f"R{total:,.0f} to start, break-even {be or 'never'} sales: {verdict.upper()}"
     kept = [e for e in econ.evidence if verbatim(e, material)]
@@ -68,6 +74,7 @@ def dive_card(card: Card) -> Dossier:
                 price_point=econ.price_point, currency=econ.currency.upper(), price_unit=econ.price_unit,
                 price_basis=econ.price_basis_id, capital_zar=total, capital_lines_json=json.dumps(lines),
                 break_even_sales=be, risks_json=json.dumps([r.model_dump() for r in risks.risks]),
+                unit_json=json.dumps(numbers.get("unit") or {}),
                 demand_score=econ.demand_score, competition_score=econ.competition_score, score=econ.score,
                 verdict=verdict, reasoning=reasoning, kill_reasons_json=json.dumps(reasons),
                 **{k: numbers[k] for k in ("price_zar", "unit_cost_zar", "unit_cost_basis", "fees_zar",
@@ -103,6 +110,9 @@ def show(card: Card, d: Dossier) -> None:
         print(f"           price {d.price_point:g} {d.currency} {d.price_unit} (R{d.price_zar:,.0f}, anchored to "
               f"{d.price_basis}); unit profit R{d.unit_profit_zar or 0:,.0f}; margin {margin}")
         print(f"           unit cost: {d.unit_cost_basis}")
+        if d.j("unit"):
+            for line in landed.lines(d.j("unit"))[1:]:
+                print(f"         {line}")
     print(f"           start-up R{d.capital_zar:,.0f}: "
           + "; ".join(f"{x[0]} R{x[1]:,.0f}" for x in d.j("capital_lines")))
     print(f"           break-even {d.break_even_sales or 'never'} sales; demand {d.demand_score}/10, "

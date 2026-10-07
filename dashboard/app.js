@@ -7,6 +7,7 @@
   function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
   function R(n) { if (n == null) return '–'; var v = Math.abs(n), s = v >= 10 ? Math.round(v).toLocaleString('en-ZA') : v.toFixed(2); return (n < 0 ? '−' : '') + 'R' + s.replace(/ |\s/g, ','); }
   function pct(x) { return x == null ? '–' : Math.round(x * 100) + '%'; }
+  function pct1(x) { return x == null ? '–' : (x * 100).toFixed(1) + '%'; }
   function hhmm(iso) { var d = new Date(iso); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
 
   var arena = Arena.mount($('c'), {onSelect: function (h) { current = {kind: h.kind, id: h.id}; panel(); }, onReplayEnd: function () { hint(); }});
@@ -41,7 +42,8 @@
     var tw = S.arena.towers[u.tower - 1], lane = S.arena.lanes.filter(function (l) { return l.id === u.lane; })[0];
     var states = {waiting: u.status === 'won' ? 'Training is preparing its squad' : 'Waiting to be judged', testing: 'Smoke test running', dead: 'Killed here, now in the Archive',
       blocked: {certified: 'Squad certified, waiting for you to fund the launch', training_failed: 'Squad not certified: retry or leave it'}[u.status] || 'Waiting on you'};
-    var d = u.dossier, kv = [['T' + u.tower, tw.name], [d ? R(d.capital) : '–', 'start-up'], [d ? pct(d.margin) : '–', 'margin']];
+    var d = u.dossier, kv = [['T' + u.tower, tw.name], [d ? R(d.capital) : '–', 'start-up'],
+      d && d.stock ? [pct1(d.stock.break_even_conversion), 'must buy to break even'] : [d ? pct(d.margin) : '–', 'margin']];
     if (u.smoke && u.state === 'testing') kv = [[String(u.smoke.visitors), 'visitors'], [String(u.smoke.buy_clicks), 'buy-clicks'], [u.smoke.visitors ? pct(u.smoke.buy_clicks / u.smoke.visitors) : '–', 'rate']];
     return {id: 'unit', name: u.title, lvl: (lane ? lane.name : u.lane) + (u.lane_guessed ? ' (guessed)' : ''),
             desc: states[u.state] + ' at tower ' + u.tower + ': ' + tw.rule + (d ? ' Deep Dive score ' + d.score + '/10, break-even after ' + (d.break_even || 'never') + ' sales.' : ''),
@@ -109,7 +111,9 @@
       c.appendChild(el('span', 'meta', d.model + ' · ' + d.lane + ' lane · score ' + d.score + '/10'));
       c.appendChild(el('h3', null, d.title)); c.appendChild(el('div', 'big', R(d.capital)));
       var ul = el('ul'); d.lines.forEach(function (l) { var li = el('li'); li.appendChild(el('span', null, l[0])); li.appendChild(el('span', null, R(l[1]))); ul.appendChild(li); }); c.appendChild(ul);
-      c.appendChild(el('span', 'meta', 'Price ' + d.price + ' ' + d.currency + ' ' + d.price_unit + ' · margin ' + pct(d.margin) + ' · break-even ' + (d.break_even || 'never') + ' sales'));
+      c.appendChild(el('span', 'meta', d.stock
+        ? 'Shop price ' + R(d.price_zar) + ' · ' + R(d.stock.landed_zar) + ' landed · ' + R(d.stock.contribution_zar) + ' left per order before ads · break-even if ' + pct1(d.stock.break_even_conversion) + ' of visitors buy · first batch ' + d.stock.batch_units + ' units'
+        : 'Price ' + d.price + ' ' + d.currency + ' ' + d.price_unit + ' · margin ' + pct(d.margin) + ' · break-even ' + (d.break_even || 'never') + ' sales'));
       c.appendChild(el('span', 'meta', 'Unit cost: ' + d.unit_cost_basis));
       grid.appendChild(c); });
     box.appendChild(grid);

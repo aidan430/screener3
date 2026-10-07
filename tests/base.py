@@ -13,7 +13,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from unittest import mock
 
-from tests.fakes import FAKE_POSTS, FakeClaude, fake_probe, temp_env
+from tests.fakes import COMMERCE_POST, FAKE_POSTS, FakeClaude, fake_probe, temp_env
 
 logging.disable(logging.CRITICAL)
 TMP = temp_env()  # must run before factory.models creates the engine
@@ -28,9 +28,10 @@ def quiet(fn, *a, **kw):
     return out, buf.getvalue()
 
 
-def first_niches(n):
+def first_niches(n, kind=""):
+    """The first n active niches of one kind ("" = software and content, "commerce")."""
     from factory.seed import active_niches
-    return active_niches()[:n]
+    return [x for x in active_niches() if x.kind == kind][:n]
 
 
 def _no_key(*a, **kw):
@@ -67,9 +68,12 @@ class FactoryTestCase(unittest.TestCase):
             p.stop()
         costs.set_client(None)
 
-    def scout(self, niches=1):
+    def scout(self, niches=1, kind=""):
+        from contextlib import nullcontext
         from factory.scouts import runner
-        with mock.patch.object(runner, "active_niches", lambda: first_niches(niches)):
+        posts = (mock.patch("factory.scouts.sources.reddit.fetch", return_value=[COMMERCE_POST])
+                 if kind == "commerce" else nullcontext())  # otherwise keep setUp's (or the test's) patch
+        with mock.patch.object(runner, "active_niches", lambda: first_niches(niches, kind)), posts:
             return quiet(runner.run)
 
     def gates(self):
@@ -84,25 +88,25 @@ class FactoryTestCase(unittest.TestCase):
         from factory.smoke import run
         return quiet(run.run)
 
-    def to_smoke(self):
-        self.scout()
+    def to_smoke(self, kind=""):
+        self.scout(kind=kind)
         self.gates()
         self.dive()
         return self.smoke()
 
-    def to_won(self):
-        """Through a funded smoke test that wins (FAKE visits and clicks)."""
+    def to_won(self, kind="", visits=160, clicks=10):
+        """Through a funded smoke test that wins on clicks (FAKE visits and clicks)."""
         from datetime import timedelta
         from factory.models import SmokeTest, TrackEvent, session, utcnow
         from factory.smoke import run as smoke
-        t = self.to_smoke()[0][0]
+        t = self.to_smoke(kind)[0][0]
         quiet(smoke.approve, t.id)
         with session() as s:
             st = s.get(SmokeTest, t.id)
             st.approved_at = utcnow() - timedelta(hours=10)
             s.add(st)
-            s.add_all([TrackEvent(slug=t.slug, kind="visit") for _ in range(160)]
-                      + [TrackEvent(slug=t.slug, kind="buy_click") for _ in range(10)])
+            s.add_all([TrackEvent(slug=t.slug, kind="visit") for _ in range(visits)]
+                      + [TrackEvent(slug=t.slug, kind="buy_click") for _ in range(clicks)])
             s.commit()
         self.smoke()
         return t

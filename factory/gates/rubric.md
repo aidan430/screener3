@@ -4,7 +4,7 @@ Both gates read this file at runtime. The section text is sent to the judge
 verbatim. Bump the version line when you change a rubric; every GateResult
 records the version it was judged under.
 
-<!-- version: 2026-10-07.1 -->
+<!-- version: 2026-10-07.2 -->
 
 ## proof
 
@@ -20,6 +20,11 @@ PASS requires at least one of:
    paid, **and** evidence of complaints about it.
 3. A direct request to pay (or a statement of paying someone) in a forum post,
    with upvotes or replies showing others care (score >= 3 or replies >= 2).
+
+For a physical product (business model local_stock), a shop or listing named in
+the material that sells this product or a close substitute at a stated price
+counts as a paid competitor, and complaints that South African buyers cannot
+get it (out of stock, overpriced, slow or costly to import) count as complaints.
 
 Scoring (0-10):
 - 0-2: no money anywhere; curiosity or venting only.
@@ -42,14 +47,31 @@ loop.
 
 KILL if any of these is needed:
 - sales calls or a sales team to close customers,
-- holding our own stock, a warehouse, shipping it ourselves, or on-site work
-  (dropshipping and print-on-demand are fine: the supplier stores and ships),
+- holding stock ourselves, packing or shipping it ourselves, or on-site work
+  (stock held and shipped by a fulfilment warehouse is fine for a local_stock
+  product: it is bought only after the owner's FUND STOCK click),
 - a licence, regulatory registration or professional sign-off to operate,
 - processing personal data categories that require registration (health
   records, children's data, biometric, credit records),
 - a two-sided marketplace that must be seeded on both sides,
 - more than 7 build-days for a sellable first version,
 - ongoing human support or manual fulfilment per customer.
+
+For a physical product sold in South Africa (local_stock), also KILL if it is:
+- wireless or radio equipment (needs ICASA type approval), mains-powered or
+  charging electrical goods (need an NRCS letter of authority), or loose
+  lithium batteries,
+- food, drink, supplements, medicines, medical devices, or anything sold with
+  a health claim,
+- a weapon, pepper spray or an adult product,
+- a brand-name product or a copy of one (trade marks, designs, characters),
+- heavier than 5 kg packed, fragile, or sold mainly in sizes (one-size apparel
+  is fine),
+- something that needs a licence, certificate or fitting to sell or use.
+For local_stock, the build is the store listing (1-2 days): score 10 = light,
+sturdy, one size, legal to sell anywhere in South Africa, and every buyer
+question can be answered from the catalogue; 6 = some risk (returns, fragility)
+but no kill condition.
 
 Scoring (0-10): 10 = a single-page tool buildable in 1-2 days, sold
 self-serve; 6 = buildable in about 7 days with some integration risk; below 6

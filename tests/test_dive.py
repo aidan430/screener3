@@ -29,9 +29,9 @@ class DeepDiveTest(FactoryTestCase):
         # micro-SaaS: 5% fees, 30% ad cost, 5% unit cost (assumption) -> 60% margin
         self.assertAlmostEqual(d.margin, 0.60, places=3)
         self.assertIn("assumption", d.unit_cost_basis)
-        # Domain 250 + hosting 350 + smoke test 200 + first ad test 1300
-        self.assertEqual(d.capital_zar, 2100)
-        self.assertEqual(d.break_even_sales, 22)
+        # Domain 250 + hosting 350 + smoke test 700 (150 SA visitors) + first ad test 1300
+        self.assertEqual(d.capital_zar, 2600)
+        self.assertEqual(d.break_even_sales, 27)  # R2,600 / R99.90 profit per sale
         self.assertEqual(d.price_basis, "E1")
         evidence = d.j("evidence")
         self.assertEqual(evidence[0]["id"], "E0")
@@ -41,7 +41,7 @@ class DeepDiveTest(FactoryTestCase):
             gate = s.exec(select(GateResult).where(GateResult.gate == "economics")).one()
         self.assertEqual(card.status, "dive_passed")
         self.assertEqual(gate.evidence, ["I pay someone R450 a month"])  # invented snippet dropped
-        self.assertIn("start-up R2,100", out)
+        self.assertIn("start-up R2,600", out)
 
     def test_price_far_above_the_anchor_kills(self):
         self.fake.price = 30.0  # E1 is 9.99 USD

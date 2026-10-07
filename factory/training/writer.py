@@ -73,11 +73,11 @@ def facts(card, niche, dossier, smoke) -> str:
 
 
 def write_sops(card, material: str, cap_zar: float) -> Sops:
-    roles = ", ".join(config.squad()["roles"])
+    roles = ", ".join(config.squad_roles(card.lane))
     sops = costs.call(stage_name="train", model=config.settings()["models"]["judge"],
                       system=SOPS_SYSTEM.format(roles=roles), prompt=material, output=Sops,
                       max_tokens=3000, card_id=card.id, cap_zar=cap_zar, note="playbook writer")
-    known = set(config.squad()["roles"])
+    known = set(config.squad_roles(card.lane))
     sops.role_rules = [r for r in sops.role_rules if r.role in known]
     return sops
 
@@ -87,11 +87,12 @@ def build_catalogue(card, material: str, dossier, cap_zar: float) -> Catalogue:
                      prompt=material, output=Catalogue, max_tokens=1500, card_id=card.id, cap_zar=cap_zar,
                      note="catalogue builder")
     if dossier and dossier.price_point and cat.items:
-        main = cat.items[0]
-        if abs(main.price - dossier.price_point) > 0.01 or main.currency.upper() != dossier.currency.upper():
+        from factory.smoke.run import page_price
+        main, (price, currency) = cat.items[0], page_price(dossier)
+        if abs(main.price - price) > 0.01 or main.currency.upper() != currency.upper():
             cat.notes = (cat.notes + " " if cat.notes else "") + (
-                f"Main price corrected from {main.price:g} {main.currency} to the Deep Dive price.")
-            main.price, main.currency = dossier.price_point, dossier.currency
+                f"Main price corrected from {main.price:g} {main.currency} to the price that won the smoke test.")
+            main.price, main.currency = price, currency
     return cat
 
 

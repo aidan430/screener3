@@ -24,6 +24,24 @@ FAKE_POSTS = [
 ]
 
 
+COMMERCE_POST = RawSignal(source="reddit", external_id="reddit:c1",
+                          url="https://www.reddit.com/r/southafrica/comments/c1/",
+                          title="Where can I buy a collapsible dog water bottle?",
+                          text="Takealot has been out of stock for months and the import ones cost R899 with "
+                               "shipping. Where can I buy a collapsible dog water bottle for hikes in SA?",
+                          score=21, replies=14, matched=["where can I buy", "out of stock"])
+
+
+def commerce_draft(signal_ids: list[int]):
+    from factory.scouts.distill import CardDraft, Distilled
+    return Distilled(cards=[CardDraft(
+        signal_id=signal_ids[0], title="Collapsible dog water bottle",
+        problem="SA dog owners who hike cannot get one locally.",
+        quote="Takealot has been out of stock for months and the import ones cost R899 with shipping.",
+        pay_evidence="the import ones cost R899 with shipping", pay_amount=899, pay_currency="R",
+        business_model="local_stock")])
+
+
 def fake_draft(signal_ids: list[int]):
     from factory.scouts.distill import CardDraft, Distilled
     a, b = signal_ids[0], signal_ids[-1]  # one post is fine: the second draft then fails the verbatim check
@@ -49,21 +67,24 @@ class FakeMessages:
         if name == "Distilled":
             import re
             ids = [int(x) for x in re.findall(r'<post id="(\d+)"', prompt)]
-            out = fake_draft(ids)
+            out = commerce_draft(ids) if "product scout" in system else fake_draft(ids)
         elif name == "Verdict":
             out = self.owner.verdict(system, prompt)
         elif name == "PageDraft":
             from factory.smoke.page import AdVariant, PageDraft, Targeting
-            out = PageDraft(product_name="Lease Nudge", headline="Lease renewals that send themselves",
+            name_ = "Trail Flask" if "physical product" in prompt else "Lease Nudge"
+            out = PageDraft(product_name=name_, headline="Lease renewals that send themselves",
                             subhead="Reminders for SA landlords.", benefits=["a", "b", "c"],
                             price_label="R99 / month", cta="Buy now",
                             ads=[AdVariant(primary_text=f"v{i}", headline=f"h{i}") for i in range(3)],
                             targeting=Targeting(countries=["ZA"], interests=["Property"]))
         elif name == "Plan":
             from factory.dive.demand import Plan
-            out = Plan(terms=["lease renewal reminders", "rent reminder"], business_model="micro_saas")
+            out = (Plan(terms=["collapsible dog water bottle"], business_model="local_stock")
+                   if "dog water bottle" in prompt else
+                   Plan(terms=["lease renewal reminders", "rent reminder"], business_model="micro_saas"))
         elif name == "Econ":
-            out = self.owner.econ()
+            out = self.owner.econ(prompt)
         elif name == "Risks":
             from factory.dive.risk import RiskItem, Risks
             out = Risks(risks=[RiskItem(risk="Tenant data must follow POPIA.", severity="medium",
@@ -85,13 +106,14 @@ class FakeClaude:
         self.calls = []
         self.messages = FakeMessages(self)
         self.price = 9.0          # anchored to E1 (9.99 USD) unless a test changes it
+        self.commerce_price = 599.0  # rand, anchored to E0 (R899 in the post)
         self.hard_kill = False
         self.exam_mode = "pass"   # pass | fail_once | fail_always (the Support agent)
         self.graded = {}
 
     def training(self, name, system, prompt):
         from factory.training import exam, writer
-        roles = ["store", "content", "ads", "support", "books"]
+        roles = ["store", "content", "ads", "support", "books", "stock"]
         if name == "Sops":
             return writer.Sops(brand_voice="Plain and friendly.", offer_summary="Lease renewal reminders.",
                                refund_policy="Full refund within 14 days (our default).",
@@ -108,7 +130,8 @@ class FakeClaude:
         if name == "Replies":
             return exam.Replies(replies=[exam.Reply(n=i, reply=f"reply {i}") for i in range(1, 6)])
         if name == "Grades":
-            role = next(r for r in ("Store agent", "Content agent", "Ads agent", "Support agent", "Bookkeeper") if r in system)
+            role = next(r for r in ("Store agent", "Content agent", "Ads agent", "Support agent", "Bookkeeper",
+                                    "Stock agent") if r in system)
             self.graded[role] = self.graded.get(role, 0) + 1
             fail = role == "Support agent" and (self.exam_mode == "fail_always"
                                                 or (self.exam_mode == "fail_once" and self.graded[role] == 1))
@@ -119,8 +142,14 @@ class FakeClaude:
         return exam.Revision(prompt="You are the Support agent. New rule: never refund outside policy.",
                              changes="Added a refund rule.")
 
-    def econ(self):
+    def econ(self, prompt=""):
         from factory.dive.economics import Econ
+        if "dog water bottle" in prompt:
+            return Econ(business_model="local_stock", price_point=self.commerce_price, currency="R",
+                        price_unit="one-off", price_basis_id="E0", weight_kg=0.3, duty_category="default",
+                        demand_score=7, competition_score=7, score=8,
+                        reasoning="Out of stock locally; imports cost R899.",
+                        evidence=["the import ones cost R899 with shipping"])
         return Econ(business_model="micro_saas", price_point=self.price, currency="USD", price_unit="per month",
                     price_basis_id="E1", demand_score=7, competition_score=6, score=8,
                     reasoning="Landlords pay R450 a month for a person; apps charge $9.99.",
@@ -129,6 +158,9 @@ class FakeClaude:
     def verdict(self, system, prompt):
         from factory.gates.common import Verdict
         if "Gate of Proof" in system:
+            if "dog water bottle" in prompt:
+                return Verdict(score=7, verdict="pass", reasoning="A priced import and an out-of-stock shop.",
+                               evidence=["Takealot has been out of stock for months"])
             if "Lease renewal" in prompt:
                 return Verdict(score=7, verdict="pass", reasoning="Rule 3: pays a person R450/month.",
                                evidence=["I pay someone R450 a month", "a quote the model made up"])

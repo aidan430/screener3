@@ -34,7 +34,7 @@ class Plan(BaseModel):
 
 def plan(card, niche, cap_zar: float) -> Plan:
     n = int(config.settings()["dive"]["search_terms"])
-    models = config.business_models()["models"]
+    models = config.enabled_models()
     prompt = (f"Niche: {niche.slug} (region {niche.region}). Keywords: {', '.join(niche.keywords)}.\n"
               f"Card: {card.title}\nProblem: {card.problem}\nBuyer quote: \"{card.quote}\"\n"
               f"Scout's model guess: {card.business_model or 'none'}")
@@ -42,7 +42,9 @@ def plan(card, niche, cap_zar: float) -> Plan:
                      system=PLAN_SYSTEM.format(n=n, models=", ".join(models)), prompt=prompt,
                      output=Plan, max_tokens=300, card_id=card.id, cap_zar=cap_zar, note="query planner")
     terms = [t.strip() for t in out.terms if t and t.strip()][:n] or [card.title]
-    model = out.business_model if out.business_model in models else (card.business_model or "digital_product")
+    fallback = card.business_model if card.business_model in models else (
+        "local_stock" if getattr(niche, "kind", "") == "commerce" else "digital_product")
+    model = out.business_model if out.business_model in models else fallback
     return Plan(terms=terms, business_model=model)
 
 

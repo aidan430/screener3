@@ -15,6 +15,7 @@ from sqlmodel import func, select
 
 from factory import agents, config, costs
 from factory.models import AgentRun, Card, Dossier, GateResult, SmokeTest, Venture, session, utcnow
+from factory.smoke import budget
 from factory.warden import holds, incidents, mailer
 from factory.warden.tables import WardenReport
 
@@ -27,7 +28,6 @@ def build(kind: str = "weekly", now=None) -> dict:
     from factory.api import state as state_mod
     now = now or utcnow()
     start = now - timedelta(days=7 if kind == "weekly" else 30)
-    budget = config.settings()["smoke"]["budget_zar"]
     with session() as s:
         scouted = s.exec(select(func.count()).select_from(Card).where(Card.created_at >= start)).one()
         gates = {(g, v): n for g, v, n in s.exec(select(GateResult.gate, GateResult.verdict, func.count())
@@ -47,15 +47,17 @@ def build(kind: str = "weekly", now=None) -> dict:
         d = doss.get(t.card_id)
         extra = (f" If it wins, the launch needs about R{d.capital_zar:,.0f} (break-even after "
                  f"{d.break_even_sales or '?'} sales)." if d and d.capital_zar else "")
-        decisions.append({"text": f"Fund the {t.name} smoke test? R{budget} for 48 hours.{extra}",
-                          "label": f"FUND TEST R{budget}", "endpoint": f"/api/approve/{t.id}"})
-    from factory.build.launch import shopping_list
+        decisions.append({"text": f"Fund the {t.name} smoke test? R{budget.of(t)} for 48 hours.{extra}",
+                          "label": f"FUND TEST R{budget.of(t)}", "endpoint": f"/api/approve/{t.id}"})
+    from factory.build.launch import fund_label, shopping_list
     for c in tower6:
         if c.status == "certified":
             _, rest = shopping_list(c.id)
+            label = fund_label(doss.get(c.id))
+            what = "its first stock and the rest of the start-up" if label == "FUND STOCK" else "the rest of the start-up"
             decisions.append({"text": f"Fund the launch of “{c.title}”? It won its smoke test and its squad passed every "
-                                      f"exam. The rest of the start-up is R{rest:,.0f}; nothing is bought automatically.",
-                              "label": f"FUND LAUNCH R{rest:,.0f}", "endpoint": f"/api/launch/{c.id}"})
+                                      f"exam. {what[0].upper() + what[1:]} is R{rest:,.0f}; nothing is bought automatically.",
+                              "label": f"{label} R{rest:,.0f}", "endpoint": f"/api/launch/{c.id}"})
         else:
             decisions.append({"text": f"Retry training for “{c.title}”? Its squad was not certified.",
                               "label": "RETRY TRAINING", "endpoint": f"/api/train/{c.id}/retry"})

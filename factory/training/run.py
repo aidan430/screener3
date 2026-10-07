@@ -57,7 +57,7 @@ def train_card(card: Card) -> Squad:
     with agents.run("train", "Prompt engineer", **ctx) as job:
         crew = [SquadAgent(squad_id=squad.id, role=k, name=r["name"], model=r["model"],
                            prompt=writer.compose(k, smoke.name, material, sops, cat))
-                for k, r in config.squad()["roles"].items()]
+                for k, r in config.squad_roles(card.lane).items()]
         _save(*crew)
         job.summary = f"first instructions for {len(crew)} agents: " + ", ".join(a.name for a in crew)
     examine(card, squad, crew, material, cap, spent0)

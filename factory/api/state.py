@@ -13,6 +13,7 @@ from factory import agents, config, costs
 from factory.api import arena as arena_mod
 from factory.api import panels
 from factory.models import AgentRun, Card, Cost, Dossier, Niche, RunLog, SmokeTest, Venture, session, tonight, utcnow
+from factory.smoke import budget
 from factory.warden import holds, incidents
 from factory.warden.tables import Incident, WardenReport
 
@@ -35,7 +36,7 @@ def side_quests(s) -> list[str]:
             ("PAYSTACK_SECRET_KEY", "Paystack KYC and webhook secret for the first venture (15 min).")]
     q += [text for key, text in need if not config.env(key)]
     for t in s.exec(select(SmokeTest).where(SmokeTest.status == "awaiting_funding")):
-        q.append(f"Fund the {t.name} smoke test (R{config.settings()['smoke']['budget_zar']}).")
+        q.append(f"Fund the {t.name} smoke test (R{budget.of(t)}).")
     for i in incidents.open_items():  # what the Warden could not fix (keys and funding are listed above)
         if i.outcome == "needs_you" and i.kind not in ("missing_key", "stuck_funding"):
             q.append(f"{i.detail} {i.action}")
@@ -74,15 +75,14 @@ def treasury(s) -> tuple[list[dict], float, float]:
             rows.append({"name": v.name, "sub": f"{v.status}, {days} days",
                          "projected_30d": round(earned / days * 30), "kind": "income"})
     for t in s.exec(select(SmokeTest).where(SmokeTest.status.in_(["awaiting_funding", "approved"]))):
-        rows.append({"name": t.name, "sub": "smoke test, waiting on your R200" if t.status == "awaiting_funding"
+        rows.append({"name": t.name, "sub": f"smoke test, waiting on your R{budget.of(t)}" if t.status == "awaiting_funding"
                      else "smoke test running", "projected_30d": None, "label": "unknown", "kind": "soon"})
     week = costs.total_zar(since=utcnow() - timedelta(days=7))
     rows.append({"name": "Elixir (agent spend)", "sub": "every agent's API bill, last 7 days x 30/7",
                  "projected_30d": -round(week * 30 / 7, 2), "kind": "cost"})
-    funded = s.exec(select(func.count()).select_from(SmokeTest).where(
-        SmokeTest.approved_at >= utcnow() - timedelta(days=30))).one()
-    rows.append({"name": "Ads and hosting", "sub": f"{funded} funded smoke tests, 30 days",
-                 "projected_30d": -float(funded * config.settings()["smoke"]["budget_zar"]), "kind": "cost"})
+    funded = list(s.exec(select(SmokeTest).where(SmokeTest.approved_at >= utcnow() - timedelta(days=30))))
+    rows.append({"name": "Ads and hosting", "sub": f"{len(funded)} funded smoke tests, 30 days",
+                 "projected_30d": -float(sum(budget.of(t) for t in funded)), "kind": "cost"})
     biggest = max([abs(r["projected_30d"] or 0) for r in rows] + [1])
     for r in rows:
         r["pct"] = (round(100 * abs(r["projected_30d"]) / biggest) if r["projected_30d"]
@@ -100,7 +100,7 @@ def _latest_dossiers(s) -> dict[int, Dossier]:
 def niches(s) -> list[dict]:
     """Every niche that reached a smoke test: what it earned and cost so far (rand)."""
     doss, bm, out = _latest_dossiers(s), config.business_models()["models"], []
-    stage = {"awaiting_funding": "waiting for your R200", "approved": "smoke test running",
+    stage = {"awaiting_funding": "waiting for your test money", "approved": "smoke test running",
              "won": "won its smoke test", "lost": "lost its smoke test"}
     by_card = {"won": "in Training", "certified": "squad certified: fund the launch",
                "training_failed": "training failed: retry?"}
@@ -109,11 +109,13 @@ def niches(s) -> list[dict]:
         v = s.exec(select(Venture).where(Venture.slug == t.slug)).first()
         revenue = (v.revenue_collected + v.revenue_uncollected) if v else 0.0
         agent = s.exec(select(func.coalesce(func.sum(Cost.zar), 0.0)).where(Cost.card_id == c.id)).one()
-        spent = float(agent) + (float(config.settings()["smoke"]["budget_zar"]) if t.approved_at else 0.0)
+        spent = float(agent) + (float(budget.of(t)) if t.approved_at else 0.0)
         d = doss.get(c.id)
         out.append({"name": t.name, "card_id": c.id, "lane": c.lane or arena_mod.LANE_FALLBACK,
                     "model": bm.get(c.business_model, {}).get("label", "Unknown"),
-                    "stage": v.status if v else by_card.get(c.status, stage.get(t.status, t.status)),
+                    "stage": v.status if v else by_card.get(c.status, (
+                        f"waiting for your R{budget.of(t)}" if t.status == "awaiting_funding"
+                        else stage.get(t.status, t.status))),
                     "revenue": round(revenue, 2),
                     "costs": round(spent, 2), "profit": round(revenue - spent, 2),
                     "capital": d.capital_zar if d else None})
@@ -131,7 +133,8 @@ def dossiers(s, limit: int = 8) -> list[dict]:
                     "price_zar": d.price_zar, "capital": d.capital_zar, "lines": d.j("capital_lines"),
                     "break_even": d.break_even_sales, "margin": d.margin, "score": d.score,
                     "demand_score": d.demand_score, "competition_score": d.competition_score,
-                    "unit_cost_basis": d.unit_cost_basis, "reasoning": d.reasoning[:400], "url": c.url})
+                    "unit_cost_basis": d.unit_cost_basis, "reasoning": d.reasoning[:400], "url": c.url,
+                    "stock": arena_mod.stock_summary(d)})
     return out
 
 

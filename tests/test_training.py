@@ -44,12 +44,12 @@ class TrainingTest(FactoryTestCase):
             self.assertIn("## Never break these", (folder / "squad" / f"{role}.md").read_text())
         self.assertIn("Support agent", (folder / "squad" / "exams.md").read_text())
         cat = json.loads((folder / "squad" / "catalogue.json").read_text())
-        self.assertEqual((cat["items"][0]["price"], cat["items"][0]["currency"]), (9.0, "USD"))  # Deep Dive price
+        self.assertEqual((cat["items"][0]["price"], cat["items"][0]["currency"]), (169.0, "ZAR"))  # the page's price
         self.assertIn("corrected", cat["notes"])
         st = self.client().get("/api/state").json()
         unit = next(u for u in st["arena"]["units"] if u["state"] != "dead")
         self.assertEqual((unit["tower"], unit["state"]), (6, "blocked"))
-        self.assertEqual(unit["actions"][0]["label"], "FUND LAUNCH R1,900")  # R2,100 minus the R200 test
+        self.assertEqual(unit["actions"][0]["label"], "FUND LAUNCH R1,900")  # R2,600 minus the R700 test
         self.assertEqual(len(unit["squad"]["agents"]), 5)
         depts = {d["id"]: d for d in st["departments"]}
         self.assertEqual((depts["train"]["agents"], depts["ops"]["agents"]), (6, 6))  # 1 builder + 5 standing by

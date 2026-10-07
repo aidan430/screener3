@@ -27,6 +27,8 @@ class Niche(SQLModel, table=True):
     keywords_json: str = "[]"
     subreddits_json: str = "[]"
     competitors_json: str = "[]"
+    kind: str = ""                             # commerce | "" (software and content niches)
+    sources_json: str = "[]"                  # empty: every enabled source
     position: int = 0
     active: bool = True
 
@@ -41,6 +43,10 @@ class Niche(SQLModel, table=True):
     @property
     def competitors(self) -> list[str]:
         return json.loads(self.competitors_json)
+
+    @property
+    def sources(self) -> list[str]:
+        return json.loads(self.sources_json or "[]")
 
 
 class Signal(SQLModel, table=True):
@@ -120,6 +126,7 @@ class Dossier(SQLModel, table=True):
     cac_zar: Optional[float] = None
     unit_profit_zar: Optional[float] = None
     margin: Optional[float] = None
+    unit_json: str = "{}"                     # local_stock: landed cost, per-order costs, break-even
     capital_zar: Optional[float] = None
     capital_lines_json: str = "[]"             # [[label, rand, basis]]
     break_even_sales: Optional[int] = None
@@ -152,6 +159,7 @@ class SmokeTest(SQLModel, table=True):
     status: str = Field(default="awaiting_funding", index=True)
     visitors: int = 0
     buy_clicks: int = 0
+    result: str = ""                           # why it settled as it did
     approved_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=utcnow)
 

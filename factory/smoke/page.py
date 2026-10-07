@@ -55,19 +55,27 @@ def slugify(s: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")[:40] or "venture"
 
 
-def draft(card: Card, price_label: str = "") -> PageDraft:
+PHYSICAL = ("\nThis is a physical product sold from stock in a South African warehouse. Benefits "
+            "describe the product itself; no subscriptions; promise no delivery dates or stock levels.")
+
+
+def draft(card: Card, price_label: str = "", physical: bool = False) -> PageDraft:
     with session() as s:
         niche = s.get(Niche, card.niche_id)
     prompt = (f"Niche: {niche.slug} (region {niche.region})\nCard title: {card.title}\n"
               f"Problem: {card.problem}\nBuyer quote: \"{card.quote}\"\n"
               f"Pay evidence: {card.pay_evidence or 'none'}\nSource: {card.url}"
-              + (f"\nPrice to use, exactly as written (set by the Deep Dive): {price_label}" if price_label else ""))
+              + (f"\nPrice to use, exactly as written (set by the Deep Dive): {price_label}" if price_label else "")
+              + (PHYSICAL if physical else ""))
     return costs.call(stage_name="smoke", model=config.settings()["models"]["judge"], system=SYSTEM,
                       prompt=prompt, output=PageDraft, max_tokens=1500, card_id=card.id)
 
 
-def render(d: PageDraft, slug: str, api_base: str | None = "") -> str:
+def render(d: PageDraft, slug: str, api_base: str | None = "", physical: bool = False) -> str:
     e = html.escape
+    ask, thanks = (("We are taking first orders this week. Leave your email and we will tell you the day it ships.",
+                    "Thanks. We will email you the day it ships.") if physical else
+                   ("We are onboarding founders this week, leave your email.", "Thanks. We will be in touch this week."))
     plausible = ""
     if config.env("FACTORY_DOMAIN"):
         dom = f"{slug}.{config.env('FACTORY_DOMAIN')}"
@@ -100,9 +108,9 @@ footer{{margin-top:48px;font-size:13px;color:#7a7a72}}
 <ul>{benefits}</ul>
 <p class="price">{e(d.price_label)}</p>
 <button id="buy">{e(d.cta)}</button>
-<form id="f"><p style="width:100%;margin:0">We are onboarding founders this week, leave your email.</p>
+<form id="f"><p style="width:100%;margin:0">{e(ask)}</p>
 <input type="email" id="em" required placeholder="you@example.com"><button type="submit">Notify me</button></form>
-<p class="ok" id="ok">Thanks. We will be in touch this week.</p>
+<p class="ok" id="ok">{e(thanks)}</p>
 <footer>An early product test. No payment is taken on this page.</footer>
 </main><script>
 var C={cfg};

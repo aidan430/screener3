@@ -38,6 +38,28 @@ Hard rules:
   one of {models}.
 - Return at most {max_cards} cards, each from a different post where possible."""
 
+COMMERCE_SYSTEM = """You are a product scout for a small South African online store. You read raw
+forum posts and extract physical products that people want to buy but cannot
+easily get in South Africa (out of stock, overpriced, slow or costly to import,
+or poor local options).
+
+Hard rules:
+- Use ONLY the posts given. Never invent facts, prices, people or urls.
+- `quote` must be copied character-for-character from the post's text (one to
+  three sentences, 20-300 characters): the words that show someone wants it.
+- `pay_evidence` must also be copied verbatim from the same post and show money:
+  a price paid or seen, a shop or listing named with its price, or an explicit
+  willingness to pay. If the post has none, use "".
+- `pay_amount` is the number in pay_evidence, else null. `pay_currency` is its
+  symbol or code as written ("R", "$", "USD"...), else "".
+- `title` names the product (max 8 words); `problem` says who wants it and what
+  stops them buying it locally.
+- Skip food, medicine, supplements, cosmetics with health claims, weapons,
+  wireless or mains-electrical gadgets, brand-name originals and copies of them,
+  and anything over 5 kg. Fewer good cards beat many weak ones.
+- `business_model` is local_stock unless the post clearly fits one of: {models}.
+- Return at most {max_cards} cards, each from a different post where possible."""
+
 
 class CardDraft(BaseModel):
     signal_id: int = Field(description="id of the post this card comes from")
@@ -111,7 +133,8 @@ def distill_niche(niche: Niche) -> list[Card]:
         return []
     cap = float(caps["scout_zar_per_niche"]) - costs.niche_zar(niche.slug)
     model = config.settings()["models"]["scout"]
-    system = SYSTEM.format(max_cards=max_cards, models=", ".join(config.business_models()["models"]))
+    prompt_for = COMMERCE_SYSTEM if niche.kind == "commerce" else SYSTEM
+    system = prompt_for.format(max_cards=max_cards, models=", ".join(config.enabled_models()))
     chars = int(caps["signal_chars"])
     # Trim the batch until the worst-case estimate fits the per-niche cap.
     while signals:
@@ -148,7 +171,8 @@ def save_cards(niche: Niche, signals: list[Signal], drafts: list[CardDraft]) -> 
                 continue
             pay_ev = d.pay_evidence if verbatim(d.pay_evidence, source_text) else ""
             amount = d.pay_amount if pay_ev and amount_in(d.pay_amount, pay_ev) else None
-            model = d.business_model if d.business_model in config.business_models()["models"] else ""
+            fallback = "local_stock" if niche.kind == "commerce" else ""
+            model = d.business_model if d.business_model in config.enabled_models() else fallback
             card = Card(niche_id=niche.id, signal_id=sig.id, title=d.title.strip()[:120],
                         business_model=model, lane=config.lane_of(model),
                         problem=d.problem.strip(), quote=d.quote.strip(), url=sig.url,

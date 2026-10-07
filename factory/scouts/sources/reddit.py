@@ -27,7 +27,7 @@ def queries(niche) -> list[tuple[str, str]]:
     for sub in niche.subreddits:
         if niche.keywords:
             out.append((sub, _or_query(niche.keywords)))
-        out.append((sub, _or_query(config.pain_phrases()[:8])))
+        out.append((sub, _or_query(config.phrases_for(niche)[:8])))
     return out
 
 
@@ -81,7 +81,7 @@ def _praw_client():
 
 def fetch(niche) -> list[RawSignal]:
     cfg = config.settings()["reddit"]
-    terms = niche.keywords + config.pain_phrases()
+    terms = niche.keywords + config.phrases_for(niche)
     reddit = _praw_client()
     seen: dict[str, RawSignal] = {}
     errors: list[str] = []

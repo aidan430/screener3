@@ -8,6 +8,10 @@ would cost to start; Training builds and certifies a squad of agents for the
 niche; Operations runs it; the Treasury counts every rand per niche; the
 Warden oversees all of it, fixes what it can and reports the rest.
 
+Commerce comes first: physical products for South African buyers, sold from
+small batches of stock held by a fulfilment warehouse (`config/commerce.yaml`).
+Digital and content niches keep running at a lower volume.
+
 The dashboard is a MOBA-style arena (see "The arena") so the player can see
 in real time which agents are working, where every niche is in the cycle,
 and which niches make or lose money.
@@ -23,7 +27,7 @@ without a human click.
 | Research | one scout per niche per source, Distiller, Proof gatekeeper, Craft gatekeeper | niches.yaml categories, global sources | Cards with verbatim evidence | Proof gate and Craft gate pass |
 | Deep Dive | Demand analyst, Competitor analyst, Economics analyst, Risk analyst, Capital estimator | Cards past Craft | Dossier: demand, competitors, price, margin, start-up capital, risks | Economics gate passes |
 | Training | Playbook writer, Catalogue builder, Prompt engineer, Simulator, Examiner, Certifier | Smoke-test winners | Certified squad + venture CLAUDE.md | Every squad agent scores 90%+ with no rule broken |
-| Operations | Smoke-test builder; per live niche a squad: Store, Content, Ads, Support, Bookkeeper | Dossiers, certified squads | Smoke tests; daily running of live niches | Monthly review keeps it |
+| Operations | Smoke-test builder; per live niche a squad: Store, Content, Ads, Support, Bookkeeper (commerce: Stock instead of Content) | Dossiers, certified squads | Smoke tests; daily running of live niches | Monthly review keeps it |
 | Treasury | Ledger, Auditor | Sales, refunds, ad and agent bills | Revenue, costs, profit per niche | Books match providers |
 | Warden | Health check, Cost guard, Fixer, Reporter | Every AgentRun, Cost and GateResult | Automatic fixes, alerts, weekly + monthly reports | n/a (oversees) |
 
@@ -35,7 +39,8 @@ A square, top-down map like a MOBA:
 - **Your base** bottom-left (HQ and Treasury). **The Market** top-right: live
   niches sit there as gold mines and send gold back down their lane.
 - **Three lanes**, one per business-model family. Top = Digital (digital
-  products, micro-SaaS). Mid = Commerce (dropshipping, print-on-demand).
+  products, micro-SaaS). Mid = Commerce (local-stock stores; dropshipping and
+  print-on-demand are switched off).
   Bot = Content (newsletters, affiliate sites). A card's lane comes from its
   business model.
 - **Six towers per lane** = the six checks a niche must pass, in order:
@@ -66,10 +71,12 @@ Card status -> tower:
 Killed or lost cards are archived, never deleted.
 
 ## Money rules
-- Two money gates per niche, both human clicks: Fund test (smoke budget,
-  R200 to R1,000) and Fund launch (the rest of the start-up capital, only
-  after a smoke-test win and a certified squad). Launching buys nothing: it
-  returns the shopping list.
+- Two money gates per niche, both human clicks: Fund test (smoke budget:
+  150 visitors at the test market's cost per click, R700 in South Africa, at
+  most R1,000) and Fund launch (the rest of the start-up capital, only after a
+  smoke-test win and a certified squad). Launching buys nothing: it returns
+  the shopping list. For a local-stock product the button is FUND STOCK and
+  includes the first stock batch, capped by `caps.stock_batch_zar` (R5,000).
 - `caps.niche_capital_zar` is the most a niche may ask for to start; above it,
   the Economics gate kills.
 - The R20 stage cap and R0.60 scout cap from Phase 1 stay. The Warden adds a
@@ -107,7 +114,8 @@ factory/
   scouts/          # Research: runner.py, distill.py, sources/{reddit,hn,appstore,...}.py
   gates/           # proof.py, craft.py, rubric.md, run.py
   dive/            # Deep Dive: demand.py, economics.py, risk.py, capital.py, run.py
-  smoke/           # page.py, ads.py, deploy.py, track.py, run.py
+  smoke/           # page.py, ads.py, budget.py, deploy.py, track.py, run.py
+  commerce/        # landed.py: SA landed cost, cost per order, break-even, first batch (make landed)
   build/           # spec.py (venture brief), launch.py (fund launch: venture + shopping list)
   training/        # Training: tables.py (Squad, SquadAgent), writer.py, exam.py, run.py
   api/             # server.py, state.py, arena.py (map JSON), panels.py
@@ -116,6 +124,7 @@ config/
   niches.yaml, pain_phrases.yaml, settings.yaml
   business_models.yaml   # lanes, models, fee/cost assumptions, capital lines
   squad.yaml             # squad roles and models, guardrails, exam rules
+  commerce.yaml          # SA tax, duty, freight, warehouse, courier, conversion benchmarks
 dashboard/
   index.html       # layout, styles, polling
   app.js           # panels, alerts, feed, departments, niches, treasury
@@ -130,18 +139,25 @@ dashboard/
   each with a guessed business model (and so a lane). Quote and pay evidence
   must be verbatim substrings of the stored signal. No url, no card.
 - Scout cost cap: R0.60 per niche per night. Over cap, skip and log.
+- Active niches (`niche_limit`): the first 4 commerce niches, then the first 2
+  others. Commerce niches search buying phrases (`commerce.yaml`), use Reddit
+  only and name no competitor apps.
 
 ### Gate of Proof (tower 1)
 Kill unless at least one of: a job post or gig with a price for this exact
 task; a paid competitor with pricing and evidence of complaints; a direct
-request to pay in a forum, with upvotes or replies. Score 0-10, < 6 killed.
+request to pay in a forum, with upvotes or replies. For a local-stock
+product, a shop selling it with a price plus complaints that South African
+buyers cannot get it counts as the second. Score 0-10, < 6 killed.
 Evidence must be verbatim; a pass with no evidence left becomes a kill.
 
 ### Gate of Craft (tower 2)
-Kill if any of: sales calls, holding our own stock (dropshipping and
-print-on-demand are allowed: the supplier ships), a licence, personal data
-categories requiring registration, a two-sided marketplace to seed, more
-than 7 build-days, or ongoing human support.
+Kill if any of: sales calls, holding or shipping stock ourselves (a
+fulfilment warehouse holding a local-stock product is allowed), a licence,
+personal data categories requiring registration, a two-sided marketplace to
+seed, more than 7 build-days, or ongoing human support. A local-stock product
+is also killed if it needs ICASA or NRCS approval, is food, health or a
+weapon, is branded or a copy, or is over 5 kg, fragile or sold in sizes.
 
 ### Deep Dive and Economics gate (tower 3)
 - Demand analyst: Haiku plans up to 3 search terms; probes App Store, Etsy and
@@ -156,16 +172,28 @@ than 7 build-days, or ongoing human support.
   samples and ad test; break-even sales = capital / unit profit.
 - Economics gate (code): score >= 7, margin >= the model's minimum, capital
   <= `niche_capital_zar`, break-even <= `max_break_even_sales`, no hard kill.
+- Local stock: the shop price is in rand (ending in 9) and `commerce/landed.py`
+  costs it: supplier price (evidence, else 15% of price), freight, duty, import
+  VAT, clearing, warehouse, pick and pack, courier, payment, store fee, returns.
+  Its gate replaces the margin rule: at most 2.5% of visitors may need to buy
+  to break even, and the stock cap must buy a first batch of 20+ units.
+  Break-even sales count only money that does not come back (not the stock);
+  profit per order is judged at the top-fifth conversion rate.
 - Every number in a Dossier is tagged `evidence` (with url) or `assumption`.
 
 ### Smoke test (towers 4-5)
 - For each `dive_passed` card: landing page at the Dossier's price, three
   benefits, one Buy button that records `buy_click` then shows "We are
-  onboarding founders this week, leave your email". 3 ad variants, R200, 48 h.
+  onboarding founders this week, leave your email" (local stock: "we will tell
+  you the day it ships"). 3 ad variants, 48 h, budget from `smoke/budget.py`.
+  Ads target `smoke.market` (ZA) and pages show the costed price in rand.
 - Deploy to `{slug}.{FACTORY_DOMAIN}`. Status `awaiting_funding`. Nothing is
   spent until `/api/approve/{id}`. If `META_ADS_ENABLED=true` create the
   campaign, else print the manual steps to logs and the dashboard.
-- Win: buy_click / visitors >= 5% with >= 150 visitors. Losers archive.
+- Win: buy_click / visitors >= 5% with >= 150 visitors, and the ads must pay:
+  a click-win whose cost per real sale (cost per visitor / (buy-click rate x
+  0.4)) is above what an order leaves is lost. Losers archive; every test
+  records why it settled (`result`).
 
 ### Training and launch (tower 6)
 - Every `won` card goes to the Training Academy (02:00, after smoke prep).
@@ -178,7 +206,8 @@ than 7 build-days, or ongoing human support.
   (facts, catalogue, voice, policies, role rules). The guardrails in
   `config/squad.yaml` close every prompt word for word and survive rewrites.
 - Squad: Store (Haiku), Content (Sonnet), Ads (Sonnet), Support (Haiku),
-  Bookkeeper (Haiku).
+  Bookkeeper (Haiku). Commerce squads have a Stock agent (Haiku) instead of
+  Content; a local-stock winner gets a store brief instead of a build brief.
 - Simulator (Haiku): 5 drills per agent, at least 2 of them try to make it
   break a rule. Each agent answers on its own model. Examiner (Sonnet) scores
   every drill 0-10 and flags broken rules. A missing answer scores 0.
@@ -190,7 +219,8 @@ than 7 build-days, or ongoing human support.
 - Fund launch (`/api/launch/{card_id}`, a human click, certified cards only):
   creates the Venture (`building`, a mine at the Market), prepares the folder
   (git init) and returns the shopping list: the Dossier's capital lines minus
-  the smoke test. Nothing is bought automatically. The human starts the
+  the smoke test (FUND STOCK also writes `stock/first-order.md`, a draft the
+  owner places). Nothing is bought automatically. The human starts the
   build session; the squad stands by until Operations runs it (Phase 5).
 - Venture rows: building, live, paused. Revenue via Paystack webhook or `/api/collect`.
 
@@ -231,6 +261,8 @@ arena: { lanes: [{id, name, position: top|mid|bot}],
          units: [{card_id, title, lane, tower: 1-6, state: waiting|blocked|testing|dead,
                   status, actions: [{label, endpoint, style}], dossier?, smoke?,
                   squad?: {status, score, notes, agents: [{name, model, score, breaches, status, version}]}}],
+                  # dossier.stock and dossiers[].stock (local stock): {landed_zar, contribution_zar,
+                  #   break_even_conversion, batch_units, batch_zar}
          mines: [{venture_id, name, lane, revenue_30d}],
          runs: [{id, dept, role, subject, lane, tower, started, finished, status, summary}] },
 niches: [{name, lane, model, stage, revenue, costs, profit, capital}],   # to date, rand
@@ -249,9 +281,12 @@ desc, kv, actions). Buttons call the endpoints in `actions`. Poll every 60 s.
    Monday report and monthly review, alerts, optional email. Done.
 4. Training Academy: venture brief, policies, catalogue, squad instructions,
    drills, exams, certification, fund launch with a shopping list. Done.
-5. Operations squads, digital products first.
-6. Treasury sync: Stripe, Paystack, Shopify, Meta, agent bills per niche.
-7. More business models.
+5. Commerce, South Africa first: local-stock model, landed costs, SA product
+   rules, market-priced tests and the customer-cost check, FUND STOCK. Done.
+6. Operations squads (commerce first) and the store, warehouse and courier
+   connections.
+7. Treasury sync: Paystack, Shopify, the warehouse, Meta, agent bills per niche.
+8. More business models.
 
 ## Working style
 - After each stage, run it for real on the active niches and show real output.
