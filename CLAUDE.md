@@ -8,9 +8,10 @@ would cost to start; Training builds and certifies a squad of agents for the
 niche; Operations runs it; the Treasury counts every rand per niche; the
 Warden oversees all of it, fixes what it can and reports the rest.
 
-Commerce comes first: physical products for South African buyers, sold from small batches of
-stock held by a fulfilment warehouse (`config/commerce.yaml`). Digital and content niches keep
-running at a lower volume.
+The BPO comes first (your choice, Nov 2026): AI agents answer customers and follow up leads for
+South African businesses while a person supervises, sold per client per month
+(`config/services.yaml`). Local-stock commerce (`config/commerce.yaml`) and digital niches are
+paused, not deleted: `niche_limit` in settings.yaml turns them back on.
 
 The dashboard is a MOBA-style arena (see "The arena") so the player can see in real time which
 agents are working, where every niche is in the cycle, and which niches make or lose money.
@@ -25,7 +26,7 @@ spent and nothing is posted publicly without a human click.
 | Research | one scout per niche per source, Distiller, Proof gatekeeper, Craft gatekeeper | niches.yaml categories, global sources | Cards with verbatim evidence | Proof gate and Craft gate pass |
 | Deep Dive | Demand analyst, Competitor analyst, Economics analyst, Risk analyst, Capital estimator | Cards past Craft | Dossier: demand, competitors, price, margin, start-up capital, risks | Economics gate passes |
 | Training | Playbook writer, Catalogue builder, Prompt engineer, Simulator, Examiner, Certifier | Smoke-test winners | Certified squad + venture CLAUDE.md | Every squad agent scores 90%+ with no rule broken |
-| Operations | Smoke-test builder; per live niche a squad: Store, Content, Ads, Support, Bookkeeper (commerce: Stock instead of Content) | Dossiers, certified squads | Smoke tests; daily running of live niches | Monthly review keeps it |
+| Operations | Smoke-test builder; per live niche a squad: Store, Content, Ads, Support, Bookkeeper (commerce: Stock instead of Content; services: Ads, Desk or Follow-up, QA, Client reporter, Bookkeeper) | Dossiers, certified squads | Smoke tests; daily running of live niches | Monthly review keeps it |
 | Treasury | Ledger, Auditor | Sales, refunds, ad and agent bills | Revenue, costs, profit per niche | Books match providers |
 | Warden | Health check, Cost guard, Fixer, Reporter | Every AgentRun, Cost and GateResult | Automatic fixes, alerts, weekly + monthly reports | n/a (oversees) |
 
@@ -36,10 +37,10 @@ A square, top-down map like a MOBA:
 - **Your base** bottom-left (HQ and Treasury). **The Market** top-right: live
   niches sit there as gold mines and send gold back down their lane.
 - **Three lanes**, one per business-model family. Top = Digital (digital
-  products, micro-SaaS). Mid = Commerce (local-stock stores; dropshipping and
-  print-on-demand are switched off).
-  Bot = Content (newsletters, affiliate sites). A card's lane comes from its
-  business model.
+  products, micro-SaaS, newsletters, affiliate sites). Mid = Commerce (local-stock
+  stores; dropshipping and print-on-demand are switched off). Bot = Services (the
+  BPO: AI support desks and lead follow-up for businesses). A card's lane comes
+  from its business model.
 - **Six towers per lane** = the six checks a niche must pass, in order:
   1 Proof, 2 Craft, 3 Economics (free, on your side, green), then
   4 Fund test, 5 Smoke test, 6 Certify & fund launch (money at stake, red).
@@ -118,6 +119,7 @@ factory/
   dive/            # Deep Dive: demand.py, economics.py, risk.py, capital.py, run.py
   smoke/           # page.py, ads.py, budget.py, deploy.py, track.py, run.py
   commerce/        # landed.py: SA landed cost, cost per order, break-even, first batch (make landed)
+  services/        # unit.py: one client's month: costs and margin (make service)
   build/           # spec.py (venture brief), launch.py (fund launch: venture + shopping list)
   training/        # Training: tables.py (Squad, SquadAgent), writer.py, exam.py, run.py
   api/             # server.py, state.py, arena.py (map JSON), panels.py
@@ -127,6 +129,7 @@ config/
   business_models.yaml   # lanes, models, fee/cost assumptions, capital lines
   squad.yaml             # squad roles and models, guardrails, exam rules
   commerce.yaml          # SA tax, duty, freight, warehouse, courier, conversion benchmarks
+  services.yaml          # BPO volumes, AI tokens, channel fees, supervisor time, phrases
 scripts/           # install.sh (server), set-key.sh, env_set.py; SETUP.md is the human guide
 dashboard/
   index.html       # layout, styles, polling
@@ -142,19 +145,21 @@ dashboard/
   each with a guessed business model (and so a lane). Quote and pay evidence
   must be verbatim substrings of the stored signal. No url, no card.
 - Scout cost cap: R0.60 per niche per night. Over cap, skip and log.
-- Active niches (`niche_limit`): the first 4 commerce niches, then the first 2
-  others. Commerce niches use only the web scout (opt-in per niche: `sources:
-  [web]`), search buying phrases (`commerce.yaml`) and name no competitor apps.
-  A web signal is only the text the API copied from the cited page, never the
-  model's words; it has no vote counts, so it can pass Proof only on rule 1, 2
-  or the local-stock rule.
+- Active niches (`niche_limit`, per kind): the first 4 services niches; commerce
+  and other niches 0 (paused). Services and commerce niches use only the web scout
+  (opt-in per niche: `sources: [web]`), search the phrases in `services.yaml` or
+  `commerce.yaml` and name no competitor apps. A web signal is only the text the
+  API copied from the cited page, never the model's words; it has no vote counts,
+  so it can pass Proof only on rule 1, 2 or the local-stock rule.
 
 ### Gate of Proof (tower 1)
 Kill unless at least one of: a job post or gig with a price for this exact
 task; a paid competitor with pricing and evidence of complaints; a direct
 request to pay in a forum, with upvotes or replies. For a local-stock
 product, a shop selling it with a price plus complaints that South African
-buyers cannot get it counts as the second. Score 0-10, < 6 killed.
+buyers cannot get it counts as the second. For a service, a job advert with a
+salary counts as the first and an outsourcing provider's price as the second.
+Score 0-10, < 6 killed.
 Evidence must be verbatim; a pass with no evidence left becomes a kill.
 
 ### Gate of Craft (tower 2)
@@ -163,7 +168,10 @@ fulfilment warehouse holding a local-stock product is allowed), a licence,
 personal data categories requiring registration, a two-sided marketplace to
 seed, more than 7 build-days, or ongoing human support. A local-stock product
 is also killed if it needs ICASA or NRCS approval, is food, health or a
-weapon, is branded or a copy, or is over 5 kg, fragile or sold in sizes.
+weapon, is branded or a copy, or is over 5 kg, fragile or sold in sizes. A service
+is killed for licensed advice, debt collection, special personal information, card
+numbers, crisis lines, on-site work, contacting people who never asked (POPIA s69,
+CPA) or outside contact hours, or more than 1 in 5 conversations needing a person.
 
 ### Deep Dive and Economics gate (tower 3)
 - Demand analyst: Haiku plans up to 3 search terms; probes App Store, Etsy and
@@ -186,22 +194,28 @@ weapon, is branded or a copy, or is over 5 kg, fragile or sold in sizes.
   to break even, and the stock cap must buy a first batch of 20+ units.
   Break-even sales count only money that does not come back (not the stock);
   profit per order is judged at the top-fifth conversion rate.
+- Services (`ai_support`, `ai_followup`): the web check reads salaries and service prices
+  and their pay period from cited text; the price is rand per client per month against an
+  anchor of the same period (hourly anchors are flagged). `services/unit.py` costs one
+  client's month (AI, QA, WhatsApp or voice, supervisor time, tools, fees, the cost to win
+  the client over 12 months); capital adds a free pilot month. Gate: margin >= 50%,
+  break-even <= 12 client-months.
 - Every number in a Dossier is tagged `evidence` (with url) or `assumption`.
 
 ### Smoke test (towers 4-5)
-- For each `dive_passed` card: landing page at the Dossier's price, three
-  benefits, one Buy button that records `buy_click` then shows "We are
-  onboarding founders this week, leave your email" (local stock: "we will tell
-  you the day it ships"). 3 ad variants, 48 h, budget from `smoke/budget.py`.
-  Ads target `smoke.market` (ZA) and pages show the costed price in rand.
+- For each `dive_passed` card: landing page at the Dossier's price, three benefits, one
+  Buy button that records `buy_click` then shows "We are onboarding founders this week,
+  leave your email" (local stock: "we will tell you the day it ships"; a service: to
+  business owners, AI agents named, "we will contact you to set up a pilot"). 3 ad
+  variants, 48 h, budget from `smoke/budget.py`, ads in `smoke.market` (ZA), rand prices.
 - The factory serves each page at `https://{FACTORY_DOMAIN}/pages/{slug}/`
   (Vercel at `{slug}.{FACTORY_DOMAIN}` if `VERCEL_TOKEN` is set). Status
   `awaiting_funding`; nothing is spent until `/api/approve/{id}`. Ads are made
   by hand from the printed steps unless `META_ADS_ENABLED=true`.
-- Win: buy_click / visitors >= 5% with >= 150 visitors, and the ads must pay:
-  a click-win whose cost per real sale (cost per visitor / (buy-click rate x
-  0.4)) is above what an order leaves is lost. Losers archive; every test
-  records why it settled (`result`).
+- Win: buy_click / visitors >= 5% with >= 150 visitors, and the ads must pay: a click-win
+  whose cost per real sale (cost per visitor / (buy-click rate x 0.4)) is above what an
+  order leaves (a service: 12 months of a client's margin) is lost. Losers archive; every
+  test records why it settled (`result`).
 
 ### Training and launch (tower 6)
 - Every `won` card goes to the Training Academy (02:00, after smoke prep).
@@ -215,7 +229,8 @@ weapon, is branded or a copy, or is over 5 kg, fragile or sold in sizes.
   `config/squad.yaml` close every prompt word for word and survive rewrites.
 - Squad: Store (Haiku), Content (Sonnet), Ads (Sonnet), Support (Haiku),
   Bookkeeper (Haiku). Commerce squads have a Stock agent (Haiku) instead of
-  Content; a local-stock winner gets a store brief instead of a build brief.
+  Content; a local-stock winner gets a store brief instead of a build brief. A service
+  squad: Ads, Desk or Follow-up, QA (Sonnet), Client reporter, Bookkeeper; a service brief.
 - Simulator (Haiku): 5 drills per agent, at least 2 of them try to make it
   break a rule. Each agent answers on its own model. Examiner (Sonnet) scores
   every drill 0-10 and flags broken rules. A missing answer scores 0.
@@ -228,26 +243,26 @@ weapon, is branded or a copy, or is over 5 kg, fragile or sold in sizes.
   creates the Venture (`building`, a mine at the Market), prepares the folder
   (git init) and returns the shopping list: the Dossier's capital lines minus
   the smoke test (FUND STOCK also writes `stock/first-order.md`, a draft the
-  owner places). Nothing is bought automatically. The human starts the
+  owner places; a service gets `client/first-client.md`: company, operator
+  agreement, consent and SLA steps). Nothing is bought or signed automatically. The human starts the
   build session; the squad stands by until Operations runs it (Phase 5).
 - Venture rows: building, live, paused. Revenue via Paystack webhook or `/api/collect`.
 
 ### Warden (Phase 3)
-- Health check every 15 minutes and after every night, itself an AgentRun. It records incidents
-  with an outcome: `fixed` (the Warden handled it), `needs_you` (only a human can) or
-  `watching`. Cleared conditions resolve themselves; a human can mark an incident handled from
-  the dashboard. Tower 6 checks: a squad not certified, or a certified squad waiting more than 7
-  days for launch money, is needs-you.
+- Health check every 15 minutes and after every night, itself an AgentRun. Incidents carry an
+  outcome: `fixed`, `needs_you` (only a human can) or `watching`; cleared ones resolve
+  themselves, and a human can mark one handled. Tower 6: a squad not certified, or certified
+  and waiting more than 7 days for launch money, is needs-you.
 - The Fixer may only: close jobs still "running" after 2 hours, retry a scout job that failed
   with a temporary error (429, 5xx, timeout) once per niche per night, pause a source that
   failed in every niche on the last 2 runs (24 h), and run a missed night once (only if the
   factory has run before).
 - Cost guard: `warden.daily_cap_zar` in settings.yaml, enforced in `costs.guard` before every
   Claude call (DailyCapReached stops all stages for the day). Only a human can raise it.
-- Reporter: Monday 07:00 SAST weekly report and a monthly review on the 1st, built from the
-  database with no model call: decisions for you, money, niches, pipeline, done without you,
-  watching, sources. Saved to the WardenReport table and data/reports/, shown on the dashboard,
-  emailed when SMTP is configured. Needs-you incidents are emailed once each.
+- Reporter: Monday 07:00 SAST weekly report and a monthly review on the 1st, from the database
+  with no model call (decisions for you, money, niches, pipeline, done without you, watching,
+  sources); saved to WardenReport and data/reports/, emailed if SMTP is set. Needs-you
+  incidents are emailed once each.
 - The Warden never spends, approves, publishes, deletes data or writes settings.yaml.
 
 ### Agent activity
@@ -255,25 +270,8 @@ Every agent's unit of work is wrapped in `agents.run(dept, role, ...)`: an Agent
 (start, finish, status, summary, rand cost, lane and tower). The dashboard draws only these.
 
 ## Dashboard contract
-`/api/state` returns the Phase 1 keys (`gold, elixir_month, scouts_active,
-buildings, treasury, net_30d, concentration_pct, side_quests`) plus:
-```
-agents_total, departments: [{id, name, agents, working, built}],
-arena: { lanes: [{id, name, position: top|mid|bot}],
-         towers: [{n: 1-6, id, name, side: free|money, waiting, passed_7d, killed_7d}],
-         units: [{card_id, title, lane, tower: 1-6, state: waiting|blocked|testing|dead,
-                  status, actions: [{label, endpoint, style}], dossier?, smoke?,
-                  squad?: {status, score, notes, agents: [{name, model, score, breaches, status, version}]}}],
-                  # dossier.stock, dossiers[].stock: {landed_zar, contribution_zar, break_even_conversion, batch_units, batch_zar}
-         mines: [{venture_id, name, lane, revenue_30d}],
-         runs: [{id, dept, role, subject, lane, tower, started, finished, status, summary}] },
-niches: [{name, lane, model, stage, revenue, costs, profit, capital}],   # to date, rand
-dossiers: [{card_id, title, model, lane, capital, lines, break_even, margin, score, verdict}],
-warden: {checks_24h, fixes_7d, needs_you, watching, today_zar, daily_cap_zar, holds, incidents, report},
-alerts: [{id, kind, label, subject, detail, action, outcome}]   # open needs-you incidents
-```
-`buildings` carries the panel for each camp, base and tower (id, name, level,
-desc, kv, actions). Buttons call the endpoints in `actions`. Poll every 60 s.
+`/api/state` (Phase 1 keys plus departments, arena, niches, dossiers, warden, alerts) is
+specified in `docs/dashboard-contract.md`. Keep it in step with `factory/api/state.py`.
 
 ## Build phases
 1. Research scouts, Proof + Craft gates, smoke prep, dashboard. Done.
@@ -285,8 +283,10 @@ desc, kv, actions). Buttons call the endpoints in `actions`. Poll every 60 s.
    drills, exams, certification, fund launch with a shopping list. Done.
 5. Commerce, South Africa first: local-stock model, landed costs, SA product
    rules, market-priced tests and the customer-cost check, FUND STOCK. Done.
-6. Operations squads (commerce first) and the store, warehouse and courier
-   connections.
+5b. Services (BPO), South Africa: services lane, BPO research and gate rules, pay
+   check, per-client-month economics, business test pages, BPO squads. Done.
+6. Operations squads (services first, then commerce) and the helpdesk, WhatsApp,
+   store, warehouse and courier connections.
 7. Treasury sync: Paystack, Shopify, the warehouse, Meta, agent bills per niche.
 8. More business models.
 

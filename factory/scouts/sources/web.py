@@ -29,6 +29,17 @@ it does not say. Skip food, medicine, supplements, cosmetics with health claims,
 weapons, wireless or mains-electrical gadgets, brand-name originals and copies of
 them, and anything heavier than 5 kg."""
 
+SERVICES = """You find South African businesses that pay people to answer customer messages
+or follow up leads, work an AI-run service could do for less. Use web search to find
+recent job adverts with a salary (Pnet, CareerJunction, Indeed, LinkedIn), posts where
+owners say they cannot keep up with WhatsApps, emails, missed calls or leads, and
+adverts for outsourced customer service with prices.
+Write one short line per page naming the business type and the work, and cite the
+page's own words that show the work and any salary or price. Never cite a page for
+something it does not say. Skip work that needs a licence or professional advice
+(financial, legal, medical), health or children's records, debt collection, cold
+marketing calls or messages to people who never asked, and work done on site."""
+
 SOFTWARE = """You find problems people pay to solve. Use web search to find recent forum
 posts and reviews where people complain about a task they pay for, or ask for a tool
 to do it. Write one short line per post and cite the post's own words that show the
@@ -47,7 +58,7 @@ def prompt_for(niche) -> str:
 def fetch(niche) -> list[RawSignal]:
     try:
         found = websearch.run(
-            stage_name="scout", system=COMMERCE if niche.kind == "commerce" else SOFTWARE,
+            stage_name="scout", system={"commerce": COMMERCE, "services": SERVICES}.get(niche.kind, SOFTWARE),
             prompt=prompt_for(niche), max_uses=int(config.settings()["web"]["scout_searches"]),
             country="ZA" if niche.region == "ZA" else "", niche_slug=niche.slug, note=f"web scout {niche.slug}",
             cap_zar=float(config.settings()["caps"]["web_zar_per_niche"]))

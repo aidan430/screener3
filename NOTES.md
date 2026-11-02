@@ -3,6 +3,79 @@
 Each default below was chosen without asking, as the kickoff instructed. Change any of them in
 `config/` or tell me and I will rework it. Phases 1 to 3 are in `notes/phases-1-3.md`.
 
+## The BPO: AI-run services for South African businesses (2026-11-02)
+
+Your choices: AI agents do the work and people supervise; customer support, outbound
+calling and whatever else the factory finds; South African businesses as clients; a new
+business. The services lane (bottom) now comes first: `niche_limit` is services 4, commerce
+0, other 0, so commerce and software niches are paused, not deleted.
+
+| Step | Result |
+|---|---|
+| `make seed` | 52 niches; 4 active: sa-online-stores-support, sa-car-dealers-leads, sa-property-agencies, sa-hospitality-bookings. |
+| `make scout` | Ran for real: the four BPO niches use only the web scout, which skipped with "ANTHROPIC_API_KEY is not set". 0 cards, R0.00. |
+| `make service` | The calculator: R2,999 a month buys a client 300 conversations that cost R1,006 to serve, a 66% margin. |
+| `make test` | 79 offline tests pass (13 new, in `tests/test_services.py`). |
+
+### Models and gates (`business_models.yaml`, `rubric.md` 2026-11-02.2)
+- **ai_support** (answer a business's customers by email, chat, WhatsApp) and **ai_followup**
+  (contact leads who asked a business to contact them, qualify them, book appointments).
+  Minimum margin 50%. Start-up lines: CIPC R175, contract and operator agreement legal
+  review R3,000, website R500, helpdesk and WhatsApp set-up R1,000 (follow-up: messaging,
+  number and voice set-up R1,500), first ad test R1,500, smoke test R700, and a free pilot
+  month for the first client (one month's delivery cost).
+- **Proof:** a job advert with a salary counts as rule 1; an outsourcing provider with a
+  price as rule 2. **Craft** kills licensed advice, debt collection, special personal
+  information (POPIA s26), card numbers, crisis lines, on-site work, contacting people who
+  never asked, contact outside the CPA hours, and work where more than 1 in 5 conversations
+  needs a person.
+- **Pay check:** the Deep Dive's web check reads salaries and service prices, with the pay
+  period code finds after the amount ("per month", "p/m", "pm", "per hour", "p.a."). A
+  monthly price may anchor to a yearly figure (divided by 12) but not to an hourly or daily
+  one: that is flagged and kills. "R9 500" (a space between thousands) is now read as 9500
+  everywhere, which also fixes pay amounts like "R1 299" in commerce posts.
+- **Gate:** margin 50%+ and the sunk start-up money back within 12 client-months
+  (`services.yaml -> gate`).
+
+### One client's month (`config/services.yaml`, all assumptions)
+- **Volume:** 300 conversations (support) or 150 leads (follow-up) unless cited evidence
+  gives one. A cited volume counts only if that number is in the cited item's own words
+  (web listings now keep the text the API copied, and the analyst sees it); otherwise the
+  default applies and the Dossier says the analyst's figure was not found.
+- **AI:** Haiku answers (8,000 tokens in and 600 out per conversation, all turns); Sonnet QA
+  reviews 20% (3,000 in, 300 out). About R0.20 a conversation.
+- **WhatsApp:** R0.25 a reply and R0.80 a message we start, with a provider fee. Meta's South
+  African rates are about $0.0379 (R0.70) a marketing message and $0.0076 (R0.14) a utility
+  message; sources disagree, and Meta changed what it charges for from 1 October 2026, so
+  check its live rate card. Email is free; 60% of support conversations arrive on WhatsApp.
+- **Voice:** R2.50 a minute, 3 minutes a lead. No voice provider is connected: adding one is
+  a new external tool, so I will ask you first.
+- **People:** a supervisor at R120 an hour takes 10% of support conversations (15% of
+  leads), 5 minutes each, plus an hour a client a month for spot checks and the client
+  call. For comparison, South African call-centre agents earn about R6,000 to R15,000 a
+  month basic (recruiter guides, 2026).
+- **Overhead:** tools R250 (support) or R350 (follow-up) a client a month, payment fees 3%,
+  R1,500 to win a client spread over 12 months.
+
+### Test page, squad and launch
+- **Page:** written to the business owner, says AI agents do the work, promises no results,
+  savings or reply times, names no clients; the Buy button asks for a work email "to set
+  up a pilot". A click-win must pay for its ads against 12 months of a client's margin.
+  Every test page now says the email is used only to contact that person (POPIA s18).
+- **Squads** (per model in `squad.yaml`): Ads, Desk (support) or Follow-up, QA (Sonnet),
+  Client reporter and Bookkeeper. Two guardrails added for every squad: contact only people
+  who asked or are customers and stop at an opt-out; say you are an AI assistant when asked.
+  The privacy rule now also forbids mixing one client's information with another's.
+- **Launch:** FUND LAUNCH writes `client/first-client.md`: register the company and its
+  information officer (POPIA s55), the service agreement and operator agreement (s20-21),
+  service levels, the client's FAQs, consent for every lead and an opt-out in every message
+  (s69 and the CPA), call-recording notices (RICA), 20 test conversations. Nothing is signed.
+- **Rules to confirm with a lawyer:** POPIA s69 covers businesses too (a juristic person is a
+  data subject), so no cold emails, SMS or automated calls to other businesses either; we
+  win clients with ads and answer only those who ask. CPA regulation 4 bars direct marketing
+  to consumers at home on Sundays and public holidays, on Saturdays before 09:00 or after
+  13:00, and other days before 08:00 or after 20:00, unless they agreed.
+
 ## Web research replaces Reddit (2026-11-02)
 
 Reddit announced on 30 September 2026 that it stops accepting new public API access requests
@@ -201,3 +274,11 @@ The order to do these in, explained step by step, is in `SETUP.md`.
     `tax.vat_registered: true`.
 15. **Product checks agents cannot do**: hold the first samples in your hands, and confirm the
     product needs no ICASA, NRCS or SAHPRA approval before you pay for stock.
+16. **For the BPO, before the first client**: register the company (CIPC) and its information
+    officer with the Information Regulator; have a lawyer check the service agreement and the
+    POPIA operator agreement (the R3,000 line); sign every client contract yourself.
+17. **WhatsApp Business Platform**: Meta business verification and a number through an
+    approved provider (for example a helpdesk that includes WhatsApp). Put its real per-message
+    fees into `config/services.yaml` (`channels`).
+18. **A voice provider, only if you want AI calls**: none is connected. Tell me which one and I
+    will ask before adding it; follow-up runs on WhatsApp and email until then.

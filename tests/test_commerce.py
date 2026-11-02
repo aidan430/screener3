@@ -64,8 +64,8 @@ class CommerceTest(FactoryTestCase):
         with session() as s:
             active = list(s.exec(select(Niche).where(Niche.active == True)))  # noqa: E712
             roles = {r.role for r in s.exec(select(AgentRun).where(AgentRun.dept == "research"))}
-        self.assertEqual(sum(n.kind == "commerce" for n in active), 4)
-        self.assertEqual(sum(n.kind != "commerce" for n in active), 2)
+        kinds = [n.kind for n in active]  # tests activate every kind (base.TEST_LIMITS)
+        self.assertEqual((kinds.count("commerce"), kinds.count("services"), kinds.count("")), (4, 4, 2))
         self.assertTrue("web scout" in roles and "hn scout" not in roles and "reddit scout" not in roles, roles)
         card = one(Card)
         self.assertEqual((card.business_model, card.lane), ("local_stock", "commerce"))
@@ -130,7 +130,7 @@ class CommerceTest(FactoryTestCase):
         craft, version = rubric("craft")
         self.assertIn("ICASA", craft)
         self.assertIn("fulfilment warehouse", craft)
-        self.assertEqual(version, "2026-11-02.1")
+        self.assertEqual(version, "2026-11-02.2")
 
 
 if __name__ == "__main__":

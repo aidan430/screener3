@@ -127,6 +127,7 @@ class Dossier(SQLModel, table=True):
     unit_profit_zar: Optional[float] = None
     margin: Optional[float] = None
     unit_json: str = "{}"                     # local_stock: landed cost, per-order costs, break-even
+    service_json: str = "{}"                  # services: monthly cost lines and margin per client
     capital_zar: Optional[float] = None
     capital_lines_json: str = "[]"             # [[label, rand, basis]]
     break_even_sales: Optional[int] = None

@@ -1,7 +1,8 @@
 """Load config/niches.yaml into Niche rows.
 
-Active niches: `niche_limit` is either a number (the first N in the file) or
-{commerce: N, other: M} (the first N commerce niches and the first M others).
+Active niches: `niche_limit` is either a number (the first N in the file) or a
+count per kind, e.g. {services: 4, commerce: 0, other: 0} (the first N of each kind;
+"other" covers niches whose kind has no count of its own).
 """
 from __future__ import annotations
 
@@ -25,7 +26,7 @@ def seed(limit: int | dict | None = None) -> list[Niche]:
     with session() as s:
         for i, n in enumerate(rows):
             kind = n.get("kind", "")
-            bucket = "all" if "all" in lim else ("commerce" if kind == "commerce" else "other")
+            bucket = "all" if "all" in lim else (kind if kind in lim else "other")
             niche = s.exec(select(Niche).where(Niche.slug == n["slug"])).first() or Niche(slug=n["slug"])
             niche.region = n.get("region", "GLOBAL")
             niche.keywords_json = json.dumps(n.get("keywords", []))

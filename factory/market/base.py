@@ -1,4 +1,4 @@
-"""Shared types for official marketplace probes (App Store, Etsy, eBay)."""
+"""Shared types for official marketplace probes (App Store, Etsy, eBay) and the web price check."""
 from __future__ import annotations
 
 import statistics
@@ -30,6 +30,8 @@ class Listing:
     rating: float | None = None
     seller: str = ""
     ext_id: str = ""
+    period: str = ""            # web: "per month", "per hour"... when the page text says so
+    quote: str = ""             # web: the words the API copied from the page (never the model's)
 
     def as_dict(self) -> dict:
         return asdict(self)

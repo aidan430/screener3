@@ -2,7 +2,8 @@
 
 Demand analyst: Haiku turns a card into up to 3 marketplace search terms and a
 business-model guess, then probes the marketplaces that model calls for (App
-Store, Etsy, eBay) across the configured global markets.
+Store, Etsy, eBay) across the configured global markets, or the web check (shop
+prices for local stock, salaries and service prices for a service).
 Competitor analyst: ranks what came back and adds the niche's named competitor
 apps with their verbatim 1-2 star reviews.
 Every number here comes straight from a marketplace response, with its url.
@@ -24,6 +25,8 @@ PLAN_SYSTEM = """You plan marketplace research for a product idea. Return up to 
 short search terms (1-4 words each) that a buyer would type into the App Store,
 Etsy or eBay to find an existing paid solution to the card's problem, and the
 business model that fits a solo founder best: one of {models}.
+For a service sold to businesses (ai_support, ai_followup) the terms are instead job
+titles or outsourced services that do this work today (e.g. "customer service agent").
 Use only the card given. No brand names unless the card names one."""
 
 
@@ -42,8 +45,8 @@ def plan(card, niche, cap_zar: float) -> Plan:
                      system=PLAN_SYSTEM.format(n=n, models=", ".join(models)), prompt=prompt,
                      output=Plan, max_tokens=300, card_id=card.id, cap_zar=cap_zar, note="query planner")
     terms = [t.strip() for t in out.terms if t and t.strip()][:n] or [card.title]
-    fallback = card.business_model if card.business_model in models else (
-        "local_stock" if getattr(niche, "kind", "") == "commerce" else "digital_product")
+    fallback = card.business_model if card.business_model in models else config.default_model(
+        niche, "digital_product")
     model = out.business_model if out.business_model in models else fallback
     return Plan(terms=terms, business_model=model)
 
@@ -56,14 +59,14 @@ def _markets(source: str) -> list[str]:
 def probe(terms: list[str], model: str, card_id: int | None = None,
           cap_zar: float | None = None) -> tuple[list[Probe], list[str]]:
     """Run every probe the model calls for. Returns probes and plain-English notes on failures."""
-    sources = config.business_models()["models"][model]["probes"]
+    m = config.business_models()["models"][model]
     limit = int(config.settings()["markets"]["listings_per_probe"])
     probes, notes = [], []
     with client() as http:
-        for src in sources:
-            if src == "web":  # one web price check per card, across all the terms
+        for src in m["probes"]:
+            if src == "web":  # one web check per card, across all the terms: shop prices, or pay for a service
                 try:
-                    probes.append(web.search(terms, card_id, cap_zar))
+                    probes.append(web.search(terms, card_id, cap_zar, services=bool(m.get("service"))))
                 except ProbeError as e:
                     notes.append(str(e))
                 continue
@@ -116,7 +119,8 @@ def evidence_items(card, probes: list[Probe]) -> dict[str, dict]:
     """E0 is the card's own source; E1.. are the strongest marketplace listings."""
     items = {"E0": {"id": "E0", "source": card.source, "market": "", "title": card.title,
                     "price": card.pay_amount, "currency": card.pay_currency, "url": card.url,
-                    "metric": None, "metric_label": "", "quote": card.quote}}
+                    "metric": None, "metric_label": "", "quote": card.quote,
+                    "period": web.period_in(card.pay_evidence or "")}}  # "R9 500 per month" -> per month
     seen, listings = set(), []
     for x in (x for p in probes for x in p.listings):
         if x.url not in seen:

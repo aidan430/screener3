@@ -59,9 +59,11 @@ def customer_cost(s, t: SmokeTest, full: bool) -> str:
     if full:
         per_visitor = max(per_visitor, budget.of(t) / t.visitors)
     cpa = per_visitor / (t.buy_clicks / t.visitors * float(sm["click_to_purchase"]))
-    unit = d.j("unit")
+    unit, service = d.j("unit"), d.j("service")
     if unit:
         left = unit["contribution_zar"]
+    elif service:  # a client's monthly margin before the cost of winning it, over the months it stays
+        left = (service["margin_zar"] + service["cac_month_zar"]) * float(config.services()["overhead"]["client_months"])
     elif d.price_zar is not None:
         months = float(sm["ltv_months"]) if d.price_unit == "per month" else 1.0
         left = (d.price_zar - (d.fees_zar or 0) - (d.unit_cost_zar or 0)) * months

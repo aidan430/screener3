@@ -69,7 +69,8 @@ def units(s, night: str) -> list[dict]:
         d = doss.get(c.id)
         if d:
             u["dossier"] = {"capital": d.capital_zar, "break_even": d.break_even_sales, "margin": d.margin,
-                            "score": d.score, "verdict": d.verdict, "stock": stock_summary(d)}
+                            "score": d.score, "verdict": d.verdict, "stock": stock_summary(d),
+                            "service": service_summary(d)}
         if c.status in ("certified", "training_failed", "won"):
             u.update(squad_info(s, c, d))
         out.append(u)
@@ -81,6 +82,13 @@ def stock_summary(d: Dossier) -> dict | None:
     u = d.j("unit")
     keys = ("landed_zar", "contribution_zar", "break_even_conversion", "batch_units", "batch_zar")
     return {k: u[k] for k in keys} if u else None
+
+
+def service_summary(d: Dossier) -> dict | None:
+    """A service's per-client monthly numbers for the dashboard (None for other models)."""
+    sv = d.j("service")
+    keys = ("price_zar", "cost_zar", "margin_zar", "margin", "volume", "what", "channel")
+    return {k: sv[k] for k in keys} if sv else None
 
 
 def squad_info(s, c: Card, d: Dossier | None) -> dict:

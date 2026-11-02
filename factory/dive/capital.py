@@ -3,8 +3,10 @@
 Start-up capital = the model's fixed lines from business_models.yaml + samples
 at unit cost + the smoke-test budget + the first ad test after a win. A local-
 stock product adds its samples by express courier and its first stock batch.
+A service for businesses adds a free pilot month for its first client.
 Break-even sales = the capital you do not get back (everything but the stock
-batch, which comes back as it sells) / unit profit.
+batch, which comes back as it sells) / unit profit. For a service, unit profit is
+one client's monthly margin, so break-even counts client-months.
 """
 from __future__ import annotations
 
@@ -29,6 +31,9 @@ def _lines(model: str, unit_cost_zar: float | None, supplier_zar: float | None) 
                          "samples x supplier price + courier (assumption)"])
     elif n and unit_cost_zar:
         head.append([f"Product samples x{n}", round(n * unit_cost_zar, 2), "samples x unit cost"])
+    if m.get("service") and unit_cost_zar:  # unit cost of a service = one client's month of delivery
+        head.append(["Free pilot month for the first client", round(unit_cost_zar, 2),
+                     "one month's delivery cost (assumption: config/services.yaml)"])
     tail = [["Smoke test ads, 48 h", float(budget.for_market()), "settings.yaml (smoke)"]]
     if m.get("ad_test"):
         tail.append(["First ad test after a win", float(m["ad_test"]), SRC])
@@ -65,16 +70,17 @@ def gate(model: str, score: int, numbers: dict, capital_zar: float, be: int | No
     reasons = list(numbers.get("flags", []))
     if score < int(th["dive_min_score"]):
         reasons.append(f"score {score}/10 is below {th['dive_min_score']}")
-    margin = numbers.get("margin")
+    margin, service = numbers.get("margin"), bool(m.get("service"))
     # a local-stock product is judged on break-even conversion and its stock batch (numbers["flags"])
     if not m.get("landed") and (margin is None or margin < float(m["min_margin"])):
         shown = "unknown" if margin is None else f"{margin:.0%}"
         reasons.append(f"margin {shown} is below the {float(m['min_margin']):.0%} minimum for {m['label']}")
     if capital_zar > float(caps["niche_capital_zar"]):
         reasons.append(f"start-up capital R{capital_zar:,.0f} is above your R{float(caps['niche_capital_zar']):,.0f} cap")
-    if be is None or be > int(th["max_break_even_sales"]):
-        reasons.append("never breaks even" if be is None
-                       else f"needs {be} sales to break even (max {th['max_break_even_sales']})")
+    limit = int(config.services()["gate"]["max_break_even_client_months"] if service else th["max_break_even_sales"])
+    if be is None or be > limit:
+        what = "client-months" if service else "sales"
+        reasons.append("never breaks even" if be is None else f"needs {be} {what} to break even (max {limit})")
     for r in risks:
         if r.hard_kill:
             reasons.append(f"hard risk: {r.risk}")

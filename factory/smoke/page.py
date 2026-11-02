@@ -55,27 +55,38 @@ def slugify(s: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")[:40] or "venture"
 
 
-PHYSICAL = ("\nThis is a physical product sold from stock in a South African warehouse. Benefits "
-            "describe the product itself; no subscriptions; promise no delivery dates or stock levels.")
+KINDS = {  # what the page sells, beyond software: "stock" (local-stock product), "service" (for businesses)
+    "stock": ("\nThis is a physical product sold from stock in a South African warehouse. Benefits "
+              "describe the product itself; no subscriptions; promise no delivery dates or stock levels."),
+    "service": ("\nThis is a monthly service for South African businesses: AI agents do the work and a person "
+                "supervises. Write to the business owner. Say plainly that AI agents do the work, never that "
+                "people do; promise no results, savings figures or response times; name no clients."),
+}
+ASK = {
+    "stock": ("We are taking first orders this week. Leave your email and we will tell you the day it ships.",
+              "Thanks. We will email you the day it ships.", "you@example.com"),
+    "service": ("We are taking on our first businesses this month. Leave your work email and we will contact "
+                "you to set up a pilot.", "Thanks. We will email you this week about a pilot.", "you@yourbusiness.co.za"),
+    "": ("We are onboarding founders this week, leave your email.", "Thanks. We will be in touch this week.",
+         "you@example.com"),
+}
 
 
-def draft(card: Card, price_label: str = "", physical: bool = False) -> PageDraft:
+def draft(card: Card, price_label: str = "", kind: str = "") -> PageDraft:
     with session() as s:
         niche = s.get(Niche, card.niche_id)
     prompt = (f"Niche: {niche.slug} (region {niche.region})\nCard title: {card.title}\n"
               f"Problem: {card.problem}\nBuyer quote: \"{card.quote}\"\n"
               f"Pay evidence: {card.pay_evidence or 'none'}\nSource: {card.url}"
               + (f"\nPrice to use, exactly as written (set by the Deep Dive): {price_label}" if price_label else "")
-              + (PHYSICAL if physical else ""))
+              + KINDS.get(kind, ""))
     return costs.call(stage_name="smoke", model=config.settings()["models"]["judge"], system=SYSTEM,
                       prompt=prompt, output=PageDraft, max_tokens=1500, card_id=card.id)
 
 
-def render(d: PageDraft, slug: str, api_base: str | None = "", physical: bool = False) -> str:
+def render(d: PageDraft, slug: str, api_base: str | None = "", kind: str = "") -> str:
     e = html.escape
-    ask, thanks = (("We are taking first orders this week. Leave your email and we will tell you the day it ships.",
-                    "Thanks. We will email you the day it ships.") if physical else
-                   ("We are onboarding founders this week, leave your email.", "Thanks. We will be in touch this week."))
+    ask, thanks, placeholder = ASK.get(kind, ASK[""])
     plausible = ""
     if config.env("FACTORY_DOMAIN") and config.env("VERCEL_TOKEN") and config.env("PLAUSIBLE_API_KEY"):
         dom = f"{slug}.{config.env('FACTORY_DOMAIN')}"  # Plausible counts Vercel pages; self-hosted ones use beacons
@@ -109,9 +120,9 @@ footer{{margin-top:48px;font-size:13px;color:#7a7a72}}
 <p class="price">{e(d.price_label)}</p>
 <button id="buy">{e(d.cta)}</button>
 <form id="f"><p style="width:100%;margin:0">{e(ask)}</p>
-<input type="email" id="em" required placeholder="you@example.com"><button type="submit">Notify me</button></form>
+<input type="email" id="em" required placeholder="{e(placeholder)}"><button type="submit">Notify me</button></form>
 <p class="ok" id="ok">{e(thanks)}</p>
-<footer>An early product test. No payment is taken on this page.</footer>
+<footer>An early product test. No payment is taken on this page. We use your email only to contact you about it.</footer>
 </main><script>
 var C={cfg};
 function beacon(kind,detail){{try{{if(window.plausible&&kind!=='visit')plausible(kind);

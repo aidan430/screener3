@@ -28,8 +28,11 @@ def quiet(fn, *a, **kw):
     return out, buf.getvalue()
 
 
+TEST_LIMITS = {"services": 4, "commerce": 4, "other": 2}
+
+
 def first_niches(n, kind=""):
-    """The first n active niches of one kind ("" = software and content, "commerce")."""
+    """The first n active niches of one kind ("" = software and content, "commerce", "services")."""
     from factory.seed import active_niches
     return [x for x in active_niches() if x.kind == kind][:n]
 
@@ -58,6 +61,7 @@ class FactoryTestCase(unittest.TestCase):
             mock.patch("factory.market.etsy.search", side_effect=_no_key),
             mock.patch("factory.market.ebay.search", side_effect=_no_key),
             mock.patch.dict(config.settings()["sources"], {"reddit": True}),  # fake posts arrive "from reddit"
+            mock.patch.dict(config.settings(), {"niche_limit": TEST_LIMITS}),  # every kind, whatever the focus
             mock.patch.dict(os.environ, {"META_ADS_ENABLED": "false", "VERCEL_TOKEN": "", "FACTORY_DOMAIN": "",
                                          "SMTP_HOST": "", "REPORT_EMAIL_TO": ""}),
         ]
