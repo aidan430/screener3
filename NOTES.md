@@ -3,6 +3,42 @@
 Each default below was chosen without asking, as the kickoff instructed. Change any of them in
 `config/` or tell me and I will rework it. Phases 1 to 3 are in `notes/phases-1-3.md`.
 
+## Web research replaces Reddit (2026-11-02)
+
+Reddit announced on 30 September 2026 that it stops accepting new public API access requests
+on 31 October 2026, ends RSS on 13 November 2026, starts removing unregistered apps on 12
+January 2027 and ends the remaining public access in March 2027. Reddit was the commerce
+niches' only source, so they now listen through Claude's web search, which needs only the
+Claude key. Search engines still index Reddit threads, so those can still be cited.
+
+| Step | Result |
+|---|---|
+| `make scout` | Ran for real. The four commerce niches use only the web scout, which skipped with "ANTHROPIC_API_KEY is not set"; the two software niches use HN and the App Store, both still blocked here (403). R0.00. |
+| `make test` | 66 offline tests pass (6 new). One drives the real Anthropic SDK through a mock network to check the request and response shapes. |
+
+### Web research defaults (`settings.yaml -> web`, `caps`)
+- **Tool:** `web_search_20250305`, the basic tool, because it runs on Haiku 4.5 (dynamic
+  filtering needs a 4.6+ model). The scout and the price check use the scout model.
+- **Evidence:** only citations count: the page url, its title and up to 150 characters the
+  API copied from the page. The model's own sentences are never stored. Excerpts from one
+  page are kept on separate lines, so a quote cannot span two.
+- **Searches:** 3 per niche per night (scout) and 3 per card (Deep Dive price check), with a
+  South African location for ZA niches.
+- **Cost:** $10 per 1,000 searches (about R0.19 each) plus tokens; search results count as
+  input tokens. The pre-call estimate assumes 10,000 input tokens per search, a worst case,
+  so a scout call is estimated at about R1.30. Caps: web scout R1.50 per niche a night;
+  Deep Dive raised from R1.50 to R3.00 a card to pay for the price check.
+- **Opt-in:** only niches that list `web` under `sources` use it (the six commerce niches).
+  Software and content niches keep HN and the App Store. `sources.reddit` is off.
+- **Proof gate:** web posts have no vote counts; the judge sees `votes="unknown"` and can
+  pass them only on rule 1, rule 2 or the local-stock rule (rubric 2026-11-02.1).
+- **Price check:** a listing exists only if the cited text holds a rand price; code reads the
+  first amount ("R 1 299.00" is 1299). Local stock probes: web, then eBay and Etsy.
+- **Errors:** a search rate limit or outage fails the scout with "HTTP 429" or "server
+  error", which the Fixer retries once. No key, or the cap, skips it without stopping the
+  night. If web search is off for your Anthropic organisation (Claude Console, Settings,
+  Capabilities; on by default), the scout fails and says so.
+
 ## Go-live kit (2026-10-07)
 
 `SETUP.md` is the step-by-step guide. Your choices: DigitalOcean, Caddy for the padlock, a
@@ -128,9 +164,8 @@ still running at a lower volume.
 The order to do these in, explained step by step, is in `SETUP.md`.
 
 1. **Anthropic API key**: put it in `.env` as `ANTHROPIC_API_KEY`. Nothing that thinks runs without it.
-2. **Reddit API app**: at https://www.reddit.com/prefs/apps create a "script" app, then set
-   `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET` and `REDDIT_USER_AGENT` (`venture-factory/0.1 by u/<you>`).
-   Without it the scout falls back to the public JSON search, which is more rate-limited.
+2. ~~Reddit API app~~: no longer possible. Reddit stopped accepting new API access on
+   31 October 2026; the web scout reads the web (Reddit threads included) instead.
 3. **Etsy developer app**: at https://www.etsy.com/developers create an app and set
    `ETSY_API_KEY` to the value Etsy says to send in the `x-api-key` header. Without it Deep
    Dive skips Etsy and notes why.

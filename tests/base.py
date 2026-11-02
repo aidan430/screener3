@@ -13,7 +13,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from unittest import mock
 
-from tests.fakes import COMMERCE_POST, FAKE_POSTS, FakeClaude, fake_probe, temp_env
+from tests.fakes import FAKE_POSTS, FakeClaude, fake_probe, temp_env
 
 logging.disable(logging.CRITICAL)
 TMP = temp_env()  # must run before factory.models creates the engine
@@ -57,6 +57,7 @@ class FactoryTestCase(unittest.TestCase):
             mock.patch("factory.market.appstore.find_app", return_value=None),
             mock.patch("factory.market.etsy.search", side_effect=_no_key),
             mock.patch("factory.market.ebay.search", side_effect=_no_key),
+            mock.patch.dict(config.settings()["sources"], {"reddit": True}),  # fake posts arrive "from reddit"
             mock.patch.dict(os.environ, {"META_ADS_ENABLED": "false", "VERCEL_TOKEN": "", "FACTORY_DOMAIN": "",
                                          "SMTP_HOST": "", "REPORT_EMAIL_TO": ""}),
         ]
@@ -69,11 +70,8 @@ class FactoryTestCase(unittest.TestCase):
         costs.set_client(None)
 
     def scout(self, niches=1, kind=""):
-        from contextlib import nullcontext
-        from factory.scouts import runner
-        posts = (mock.patch("factory.scouts.sources.reddit.fetch", return_value=[COMMERCE_POST])
-                 if kind == "commerce" else nullcontext())  # otherwise keep setUp's (or the test's) patch
-        with mock.patch.object(runner, "active_niches", lambda: first_niches(niches, kind)), posts:
+        from factory.scouts import runner  # commerce niches use the web scout, answered by FakeClaude
+        with mock.patch.object(runner, "active_niches", lambda: first_niches(niches, kind)):
             return quiet(runner.run)
 
     def gates(self):

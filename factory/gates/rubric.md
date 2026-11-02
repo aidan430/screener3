@@ -4,7 +4,7 @@ Both gates read this file at runtime. The section text is sent to the judge
 verbatim. Bump the version line when you change a rubric; every GateResult
 records the version it was judged under.
 
-<!-- version: 2026-10-07.2 -->
+<!-- version: 2026-11-02.1 -->
 
 ## proof
 
@@ -25,6 +25,10 @@ For a physical product (business model local_stock), a shop or listing named in
 the material that sells this product or a close substitute at a stated price
 counts as a paid competitor, and complaints that South African buyers cannot
 get it (out of stock, overpriced, slow or costly to import) count as complaints.
+
+Posts found by web search carry no vote or reply counts (`votes="unknown"`), so
+rule 3 cannot be met from them; judge them on rule 1, rule 2 or the local-stock
+rule above. Their TEXT is excerpts copied from the page, which may be cut short.
 
 Scoring (0-10):
 - 0-2: no money anywhere; curiosity or venting only.

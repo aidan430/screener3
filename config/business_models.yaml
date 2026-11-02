@@ -66,7 +66,7 @@ models:
       - ["Store, first month", 600]
       - ["Domain", 200]
       - ["Product photos and short video", 500]
-    probes: [ebay, etsy]
+    probes: [web, ebay, etsy]   # web: what South African shops charge today
   dropshipping:
     label: Dropshipping
     enabled: false          # off: you chose a fulfilment warehouse over supplier-ships-direct

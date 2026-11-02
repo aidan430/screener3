@@ -15,7 +15,7 @@ from collections import defaultdict
 from pydantic import BaseModel, Field
 
 from factory import config, costs
-from factory.market import appstore, ebay, etsy
+from factory.market import appstore, ebay, etsy, web
 from factory.market.base import NeedsKey, Probe, ProbeError, client, price_stats
 
 log = logging.getLogger("factory.dive.demand")
@@ -53,13 +53,20 @@ def _markets(source: str) -> list[str]:
     return {"appstore": mk["appstore_countries"], "ebay": mk["ebay_marketplaces"]}.get(source, ["etsy"])
 
 
-def probe(terms: list[str], model: str) -> tuple[list[Probe], list[str]]:
+def probe(terms: list[str], model: str, card_id: int | None = None,
+          cap_zar: float | None = None) -> tuple[list[Probe], list[str]]:
     """Run every probe the model calls for. Returns probes and plain-English notes on failures."""
     sources = config.business_models()["models"][model]["probes"]
     limit = int(config.settings()["markets"]["listings_per_probe"])
     probes, notes = [], []
     with client() as http:
         for src in sources:
+            if src == "web":  # one web price check per card, across all the terms
+                try:
+                    probes.append(web.search(terms, card_id, cap_zar))
+                except ProbeError as e:
+                    notes.append(str(e))
+                continue
             try:
                 for term in terms:
                     for market in _markets(src):

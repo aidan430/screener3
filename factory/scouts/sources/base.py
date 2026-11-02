@@ -19,6 +19,10 @@ class NotImplementedSource(SourceError):
     pass
 
 
+class SourceSkipped(SourceError):
+    """Not run tonight for a reason that is not the source's fault (no key, over a cap)."""
+
+
 @dataclass
 class RawSignal:
     source: str

@@ -63,25 +63,19 @@ Done when: the droplet shows "Active" and both A records are saved. They can tak
 Done when: you see the arena with its six camps. If the page does not open yet, the A
 records from step 3 are still travelling; try again in 15 minutes.
 
-### 5. A Reddit app: so the scouts can listen (5 minutes)
-1. Log in to Reddit, open reddit.com/prefs/apps, tap "create another app".
-2. Name `venture-factory`, choose **script**, redirect uri `http://localhost:8080`. Create.
-   If Reddit asks what it is for: a personal research tool that reads public posts.
-3. The short code under the app name is the ID; "secret" is the secret.
-4. In the droplet console, run these one at a time and paste each value when asked:
-   ```
-   bash /opt/factory/screener3/scripts/set-key.sh REDDIT_CLIENT_ID
-   bash /opt/factory/screener3/scripts/set-key.sh REDDIT_CLIENT_SECRET
-   bash /opt/factory/screener3/scripts/set-key.sh REDDIT_USER_AGENT
-   ```
-   For the last one type `venture-factory/0.1 by u/` followed by your Reddit username.
+### 5. Web search: how the scouts listen (nothing to set up)
+Reddit stopped accepting new apps on 31 October 2026, so there is no Reddit app to make.
+The scouts search the web through your Claude key instead (about R0.19 a search, capped).
+Web search is on for new Claude accounts. If a scout ever says it is off, open the Claude
+Console, then Settings, then Capabilities, and switch web search on.
 
-Done when: each one says "Saved ... and restarted the factory".
+Done when: nothing to do.
 
 ### 6. Email for the Monday report (5 minutes, optional)
 1. In your Google account turn on 2-Step Verification, then create an **App password**
    named `factory`. You get 16 letters.
-2. Run `set-key.sh` (as in step 5) for each of these:
+2. In the droplet console, run `bash /opt/factory/screener3/scripts/set-key.sh NAME` for each
+   of these, pasting each value when asked:
    `SMTP_HOST` = `smtp.gmail.com`, `SMTP_PORT` = `587`, `SMTP_USER` = your Gmail address,
    `SMTP_PASSWORD` = the 16 letters, `REPORT_EMAIL_TO` = where the report should go.
 

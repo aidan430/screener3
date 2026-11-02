@@ -1,5 +1,8 @@
 """Every Anthropic call goes through here: pre-call budget check, call, Cost row.
 
+`call` is a structured-output call; `search` lets Claude use Anthropic's
+server-side web search and adds its price ($10 per 1,000 searches) to the cost.
+
 Budgets:
 - per-stage cap (settings.caps.stage_zar, R20): a call whose worst-case cost would
   push the stage over the cap raises StageOverBudget *before* it is sent.
@@ -130,6 +133,45 @@ def call(
 ) -> T:
     """Structured-output call. Returns a validated pydantic object."""
     est = estimate_zar(model, len(system) + len(prompt), max_tokens)
+    guard(est, stage_name, niche_slug, cap_zar)
+    resp = client().messages.parse(
+        model=model,
+        max_tokens=max_tokens,
+        system=system,
+        messages=[{"role": "user", "content": prompt}],
+        output_format=output,
+    )
+    spend(stage_name, model, resp.usage, niche_slug, card_id, note)
+    if resp.stop_reason == "refusal" or resp.parsed_output is None:
+        raise RuntimeError(f"{model} returned no parsable output (stop_reason={resp.stop_reason})")
+    return resp.parsed_output
+
+
+def search(*, stage_name: str, model: str, system: str, prompt: str, tools: list[dict], max_tokens: int,
+           niche_slug: str = "", card_id: int | None = None, cap_zar: float | None = None, note: str = ""):
+    """A call in which Claude may use Anthropic's web search. Returns the raw message.
+
+    Search results count as input tokens, so the estimate adds a worst case per
+    allowed search (settings.web.tokens_per_search) plus the search price."""
+    w = config.settings()["web"]
+    uses = sum(int(t.get("max_uses", 1)) for t in tools if t.get("name") == "web_search")
+    per_search = float(w["usd_per_search"]) + usd_for(model, int(w["tokens_per_search"]), 0)
+    est = estimate_zar(model, len(system) + len(prompt), max_tokens) + config.zar(uses * per_search)
+    guard(est, stage_name, niche_slug, cap_zar)
+    resp = client().messages.create(model=model, max_tokens=max_tokens, system=system, tools=tools,
+                                    messages=[{"role": "user", "content": prompt}])
+    n = searches(resp.usage)
+    spend(stage_name, model, resp.usage, niche_slug, card_id, f"{note} ({n} searches)".strip(),
+          extra_usd=n * float(w["usd_per_search"]), extra=f" +{n} searches")
+    return resp
+
+
+def searches(usage) -> int:
+    return int(getattr(getattr(usage, "server_tool_use", None), "web_search_requests", 0) or 0)
+
+
+def guard(est: float, stage_name: str, niche_slug: str = "", cap_zar: float | None = None) -> None:
+    """Raise before sending if the call's worst case breaks a cap."""
     if cap_zar is not None and est > cap_zar:
         raise CapExceeded(f"{stage_name}/{niche_slug}: est R{est:.2f} > cap R{cap_zar:.2f}")
     cap = daily_cap()
@@ -142,28 +184,22 @@ def call(
             f"stage '{_stage['name']}' has spent R{_stage['spent_zar']:.2f}; next call "
             f"(est R{est:.2f}) would pass the R{stage_cap():.0f} cap. Stopping."
         )
-    resp = client().messages.parse(
-        model=model,
-        max_tokens=max_tokens,
-        system=system,
-        messages=[{"role": "user", "content": prompt}],
-        output_format=output,
-    )
-    u = resp.usage
+
+
+def spend(stage_name, model, u, niche_slug="", card_id=None, note="", extra_usd=0.0, extra="") -> float:
+    """Log what a call cost (tokens plus any search fees) and count it against the caps."""
     in_tok = (u.input_tokens or 0) + (getattr(u, "cache_read_input_tokens", 0) or 0) \
         + (getattr(u, "cache_creation_input_tokens", 0) or 0)
     out_tok = u.output_tokens or 0
-    usd = usd_for(model, in_tok, out_tok)
+    usd = usd_for(model, in_tok, out_tok) + extra_usd
     rand = config.zar(usd)
     record(stage_name, model, in_tok, out_tok, usd, rand, niche_slug, card_id, note)
     _process["zar"] += rand
     if _stage["name"]:
         _stage["spent_zar"] += rand
-    print(f"    [cost] {stage_name:<6} {model:<18} in={in_tok:>6} out={out_tok:>5} "
+    print(f"    [cost] {stage_name:<6} {model:<18} in={in_tok:>6} out={out_tok:>5}{extra} "
           f"R{rand:.3f}{'  ' + niche_slug if niche_slug else ''}")
-    if resp.stop_reason == "refusal" or resp.parsed_output is None:
-        raise RuntimeError(f"{model} returned no parsable output (stop_reason={resp.stop_reason})")
-    return resp.parsed_output
+    return rand
 
 
 def record(stage_name, model, in_tok, out_tok, usd, rand, niche_slug="", card_id=None, note=""):

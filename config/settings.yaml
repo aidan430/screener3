@@ -25,7 +25,8 @@ caps:
   cards_per_niche: 5
   signals_to_distill: 25      # top-ranked signals sent to Haiku per niche
   signal_chars: 700           # truncation per signal in the distill prompt
-  dive_zar_per_card: 1.50     # Deep Dive spend per card (planner + 2 Sonnet analysts)
+  dive_zar_per_card: 3.00     # Deep Dive spend per card (planner, web price check, 2 Sonnet analysts)
+  web_zar_per_niche: 1.50     # web scout spend per niche per night (searches + reading results)
   niche_capital_zar: 15000    # most a niche may ask for to start (your choice); above it the Economics gate kills
   training_zar_per_squad: 12  # Training spend per winning niche (writers, exams, one retake)
   stock_batch_zar: 10000      # most one winning product may ask for its first stock batch (your choice)
@@ -56,7 +57,8 @@ smoke:
   variants: 3
 
 sources:                      # Research scouts. appstore needs no key.
-  reddit: true
+  web: true                   # Claude's web search; only niches that list it use it (it costs more)
+  reddit: false               # Reddit closed new API access on 31 Oct 2026; public access ends by March 2027
   hn: true
   appstore: true              # 1-2 star reviews of the niche's named competitor apps
   upwork: false
@@ -77,6 +79,12 @@ markets:                      # where Deep Dive measures demand (global by defau
   ebay_marketplaces: [EBAY_US, EBAY_GB, EBAY_DE, EBAY_AU]
   listings_per_probe: 10
   reviews_per_app: 20
+
+web:                          # Anthropic's server-side web search (web scout and Deep Dive price check)
+  usd_per_search: 0.01        # $10 per 1,000 searches, on top of tokens (Anthropic pricing, Nov 2026)
+  tokens_per_search: 10000    # worst-case input tokens one search adds, for the pre-call estimate
+  scout_searches: 3           # searches per niche per night
+  price_searches: 3           # searches per Deep Dive card
 
 dive:
   search_terms: 3             # planned by Haiku per card

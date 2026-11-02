@@ -97,6 +97,16 @@ def squad_roles(lane: str = "") -> dict:
     return {k: sq["roles"][k] for k in keys}
 
 
+OPT_IN_SOURCES = {"web"}  # cost more per search: only niches that list them in niches.yaml use them
+
+
+def sources_for(niche) -> list[str]:
+    """Enabled sources a niche uses: the ones it lists, else every enabled one that is not opt-in."""
+    on = [k for k, v in settings()["sources"].items() if v]
+    listed = getattr(niche, "sources", None) or []
+    return [k for k in on if (k in listed if listed else k not in OPT_IN_SOURCES)]
+
+
 def phrases_for(niche) -> list[str]:
     """Search phrases for a niche: buying phrases for commerce niches, pain phrases otherwise."""
     if getattr(niche, "kind", "") == "commerce":

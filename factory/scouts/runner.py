@@ -14,12 +14,12 @@ from sqlmodel import delete, select
 from factory import agents, config, costs
 from factory.models import Card, Niche, RunLog, Signal, session, tonight, utcnow
 from factory.scouts import distill
-from factory.scouts.sources import appstore, fiverr, hellopeter, hn, reddit, trends, upwork
-from factory.scouts.sources.base import NotImplementedSource, RawSignal, SourceError
+from factory.scouts.sources import appstore, fiverr, hellopeter, hn, reddit, trends, upwork, web
+from factory.scouts.sources.base import NotImplementedSource, RawSignal, SourceError, SourceSkipped
 from factory.seed import active_niches, seed
 
 log = logging.getLogger("factory.scouts")
-ADAPTERS = {m.NAME: m for m in (reddit, hn, upwork, fiverr, appstore, hellopeter, trends)}
+ADAPTERS = {m.NAME: m for m in (reddit, hn, upwork, fiverr, appstore, hellopeter, trends, web)}
 PRICE = re.compile(r"(\$|R|£|€)\s?\d|\d+\s?(/mo|per month|a month|/month|per year|/yr)|\bpay(ing)?\b", re.I)
 
 
@@ -70,6 +70,8 @@ def fetch_source(niche: Niche, name: str, job) -> int:
         return n
     except NotImplementedSource as e:
         job.status, job.summary = "skipped", f"TODO: {e}"
+    except SourceSkipped as e:
+        job.status, job.summary = "skipped", str(e)
     except SourceError as e:
         job.status, job.summary = "failed", f"FAILED: {e}"
         log.warning("source %s failed for %s: %s", name, niche.slug, e)
@@ -87,7 +89,7 @@ def distill_job(niche: Niche) -> list[Card]:
 
 def scout_niche(niche: Niche) -> dict:
     from factory.warden import holds
-    enabled = [k for k, v in config.settings()["sources"].items() if v and (not niche.sources or k in niche.sources)]
+    enabled = config.sources_for(niche)
     held = holds.active()
     report = {"niche": niche.slug, "sources": {}, "new_signals": 0, "cards": []}
     for name in enabled:

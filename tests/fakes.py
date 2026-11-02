@@ -60,6 +60,12 @@ class FakeMessages:
     def __init__(self, owner):
         self.owner = owner
 
+    def create(self, *, model, max_tokens, system, messages, tools=None, **kw):
+        """Only web-search calls use create(); answered like the API: queries, results, cited text."""
+        self.owner.calls.append(SimpleNamespace(model=model, schema="web_search", prompt=messages[0]["content"],
+                                                tools=tools))
+        return self.owner.web_search(system)
+
     def parse(self, *, model, max_tokens, system, messages, output_format):
         self.owner.calls.append(SimpleNamespace(model=model, schema=output_format.__name__, prompt=messages[0]["content"]))
         name = output_format.__name__
@@ -141,6 +147,27 @@ class FakeClaude:
         # Revision: a rewrite that (wrongly) drops the guardrails; the code must put them back
         return exam.Revision(prompt="You are the Support agent. New rule: never refund outside policy.",
                              changes="Added a refund rule.")
+
+    def web_search(self, system):
+        ns, system = SimpleNamespace, " ".join(system.split())
+        if "physical products" in system:  # the web scout for a commerce niche
+            hits = [(COMMERCE_POST.url, COMMERCE_POST.title, COMMERCE_POST.text[:150])]
+        elif "shops charge" in system:  # the Deep Dive price check
+            hits = [("https://www.takealot.com/dog-bottle/PLID1", "Collapsible Dog Water Bottle | Takealot.com",
+                     "Collapsible Dog Water Bottle 500ml R449 In stock"),
+                    ("https://www.example.co.za/bottle", "Pet bottle", "Travel bottle for dogs, R 1 299.00 incl. VAT")]
+        else:
+            hits = []
+        cites = [ns(type="web_search_result_location", url=u, title=t, cited_text=c, encrypted_index="x")
+                 for u, t, c in hits]
+        results = [ns(type="web_search_result", url=u, title=t, page_age="October 2, 2026", encrypted_content="x")
+                   for u, t, _ in hits]
+        content = [ns(type="server_tool_use", id="srv1", name="web_search", input={"query": "fake query"}),
+                   ns(type="web_search_tool_result", tool_use_id="srv1", content=results),
+                   ns(type="text", text="Found these.", citations=cites)]
+        usage = ns(input_tokens=len(system) // 4 + 3000, output_tokens=200, cache_read_input_tokens=0,
+                   cache_creation_input_tokens=0, server_tool_use=ns(web_search_requests=1))
+        return ns(content=content, usage=usage, stop_reason="end_turn")
 
     def econ(self, prompt=""):
         from factory.dive.economics import Econ

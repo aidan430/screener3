@@ -72,13 +72,12 @@ def run(dept: str, role: str, subject: str = "", card=None, tower: int | None = 
 
 def roster() -> dict[str, list[str]]:
     """Agent roles that exist in code right now, per department."""
-    enabled = [k for k, v in config.settings()["sources"].items() if v]
     with session() as s:
-        niches = list(s.exec(select(Niche.slug).where(Niche.active == True)))  # noqa: E712
+        niches = list(s.exec(select(Niche).where(Niche.active == True)))  # noqa: E712
         squads = [f"{a.name} · {q.slug}" for q, a in s.exec(
             select(Squad, SquadAgent).join(SquadAgent, SquadAgent.squad_id == Squad.id)
             .where(Squad.status.in_(["certified", "launched"])))]
-    scouts = [f"{src} scout · {slug}" for slug in niches for src in enabled]
+    scouts = [f"{src} scout · {n.slug}" for n in niches for src in config.sources_for(n)]
     return {
         "research": scouts + ["Distiller", "Proof gatekeeper", "Craft gatekeeper"],
         "dive": list(DIVE_ROLES),

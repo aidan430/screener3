@@ -4,7 +4,8 @@
 # keywords: used across upwork/fiverr/hn/trends searches.
 # kind: commerce = physical products for South African buyers, sold from stock
 # held by a fulfilment warehouse. Their scouts search buying phrases
-# (config/commerce.yaml), name no competitor apps, and use Reddit only.
+# (config/commerce.yaml), name no competitor apps, and use web search only
+# (Reddit closed new API access on 31 Oct 2026).
 
 - slug: sa-home-kitchen
   kind: commerce
@@ -12,42 +13,42 @@
   keywords: [kitchen gadget, home organisation, storage solution, cleaning tool]
   subreddits: [southafrica, askSouthAfrica, capetown, johannesburg]
   competitors: []
-  sources: [reddit]
+  sources: [web]
 - slug: sa-pets
   kind: commerce
   region: ZA
   keywords: [dog harness, dog bed, cat toy, pet accessories]
   subreddits: [southafrica, askSouthAfrica, dogs, cats]
   competitors: []
-  sources: [reddit]
+  sources: [web]
 - slug: sa-baby-kids
   kind: commerce
   region: ZA
   keywords: [baby products, toddler, kids toys, lunch box]
   subreddits: [southafrica, askSouthAfrica, beyondthebump, Parenting]
   competitors: []
-  sources: [reddit]
+  sources: [web]
 - slug: sa-outdoors-fitness
   kind: commerce
   region: ZA
   keywords: [camping gear, hiking gear, home gym, cycling accessories]
   subreddits: [southafrica, askSouthAfrica, CampingandHiking, homegym]
   competitors: []
-  sources: [reddit]
+  sources: [web]
 - slug: sa-car-accessories
   kind: commerce
   region: ZA
   keywords: [car organiser, car cleaning, phone mount, boot organiser]
   subreddits: [southafrica, askSouthAfrica, cars]
   competitors: []
-  sources: [reddit]
+  sources: [web]
 - slug: sa-gifts
   kind: commerce
   region: ZA
   keywords: [gift ideas, birthday gift, personalised gift, christmas gift]
   subreddits: [southafrica, askSouthAfrica, GiftIdeas]
   competitors: []
-  sources: [reddit]
+  sources: [web]
 
 # Software and content niches (kind left empty).
 

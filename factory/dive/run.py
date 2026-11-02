@@ -31,7 +31,7 @@ def dive_card(card: Card) -> Dossier:
     ctx = {"subject": card.title, "card": card, "tower": TOWER}
     with agents.run("dive", "Demand analyst", **ctx) as job:
         plan = demand.plan(card, niche, _left(cap, spent0))
-        probes, notes = demand.probe(plan.terms, plan.business_model)
+        probes, notes = demand.probe(plan.terms, plan.business_model, card.id, _left(cap, spent0))
         stats, items = demand.demand_stats(probes), demand.evidence_items(card, probes)
         job.summary = (f"searched {', '.join(plan.terms)} as {plan.business_model}: {len(items) - 1} listings"
                        + (f"; {len(notes)} probe problems" if notes else ""))

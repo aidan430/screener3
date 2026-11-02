@@ -8,18 +8,16 @@ would cost to start; Training builds and certifies a squad of agents for the
 niche; Operations runs it; the Treasury counts every rand per niche; the
 Warden oversees all of it, fixes what it can and reports the rest.
 
-Commerce comes first: physical products for South African buyers, sold from
-small batches of stock held by a fulfilment warehouse (`config/commerce.yaml`).
-Digital and content niches keep running at a lower volume.
+Commerce comes first: physical products for South African buyers, sold from small batches of
+stock held by a fulfilment warehouse (`config/commerce.yaml`). Digital and content niches keep
+running at a lower volume.
 
-The dashboard is a MOBA-style arena (see "The arena") so the player can see
-in real time which agents are working, where every niche is in the cycle,
-and which niches make or lose money.
+The dashboard is a MOBA-style arena (see "The arena") so the player can see in real time which
+agents are working, where every niche is in the cycle, and which niches make or lose money.
 
-The human (the "player") does only what agents cannot: approve spending,
-pass ID checks, own accounts, and answer the Warden's weekly report. Target:
-about 20 minutes a week. Money is never spent and nothing is posted publicly
-without a human click.
+The human (the "player") does only what agents cannot: approve spending, pass ID checks, own
+accounts, and answer the Warden's weekly report. Target: about 20 minutes a week. Money is never
+spent and nothing is posted publicly without a human click.
 
 ## Departments
 | Department | Agents (roles) | Input | Output | Passes on when |
@@ -31,8 +29,7 @@ without a human click.
 | Treasury | Ledger, Auditor | Sales, refunds, ad and agent bills | Revenue, costs, profit per niche | Books match providers |
 | Warden | Health check, Cost guard, Fixer, Reporter | Every AgentRun, Cost and GateResult | Automatic fixes, alerts, weekly + monthly reports | n/a (oversees) |
 
-Departments not built yet show on the map as construction sites. Never show
-an agent as working unless an AgentRun row says it is.
+Unbuilt departments show as construction sites. No agent shows as working without an AgentRun row.
 
 ## The arena (dashboard map)
 A square, top-down map like a MOBA:
@@ -82,7 +79,7 @@ Killed or lost cards are archived, never deleted.
   the Economics gate kills.
 - The R20 stage cap and R0.60 scout cap from Phase 1 stay. The Warden adds a
   daily agent-spend cap (`warden.daily_cap_zar`, R50) it cannot raise itself.
-  Training is capped at R12 per squad (`caps.training_zar_per_squad`).
+  Caps: training R12 per squad, web scout R1.50 per niche a night, Deep Dive R3 a card.
 
 ## Stack (do not deviate without asking)
 - Python 3.11, `uv` for deps
@@ -91,8 +88,10 @@ Killed or lost cards are archived, never deleted.
   Simulator use `claude-haiku-4-5`. Gatekeepers, Deep Dive judges, page
   writer, Training's writers and the Examiner use `claude-sonnet-4-6`. Squad
   agents use the model set per role in `config/squad.yaml`. Never Opus.
-- `httpx` for HTTP, `praw` for Reddit, `feedparser` for RSS, `playwright`
-  only where an API does not exist
+- `httpx` for HTTP, `feedparser` for RSS, `playwright` only where an API does not
+  exist. Web search through the `anthropic` SDK's server tool (`web_search_20250305`,
+  $10 per 1,000 searches) for the web scout and the Deep Dive price check. Reddit
+  (`praw`) is off: Reddit closed new API access on 31 Oct 2026.
 - Official APIs only for marketplaces: App Store (iTunes Search + reviews
   RSS, no key), Etsy Open API v3 (`ETSY_API_KEY`), eBay Browse API
   (`EBAY_CLIENT_ID` / `EBAY_CLIENT_SECRET`). No scraping that breaks a site's
@@ -144,8 +143,11 @@ dashboard/
   must be verbatim substrings of the stored signal. No url, no card.
 - Scout cost cap: R0.60 per niche per night. Over cap, skip and log.
 - Active niches (`niche_limit`): the first 4 commerce niches, then the first 2
-  others. Commerce niches search buying phrases (`commerce.yaml`), use Reddit
-  only and name no competitor apps.
+  others. Commerce niches use only the web scout (opt-in per niche: `sources:
+  [web]`), search buying phrases (`commerce.yaml`) and name no competitor apps.
+  A web signal is only the text the API copied from the cited page, never the
+  model's words; it has no vote counts, so it can pass Proof only on rule 1, 2
+  or the local-stock rule.
 
 ### Gate of Proof (tower 1)
 Kill unless at least one of: a job post or gig with a price for this exact
@@ -166,6 +168,7 @@ weapon, is branded or a copy, or is over 5 kg, fragile or sold in sizes.
 ### Deep Dive and Economics gate (tower 3)
 - Demand analyst: Haiku plans up to 3 search terms; probes App Store, Etsy and
   eBay in the configured markets; records counts, prices, ratings with urls.
+  Local stock adds the web price check: rand prices read by code from cited shop text.
 - Competitor analyst: top competitors with prices, ratings and 1-2 star
   review quotes, from the probes and the niche's named competitors.
 - Economics analyst (Sonnet): picks the business model and a price point
@@ -230,24 +233,21 @@ weapon, is branded or a copy, or is over 5 kg, fragile or sold in sizes.
 - Venture rows: building, live, paused. Revenue via Paystack webhook or `/api/collect`.
 
 ### Warden (Phase 3)
-- Health check every 15 minutes and after every night, itself an AgentRun.
-  It records incidents with an outcome: `fixed` (the Warden handled it),
-  `needs_you` (only a human can) or `watching`. Cleared conditions resolve
-  themselves; a human can mark an incident handled from the dashboard.
-  Tower 6 checks: a squad not certified, or a certified squad waiting more
-  than 7 days for launch money, is needs-you.
-- The Fixer may only: close jobs still "running" after 2 hours, retry a scout
-  job that failed with a temporary error (429, 5xx, timeout) once per niche per
-  night, pause a source that failed in every niche on the last 2 runs (24 h),
-  and run a missed night once (only if the factory has run before).
-- Cost guard: `warden.daily_cap_zar` in settings.yaml, enforced in `costs.call`
-  for every Claude call (DailyCapReached stops all stages for the day). Only a
-  human can raise it.
-- Reporter: Monday 07:00 SAST weekly report and a monthly review on the 1st,
-  built from the database with no model call: decisions for you, money,
-  niches, pipeline, done without you, watching, sources. Saved to the
-  WardenReport table and data/reports/, shown on the dashboard, emailed when
-  SMTP is configured. Needs-you incidents are emailed once each.
+- Health check every 15 minutes and after every night, itself an AgentRun. It records incidents
+  with an outcome: `fixed` (the Warden handled it), `needs_you` (only a human can) or
+  `watching`. Cleared conditions resolve themselves; a human can mark an incident handled from
+  the dashboard. Tower 6 checks: a squad not certified, or a certified squad waiting more than 7
+  days for launch money, is needs-you.
+- The Fixer may only: close jobs still "running" after 2 hours, retry a scout job that failed
+  with a temporary error (429, 5xx, timeout) once per niche per night, pause a source that
+  failed in every niche on the last 2 runs (24 h), and run a missed night once (only if the
+  factory has run before).
+- Cost guard: `warden.daily_cap_zar` in settings.yaml, enforced in `costs.guard` before every
+  Claude call (DailyCapReached stops all stages for the day). Only a human can raise it.
+- Reporter: Monday 07:00 SAST weekly report and a monthly review on the 1st, built from the
+  database with no model call: decisions for you, money, niches, pipeline, done without you,
+  watching, sources. Saved to the WardenReport table and data/reports/, shown on the dashboard,
+  emailed when SMTP is configured. Needs-you incidents are emailed once each.
 - The Warden never spends, approves, publishes, deletes data or writes settings.yaml.
 
 ### Agent activity
@@ -276,7 +276,7 @@ alerts: [{id, kind, label, subject, detail, action, outcome}]   # open needs-you
 desc, kv, actions). Buttons call the endpoints in `actions`. Poll every 60 s.
 
 ## Build phases
-1. Research scouts (Reddit, HN), Proof + Craft gates, smoke prep, dashboard. Done.
+1. Research scouts, Proof + Craft gates, smoke prep, dashboard. Done.
 2. Deep Dive + Economics gate + capital estimator, App Store/Etsy/eBay probes,
    AgentRun logging, MOBA arena dashboard. Done.
 3. Warden v1: health checks, cost guard, retries, source pauses, catch-up,

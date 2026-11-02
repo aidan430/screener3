@@ -35,8 +35,10 @@ def material(card: Card) -> tuple[str, str]:
         sig = s.get(Signal, card.signal_id) if card.signal_id else None
     post = ""
     if sig:
-        post = (f"\n<source_post url=\"{sig.url}\" source=\"{sig.source}\" score=\"{sig.score:g}\" "
-                f"replies=\"{sig.replies}\">\nTITLE: {sig.title}\nTEXT: {sig.text[:4000]}\n</source_post>")
+        meta = (f'score="{sig.score:g}" replies="{sig.replies}"' if sig.source != "web"
+                else 'votes="unknown" note="found by web search; TEXT is excerpts copied from the page"')
+        post = (f"\n<source_post url=\"{sig.url}\" source=\"{sig.source}\" {meta}>\n"
+                f"TITLE: {sig.title}\nTEXT: {sig.text[:4000]}\n</source_post>")
     pay = f"{card.pay_currency}{card.pay_amount:g}" if card.pay_amount is not None else "none extracted"
     label = config.business_models()["models"].get(card.business_model, {}).get("label", "not guessed")
     block = (f"<card id=\"{card.id}\">\nNiche: {niche.slug} (region {niche.region})\n"

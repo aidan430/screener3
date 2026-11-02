@@ -59,14 +59,14 @@ class CommerceTest(FactoryTestCase):
         from factory.api.server import app
         return TestClient(app)
 
-    def test_commerce_niches_come_first_and_scout_reddit_only(self):
+    def test_commerce_niches_come_first_and_scout_the_web_only(self):
         self.scout(kind="commerce")
         with session() as s:
             active = list(s.exec(select(Niche).where(Niche.active == True)))  # noqa: E712
             roles = {r.role for r in s.exec(select(AgentRun).where(AgentRun.dept == "research"))}
         self.assertEqual(sum(n.kind == "commerce" for n in active), 4)
         self.assertEqual(sum(n.kind != "commerce" for n in active), 2)
-        self.assertNotIn("hn scout", roles)
+        self.assertTrue("web scout" in roles and "hn scout" not in roles and "reddit scout" not in roles, roles)
         card = one(Card)
         self.assertEqual((card.business_model, card.lane), ("local_stock", "commerce"))
         prompt = next(c for c in self.fake.calls if c.schema == "Distilled").prompt
@@ -130,7 +130,7 @@ class CommerceTest(FactoryTestCase):
         craft, version = rubric("craft")
         self.assertIn("ICASA", craft)
         self.assertIn("fulfilment warehouse", craft)
-        self.assertEqual(version, "2026-10-07.2")
+        self.assertEqual(version, "2026-11-02.1")
 
 
 if __name__ == "__main__":
