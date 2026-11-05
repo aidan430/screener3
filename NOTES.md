@@ -147,3 +147,6 @@ commit 7d2617e). Both in git history.
 - **Ladder (200 coins, Build tab):** the owner's ladder model (111414262141412), stood up and
   scaled to 20 studs, with an invisible TrussPart inside that characters climb. Wooden rails
   and rungs stand in if the model won't load. Stack ladders to go higher.
+- **Hay texture on:** `HayTexture` = the owner's uploaded image 92326825877863 (garden-hay.jpg).
+  That ID is an Image, not a model, so `HayModel` is back to 0: loose hay uses the built-in
+  shape in the Grass material, which now wears the same texture.

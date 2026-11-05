@@ -25,12 +25,12 @@ Config.HeapColour = { 222, 186, 92 } -- straw gold (the terrain Grass material i
 -- Your hay texture: upload garden-hay.jpg (and its normal map) in Studio (Asset Manager > Import),
 -- paste the IDs here ("rbxassetid://123"), rebuild. The heap, the hay on tools and the bundles
 -- then wear it. Empty = plain straw-gold Grass.
-Config.HayTexture = ""
+Config.HayTexture = "rbxassetid://92326825877863"
 Config.HayNormal = ""
 Config.HayTextureStuds = 8 -- how many studs one copy of the texture covers
 -- The hay model you imported and uploaded (a Model or a mesh ID): lumps on tools, flying hay,
 -- bundles, bales' neighbours and the mounds round the heap use it. 0 = rounded hay balls.
-Config.HayModel = 92326825877863
+Config.HayModel = 0
 -- Or a bare mesh ID and its texture (used only if HayModel is 0 or doesn't load).
 Config.HayMesh = ""
 Config.HayMeshTexture = ""
