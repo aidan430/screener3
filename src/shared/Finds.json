@@ -1,0 +1,14 @@
+[
+  {"name": "a brass button", "story": "It is from Mrs Thimbleby's coat. So she did come to the haystack that night."},
+  {"name": "a magpie feather", "story": "Black and white, with a green shine. Pip the magpie has been here."},
+  {"name": "a spool of golden thread", "story": "The needle was threaded with this. It can't be far."},
+  {"name": "an old horseshoe", "story": "The merchant says it's lucky. He pays well for it anyway."},
+  {"name": "a thimble", "story": "Silver, and engraved with a T. The tailor's, for certain."},
+  {"name": "a chewed corn cob", "story": "Gertrude the goat got in here. She eats anything shiny... or not."},
+  {"name": "a torn fair ticket", "story": "Harvest Fair, Row 3. The night the needle went missing."},
+  {"name": "a duck egg", "story": "Still warm. The ducks have been nesting in the hay."},
+  {"name": "a tiny bell", "story": "From Biscuit the barn cat's collar. Everyone's been through this haystack."},
+  {"name": "a rusty key", "story": "It fits no lock on the farm. Or does it?"},
+  {"name": "a jar of honey", "story": "The merchant's eyes light up. 'Rare,' he says, and pays double.", "bonus": 2},
+  {"name": "a gold coin", "story": "Old, and heavy. The merchant bites it and nods.", "bonus": 3}
+]

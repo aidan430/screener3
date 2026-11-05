@@ -1,52 +1,47 @@
 # NOTES: choices and defaults
 
 Every default below was chosen without asking. Change any of them in `src/shared/Config.luau`
-(numbers), `src/shared/Piles.json` (haystacks and clues) or `src/shared/Cases.json` (stories).
+(numbers), `src/shared/Finds.json` (lucky finds and story) or `src/server/World.luau` (the map).
 
-## Version 1 (2026-11-05)
-Your choices: an original "find the needle in the haystack" mystery that plays like a
-simulator, with 5,000,000 straws; the theme was left to me.
+## Version 2 (2026-11-05): one big haystack, a 24-hour grind
+Your brief: one big haystack; a slow process of about 24 hours to find the needle; straw sold to
+a merchant; machines, better tools and tool perks bought with coins; power-ups and speed-ups
+mainly with Robux; ten unique achievements; all ten open a secret level.
 
-- **Theme:** Hollow Creek Farm, an autumn farm at sunset (warm light, orange trees, lamps).
-  It suits hay and a cosy mystery, and looks good built from simple shapes.
-- **Haystacks:** 10, with 500,000 straws each, next to farm landmarks: three north (Windmill,
-  Red Barn, Old Tractor), two east (Duck Pond, Apple Tree), two south (Old Well, Pumpkin
-  Patch), three west (Chicken Coop, Scarecrow, Tool Shed). North is the way you face when you
-  spawn; a signpost in the plaza names the four sides.
-- **Finding the needle:** chance per search = straws in your handful / straws left in that
-  haystack. That is the same as hiding the needle at a random straw, and the last handful
-  always finds it. Bigger tools mean bigger handfuls and better odds.
-- **Clues:** 2 to 4 per case. Each search has a 3% chance of giving you your next clue (about
-  one every 33 searches). The clues rule haystacks out by side, water, buildings and animals;
-  the last one names a trace only one place leaves (flour, duckweed, sawdust...).
-- **Tools:** 8, from the Rusty Fork (100 straws a search, free) to the Needle Detector
-  (60,000, 5M coins). Each costs 5 seconds to 15 minutes of searching with the one before
-  (tested). Coins: 1 per 10 straws.
-- **Rewards:** the finder gets 400 searches' worth of coins at their tool's power; everyone
-  else who searched in that case gets 40. Next case after 12 seconds.
-- **Rebirth:** costs 2.5M coins (then 5M, 7.5M...), resets coins and tool, +50% coins.
-- **Anti-cheat:** the server checks you hold your tool within 26 studs of the haystack, and
-  allows one search per 0.18 seconds, so auto-clickers gain nothing.
-- **Saving:** coins, tool, rebirths, needles found and totals, every 2 minutes, on leaving
-  and on shutdown. If loading fails, that visit isn't saved (it never overwrites good data).
-- **Robux:** 2x Coins and Auto Search passes, a Clue Hint product (your next clue now; coins
-  if you have every clue). All switched off until you create them and send me the IDs.
-  No paid random rewards.
-- **Tooling:** Roblox's build tools (Rojo, Lune, luau-lsp) couldn't be downloaded in the cloud
-  sandbox, so `dev/build.py` builds the place file and `dev/luau.py` checks the code instead.
-  Neither runs the game: the first real test is pressing Play in Studio.
+- **Your own haystack.** Everyone sees the same giant haystack, but each player's progress and
+  needle are their own and saved, because a shared haystack couldn't add up to 24 hours across
+  visits. 5,000,000 straws. The needle is never in the first 60%.
+- **Pacing (tested in `dev/pacing.py`):** a free player who clicks 3 times a second, sells
+  when the bag is full and always buys the best upgrade they can afford reaches the needle zone
+  after about 17.6 hours and clears the haystack in 24.0. With every Robux item it takes 8-11
+  hours. Early game is slow on purpose: the Rusty Fork takes 1 straw a search.
+- **Merchant:** 1 coin a straw. The bag (400 straws at first, up to 160,000) must be carried to
+  the stall east of the plaza. Merchant's Whistles (Robux) sell anywhere.
+- **Tools:** 10, from 1 to 22 straws a search, 400 to 3.4M coins. **Perks** (per tool, reset
+  on a new tool): Sharpened +15% straws a level, Swift -10% cooldown a level, Lucky +0.4%
+  find chance a level; 5 levels each, prices scale with the tool.
+- **Machines:** five kinds (0.15 to 7.5 straws a second each), up to 10/10/8/6/4 of each, each
+  copy costs 1.3-1.5x more. They work only while you're in the game (VIP: an hour after too).
+- **Lucky finds:** 0.6% a search; 12 items from the mystery (the tailor's thimble, Pip the
+  magpie's feather...), worth 60 searches of coins, honey and the gold coin 2-3x.
+- **Finding the needle:** a prize of 5,000 searches' worth of coins, +20% coins on everything
+  forever, and a fresh haystack with a new needle (so the game goes on).
+- **Robux:** passes Auto Sell, Double Machines, VIP (+25% coins, offline machines); products
+  2x Speed, 2x Coins, Lucky Charm (an hour each), Straw Blast (100,000 straws at once),
+  Merchant's Whistle x10. All switched off until the IDs are set. No paid random rewards.
+- **Achievements (10):** First Straw, Bag Full, Merchant's Friend (100k sold), Collector (all
+  tools), Industrialist (10 machines), Perfectionist (all perks maxed on one tool), Marathon
+  (2 hours in one visit), Halfway There (2.5M searched), Lucky Duck (25 finds), Needle Finder.
+  Optional Roblox badges via `Config.BadgeIds`.
+- **The Golden Loft:** a platform in the clouds above the barn, reached from the loft hatch on
+  the barn (the server teleports you, so it can't be reached by climbing). A golden haystack of
+  250,000 straws paying 20x, with a golden needle of its own.
+- **Anti-cheat:** the server checks position, tool and cooldown; bag room and haystack totals
+  are server-side; purchases are validated server-side.
 
-## Version 1.1 (2026-11-05): after the first Studio test and a code review
-- The fork is checked after every spawn and given again if it didn't arrive (a fast first
-  load could leave a player empty-handed and unable to search).
-- Coins just under a million read "1M", not "1000K".
-- Haystacks grow back over 2.5 seconds at a new case, so nobody standing close gets flung.
-- Standing at a haystack hides its floating label (it sat behind the top bar) and shows the
-  same facts in a panel above the hotbar. Labels now also say "COULD BE HERE" once you have
-  clues.
+## Version 1 (2026-11-05), replaced
+Ten haystacks with shared, round-based cases and clues. Kept in git history (commit 7d2617e).
 
-## Not done yet (ideas for version 2)
-- Sounds and music (pick them from the Studio Toolbox, or send me asset IDs).
-- Bigger zones after rebirth (a barn of 50 million straws), pets that search with you, a
-  global leaderboard, daily rewards, badges.
-- Real 3D models from the Toolbox or a modeller in place of the simple shapes.
+## Not done yet (ideas for version 3)
+- Sounds and music, a global leaderboard, daily rewards, pets that search with you.
+- Real 3D models from the Toolbox in place of the simple shapes.

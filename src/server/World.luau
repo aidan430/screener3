@@ -1,35 +1,40 @@
--- Hollow Creek Farm at sunset: terrain, plaza, paths, fence, trees, signpost and the notice
--- board. The landmarks beside each haystack come from Landmarks.
+-- Hollow Creek Farm at sunset: terrain, plaza, the merchant's stall, the machine yard, the
+-- barn with the Golden Loft above it, fence and trees. The haystacks are in Haystack.luau.
 local Lighting = game:GetService("Lighting")
 
 local Build = require(script.Parent.Build)
-local Landmarks = require(script.Parent.Landmarks)
 
 local World = {}
-local notice = {}
-
 local terrain = workspace.Terrain
 local AUTUMN = { { 214, 120, 40 }, { 196, 72, 44 }, { 232, 176, 54 }, { 150, 150, 58 } }
 local WOOD = { 122, 86, 52 }
 
--- Ground and the spawn point come first, so nobody spawns into the void.
+World.HAYSTACK = Vector3.new(0, 0, -110) -- the giant haystack, north of the plaza
+World.MERCHANT = Vector3.new(74, 0, 10) -- the merchant's stall, east
+World.YARD = Vector3.new(-80, 0, 0) -- the machine yard, west
+World.BARN = Vector3.new(0, 0, 96) -- the barn, south; the Golden Loft is above it
+World.LOFT = Vector3.new(0, 130, 96) -- the secret level floats high above the barn
+
 function World.ground()
 	terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(118, 136, 58))
 	terrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(124, 94, 62))
 	terrain:SetMaterialColor(Enum.Material.Cobblestone, Color3.fromRGB(152, 138, 120))
 	terrain:FillBlock(CFrame.new(0, -8, 0), Vector3.new(640, 16, 640), Enum.Material.Grass)
-	terrain:FillCylinder(CFrame.new(0, -2, 0), 4, 34, Enum.Material.Cobblestone)
-
+	terrain:FillCylinder(CFrame.new(0, -2, 0), 4, 30, Enum.Material.Cobblestone)
+	for _, target in ipairs({ World.HAYSTACK, World.MERCHANT, World.YARD, World.BARN }) do
+		local dir = Vector3.new(target.X, 0, target.Z).Unit
+		local from, to = dir * 28 + Vector3.new(0, -2, 0), target - dir * 20 + Vector3.new(0, -2, 0)
+		terrain:FillBlock(CFrame.lookAt((from + to) / 2, to), Vector3.new(7, 4, (to - from).Magnitude), Enum.Material.Ground)
+	end
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "Spawn"
 	spawn.Anchored = true
 	spawn.Size = Vector3.new(12, 1, 12)
-	spawn.CFrame = CFrame.new(0, 0.5, 20) -- faces north, towards the notice board
+	spawn.CFrame = CFrame.new(0, 0.5, 16) -- faces north, towards the haystack
 	spawn.Color = Color3.fromRGB(196, 150, 92)
 	spawn.Material = Enum.Material.WoodPlanks
 	spawn.Duration = 0
 	spawn.Neutral = true
-	spawn.TopSurface = Enum.SurfaceType.Smooth
 	spawn.Parent = workspace
 end
 
@@ -60,10 +65,6 @@ function World.lighting()
 	bloom.Size = 20
 	bloom.Threshold = 1.4
 	bloom.Parent = Lighting
-	local rays = Instance.new("SunRaysEffect")
-	rays.Intensity = 0.06
-	rays.Spread = 0.5
-	rays.Parent = Lighting
 	local grade = Instance.new("ColorCorrectionEffect")
 	grade.Saturation = 0.1
 	grade.Contrast = 0.06
@@ -71,21 +72,10 @@ function World.lighting()
 	grade.Parent = Lighting
 end
 
-local function paths(piles)
-	for _, pile in ipairs(piles) do
-		local target = Vector3.new(pile.x, -2, pile.z)
-		local dir = Vector3.new(pile.x, 0, pile.z).Unit
-		local from = dir * 30 + Vector3.new(0, -2, 0)
-		local to = target - dir * 16
-		terrain:FillBlock(CFrame.lookAt((from + to) / 2, to), Vector3.new(7, 4, (to - from).Magnitude), Enum.Material.Ground)
-	end
-end
-
 local function fence(folder)
-	local count, radius = 56, 214
+	local count, radius = 56, 200
 	for i = 0, count - 1 do
-		local a = i / count * math.pi * 2
-		local b = (i + 1) / count * math.pi * 2
+		local a, b = i / count * math.pi * 2, (i + 1) / count * math.pi * 2
 		local p = Vector3.new(math.cos(a) * radius, 0, math.sin(a) * radius)
 		local q = Vector3.new(math.cos(b) * radius, 0, math.sin(b) * radius)
 		Build.part({ name = "Post", size = Vector3.new(1.2, 5, 1.2), cframe = CFrame.new(p + Vector3.new(0, 2.5, 0)), color = WOOD, material = "Wood", parent = folder })
@@ -100,7 +90,7 @@ local function trees(folder)
 	local rng = Random.new(7)
 	for i = 1, 40 do
 		local a = i / 40 * math.pi * 2 + rng:NextNumber(-0.05, 0.05)
-		local r = rng:NextNumber(232, 290)
+		local r = rng:NextNumber(218, 275)
 		local base = CFrame.new(math.cos(a) * r, 0, math.sin(a) * r)
 		local height = rng:NextNumber(10, 16)
 		Build.post({ name = "Trunk", color = { 96, 66, 44 }, material = "Wood", parent = folder }, base, height, 2.6)
@@ -113,19 +103,9 @@ local function trees(folder)
 end
 
 local function plaza(folder)
-	-- signpost in the middle, one arm per side of the farm
-	Build.post({ name = "Signpost", color = WOOD, material = "Wood", parent = folder }, CFrame.new(0, 0, 0), 12, 1)
-	local arms = { { "NORTH", -90, 10.6 }, { "EAST", 0, 9.4 }, { "SOUTH", 90, 8.2 }, { "WEST", 180, 7 } }
-	for _, arm in ipairs(arms) do
-		local cf = CFrame.new(0, arm[3], 0) * CFrame.Angles(0, math.rad(-arm[2]), 0) * CFrame.new(4.6, 0, 0)
-		local board = Build.part({ name = arm[1], size = Vector3.new(8, 1.5, 0.35), cframe = cf, color = { 214, 184, 130 }, material = "WoodPlanks", parent = folder })
-		Build.text(board, Enum.NormalId.Front, arm[1] .. " FIELDS")
-		Build.text(board, Enum.NormalId.Back, arm[1] .. " FIELDS")
-	end
-	-- lamps around the plaza
 	for i = 0, 3 do
 		local a = i / 4 * math.pi * 2 + math.pi / 4
-		local base = CFrame.new(math.cos(a) * 26, 0, math.sin(a) * 26)
+		local base = CFrame.new(math.cos(a) * 24, 0, math.sin(a) * 24)
 		Build.post({ name = "LampPost", color = { 52, 48, 46 }, material = "Metal", parent = folder }, base, 9, 0.6)
 		local lamp = Build.part({ name = "Lamp", size = Vector3.new(1.6, 1.6, 1.6), cframe = base * CFrame.new(0, 9.6, 0), color = { 255, 196, 110 }, material = "Neon", parent = folder })
 		local light = Instance.new("PointLight")
@@ -134,76 +114,84 @@ local function plaza(folder)
 		light.Brightness = 1.6
 		light.Parent = lamp
 	end
-	-- a few hay bales to sit on
-	for i = 0, 5 do
-		local a = i / 6 * math.pi * 2
-		local cf = CFrame.new(math.cos(a) * 20, 1.5, math.sin(a) * 20) * CFrame.Angles(0, -a, 0)
-		Build.part({ name = "Bale", size = Vector3.new(5, 3, 3), cframe = cf, color = { 220, 184, 96 }, material = "Grass", parent = folder })
-	end
-	-- the notice board shows the current case
-	local boardCf = CFrame.lookAt(Vector3.new(0, 7, -14), Vector3.new(0, 7, 20))
-	for _, x in ipairs({ -7.4, 7.4 }) do
-		Build.part({ name = "BoardLeg", size = Vector3.new(0.8, 12, 0.8), cframe = boardCf * CFrame.new(x, -1, 0.4), color = WOOD, material = "Wood", parent = folder })
-	end
-	local board = Build.part({ name = "NoticeBoard", size = Vector3.new(14, 8, 0.5), cframe = boardCf, color = { 92, 64, 40 }, material = "WoodPlanks", parent = folder })
-	local gui = Instance.new("SurfaceGui")
-	gui.Face = Enum.NormalId.Front
-	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	gui.PixelsPerStud = 50
-	gui.LightInfluence = 0.5
-	gui.Parent = board
-	local paper = Instance.new("Frame")
-	paper.Size = UDim2.new(1, -30, 1, -30)
-	paper.Position = UDim2.fromOffset(15, 15)
-	paper.BackgroundColor3 = Color3.fromRGB(246, 234, 204)
-	paper.Parent = gui
-	local function line(name, y, height, font, size)
-		local label = Instance.new("TextLabel")
-		label.Name = name
-		label.Size = UDim2.new(1, -30, height, 0)
-		label.Position = UDim2.new(0, 15, y, 0)
-		label.BackgroundTransparency = 1
-		label.Font = font
-		label.TextScaled = true
-		label.TextWrapped = true
-		label.TextColor3 = Color3.fromRGB(58, 38, 22)
-		label.Text = ""
-		local limit = Instance.new("UITextSizeConstraint")
-		limit.MaxTextSize = size
-		limit.Parent = label
-		label.Parent = paper
-		return label
-	end
-	notice.case = line("Case", 0.05, 0.14, Enum.Font.FredokaOne, 40)
-	notice.title = line("Title", 0.2, 0.18, Enum.Font.FredokaOne, 64)
-	notice.intro = line("Intro", 0.42, 0.34, Enum.Font.Gotham, 34)
-	notice.help = line("Help", 0.8, 0.14, Enum.Font.GothamBold, 30)
-	notice.help.Text = "Search any haystack. Every search can turn up a clue."
-end
-
-function World.setNotice(number, title, intro)
-	if notice.case then
-		notice.case.Text = "CASE #" .. number
-		notice.title.Text = title
-		notice.intro.Text = intro
+	local signs = { { "HAYSTACK", World.HAYSTACK }, { "MERCHANT", World.MERCHANT }, { "MACHINE YARD", World.YARD }, { "BARN", World.BARN } }
+	Build.post({ name = "Signpost", color = WOOD, material = "Wood", parent = folder }, CFrame.new(0, 0, -4), 11, 1)
+	for i, sign in ipairs(signs) do
+		local towards = Vector3.new(sign[2].X, 0, sign[2].Z).Unit
+		local cf = CFrame.lookAt(Vector3.new(0, 10.4 - i * 1.4, -4) + towards * 4.4, Vector3.new(0, 10.4 - i * 1.4, -4) + towards * 20)
+		local board = Build.part({ name = sign[1], size = Vector3.new(8, 1.3, 0.35), cframe = cf, color = { 214, 184, 130 }, material = "WoodPlanks", parent = folder })
+		Build.text(board, Enum.NormalId.Front, sign[1])
+		Build.text(board, Enum.NormalId.Back, sign[1])
 	end
 end
 
-function World.build(piles)
+local function merchant(folder)
+	local cf = CFrame.lookAt(World.MERCHANT, Vector3.new(0, 0, World.MERCHANT.Z)) -- the counter faces the plaza
+	Build.part({ name = "Counter", size = Vector3.new(12, 3.6, 3), cframe = cf * CFrame.new(0, 1.8, -3), color = { 150, 104, 60 }, material = "WoodPlanks", parent = folder })
+	for _, x in ipairs({ -5.5, 5.5 }) do
+		Build.part({ name = "StallPost", size = Vector3.new(0.7, 10, 0.7), cframe = cf * CFrame.new(x, 5, 2), color = WOOD, material = "Wood", parent = folder })
+	end
+	local awning = Build.part({ name = "Awning", size = Vector3.new(14, 0.4, 9), cframe = cf * CFrame.new(0, 10.2, -1) * CFrame.Angles(math.rad(-8), 0, 0), color = { 200, 60, 50 }, material = "Fabric", parent = folder })
+	for i = 0, 6 do
+		Build.part({ name = "Stripe", size = Vector3.new(1, 0.42, 9), cframe = awning.CFrame * CFrame.new(-6 + i * 2, 0, 0), color = { 246, 240, 226 }, material = "Fabric", parent = folder })
+	end
+	local sign = Build.part({ name = "MerchantSign", size = Vector3.new(10, 2, 0.4), cframe = cf * CFrame.new(0, 7.2, 2), color = { 246, 234, 204 }, material = "WoodPlanks", parent = folder })
+	Build.text(sign, Enum.NormalId.Front, "HAY MERCHANT: straw bought here")
+	-- the merchant himself
+	local body = cf * CFrame.new(0, 0, 5)
+	Build.part({ name = "MerchantBody", size = Vector3.new(2.4, 3.2, 1.4), cframe = body * CFrame.new(0, 3.6, 0), color = { 80, 110, 70 }, material = "Fabric", parent = folder })
+	Build.part({ name = "MerchantHead", shape = "Ball", size = Vector3.new(1.8, 1.8, 1.8), cframe = body * CFrame.new(0, 6.1, 0), color = { 230, 190, 150 }, parent = folder })
+	Build.part({ name = "MerchantHat", shape = "Cylinder", size = Vector3.new(0.3, 3.4, 3.4), cframe = body * CFrame.new(0, 6.9, 0) * CFrame.Angles(0, 0, math.rad(90)), color = { 112, 84, 48 }, material = "Fabric", parent = folder })
+	for _, x in ipairs({ -1.9, 1.9 }) do
+		Build.part({ name = "MerchantLeg", size = Vector3.new(0.9, 2, 0.9), cframe = body * CFrame.new(x * 0.4, 1, 0), color = { 60, 50, 44 }, material = "Fabric", parent = folder })
+	end
+	Build.part({ name = "Scales", size = Vector3.new(2, 0.3, 1.2), cframe = cf * CFrame.new(-3, 3.75, -3), color = { 200, 170, 80 }, material = "Metal", parent = folder })
+	local coins = Build.part({ name = "CoinPile", shape = "Ball", size = Vector3.new(1.6, 1, 1.6), cframe = cf * CFrame.new(3, 3.9, -3), color = { 245, 200, 66 }, material = "Metal", parent = folder })
+	coins.Reflectance = 0.3
+end
+
+local function yard(folder)
+	local cf = CFrame.new(World.YARD)
+	terrain:FillBlock(cf * CFrame.new(0, -2, 0), Vector3.new(44, 4, 34), Enum.Material.Ground)
+	for _, z in ipairs({ -17, 17 }) do
+		Build.part({ name = "YardRail", size = Vector3.new(44, 0.5, 0.5), cframe = cf * CFrame.new(0, 2.4, z), color = WOOD, material = "Wood", parent = folder })
+	end
+	local sign = Build.part({ name = "YardSign", size = Vector3.new(12, 2.2, 0.4), cframe = cf * CFrame.new(0, 7, -17) , color = { 246, 234, 204 }, material = "WoodPlanks", parent = folder })
+	Build.text(sign, Enum.NormalId.Front, "MACHINE YARD: your machines work here")
+	Build.text(sign, Enum.NormalId.Back, "MACHINE YARD")
+	for _, x in ipairs({ -6, 6 }) do
+		Build.part({ name = "SignPost", size = Vector3.new(0.6, 7, 0.6), cframe = cf * CFrame.new(x, 3.5, -17), color = WOOD, material = "Wood", parent = folder })
+	end
+end
+
+local function barn(folder)
+	local cf = CFrame.lookAt(World.BARN, Vector3.new(0, 0, 0)) -- the doors face the plaza
+	Build.part({ name = "BarnWalls", size = Vector3.new(30, 18, 22), cframe = cf * CFrame.new(0, 9, 0), color = { 176, 52, 40 }, material = "WoodPlanks", parent = folder })
+	Build.roof({ name = "BarnRoof", color = { 86, 62, 52 }, material = "Slate", parent = folder }, cf * CFrame.new(0, 18, 0) * CFrame.Angles(0, math.rad(90), 0), 32, 21.9)
+	Build.part({ name = "BarnDoorFrame", size = Vector3.new(10, 12, 0.3), cframe = cf * CFrame.new(0, 6, -11.1), color = { 240, 232, 214 }, material = "WoodPlanks", parent = folder })
+	Build.part({ name = "BarnDoor", size = Vector3.new(8.6, 10.6, 0.3), cframe = cf * CFrame.new(0, 5.8, -11.2), color = { 150, 42, 34 }, material = "WoodPlanks", parent = folder })
+	-- the loft hatch: the way up to the Golden Loft (the client opens it once all ten achievements are done)
+	local hatch = Build.part({ name = "LoftHatch", size = Vector3.new(5, 5, 0.4), cframe = cf * CFrame.new(0, 14.5, -11.2), color = { 60, 44, 30 }, material = "Wood", parent = folder })
+	Build.text(hatch, Enum.NormalId.Front, "GOLDEN LOFT\n10 achievements open it", { color = Color3.fromRGB(245, 200, 66), pixels = 30 })
+	local window = Build.part({ name = "LoftGlow", size = Vector3.new(4, 4, 0.2), cframe = cf * CFrame.new(0, 14.5, -11.45), color = { 255, 214, 90 }, material = "Neon", transparency = 0.6, collide = false, parent = folder })
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255, 200, 80)
+	light.Range = 18
+	light.Brightness = 0.8
+	light.Parent = window
+end
+
+function World.build()
 	World.lighting()
 	local farm = Instance.new("Folder")
 	farm.Name = "Farm"
 	farm.Parent = workspace
-	paths(piles)
 	fence(farm)
 	trees(farm)
 	plaza(farm)
-	local landmarks = Instance.new("Folder")
-	landmarks.Name = "Landmarks"
-	landmarks.Parent = workspace
-	for _, pile in ipairs(piles) do
-		Landmarks.build(pile, landmarks)
-	end
+	merchant(farm)
+	yard(farm)
+	barn(farm)
 end
 
 return World

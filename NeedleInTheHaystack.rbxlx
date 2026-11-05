@@ -9,123 +9,6 @@
 			</Properties>
 			<Item class="ModuleScript" referent="RBX00002">
 				<Properties>
-					<string name="Name">Cases</string>
-					<ProtectedString name="Source"><![CDATA[-- Generated from Cases.json
-return {
-	{
-		title = "The Tailor's Golden Needle",
-		needle = "Golden Needle",
-		intro = "Mrs Thimbleby, the village tailor, lost her golden needle the night before the Harvest Fair. Without it, nobody gets a costume!",
-		reveal = "Pip the magpie took it! Magpies love shiny things, and Pip tucked it into the {pile} haystack.",
-	},
-	{
-		title = "Grandpa Joe's Compass",
-		needle = "Compass Needle",
-		intro = "The needle fell out of Grandpa Joe's old compass. Now he can't find his way home from the far fields!",
-		reveal = "It was the wind! Last night's storm blew the loose needle across the farm and into the {pile} haystack.",
-	},
-	{
-		title = "The Knitting Needle Caper",
-		needle = "Knitting Needle",
-		intro = "Granny Rose was knitting the world's longest scarf when one of her needles vanished.",
-		reveal = "Biscuit the barn cat ran off with the yarn, and the needle went with it, all the way to the {pile} haystack.",
-	},
-	{
-		title = "The Silent Record Player",
-		needle = "Record Player Needle",
-		intro = "The barn dance starts tonight, but the record player's needle is gone. No needle, no music, no dance!",
-		reveal = "Young Ollie hid it so he could practise his drums in peace. He buried it in the {pile} haystack.",
-	},
-	{
-		title = "The Mayor's Lucky Pin",
-		needle = "Lucky Silver Pin",
-		intro = "The mayor's lucky silver pin disappeared an hour before her big speech at the fair.",
-		reveal = "Gertrude the goat nibbled the mayor's hat, and the pin dropped out by the {pile} haystack.",
-	},
-}
-]]></ProtectedString>
-				</Properties>
-			</Item>
-			<Item class="ModuleScript" referent="RBX00003">
-				<Properties>
-					<string name="Name">Clues</string>
-					<ProtectedString name="Source"><![CDATA[-- Builds a case's clues from where the needle is hidden. Every clue is true of the needle's
--- haystack and rules some others out; the last clue names a trace only one place could leave.
--- Plain Luau: no Roblox services.
-local Clues = {}
-
-local FACTS = {
-	water = {
-		[true] = "The straw around the needle was damp. It was hidden near water.",
-		[false] = "The straw around the needle was bone dry, far from any water.",
-	},
-	building = {
-		[true] = "A farmhand heard it drop right next to a building.",
-		[false] = "It was dropped out in the open, away from every building.",
-	},
-	animals = {
-		[true] = "Animal tracks lead straight to the hiding place.",
-		[false] = "No animal has been anywhere near the hiding place.",
-	},
-}
-
-local function textFor(attribute, value)
-	if attribute == "side" then
-		return "Someone saw a glint on the " .. value .. " side of the farm."
-	end
-	return FACTS[attribute][value]
-end
-
-function Clues.ids(piles)
-	local ids = {}
-	for _, pile in ipairs(piles) do
-		table.insert(ids, pile.id)
-	end
-	return ids
-end
-
--- piles: the list from Piles.json. pick(n) returns a whole number from 1 to n.
--- Returns { {text = string, possible = {pile ids still possible}}, ... }
-function Clues.generate(piles, needleId, pick)
-	local needle = nil
-	for _, pile in ipairs(piles) do
-		if pile.id == needleId then
-			needle = pile
-		end
-	end
-	assert(needle ~= nil, "no haystack called " .. tostring(needleId))
-
-	local attributes = { "side", "water", "building", "animals" }
-	for i = #attributes, 2, -1 do
-		local j = pick(i)
-		attributes[i], attributes[j] = attributes[j], attributes[i]
-	end
-
-	local candidates = table.clone(piles)
-	local clues = {}
-	for _, attribute in ipairs(attributes) do
-		local keep = {}
-		for _, pile in ipairs(candidates) do
-			if pile[attribute] == needle[attribute] then
-				table.insert(keep, pile)
-			end
-		end
-		-- a useful clue rules something out but leaves the final answer to the last clue
-		if #keep < #candidates and #keep >= 2 then
-			candidates = keep
-			table.insert(clues, { text = textFor(attribute, needle[attribute]), possible = Clues.ids(keep) })
-		end
-	end
-	table.insert(clues, { text = "Stuck to the thread: " .. needle.trace .. ".", possible = { needle.id } })
-	return clues
-end
-
-return Clues
-]]></ProtectedString>
-				</Properties>
-			</Item>
-			<Item class="ModuleScript" referent="RBX00004">
-				<Properties>
 					<string name="Name">Config</string>
 					<ProtectedString name="Source"><![CDATA[-- Every number you might want to tune lives here. Change it, rebuild, play-test.
 -- This module requires nothing, so the server, the client and the checks can all read it.
@@ -134,108 +17,216 @@ local Config = {}
 Config.Title = "Needle in the Haystack"
 Config.FarmName = "Hollow Creek Farm"
 
--- The haystacks
-Config.TotalStraws = 5000000 -- shared equally between the haystacks in Piles.json
-Config.MinPileScale = 0.3 -- an emptied haystack shrinks to this size
-Config.SearchRange = 26 -- studs from a haystack's centre (flat distance) to search it
-Config.SearchCooldown = 0.18 -- seconds between searches, so auto-clickers gain nothing
+-- The haystack. Everyone sees the same giant haystack, but each player's progress is their
+-- own and is saved: you dig through your 5,000,000 straws, and your needle is in there.
+Config.TotalStraws = 5000000
+Config.NeedleEarliest = 0.6 -- the needle is never in the first 60% of the straws
+Config.SearchRange = 34 -- studs from the haystack's centre (flat distance) to search it
+Config.SearchCooldown = 0.3 -- seconds between searches (the Swift perk shortens it)
+Config.MerchantRange = 16 -- studs from the merchant's stall to sell
 
--- Cases (rounds)
-Config.ClueChance = 0.03 -- chance that a search turns up your next clue
-Config.SolvedPause = 12 -- seconds between solving a case and the next case
-Config.FinderRewardSearches = 400 -- the finder earns this many searches' worth of coins
-Config.HelperRewardSearches = 40 -- everyone else who searched this case earns this many
+-- Coins: the merchant pays this per straw. Everything coins buy is below.
+Config.CoinsPerStraw = 1
 
--- Coins and rebirth
-Config.CoinsPerStraw = 0.1
-Config.RebirthBaseCost = 2500000 -- the first rebirth; each one after costs this much more
-Config.RebirthCoinBonus = 0.5 -- +50% coins for every rebirth
-
--- Search tools, in the order players buy them. Colours are {red, green, blue}.
+-- Tools, in the order players buy them. power = straws per search. Colours are {r, g, b}.
 Config.Tools = {
-	{ name = "Rusty Fork", power = 100, price = 0, shaft = { 112, 82, 58 }, head = { 128, 98, 78 }, material = "CorrodedMetal" },
-	{ name = "Wooden Pitchfork", power = 250, price = 250, shaft = { 160, 116, 72 }, head = { 176, 128, 82 }, material = "Wood" },
-	{ name = "Iron Pitchfork", power = 600, price = 1500, shaft = { 150, 108, 66 }, head = { 165, 170, 178 }, material = "Metal" },
-	{ name = "Golden Rake", power = 1500, price = 8000, shaft = { 120, 84, 50 }, head = { 245, 200, 66 }, material = "Metal" },
-	{ name = "Hay Blower", power = 4000, price = 40000, shaft = { 70, 72, 84 }, head = { 232, 92, 60 }, material = "SmoothPlastic" },
-	{ name = "Super Sifter", power = 10000, price = 200000, shaft = { 60, 64, 78 }, head = { 90, 200, 255 }, material = "Neon" },
-	{ name = "Magnet Gloves", power = 25000, price = 1000000, shaft = { 200, 200, 210 }, head = { 220, 40, 40 }, material = "SmoothPlastic" },
-	{ name = "Needle Detector", power = 60000, price = 5000000, shaft = { 40, 44, 52 }, head = { 70, 255, 150 }, material = "Neon" },
+	{ name = "Rusty Fork", power = 1, price = 0, shaft = { 112, 82, 58 }, head = { 128, 98, 78 }, material = "CorrodedMetal" },
+	{ name = "Wooden Pitchfork", power = 2, price = 400, shaft = { 160, 116, 72 }, head = { 176, 128, 82 }, material = "Wood" },
+	{ name = "Iron Pitchfork", power = 3, price = 2400, shaft = { 150, 108, 66 }, head = { 165, 170, 178 }, material = "Metal" },
+	{ name = "Steel Rake", power = 5, price = 10000, shaft = { 120, 84, 50 }, head = { 190, 196, 204 }, material = "Metal" },
+	{ name = "Golden Rake", power = 7, price = 40000, shaft = { 120, 84, 50 }, head = { 245, 200, 66 }, material = "Metal" },
+	{ name = "Hay Blower", power = 9, price = 120000, shaft = { 70, 72, 84 }, head = { 232, 92, 60 }, material = "SmoothPlastic" },
+	{ name = "Super Sifter", power = 12, price = 320000, shaft = { 60, 64, 78 }, head = { 90, 200, 255 }, material = "Neon" },
+	{ name = "Magnet Gloves", power = 15, price = 800000, shaft = { 200, 200, 210 }, head = { 220, 40, 40 }, material = "SmoothPlastic" },
+	{ name = "Twin Turbines", power = 19, price = 1700000, shaft = { 40, 44, 52 }, head = { 255, 170, 40 }, material = "Metal" },
+	{ name = "Needle Detector", power = 22, price = 3400000, shaft = { 40, 44, 52 }, head = { 70, 255, 150 }, material = "Neon" },
 }
-Config.DetectorLevel = 8 -- this tool also beeps when you search the haystack hiding the needle
+Config.DetectorLevel = 10 -- from this tool on, the HUD shows how warm the needle is
+
+-- Bags: how much straw you can carry before selling to the merchant.
+Config.Bags = {
+	{ name = "Hay Pouch", size = 400, price = 0 },
+	{ name = "Sack", size = 1500, price = 900 },
+	{ name = "Big Sack", size = 5000, price = 6000 },
+	{ name = "Cart", size = 16000, price = 40000 },
+	{ name = "Wagon", size = 50000, price = 250000 },
+	{ name = "Hay Lorry", size = 160000, price = 1500000 },
+}
+
+-- Machines search by themselves while you play (and need no clicking). rate = straws a
+-- second each; you can own `max` of each; each one you buy costs `growth` times more.
+Config.Machines = {
+	{ name = "Clockwork Hen", rate = 0.15, price = 1600, growth = 1.3, max = 10, color = { 236, 180, 70 } },
+	{ name = "Sorting Sieve", rate = 0.6, price = 20000, growth = 1.3, max = 10, color = { 150, 150, 160 } },
+	{ name = "Steam Thresher", rate = 1.5, price = 160000, growth = 1.35, max = 8, color = { 90, 70, 60 } },
+	{ name = "Hay Vacuum", rate = 3.6, price = 900000, growth = 1.4, max = 6, color = { 200, 80, 60 } },
+	{ name = "Needle Magnetron", rate = 7.5, price = 4000000, growth = 1.5, max = 4, color = { 70, 255, 150 } },
+}
+
+-- Perks are bought per tool (they reset when you buy a new tool). price is for the Wooden
+-- Pitchfork; it scales with the tool's price. Each level costs `growth` times more.
+Config.Perks = {
+	{ id = "sharp", name = "Sharpened", per_level = 0.15, levels = 5, price = 120, growth = 1.6, text = "+15% straws a search per level" },
+	{ id = "swift", name = "Swift", per_level = 0.10, levels = 5, price = 120, growth = 1.6, text = "-10% search cooldown per level" },
+	{ id = "lucky", name = "Lucky", per_level = 0.004, levels = 5, price = 150, growth = 1.6, text = "+0.4% chance of a lucky find per level" },
+}
+
+-- Lucky finds: odd things in the hay that the merchant pays extra for (and bits of the story).
+Config.LuckyChance = 0.006 -- per search, before the Lucky perk
+Config.LuckyValueSearches = 60 -- a find is worth this many searches' worth of coins
 
 -- Saving
-Config.DataStoreName = "NeedleHaystack_v1"
+Config.DataStoreName = "NeedleHaystack_v2"
 Config.AutosaveSeconds = 120
 
--- Robux items. Nothing shows in the shop until you create the item on the Creator
--- Dashboard (after publishing) and paste its ID here. 0 = switched off.
+-- Robux. Power-ups (timed boosts) are Robux only. Nothing shows in the shop until you create
+-- the item on the Creator Dashboard (after publishing) and paste its ID here. 0 = switched off.
 Config.GamePasses = {
-	DoubleCoins = 0, -- every search earns twice the coins
-	AutoSearch = 0, -- searches by itself while you hold your tool next to a haystack
+	AutoSell = 0, -- your bag sells itself to the merchant when it fills up
+	VIP = 0, -- +25% coins, a golden name tag, and machines keep running for an hour after you leave
+	DoubleMachines = 0, -- every machine works twice as fast
 }
 Config.Products = {
-	ClueHint = 0, -- reveals your next clue straight away
+	SpeedBoost = 0, -- 2x straws a search for 1 hour
+	CoinBoost = 0, -- 2x coins from the merchant for 1 hour
+	MerchantWhistle = 0, -- sell your bag anywhere, 10 times
+	StrawBlast = 0, -- search 100,000 straws at once
+	LuckyCharm = 0, -- 5x lucky finds for 1 hour
 }
-Config.AutoSearchInterval = 0.6
+Config.BoostSeconds = 3600
+Config.WhistleUses = 10
+Config.StrawBlastAmount = 100000
+Config.VipCoinBonus = 0.25
+Config.VipOfflineSeconds = 3600
+
+-- Achievements: all ten open the Golden Loft, a secret level above the barn.
+Config.Achievements = {
+	{ id = "first_straw", name = "First Straw", text = "Search the haystack for the first time.", stat = "searches", goal = 1 },
+	{ id = "bag_full", name = "Bag Full", text = "Fill your bag to the brim.", stat = "bags_filled", goal = 1 },
+	{ id = "merchant", name = "Merchant's Friend", text = "Sell 100,000 straws to the merchant.", stat = "straws_sold", goal = 100000 },
+	{ id = "collector", name = "Collector", text = "Own every tool, up to the Needle Detector.", stat = "tool", goal = 10 },
+	{ id = "industrialist", name = "Industrialist", text = "Own 10 machines at once.", stat = "machines", goal = 10 },
+	{ id = "perfectionist", name = "Perfectionist", text = "Max out all three perks on one tool.", stat = "perks_maxed", goal = 1 },
+	{ id = "marathon", name = "Marathon", text = "Search for two hours in one visit.", stat = "session_seconds", goal = 7200 },
+	{ id = "halfway", name = "Halfway There", text = "Search 2,500,000 straws.", stat = "searched", goal = 2500000 },
+	{ id = "lucky", name = "Lucky Duck", text = "Make 25 lucky finds in the hay.", stat = "lucky_finds", goal = 25 },
+	{ id = "needle", name = "Needle Finder", text = "Find the needle.", stat = "needles", goal = 1 },
+}
+Config.BadgeIds = {} -- optional: { first_straw = 123456 } awards a Roblox badge too
+
+-- The Golden Loft: a smaller golden haystack where straw pays 20x and a golden needle waits.
+Config.Loft = { straws = 250000, coinMultiplier = 20, needleEarliest = 0.5 }
 
 return Config
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00005">
+			<Item class="ModuleScript" referent="RBX00003">
 				<Properties>
 					<string name="Name">Economy</string>
-					<ProtectedString name="Source"><![CDATA[-- Coins, search power, needle odds and haystack size. Plain maths: no Roblox services.
+					<ProtectedString name="Source"><![CDATA[-- Rates, prices and odds. Plain maths: no Roblox services.
 -- Usage: local Economy = require(Shared.Economy)(Config)
 return function(Config)
 	local Economy = {}
 
+	local function perkLevel(data, id)
+		return (data.perks and data.perks[id]) or 0
+	end
+
 	function Economy.tool(level)
-		local tools = Config.Tools
-		return tools[math.clamp(level, 1, #tools)]
+		return Config.Tools[math.clamp(level, 1, #Config.Tools)]
 	end
 
-	-- straws searched in one go with this tool
-	function Economy.power(level)
-		return Economy.tool(level).power
+	function Economy.bag(level)
+		return Config.Bags[math.clamp(level, 1, #Config.Bags)]
 	end
 
-	function Economy.multiplier(rebirths, doubleCoins)
-		local m = 1 + Config.RebirthCoinBonus * rebirths
-		if doubleCoins then
+	-- straws one search takes, with the Sharpened perk and any speed boost
+	function Economy.power(data, speedBoost)
+		local p = Economy.tool(data.tool).power * (1 + Config.Perks[1].per_level * perkLevel(data, "sharp"))
+		if speedBoost then
+			p *= 2
+		end
+		return math.max(1, math.floor(p + 0.5))
+	end
+
+	function Economy.cooldown(data)
+		return Config.SearchCooldown * (1 - Config.Perks[2].per_level * perkLevel(data, "swift"))
+	end
+
+	function Economy.luckyChance(data, charm)
+		local c = Config.LuckyChance + Config.Perks[3].per_level * perkLevel(data, "lucky")
+		return if charm then c * 5 else c
+	end
+
+	-- straws a second from the player's machines
+	function Economy.machineRate(data, doubled)
+		local rate = 0
+		for i, m in ipairs(Config.Machines) do
+			rate += ((data.machines and data.machines[i]) or 0) * m.rate
+		end
+		return if doubled then rate * 2 else rate
+	end
+
+	function Economy.machineCount(data)
+		local n = 0
+		for i in ipairs(Config.Machines) do
+			n += (data.machines and data.machines[i]) or 0
+		end
+		return n
+	end
+
+	function Economy.machinePrice(index, owned)
+		local m = Config.Machines[index]
+		return math.floor(m.price * m.growth ^ owned + 0.5)
+	end
+
+	-- perks are priced for the tool you hold: the free fork pays Wooden Pitchfork prices
+	function Economy.perkPrice(data, perkIndex)
+		local perk = Config.Perks[perkIndex]
+		local level = perkLevel(data, perk.id)
+		local scale = math.max(Economy.tool(data.tool).price, Config.Tools[2].price) / Config.Tools[2].price
+		return math.floor(perk.price * perk.growth ^ level * scale + 0.5)
+	end
+
+	function Economy.perksMaxed(data)
+		for _, perk in ipairs(Config.Perks) do
+			if perkLevel(data, perk.id) < perk.levels then
+				return false
+			end
+		end
+		return true
+	end
+
+	function Economy.coinMultiplier(flags)
+		local m = 1
+		if flags.vip then
+			m += Config.VipCoinBonus
+		end
+		if flags.coinBoost then
 			m *= 2
 		end
 		return m
 	end
 
-	function Economy.coinsFor(straws, multiplier)
-		if straws <= 0 then
-			return 0
-		end
-		return math.floor(straws * Config.CoinsPerStraw * multiplier + 0.5)
+	-- what the merchant pays for `straws` straws (golden straws pay Loft.coinMultiplier more)
+	function Economy.coinsFor(straws, golden, multiplier)
+		local each = Config.CoinsPerStraw * (if golden then Config.Loft.coinMultiplier else 1)
+		return math.floor(straws * each * multiplier + 0.5)
 	end
 
-	function Economy.rebirthCost(rebirths)
-		return Config.RebirthBaseCost * (rebirths + 1)
+	-- where the needle hides: a straw index, never in the first `earliest` share
+	function Economy.needleAt(total, earliest, rng)
+		return math.floor(total * earliest + rng:NextNumber() * total * (1 - earliest)) + 1
 	end
 
-	-- The needle is equally likely to be any straw still in its haystack, so a handful of
-	-- straws finds it with probability handful / remaining. The last handful always does.
-	function Economy.needleChance(handful, remaining)
-		if remaining <= 0 then
-			return 0
+	-- 0 (cold) to 1 (the next handful has it): how warm the Needle Detector shows
+	function Economy.warmth(searched, needleAt, total)
+		local left = needleAt - searched
+		if left <= 0 then
+			return 1
 		end
-		return math.min(1, handful / remaining)
-	end
-
-	-- A haystack's size follows the cube root of what is left (its volume shrinks with it).
-	function Economy.pileScale(remaining, total)
-		if total <= 0 then
-			return Config.MinPileScale
-		end
-		local left = math.clamp(remaining / total, 0, 1)
-		return Config.MinPileScale + (1 - Config.MinPileScale) * left ^ (1 / 3)
+		return math.clamp(1 - left / (total * 0.1), 0, 1)
 	end
 
 	return Economy
@@ -243,7 +234,66 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00006">
+			<Item class="ModuleScript" referent="RBX00004">
+				<Properties>
+					<string name="Name">Finds</string>
+					<ProtectedString name="Source"><![CDATA[-- Generated from Finds.json
+return {
+	{
+		name = "a brass button",
+		story = "It is from Mrs Thimbleby's coat. So she did come to the haystack that night.",
+	},
+	{
+		name = "a magpie feather",
+		story = "Black and white, with a green shine. Pip the magpie has been here.",
+	},
+	{
+		name = "a spool of golden thread",
+		story = "The needle was threaded with this. It can't be far.",
+	},
+	{
+		name = "an old horseshoe",
+		story = "The merchant says it's lucky. He pays well for it anyway.",
+	},
+	{
+		name = "a thimble",
+		story = "Silver, and engraved with a T. The tailor's, for certain.",
+	},
+	{
+		name = "a chewed corn cob",
+		story = "Gertrude the goat got in here. She eats anything shiny... or not.",
+	},
+	{
+		name = "a torn fair ticket",
+		story = "Harvest Fair, Row 3. The night the needle went missing.",
+	},
+	{
+		name = "a duck egg",
+		story = "Still warm. The ducks have been nesting in the hay.",
+	},
+	{
+		name = "a tiny bell",
+		story = "From Biscuit the barn cat's collar. Everyone's been through this haystack.",
+	},
+	{
+		name = "a rusty key",
+		story = "It fits no lock on the farm. Or does it?",
+	},
+	{
+		name = "a jar of honey",
+		story = "The merchant's eyes light up. 'Rare,' he says, and pays double.",
+		bonus = 2,
+	},
+	{
+		name = "a gold coin",
+		story = "Old, and heavy. The merchant bites it and nods.",
+		bonus = 3,
+	},
+}
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00005">
 				<Properties>
 					<string name="Name">Format</string>
 					<ProtectedString name="Source"><![CDATA[-- Number formatting for the UI. Plain Luau: no Roblox services.
@@ -301,186 +351,155 @@ return Format
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00007">
-				<Properties>
-					<string name="Name">Piles</string>
-					<ProtectedString name="Source"><![CDATA[-- Generated from Piles.json
-return {
-	{
-		id = "windmill",
-		name = "Windmill",
-		side = "north",
-		water = false,
-		building = true,
-		animals = false,
-		trace = "a dusting of white flour",
-		x = -78,
-		z = -140,
-	},
-	{
-		id = "barn",
-		name = "Red Barn",
-		side = "north",
-		water = false,
-		building = true,
-		animals = true,
-		trace = "a tuft of brown cow hair",
-		x = 0,
-		z = -158,
-	},
-	{
-		id = "tractor",
-		name = "Old Tractor",
-		side = "north",
-		water = false,
-		building = false,
-		animals = false,
-		trace = "a smear of black engine oil",
-		x = 78,
-		z = -140,
-	},
-	{
-		id = "pond",
-		name = "Duck Pond",
-		side = "east",
-		water = true,
-		building = false,
-		animals = true,
-		trace = "a strand of green duckweed",
-		x = 152,
-		z = -40,
-	},
-	{
-		id = "appletree",
-		name = "Apple Tree",
-		side = "east",
-		water = false,
-		building = false,
-		animals = false,
-		trace = "a sticky curl of apple peel",
-		x = 152,
-		z = 52,
-	},
-	{
-		id = "well",
-		name = "Old Well",
-		side = "south",
-		water = true,
-		building = false,
-		animals = false,
-		trace = "a flake of rust from an old bucket",
-		x = -46,
-		z = 152,
-	},
-	{
-		id = "pumpkins",
-		name = "Pumpkin Patch",
-		side = "south",
-		water = false,
-		building = false,
-		animals = false,
-		trace = "a slippery pumpkin seed",
-		x = 46,
-		z = 152,
-	},
-	{
-		id = "coop",
-		name = "Chicken Coop",
-		side = "west",
-		water = false,
-		building = true,
-		animals = true,
-		trace = "a fluffy white feather",
-		x = -152,
-		z = -64,
-	},
-	{
-		id = "scarecrow",
-		name = "Scarecrow",
-		side = "west",
-		water = false,
-		building = false,
-		animals = false,
-		trace = "a button from a scarecrow's coat",
-		x = -158,
-		z = 6,
-	},
-	{
-		id = "shed",
-		name = "Tool Shed",
-		side = "west",
-		water = false,
-		building = true,
-		animals = false,
-		trace = "a curl of fresh sawdust",
-		x = -152,
-		z = 76,
-	},
-}
-]]></ProtectedString>
-				</Properties>
-			</Item>
 		</Item>
-		<Item class="Folder" referent="RBX00008">
+		<Item class="Folder" referent="RBX00006">
 			<Properties>
 				<string name="Name">Remotes</string>
 			</Properties>
-			<Item class="RemoteEvent" referent="RBX00009">
+			<Item class="RemoteEvent" referent="RBX00007">
 				<Properties>
 					<string name="Name">Search</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0000A">
+			<Item class="RemoteEvent" referent="RBX00008">
 				<Properties>
 					<string name="Name">SearchFx</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0000B">
-				<Properties>
-					<string name="Name">Clue</string>
-				</Properties>
-			</Item>
-			<Item class="RemoteEvent" referent="RBX0000C">
+			<Item class="RemoteEvent" referent="RBX00009">
 				<Properties>
 					<string name="Name">Announce</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0000D">
+			<Item class="RemoteEvent" referent="RBX0000A">
 				<Properties>
-					<string name="Name">ToggleAuto</string>
+					<string name="Name">Achievement</string>
+				</Properties>
+			</Item>
+			<Item class="RemoteFunction" referent="RBX0000B">
+				<Properties>
+					<string name="Name">Sell</string>
+				</Properties>
+			</Item>
+			<Item class="RemoteFunction" referent="RBX0000C">
+				<Properties>
+					<string name="Name">Whistle</string>
+				</Properties>
+			</Item>
+			<Item class="RemoteFunction" referent="RBX0000D">
+				<Properties>
+					<string name="Name">Buy</string>
 				</Properties>
 			</Item>
 			<Item class="RemoteFunction" referent="RBX0000E">
 				<Properties>
-					<string name="Name">BuyTool</string>
+					<string name="Name">Loft</string>
 				</Properties>
 			</Item>
 			<Item class="RemoteFunction" referent="RBX0000F">
 				<Properties>
-					<string name="Name">Rebirth</string>
+					<string name="Name">GetAchievements</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00010">
-				<Properties>
-					<string name="Name">GetState</string>
-				</Properties>
-			</Item>
-		</Item>
-		<Item class="Folder" referent="RBX00011">
-			<Properties>
-				<string name="Name">GameState</string>
-			</Properties>
 		</Item>
 	</Item>
-	<Item class="ServerScriptService" referent="RBX00012">
+	<Item class="ServerScriptService" referent="RBX00010">
 		<Properties>
 			<string name="Name">ServerScriptService</string>
 		</Properties>
-		<Item class="Folder" referent="RBX00013">
+		<Item class="Folder" referent="RBX00011">
 			<Properties>
 				<string name="Name">Server</string>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX00014">
+			<Item class="ModuleScript" referent="RBX00012">
+				<Properties>
+					<string name="Name">Achievements</string>
+					<ProtectedString name="Source"><![CDATA[-- The ten achievements. Each watches one number; all ten together open the Golden Loft.
+-- Optional Roblox badges: put badge IDs into Config.BadgeIds.
+local BadgeService = game:GetService("BadgeService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Economy = require(Shared:WaitForChild("Economy"))(Config)
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local PlayerData = require(script.Parent.PlayerData)
+
+local Achievements = {}
+
+-- The current value of each achievement's number for a player.
+function Achievements.value(player, d, stat)
+	if stat == "tool" then
+		return d.tool
+	elseif stat == "machines" then
+		return Economy.machineCount(d)
+	elseif stat == "session_seconds" then
+		return PlayerData.sessionSeconds(player)
+	elseif stat == "searched" then
+		return d.stats.total_searched
+	elseif stat == "needles" then
+		return d.needles
+	end
+	return d.stats[stat] or 0
+end
+
+local function award(player, achievement)
+	PlayerData.update(player, function(data)
+		data.achievements[achievement.id] = true
+	end)
+	Remotes.Achievement:FireClient(player, { id = achievement.id, name = achievement.name, text = achievement.text, done = player:GetAttribute("Achievements"), total = #Config.Achievements })
+	local badge = Config.BadgeIds[achievement.id]
+	if badge and badge ~= 0 then
+		task.spawn(function()
+			pcall(BadgeService.AwardBadge, BadgeService, player.UserId, badge)
+		end)
+	end
+	if player:GetAttribute("LoftOpen") then
+		Remotes.Announce:FireAllClients({ kind = "loft", finder = player.DisplayName, finderId = player.UserId })
+	end
+end
+
+-- Call after anything that could complete an achievement. Cheap: ten comparisons.
+function Achievements.check(player)
+	local d = PlayerData.get(player)
+	if not d then
+		return
+	end
+	for _, a in ipairs(Config.Achievements) do
+		if not d.achievements[a.id] and Achievements.value(player, d, a.stat) >= a.goal then
+			award(player, a)
+		end
+	end
+end
+
+function Achievements.progress(player)
+	local d = PlayerData.get(player)
+	local out = {}
+	for _, a in ipairs(Config.Achievements) do
+		table.insert(out, { id = a.id, name = a.name, text = a.text, goal = a.goal, value = d and Achievements.value(player, d, a.stat) or 0, done = d ~= nil and d.achievements[a.id] == true })
+	end
+	return out
+end
+
+function Achievements.init()
+	Remotes.GetAchievements.OnServerInvoke = Achievements.progress
+	task.spawn(function() -- the Marathon achievement is about time, so check it on a timer
+		while true do
+			task.wait(30)
+			for _, player in ipairs(Players:GetPlayers()) do
+				Achievements.check(player)
+			end
+		end
+	end)
+end
+
+return Achievements
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00013">
 				<Properties>
 					<string name="Name">Build</string>
 					<ProtectedString name="Source"><![CDATA[-- Helpers for building the world out of simple anchored parts.
@@ -512,6 +531,10 @@ function Build.part(spec)
 	p.Transparency = spec.transparency or 0
 	p.TopSurface = Enum.SurfaceType.Smooth
 	p.BottomSurface = Enum.SurfaceType.Smooth
+	if spec.collide == false then
+		p.CanQuery = false
+		p.CanTouch = false
+	end
 	p.Parent = spec.parent
 	return p
 end
@@ -558,333 +581,150 @@ return Build
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00015">
+			<Item class="ModuleScript" referent="RBX00014">
 				<Properties>
-					<string name="Name">Haystacks</string>
-					<ProtectedString name="Source"><![CDATA[-- The ten haystacks: their straw counts (the 5,000,000 shared between them) and their looks.
--- A haystack shrinks as it is searched and grows back when a new case starts.
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-
-local Shared = ReplicatedStorage:WaitForChild("Shared")
-local Config = require(Shared:WaitForChild("Config"))
-local Economy = require(Shared:WaitForChild("Economy"))(Config)
+					<string name="Name">Haystack</string>
+					<ProtectedString name="Source"><![CDATA[-- The giant haystack everyone searches, and the golden haystack of the secret Loft.
+-- Progress is per player (saved), so the mounds never shrink; the HUD shows your own progress.
 local Build = require(script.Parent.Build)
+local World = require(script.Parent.World)
 
-local Haystacks = {}
-local states = {} -- one per haystack, in Piles.json order
-local byId = {}
-local gameState = ReplicatedStorage:WaitForChild("GameState")
+local Haystack = {}
 
 local HAY = { { 226, 190, 92 }, { 212, 172, 76 }, { 236, 204, 112 } }
-local GROW_SECONDS = 2.5
+local GOLD = { { 250, 206, 70 }, { 240, 186, 50 }, { 255, 224, 110 } }
 
-local function mound(pile, parent)
+local function mound(name, centre, size, colours, parent, seed)
 	local model = Instance.new("Model")
-	model.Name = pile.id
-	local base = Vector3.new(pile.x, 0, pile.z)
-	local function ball(name, size, offset, colour)
-		return Build.part({ name = name, shape = "Ball", size = Vector3.new(size, size, size), cframe = CFrame.new(base + offset), color = colour, material = "Grass", parent = model })
+	model.Name = name
+	local function ball(label, diameter, offset, colour, material)
+		return Build.part({ name = label, shape = "Ball", size = Vector3.new(diameter, diameter, diameter), cframe = CFrame.new(centre + offset), color = colour, material = material or "Grass", parent = model })
 	end
-	ball("Core", 22, Vector3.new(0, 3, 0), HAY[1])
-	for i = 1, 6 do
-		local a = i / 6 * math.pi * 2
-		ball("Lump", 13 + (i % 3) * 1.5, Vector3.new(math.cos(a) * 8, 0.5, math.sin(a) * 8), HAY[i % 3 + 1])
+	local core = ball("Core", size, Vector3.new(0, size * 0.14, 0), colours[1])
+	local rng = Random.new(seed)
+	for i = 1, 10 do
+		local a = i / 10 * math.pi * 2
+		local d = size * (0.5 + (i % 3) * 0.06)
+		ball("Lump", d, Vector3.new(math.cos(a) * size * 0.36, size * 0.02, math.sin(a) * size * 0.36), colours[i % 3 + 1])
 	end
-	ball("Top", 9, Vector3.new(1, 13, -1), HAY[3])
-	local rng = Random.new(#pile.id * 31 + math.floor(pile.x))
-	for _ = 1, 14 do
+	ball("Top", size * 0.42, Vector3.new(size * 0.04, size * 0.58, -size * 0.04), colours[3])
+	for _ = 1, 40 do
 		local a = rng:NextNumber() * math.pi * 2
-		local h = rng:NextNumber(2, 13)
-		local r = 10.5 - h * 0.45
+		local h = rng:NextNumber(size * 0.1, size * 0.62)
+		local r = size * 0.48 - h * 0.45
 		Build.part({
 			name = "Straw",
 			shape = "Cylinder",
-			size = Vector3.new(rng:NextNumber(2.5, 4.5), 0.18, 0.18),
-			cframe = CFrame.new(base + Vector3.new(math.cos(a) * r, h, math.sin(a) * r)) * CFrame.Angles(rng:NextNumber(-1, 1), a, rng:NextNumber(-0.6, 0.6)),
+			size = Vector3.new(rng:NextNumber(3, 6), 0.2, 0.2),
+			cframe = CFrame.new(centre + Vector3.new(math.cos(a) * r, h, math.sin(a) * r)) * CFrame.Angles(rng:NextNumber(-1, 1), a, rng:NextNumber(-0.6, 0.6)),
 			color = { 246, 222, 140 },
 			collide = false,
 			shadow = false,
 			parent = model,
 		})
 	end
-	model.WorldPivot = CFrame.new(base) -- shrinks towards the ground
-	model:SetAttribute("PileId", pile.id)
-	model:SetAttribute("DisplayName", pile.name)
-	model:SetAttribute("Side", pile.side)
-	model.Parent = parent
-	return model
-end
-
-local elapsed = 0
-local function refresh(dt)
-	elapsed += dt
-	if elapsed < 0.25 then
-		return
-	end
-	elapsed = 0
-	local total = 0
-	for _, state in ipairs(states) do
-		total += state.remaining
-		if state.dirty and not state.growing then
-			state.dirty = false
-			state.model:SetAttribute("Remaining", state.remaining)
-			local scale = Economy.pileScale(state.remaining, state.total)
-			if math.abs(scale - state.scale) > 0.004 then
-				state.scale = scale
-				state.model:ScaleTo(scale)
+	if colours == GOLD then
+		for _, part in ipairs(model:GetChildren()) do
+			if part:IsA("BasePart") and part.Name ~= "Straw" then
+				part.Material = Enum.Material.Sand
+				part.Reflectance = 0.15
 			end
 		end
 	end
-	gameState:SetAttribute("Remaining", total)
+	model.WorldPivot = CFrame.new(centre)
+	model:SetAttribute("Centre", centre)
+	model.Parent = parent
+	return model, core
 end
 
-function Haystacks.build(piles)
+function Haystack.build()
 	local folder = Instance.new("Folder")
 	folder.Name = "Haystacks"
 	folder.Parent = workspace
-	local each = math.floor(Config.TotalStraws / #piles)
-	for _, pile in ipairs(piles) do
-		local state = {
-			pile = pile,
-			model = mound(pile, folder),
-			position = Vector3.new(pile.x, 0, pile.z),
-			total = each,
-			remaining = each,
-			scale = 1,
-			dirty = true,
-		}
-		state.model:SetAttribute("Total", each)
-		table.insert(states, state)
-		byId[pile.id] = state
-	end
-	gameState:SetAttribute("TotalStraws", each * #piles)
-	gameState:SetAttribute("Remaining", each * #piles)
-	RunService.Heartbeat:Connect(refresh)
-end
-
--- Every haystack back to full, for a new case. They grow back over a couple of seconds,
--- so anyone standing next to a small one is nudged aside rather than flung.
-function Haystacks.refill()
-	local from = {}
-	for _, state in ipairs(states) do
-		state.remaining = state.total
-		state.growing = true
-		from[state] = state.scale
-		state.model:SetAttribute("Remaining", state.total)
-	end
-	gameState:SetAttribute("Remaining", Config.TotalStraws)
-	task.spawn(function()
-		local started = os.clock()
-		local progress = 0
-		while progress < 1 do
-			RunService.Heartbeat:Wait()
-			progress = math.min(1, (os.clock() - started) / GROW_SECONDS)
-			for _, state in ipairs(states) do
-				local scale = from[state] + (1 - from[state]) * progress
-				if math.abs(scale - state.scale) > 0.002 then
-					state.scale = scale
-					state.model:ScaleTo(scale)
-				end
-			end
-		end
-		for _, state in ipairs(states) do
-			state.growing = false
-			state.dirty = true -- catch up with searches made while growing
-		end
-	end)
-end
-
--- The haystack a player standing at `position` can search, if any.
-function Haystacks.nearest(position)
-	local best, bestDistance = nil, Config.SearchRange
-	for _, state in ipairs(states) do
-		local flat = Vector3.new(position.X - state.position.X, 0, position.Z - state.position.Z)
-		if flat.Magnitude <= bestDistance then
-			best, bestDistance = state, flat.Magnitude
-		end
-	end
-	return best
-end
-
-function Haystacks.take(state, amount)
-	state.remaining = math.max(0, state.remaining - amount)
-	state.dirty = true
-end
-
-function Haystacks.get(id)
-	return byId[id]
-end
-
-return Haystacks
-]]></ProtectedString>
-				</Properties>
-			</Item>
-			<Item class="ModuleScript" referent="RBX00016">
-				<Properties>
-					<string name="Name">Landmarks</string>
-					<ProtectedString name="Source"><![CDATA[-- The ten farm landmarks, one behind each haystack, built from simple parts.
--- Each builder gets `cf`: a ground-level frame whose front (-Z) faces the plaza.
-local Build = require(script.Parent.Build)
-
-local Landmarks = {}
-local terrain = workspace.Terrain
-local builders = {}
-
-local function p(model, cf, size, color, material, shape)
-	return Build.part({ size = size, cframe = cf, color = color, material = material or "SmoothPlastic", shape = shape, parent = model })
-end
-
-function builders.windmill(model, cf)
-	local stone = { 198, 182, 152 }
-	p(model, cf * CFrame.new(0, 5, 0), Vector3.new(12, 10, 12), stone, "WoodPlanks")
-	p(model, cf * CFrame.new(0, 14, 0), Vector3.new(10, 8, 10), stone, "WoodPlanks")
-	p(model, cf * CFrame.new(0, 21.5, 0), Vector3.new(8, 7, 8), stone, "WoodPlanks")
-	p(model, cf * CFrame.new(0, 26, 0), Vector3.new(9, 9, 9), { 170, 62, 50 }, "Wood", "Ball")
-	p(model, cf * CFrame.new(0, 3.5, -6.05), Vector3.new(3.4, 7, 0.2), { 70, 48, 32 }, "Wood")
-	-- the sails turn on each player's screen (WorldFx rotates the Blades model)
-	local hub = cf * CFrame.new(0, 22, -5)
-	p(model, hub * CFrame.Angles(0, math.rad(90), 0), Vector3.new(2.4, 2.2, 2.2), { 90, 70, 52 }, "Wood", "Cylinder")
-	local blades = Instance.new("Model")
-	blades.Name = "Blades"
+	mound("Haystack", World.HAYSTACK, 56, HAY, folder, 1)
+	-- the Golden Loft: a platform in the clouds above the barn, reached from the loft hatch
+	local loft = Instance.new("Model")
+	loft.Name = "Loft"
+	local floor = Build.part({ name = "LoftFloor", size = Vector3.new(90, 2, 90), cframe = CFrame.new(World.LOFT - Vector3.new(0, 1, 0)), color = { 214, 184, 130 }, material = "WoodPlanks", parent = loft })
+	floor.Reflectance = 0.05
 	for i = 0, 3 do
-		local turn = hub * CFrame.new(0, 0, -1.4) * CFrame.Angles(0, 0, math.rad(i * 90))
-		p(blades, turn * CFrame.new(0, 8, 0), Vector3.new(2.6, 14, 0.3), { 238, 230, 212 }, "Fabric")
-		p(blades, turn * CFrame.new(0, 8, 0.2), Vector3.new(0.5, 15, 0.4), { 110, 82, 58 }, "Wood")
+		local a = i / 4 * math.pi * 2
+		local cf = CFrame.new(World.LOFT + Vector3.new(math.cos(a) * 44, 2.5, math.sin(a) * 44)) * CFrame.Angles(0, -a, 0)
+		Build.part({ name = "LoftRail", size = Vector3.new(1, 5, 90), cframe = cf, color = { 122, 86, 52 }, material = "Wood", parent = loft })
+		local lamp = Build.part({ name = "LoftLamp", size = Vector3.new(2, 2, 2), cframe = cf * CFrame.new(0, 6, 0), color = { 255, 214, 90 }, material = "Neon", parent = loft })
+		local light = Instance.new("PointLight")
+		light.Color = Color3.fromRGB(255, 200, 80)
+		light.Range = 40
+		light.Brightness = 1.2
+		light.Parent = lamp
 	end
-	blades.WorldPivot = hub * CFrame.new(0, 0, -1.4)
-	blades.Parent = model
+	local cloud = Build.part({ name = "Cloud", shape = "Ball", size = Vector3.new(130, 30, 130), cframe = CFrame.new(World.LOFT - Vector3.new(0, 16, 0)), color = { 255, 240, 220 }, material = "Sand", collide = false, transparency = 0.15, parent = loft })
+	cloud.CastShadow = false
+	local sign = Build.part({ name = "LoftSign", size = Vector3.new(16, 3, 0.4), cframe = CFrame.new(World.LOFT + Vector3.new(0, 8, 42)), color = { 60, 44, 30 }, material = "Wood", parent = loft })
+	Build.text(sign, Enum.NormalId.Back, "THE GOLDEN LOFT: golden straw pays 20x", { color = Color3.fromRGB(245, 200, 66) })
+	local pad = Build.part({ name = "LoftPad", size = Vector3.new(8, 0.4, 8), cframe = CFrame.new(World.LOFT + Vector3.new(0, 0.2, 36)), color = { 245, 200, 66 }, material = "Neon", parent = loft })
+	Build.text(pad, Enum.NormalId.Top, "step here to go back down", { color = Color3.fromRGB(60, 44, 30), pixels = 24 })
+	loft.Parent = folder
+	mound("GoldenHaystack", World.LOFT + Vector3.new(0, 0, -8), 34, GOLD, folder, 2)
 end
 
-function builders.barn(model, cf)
-	p(model, cf * CFrame.new(0, 8, 0), Vector3.new(26, 16, 20), { 176, 52, 40 }, "WoodPlanks")
-	-- ridge runs across the barn; the roof stays inside the side walls so only the eaves show
-	Build.roof({ color = { 86, 62, 52 }, material = "Slate", parent = model }, cf * CFrame.new(0, 16, 0) * CFrame.Angles(0, math.rad(90), 0), 28, 25.9)
-	p(model, cf * CFrame.new(0, 5.5, -10.1), Vector3.new(9, 11, 0.3), { 240, 232, 214 }, "WoodPlanks")
-	p(model, cf * CFrame.new(0, 5.5, -10.2), Vector3.new(7.6, 9.6, 0.3), { 150, 42, 34 }, "WoodPlanks")
+-- Which haystack the player can search from `position`: "hay", "gold" or nil.
+function Haystack.at(position, range)
+	local function near(centre, r)
+		return Vector3.new(position.X - centre.X, 0, position.Z - centre.Z).Magnitude <= r and math.abs(position.Y - centre.Y) < 40
+	end
+	if near(World.HAYSTACK, range) then
+		return "hay"
+	elseif near(World.LOFT + Vector3.new(0, 0, -8), range * 0.75) then
+		return "gold"
+	end
+	return nil
 end
 
-function builders.tractor(model, cf)
-	local green, red, black = { 62, 140, 62 }, { 196, 54, 40 }, { 34, 34, 36 }
-	p(model, cf * CFrame.new(0, 4, 0), Vector3.new(6, 3.4, 12), green, "Metal")
-	p(model, cf * CFrame.new(0, 8, 3), Vector3.new(5.6, 5, 5), green, "Metal")
-	p(model, cf * CFrame.new(0, 10.7, 3), Vector3.new(6.4, 0.4, 6.4), black, "Metal")
-	for _, side in ipairs({ -1, 1 }) do
-		p(model, cf * CFrame.new(side * 4, 3.6, 3.6), Vector3.new(2, 7.2, 7.2), black, "Rubber", "Cylinder")
-		p(model, cf * CFrame.new(side * 4.1, 3.6, 3.6), Vector3.new(2, 3, 3), red, "Metal", "Cylinder")
-		p(model, cf * CFrame.new(side * 3.6, 2, -4), Vector3.new(1.6, 4, 4), black, "Rubber", "Cylinder")
-	end
-	Build.post({ color = black, material = "Metal", parent = model }, cf * CFrame.new(1.8, 5.6, -3), 4, 0.6)
-end
-
-function builders.pond(model, cf)
-	local centre = cf.Position
-	terrain:FillCylinder(CFrame.new(centre.X, -2.5, centre.Z), 5, 17, Enum.Material.Water)
-	local rng = Random.new(11)
-	for i = 1, 14 do
-		local a = i / 14 * math.pi * 2
-		local base = CFrame.new(centre + Vector3.new(math.cos(a) * 17, 0, math.sin(a) * 17))
-		Build.post({ color = { 92, 120, 52 }, material = "Grass", collide = false, parent = model }, base, rng:NextNumber(3, 5.5), 0.35)
-	end
-	for i = 1, 3 do
-		local duck = cf * CFrame.new(-6 + i * 3.5, 0.4, -2 + (i % 2) * 4) * CFrame.Angles(0, i, 0)
-		p(model, duck, Vector3.new(1.6, 1.2, 2.4), { 246, 244, 236 })
-		p(model, duck * CFrame.new(0, 1, -1), Vector3.new(1, 1, 1), { 62, 120, 72 })
-		p(model, duck * CFrame.new(0, 0.9, -1.7), Vector3.new(0.5, 0.3, 0.5), { 240, 160, 40 })
-	end
-end
-
-function builders.appletree(model, cf)
-	Build.post({ color = { 96, 66, 44 }, material = "Wood", parent = model }, cf, 15, 3)
-	local canopy = { { 0, 19, 0, 18 }, { 5, 16, 3, 13 }, { -5, 17, -2, 13 }, { 0, 16, 5, 12 } }
-	for i, c in ipairs(canopy) do
-		p(model, cf * CFrame.new(c[1], c[2], c[3]), Vector3.new(c[4], c[4], c[4]), i % 2 == 0 and { 168, 156, 52 } or { 116, 140, 50 }, "Grass", "Ball")
-	end
-	local rng = Random.new(5)
-	for _ = 1, 12 do
-		local dir = Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(-0.4, 0.8), rng:NextNumber(-1, 1)).Unit
-		p(model, cf * CFrame.new(Vector3.new(0, 18, 0) + dir * 9.2), Vector3.new(1.3, 1.3, 1.3), { 200, 30, 36 }, "SmoothPlastic", "Ball")
-	end
-end
-
-function builders.well(model, cf)
-	local stone = { 146, 140, 134 }
-	Build.post({ color = stone, material = "Slate", parent = model }, cf, 3.4, 9)
-	Build.post({ color = { 18, 26, 34 }, material = "SmoothPlastic", parent = model }, cf * CFrame.new(0, 3.3, 0), 0.2, 7.4)
-	for _, x in ipairs({ -3.8, 3.8 }) do
-		p(model, cf * CFrame.new(x, 6.4, 0), Vector3.new(0.8, 6.4, 0.8), { 110, 78, 50 }, "Wood")
-	end
-	for _, s in ipairs({ -1, 1 }) do
-		p(model, cf * CFrame.new(s * 2.2, 10.4, 0) * CFrame.Angles(0, 0, math.rad(-s * 35)), Vector3.new(5.6, 0.3, 6.4), { 120, 60, 44 }, "WoodPlanks")
-	end
-	p(model, cf * CFrame.new(0, 7.6, 0) * CFrame.Angles(0, math.rad(90), 0), Vector3.new(1.4, 1.2, 1.2), { 120, 100, 80 }, "Metal", "Cylinder")
-end
-
-function builders.pumpkins(model, cf)
-	terrain:FillBlock(cf * CFrame.new(0, -2, 0), Vector3.new(22, 4, 18), Enum.Material.Ground)
-	local rng = Random.new(3)
-	for _ = 1, 10 do
-		local size = rng:NextNumber(2.4, 4.6)
-		local spot = cf * CFrame.new(rng:NextNumber(-9, 9), size / 2 - 0.3, rng:NextNumber(-7, 7))
-		p(model, spot, Vector3.new(size, size, size), { 232, 120, 30 }, "SmoothPlastic", "Ball")
-		p(model, spot * CFrame.new(0, size / 2, 0), Vector3.new(0.35, 0.9, 0.35), { 82, 110, 40 }, "Wood")
-	end
-end
-
-function builders.coop(model, cf)
-	p(model, cf * CFrame.new(0, 4, 0), Vector3.new(10, 6, 8), { 232, 220, 188 }, "WoodPlanks")
-	Build.roof({ color = { 170, 56, 44 }, material = "WoodPlanks", parent = model }, cf * CFrame.new(0, 7, 0), 11, 7.9)
-	p(model, cf * CFrame.new(0, 2.6, -4.05), Vector3.new(2, 2.4, 0.2), { 60, 44, 30 }, "Wood")
-	p(model, cf * CFrame.new(0, 1, -6.4) * CFrame.Angles(math.rad(-24), 0, 0), Vector3.new(2, 0.3, 5), { 150, 112, 70 }, "Wood")
-	for i = 1, 3 do
-		local hen = cf * CFrame.new(-5 + i * 2.6, 0.9, -9 + (i % 2) * 1.6) * CFrame.Angles(0, i * 2, 0)
-		p(model, hen, Vector3.new(1.4, 1.4, 1.8), { 248, 246, 240 })
-		p(model, hen * CFrame.new(0, 1, -0.8), Vector3.new(0.9, 0.9, 0.9), { 248, 246, 240 })
-		p(model, hen * CFrame.new(0, 1.6, -0.8), Vector3.new(0.25, 0.4, 0.6), { 210, 40, 40 })
-	end
-end
-
-function builders.scarecrow(model, cf)
-	local wood = { 120, 88, 56 }
-	p(model, cf * CFrame.new(0, 5, 0), Vector3.new(0.8, 10, 0.8), wood, "Wood")
-	p(model, cf * CFrame.new(0, 8, 0), Vector3.new(8, 0.6, 0.6), wood, "Wood")
-	p(model, cf * CFrame.new(0, 7.4, 0), Vector3.new(3.2, 3.6, 1.4), { 166, 58, 48 }, "Fabric")
-	p(model, cf * CFrame.new(0, 10.6, 0), Vector3.new(2.6, 2.6, 2.6), { 222, 196, 138 }, "Fabric", "Ball")
-	Build.post({ color = { 112, 84, 48 }, material = "Fabric", parent = model }, cf * CFrame.new(0, 11.6, 0), 0.3, 4.6)
-	Build.post({ color = { 112, 84, 48 }, material = "Fabric", parent = model }, cf * CFrame.new(0, 11.8, 0), 1.6, 2.4)
-	for _, x in ipairs({ -3.6, 3.6 }) do
-		p(model, cf * CFrame.new(x, 8.7, 0), Vector3.new(0.8, 0.8, 1.2), { 30, 28, 32 })
-	end
-end
-
-function builders.shed(model, cf)
-	p(model, cf * CFrame.new(0, 4.5, 0), Vector3.new(12, 9, 10), { 124, 104, 84 }, "WoodPlanks")
-	Build.roof({ color = { 76, 68, 62 }, material = "Slate", parent = model }, cf * CFrame.new(0, 9, 0), 13, 9.9)
-	p(model, cf * CFrame.new(0, 3.6, -5.05), Vector3.new(4, 7.2, 0.2), { 84, 64, 46 }, "Wood")
-	local lean = cf * CFrame.new(4, 3, -5.6) * CFrame.Angles(math.rad(12), 0, 0)
-	p(model, lean, Vector3.new(0.3, 6, 0.3), { 150, 110, 70 }, "Wood")
-	p(model, lean * CFrame.new(0, 3, 0), Vector3.new(1.4, 0.25, 0.25), { 160, 164, 170 }, "Metal")
-end
-
-function Landmarks.build(pile, parent)
-	local builder = builders[pile.id]
-	if not builder then
-		return nil
-	end
-	local base = Vector3.new(pile.x, 0, pile.z)
-	local origin = base + base.Unit * 30
-	local model = Instance.new("Model")
-	model.Name = pile.id
-	builder(model, CFrame.lookAt(origin, Vector3.new(0, 0, 0)))
-	model.Parent = parent
-	return model
-end
-
-return Landmarks
+return Haystack
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Script" referent="RBX00017">
+			<Item class="ModuleScript" referent="RBX00015">
+				<Properties>
+					<string name="Name">Loft</string>
+					<ProtectedString name="Source"><![CDATA[-- The Golden Loft: the secret level above the barn, open only to players with all ten
+-- achievements. The server moves the player up and down so nobody can walk in uninvited.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local World = require(script.Parent.World)
+
+local Loft = {}
+
+local function teleport(player, position)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if root then
+		root.CFrame = CFrame.new(position)
+		root.AssemblyLinearVelocity = Vector3.zero
+	end
+end
+
+function Loft.init()
+	Remotes.Loft.OnServerInvoke = function(player, direction)
+		if direction == "up" then
+			if not player:GetAttribute("LoftOpen") then
+				return false, "The Golden Loft opens when all ten achievements are done."
+			end
+			teleport(player, World.LOFT + Vector3.new(0, 4, 30))
+			return true, "Welcome to the Golden Loft. Golden straw pays 20x!"
+		end
+		teleport(player, World.BARN + Vector3.new(0, 4, -18))
+		return true, "Back down on the farm."
+	end
+end
+
+return Loft
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="Script" referent="RBX00016">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Starts the game. The ground and spawn point are built first, so nobody spawns into the void.
@@ -894,20 +734,19 @@ local RunService = game:GetService("RunService")
 local World = require(script.Parent.World)
 World.ground()
 
-local Shared = ReplicatedStorage:WaitForChild("Shared")
-local Piles = require(Shared:WaitForChild("Piles"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
-local Haystacks = require(script.Parent.Haystacks)
+local Haystack = require(script.Parent.Haystack)
 local PlayerData = require(script.Parent.PlayerData)
 local Tools = require(script.Parent.Tools)
-local Rounds = require(script.Parent.Rounds)
+local Achievements = require(script.Parent.Achievements)
 local Search = require(script.Parent.Search)
 local Shop = require(script.Parent.Shop)
+local Loft = require(script.Parent.Loft)
 local Monetization = require(script.Parent.Monetization)
 
-World.build(Piles)
-Haystacks.build(Piles)
+World.build()
+Haystack.build()
 
 PlayerData.onLoaded(function(player, saveable)
 	local data = PlayerData.get(player)
@@ -932,13 +771,14 @@ end)
 
 PlayerData.init()
 Monetization.init()
+Achievements.init()
 Search.init()
 Shop.init()
-Rounds.init()
+Loft.init()
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00018">
+			<Item class="ModuleScript" referent="RBX00017">
 				<Properties>
 					<string name="Name">Monetization</string>
 					<ProtectedString name="Source"><![CDATA[-- Robux items. Every ID in Config.GamePasses and Config.Products starts at 0 (switched off);
@@ -949,26 +789,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
-local Economy = require(Shared:WaitForChild("Economy"))(Config)
+local Format = require(Shared:WaitForChild("Format"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local PlayerData = require(script.Parent.PlayerData)
-local Rounds = require(script.Parent.Rounds)
+local Search = require(script.Parent.Search)
 
 local Monetization = {}
 
-local function passName(id)
-	for name, passId in pairs(Config.GamePasses) do
-		if passId ~= 0 and passId == id then
-			return name
-		end
-	end
-	return nil
-end
-
-local function productName(id)
-	for name, productId in pairs(Config.Products) do
-		if productId ~= 0 and productId == id then
+local function nameOf(table_, id)
+	for name, itemId in pairs(table_) do
+		if itemId ~= 0 and itemId == id then
 			return name
 		end
 	end
@@ -986,6 +817,37 @@ local function checkPasses(player)
 			end
 		end
 	end
+	Search.offline(player)
+end
+
+local grants = {}
+
+local function boost(name)
+	return function(player)
+		PlayerData.update(player, function(d)
+			d.boosts[name] = math.max(d.boosts[name] or 0, os.time()) + Config.BoostSeconds
+		end)
+		return "Your " .. name .. " is on for an hour."
+	end
+end
+grants.SpeedBoost = boost("SpeedBoost")
+grants.CoinBoost = boost("CoinBoost")
+grants.LuckyCharm = boost("LuckyCharm")
+
+function grants.MerchantWhistle(player)
+	PlayerData.update(player, function(d)
+		d.whistles += Config.WhistleUses
+	end)
+	return "You have " .. Config.WhistleUses .. " more Merchant's Whistles: sell your bag anywhere."
+end
+
+function grants.StrawBlast(player)
+	local before = PlayerData.get(player).searched
+	for _ = 1, 50 do -- searched in handfuls so the bag, the needle and the finds all count
+		Search.blast(player, Config.StrawBlastAmount / 50)
+	end
+	local after = PlayerData.get(player).searched
+	return "Straw Blast! " .. Format.commas(math.max(0, after - before)) .. " straws blown through your haystack."
 end
 
 -- Roblox calls this for every developer product purchase, retrying until we say granted.
@@ -994,39 +856,32 @@ local function processReceipt(info)
 	if not player then
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
-	local data = PlayerData.waitFor(player, 15)
-	if not data then
+	if not PlayerData.waitFor(player, 15) then
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
 	if PlayerData.hasReceipt(player, info.PurchaseId) then
 		return Enum.ProductPurchaseDecision.PurchaseGranted -- already given
 	end
-	local name = productName(info.ProductId)
-	if name == "ClueHint" then
-		if not Rounds.giveClue(player) then
-			-- no clue left to give (all found, or between cases): pay coins instead
-			PlayerData.addCoins(player, Economy.coinsFor(Economy.power(data.tool) * 100, PlayerData.multiplier(player)))
-			Remotes.Announce:FireClient(player, { kind = "notice", text = "No clue left in this case, so you got coins instead." })
-		end
-	else
+	local name = nameOf(Config.Products, info.ProductId)
+	local grant = name and grants[name]
+	if not grant then
 		warn("[Monetization] unknown product " .. tostring(info.ProductId))
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
+	local message = grant(player)
 	PlayerData.addReceipt(player, info.PurchaseId)
 	PlayerData.save(player)
+	Remotes.Announce:FireClient(player, { kind = "notice", text = message })
 	return Enum.ProductPurchaseDecision.PurchaseGranted
 end
 
 function Monetization.init()
-	Players.PlayerAdded:Connect(checkPasses)
-	for _, player in ipairs(Players:GetPlayers()) do
-		task.spawn(checkPasses, player)
-	end
+	PlayerData.onLoaded(checkPasses)
 	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
-		local name = passName(passId)
+		local name = nameOf(Config.GamePasses, passId)
 		if purchased and name then
 			PlayerData.setPass(player, name, true)
-			Remotes.Announce:FireClient(player, { kind = "notice", text = "Thank you! Your pass is active." })
+			Remotes.Announce:FireClient(player, { kind = "notice", text = "Thank you! Your " .. name .. " pass is active." })
 		end
 	end)
 	MarketplaceService.ProcessReceipt = processReceipt
@@ -1036,12 +891,12 @@ return Monetization
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00019">
+			<Item class="ModuleScript" referent="RBX00018">
 				<Properties>
 					<string name="Name">PlayerData</string>
-					<ProtectedString name="Source"><![CDATA[-- Each player's saved progress (coins, tool, rebirths, needles found) and the leaderboard.
--- If the DataStore can't be read (Studio before publishing, or an outage), the player plays
--- with fresh progress that is not saved, so a failed read never overwrites good data.
+					<ProtectedString name="Source"><![CDATA[-- Each player's saved progress and the leaderboard. If the DataStore can't be read (Studio
+-- before publishing, or an outage), the player plays with fresh progress that is not saved,
+-- so a failed read never overwrites good data.
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -1051,12 +906,13 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Economy = require(Shared:WaitForChild("Economy"))(Config)
 
+local Profile = require(script.Parent.Profile)
+
 local PlayerData = {}
-local profiles = {} -- [player] = { data, saveable, dirty }
-local passes = {} -- [player] = { DoubleCoins = true, ... } (checked each visit, not saved)
+local profiles = {} -- [player] = { data, saveable, dirty, joined }
+local passes = {} -- [player] = { VIP = true, ... } (checked each visit, not saved)
 local loadedCallbacks = {}
 
-local DEFAULTS = { coins = 0, tool = 1, rebirths = 0, needles = 0, solved = 0, clues = 0, straws = 0 }
 local MAX_RECEIPTS = 50
 
 local store = nil
@@ -1075,28 +931,9 @@ local function key(player)
 	return "player_" .. player.UserId
 end
 
-local function fresh(saved)
-	local data = { receipts = {} }
-	for name, value in pairs(DEFAULTS) do
-		data[name] = value
-		if type(saved) == "table" and type(saved[name]) == type(value) then
-			data[name] = saved[name]
-		end
-	end
-	if type(saved) == "table" and type(saved.receipts) == "table" then
-		for _, id in ipairs(saved.receipts) do
-			if type(id) == "string" then
-				table.insert(data.receipts, id)
-			end
-		end
-	end
-	data.tool = math.clamp(math.floor(data.tool), 1, #Config.Tools)
-	return data
-end
-
 local function load(player)
 	if not store then
-		return fresh(nil), false
+		return Profile.fresh(nil), false
 	end
 	local tries = if RunService:IsStudio() then 1 else 3
 	for attempt = 1, tries do
@@ -1104,16 +941,17 @@ local function load(player)
 			return store:GetAsync(key(player))
 		end)
 		if ok then
-			return fresh(saved), true
+			return Profile.fresh(saved), true
 		end
 		warn("[PlayerData] could not load " .. player.Name .. ": " .. tostring(saved))
 		if attempt < tries then
 			task.wait(attempt * 2)
 		end
 	end
-	return fresh(nil), false
+	return Profile.fresh(nil), false
 end
 
+-- Everything the client shows comes from these attributes (and leaderstats).
 local function publish(player, profile)
 	local d = profile.data
 	local stats = player:FindFirstChild("leaderstats")
@@ -1121,17 +959,65 @@ local function publish(player, profile)
 		stats.Coins.Value = d.coins
 		stats.Needles.Value = d.needles
 	end
+	local flags = PlayerData.flags(player)
 	player:SetAttribute("Coins", d.coins)
 	player:SetAttribute("Tool", d.tool)
-	player:SetAttribute("Power", Economy.power(d.tool))
-	player:SetAttribute("Rebirths", d.rebirths)
+	player:SetAttribute("Bag", d.bag)
+	player:SetAttribute("BagStraw", d.bagStraw)
+	player:SetAttribute("BagGolden", d.bagGolden)
+	player:SetAttribute("Searched", d.searched)
+	player:SetAttribute("LoftSearched", d.loft.searched)
 	player:SetAttribute("Needles", d.needles)
-	player:SetAttribute("Multiplier", PlayerData.multiplier(player))
+	player:SetAttribute("GoldenNeedles", d.loft.needles)
+	player:SetAttribute("Power", Economy.power(d, flags.speedBoost))
+	player:SetAttribute("MachineRate", Economy.machineRate(d, flags.doubleMachines))
+	player:SetAttribute("Multiplier", Economy.coinMultiplier(flags) * (1 + 0.2 * d.needles))
+	player:SetAttribute("Whistles", d.whistles)
+	for _, perk in ipairs(Config.Perks) do
+		player:SetAttribute("Perk_" .. perk.id, d.perks[perk.id])
+	end
+	for i in ipairs(Config.Machines) do
+		player:SetAttribute("Machine_" .. i, d.machines[i])
+	end
+	for name, until_ in pairs(d.boosts) do
+		player:SetAttribute("Boost_" .. name, until_)
+	end
+	local done = 0
+	for _, a in ipairs(Config.Achievements) do
+		if d.achievements[a.id] then
+			done += 1
+		end
+	end
+	player:SetAttribute("Achievements", done)
+	player:SetAttribute("LoftOpen", done >= #Config.Achievements)
 end
 
 function PlayerData.get(player)
 	local profile = profiles[player]
 	return profile and profile.data
+end
+
+function PlayerData.sessionSeconds(player)
+	local profile = profiles[player]
+	return if profile then os.time() - profile.joined else 0
+end
+
+-- Passes and active boosts, as the rest of the game sees them.
+function PlayerData.flags(player)
+	local d = PlayerData.get(player)
+	local own = passes[player] or {}
+	local now = os.time()
+	local function boost(name)
+		return d ~= nil and (d.boosts[name] or 0) > now
+	end
+	return {
+		vip = own.VIP == true,
+		autoSell = own.AutoSell == true,
+		doubleMachines = own.DoubleMachines == true,
+		speedBoost = boost("SpeedBoost"),
+		coinBoost = boost("CoinBoost"),
+		luckyCharm = boost("LuckyCharm"),
+	}
 end
 
 -- Change a player's data and show the change everywhere. Returns false if not loaded yet.
@@ -1146,12 +1032,6 @@ function PlayerData.update(player, change)
 	return true
 end
 
-function PlayerData.addCoins(player, amount)
-	return PlayerData.update(player, function(d)
-		d.coins += amount
-	end)
-end
-
 function PlayerData.setPass(player, name, owned)
 	passes[player] = passes[player] or {}
 	passes[player][name] = owned
@@ -1160,15 +1040,6 @@ function PlayerData.setPass(player, name, owned)
 	if profile then
 		publish(player, profile)
 	end
-end
-
-function PlayerData.hasPass(player, name)
-	return passes[player] ~= nil and passes[player][name] == true
-end
-
-function PlayerData.multiplier(player)
-	local d = PlayerData.get(player)
-	return Economy.multiplier(d and d.rebirths or 0, PlayerData.hasPass(player, "DoubleCoins"))
 end
 
 -- Waits up to `timeout` seconds for a player's data. Returns it, or nil.
@@ -1200,6 +1071,7 @@ function PlayerData.save(player)
 		return false
 	end
 	local data = profile.data
+	data.lastSeen = os.time()
 	local ok, err = pcall(function()
 		store:UpdateAsync(key(player), function()
 			return data
@@ -1231,7 +1103,7 @@ local function added(player)
 	if player.Parent == nil then
 		return -- left while loading
 	end
-	local profile = { data = data, saveable = saveable, dirty = false }
+	local profile = { data = data, saveable = saveable, dirty = false, joined = os.time() }
 	profiles[player] = profile
 	publish(player, profile)
 	for _, callback in ipairs(loadedCallbacks) do
@@ -1279,190 +1151,108 @@ return PlayerData
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001A">
+			<Item class="ModuleScript" referent="RBX00019">
 				<Properties>
-					<string name="Name">Rounds</string>
-					<ProtectedString name="Source"><![CDATA[-- Cases: each round hides one needle in one haystack, gives each player clues as they
--- search, and ends when someone's handful of straw contains the needle.
-local Players = game:GetService("Players")
+					<string name="Name">Profile</string>
+					<ProtectedString name="Source"><![CDATA[-- A player's data model: what is saved, with its defaults. Anything missing or of the
+-- wrong type in a saved record falls back to the default, so old saves keep working.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Economy = require(Shared:WaitForChild("Economy"))(Config)
-local Clues = require(Shared:WaitForChild("Clues"))
-local Piles = require(Shared:WaitForChild("Piles"))
-local Cases = require(Shared:WaitForChild("Cases"))
-local Remotes = ReplicatedStorage:WaitForChild("Remotes")
-local gameState = ReplicatedStorage:WaitForChild("GameState")
 
-local Haystacks = require(script.Parent.Haystacks)
-local PlayerData = require(script.Parent.PlayerData)
-local World = require(script.Parent.World)
-
-local Rounds = {}
+local Profile = {}
 local rng = Random.new()
-local caseCount = 0
-local current = nil -- { number, story, needle, clues, phase }
-local found = {} -- [player] = clues found this case
-local helpers = {} -- [player] = true once they have searched this case
 
-local function pick(n)
-	return rng:NextInteger(1, n)
+Profile.STATS = { "searches", "bags_filled", "straws_sold", "lucky_finds", "perks_maxed", "total_searched" }
+
+local function number(saved, name, default)
+	local v = type(saved) == "table" and saved[name]
+	return if type(v) == "number" then v else default
 end
 
-local function clueMessage(index)
-	local clue = current.clues[index]
-	return { case = current.number, index = index, count = #current.clues, text = clue.text, possible = clue.possible }
-end
-
-local function startCase()
-	caseCount += 1
-	local story = Cases[(caseCount - 1) % #Cases + 1]
-	local needle = Piles[rng:NextInteger(1, #Piles)]
-	current = { number = caseCount, story = story, needle = needle, clues = Clues.generate(Piles, needle.id, pick), phase = "searching" }
-	table.clear(found)
-	table.clear(helpers)
-	Haystacks.refill()
-	gameState:SetAttribute("Case", caseCount)
-	gameState:SetAttribute("CaseTitle", story.title)
-	gameState:SetAttribute("CaseIntro", story.intro)
-	gameState:SetAttribute("NeedleName", story.needle)
-	gameState:SetAttribute("ClueCount", #current.clues)
-	gameState:SetAttribute("Phase", "searching")
-	World.setNotice(caseCount, story.title, story.intro)
-	Remotes.Announce:FireAllClients({ kind = "case", case = caseCount, title = story.title, intro = story.intro })
-end
-
--- Hands the player their next clue for this case. Returns false if there is none left.
-function Rounds.giveClue(player)
-	if not current or current.phase ~= "searching" then
-		return false
+function Profile.fresh(saved)
+	saved = if type(saved) == "table" then saved else {}
+	local d = {
+		coins = number(saved, "coins", 0),
+		tool = math.clamp(math.floor(number(saved, "tool", 1)), 1, #Config.Tools),
+		bag = math.clamp(math.floor(number(saved, "bag", 1)), 1, #Config.Bags),
+		bagStraw = number(saved, "bagStraw", 0),
+		bagGolden = number(saved, "bagGolden", 0),
+		searched = number(saved, "searched", 0),
+		needleAt = number(saved, "needleAt", 0),
+		needles = number(saved, "needles", 0),
+		whistles = number(saved, "whistles", 0),
+		lastSeen = number(saved, "lastSeen", 0),
+		perks = {},
+		machines = {},
+		stats = {},
+		achievements = {},
+		boosts = {},
+		receipts = {},
+		loft = { searched = number(saved.loft, "searched", 0), needleAt = number(saved.loft, "needleAt", 0), needles = number(saved.loft, "needles", 0) },
+	}
+	for _, perk in ipairs(Config.Perks) do
+		d.perks[perk.id] = math.clamp(math.floor(number(saved.perks, perk.id, 0)), 0, perk.levels)
 	end
-	local index = (found[player] or 0) + 1
-	if index > #current.clues then
-		return false
+	for i, m in ipairs(Config.Machines) do
+		d.machines[i] = math.clamp(math.floor(number(saved.machines, i, 0)), 0, m.max)
 	end
-	found[player] = index
-	PlayerData.update(player, function(d)
-		d.clues += 1
-	end)
-	Remotes.Clue:FireClient(player, clueMessage(index))
-	return true
-end
-
-function Rounds.cluesFor(player)
-	local list = {}
-	if current then
-		for index = 1, found[player] or 0 do
-			table.insert(list, clueMessage(index))
+	for _, name in ipairs(Profile.STATS) do
+		d.stats[name] = number(saved.stats, name, 0)
+	end
+	for _, a in ipairs(Config.Achievements) do
+		d.achievements[a.id] = type(saved.achievements) == "table" and saved.achievements[a.id] == true
+	end
+	for name in pairs(Config.Products) do
+		d.boosts[name] = number(saved.boosts, name, 0)
+	end
+	if type(saved.receipts) == "table" then
+		for _, id in ipairs(saved.receipts) do
+			if type(id) == "string" then
+				table.insert(d.receipts, id)
+			end
 		end
 	end
-	return list
+	if d.needleAt <= 0 then
+		d.needleAt = Economy.needleAt(Config.TotalStraws, Config.NeedleEarliest, rng)
+	end
+	if d.loft.needleAt <= 0 then
+		d.loft.needleAt = Economy.needleAt(Config.Loft.straws, Config.Loft.needleEarliest, rng)
+	end
+	return d
 end
 
-function Rounds.needleId()
-	return current and current.phase == "searching" and current.needle.id or nil
-end
-
--- Called for every handful, before the straws are taken from the haystack.
--- Returns true if this handful holds the needle.
-function Rounds.search(player, state, amount)
-	if not current or current.phase ~= "searching" then
-		return false
-	end
-	helpers[player] = true
-	if state.pile.id == current.needle.id and rng:NextNumber() < Economy.needleChance(amount, state.remaining) then
-		return true
-	end
-	if rng:NextNumber() < Config.ClueChance then
-		Rounds.giveClue(player)
-	end
-	return false
-end
-
-local function reward(player, searches)
-	local d = PlayerData.get(player)
-	if not d then
-		return 0
-	end
-	local coins = Economy.coinsFor(Economy.power(d.tool) * searches, PlayerData.multiplier(player))
-	PlayerData.update(player, function(data)
-		data.coins += coins
-		data.solved += 1
-	end)
-	return coins
-end
-
-function Rounds.solve(finder, state)
-	if not current or current.phase ~= "searching" then
-		return
-	end
-	current.phase = "solved"
-	gameState:SetAttribute("Phase", "solved")
-	local story = current.story
-	local reveal = string.gsub(story.reveal, "{pile}", state.pile.name)
-	for player in pairs(helpers) do
-		if player ~= finder and player.Parent then
-			reward(player, Config.HelperRewardSearches)
-		end
-	end
-	local prize = reward(finder, Config.FinderRewardSearches)
-	PlayerData.update(finder, function(d)
-		d.needles += 1
-	end)
-	Remotes.Announce:FireAllClients({
-		kind = "solved",
-		case = current.number,
-		finder = finder.DisplayName,
-		finderId = finder.UserId,
-		needle = story.needle,
-		pile = state.pile.name,
-		pileId = state.pile.id,
-		reveal = reveal,
-		prize = prize,
-		helperSearches = Config.HelperRewardSearches,
-		nextIn = Config.SolvedPause,
-	})
-	task.delay(Config.SolvedPause, startCase)
-end
-
-function Rounds.init()
-	Players.PlayerRemoving:Connect(function(player)
-		found[player] = nil
-		helpers[player] = nil
-	end)
-	Remotes.GetState.OnServerInvoke = function(player)
-		return { case = current and current.number or 0, clues = Rounds.cluesFor(player) }
-	end
-	startCase()
-end
-
-return Rounds
+return Profile
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001B">
+			<Item class="ModuleScript" referent="RBX0001A">
 				<Properties>
 					<string name="Name">Search</string>
-					<ProtectedString name="Source"><![CDATA[-- A search: the player clicks with their tool next to a haystack; the server checks they
--- really are there, takes a handful of straws, pays coins and asks Rounds about the needle.
+					<ProtectedString name="Source"><![CDATA[-- The loop: search the haystack (straw goes in your bag), machines add straw by themselves,
+-- sell the bag to the merchant for coins. Lucky finds and the needle hide in the straw.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Economy = require(Shared:WaitForChild("Economy"))(Config)
+local Finds = require(Shared:WaitForChild("Finds"))
+local Format = require(Shared:WaitForChild("Format"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
-local Haystacks = require(script.Parent.Haystacks)
+local Haystack = require(script.Parent.Haystack)
 local PlayerData = require(script.Parent.PlayerData)
-local Rounds = require(script.Parent.Rounds)
+local Achievements = require(script.Parent.Achievements)
+local World = require(script.Parent.World)
 
 local Search = {}
 local lastSearch = {}
+local rng = Random.new()
 
-local function rootOf(player)
+local function root(player)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not humanoid or humanoid.Health <= 0 then
@@ -1477,38 +1267,125 @@ local function holdingTool(player)
 	return tool ~= nil and tool:GetAttribute("Level") ~= nil
 end
 
-function Search.perform(player)
-	local data = PlayerData.get(player)
-	local root = rootOf(player)
-	if not data or not root then
-		return
+local function bagRoom(d)
+	return Economy.bag(d.bag).size - d.bagStraw - d.bagGolden
+end
+
+-- Sells the bag. Returns coins paid (0 if the bag was empty).
+function Search.sell(player, reason)
+	local d = PlayerData.get(player)
+	if not d or (d.bagStraw <= 0 and d.bagGolden <= 0) then
+		return 0
 	end
-	local state = Haystacks.nearest(root.Position)
-	if not state then
-		return
-	end
-	if state.remaining <= 0 then
-		Remotes.SearchFx:FireClient(player, { pile = state.pile.id, straws = 0, coins = 0, empty = true })
-		return
-	end
-	local amount = math.min(Economy.power(data.tool), state.remaining)
-	local detector = data.tool >= Config.DetectorLevel and Rounds.needleId() == state.pile.id
-	local hit = Rounds.search(player, state, amount)
-	Haystacks.take(state, amount)
-	local coins = Economy.coinsFor(amount, PlayerData.multiplier(player))
-	PlayerData.update(player, function(d)
-		d.coins += coins
-		d.straws += amount
+	local flags = PlayerData.flags(player)
+	local mult = Economy.coinMultiplier(flags) * (1 + 0.2 * d.needles)
+	local coins = Economy.coinsFor(d.bagStraw, false, mult) + Economy.coinsFor(d.bagGolden, true, mult)
+	local straws = d.bagStraw + d.bagGolden
+	PlayerData.update(player, function(data)
+		data.coins += coins
+		data.stats.straws_sold += straws
+		data.bagStraw, data.bagGolden = 0, 0
 	end)
-	Remotes.SearchFx:FireClient(player, { pile = state.pile.id, straws = amount, coins = coins, detector = detector })
-	if hit then
-		Rounds.solve(player, state)
+	Remotes.SearchFx:FireClient(player, { kind = "sold", coins = coins, straws = straws, reason = reason })
+	Achievements.check(player)
+	return coins
+end
+
+local function luckyFind(player, d, flags)
+	local find = Finds[rng:NextInteger(1, #Finds)]
+	local worth = Economy.coinsFor(Economy.power(d, false) * Config.LuckyValueSearches, false, Economy.coinMultiplier(flags)) * (find.bonus or 1)
+	PlayerData.update(player, function(data)
+		data.coins += worth
+		data.stats.lucky_finds += 1
+	end)
+	Remotes.SearchFx:FireClient(player, { kind = "find", name = find.name, story = find.story, coins = worth })
+end
+
+local function needleFound(player, golden)
+	local d = PlayerData.get(player)
+	local prize = Economy.coinsFor(Economy.power(d, false) * 5000, golden, Economy.coinMultiplier(PlayerData.flags(player)))
+	PlayerData.update(player, function(data)
+		data.coins += prize
+		if golden then
+			data.loft.needles += 1
+			data.loft.searched = 0
+			data.loft.needleAt = Economy.needleAt(Config.Loft.straws, Config.Loft.needleEarliest, rng)
+		else
+			data.needles += 1
+			data.searched = 0 -- a fresh haystack, a new needle, and +20% coins for good
+			data.needleAt = Economy.needleAt(Config.TotalStraws, Config.NeedleEarliest, rng)
+		end
+	end)
+	Remotes.Announce:FireAllClients({ kind = "needle", finder = player.DisplayName, finderId = player.UserId, golden = golden, prize = prize })
+	Achievements.check(player)
+end
+
+-- Takes `amount` straws from the player's haystack (or the loft's) into the bag.
+-- Returns straws actually taken; fires nothing itself.
+local function dig(player, d, where, amount)
+	local golden = where == "gold"
+	local progress = if golden then d.loft else d
+	local total = if golden then Config.Loft.straws else Config.TotalStraws
+	amount = math.min(amount, bagRoom(d), total - progress.searched)
+	if amount <= 0 then
+		return 0, false
 	end
+	local hit = progress.searched < progress.needleAt and progress.searched + amount >= progress.needleAt
+	PlayerData.update(player, function(data)
+		local p = if golden then data.loft else data
+		p.searched += amount
+		if golden then
+			data.bagGolden += amount
+		else
+			data.bagStraw += amount
+			data.stats.total_searched += amount
+		end
+	end)
+	return amount, hit
+end
+
+function Search.perform(player)
+	local d, part = PlayerData.get(player), root(player)
+	if not d or not part then
+		return
+	end
+	local where = Haystack.at(part.Position, Config.SearchRange)
+	if not where or (where == "gold" and not player:GetAttribute("LoftOpen")) then
+		return
+	end
+	local flags = PlayerData.flags(player)
+	if bagRoom(d) <= 0 then
+		if flags.autoSell then
+			Search.sell(player, "auto")
+		else
+			Remotes.SearchFx:FireClient(player, { kind = "full" })
+			return
+		end
+	end
+	local amount, hit = dig(player, d, where, Economy.power(d, flags.speedBoost))
+	if amount <= 0 then
+		return
+	end
+	PlayerData.update(player, function(data)
+		data.stats.searches += 1
+		if bagRoom(data) <= 0 then
+			data.stats.bags_filled += 1
+		end
+	end)
+	local warmth = if d.tool >= Config.DetectorLevel and where == "hay" then Economy.warmth(d.searched, d.needleAt, Config.TotalStraws) else nil
+	Remotes.SearchFx:FireClient(player, { kind = "search", where = where, straws = amount, warmth = warmth, full = bagRoom(d) <= 0 })
+	if hit then
+		needleFound(player, where == "gold")
+	elseif rng:NextNumber() < Economy.luckyChance(d, flags.luckyCharm) then
+		luckyFind(player, d, flags)
+	end
+	Achievements.check(player)
 end
 
 function Search.request(player)
+	local d = PlayerData.get(player)
 	local now = os.clock()
-	if now - (lastSearch[player] or 0) < Config.SearchCooldown then
+	if not d or now - (lastSearch[player] or 0) < Economy.cooldown(d) * 0.9 then
 		return
 	end
 	lastSearch[player] = now
@@ -1517,23 +1394,94 @@ function Search.request(player)
 	end
 end
 
+-- Machines add straw to the bag every second while the player is in the game.
+local function tickMachines()
+	for _, player in ipairs(Players:GetPlayers()) do
+		local d = PlayerData.get(player)
+		if d then
+			local flags = PlayerData.flags(player)
+			local rate = Economy.machineRate(d, flags.doubleMachines)
+			if rate > 0 and bagRoom(d) > 0 then
+				local amount, hit = dig(player, d, "hay", rate)
+				if hit then
+					needleFound(player, false)
+				elseif amount > 0 and bagRoom(d) <= 0 and flags.autoSell then
+					Search.sell(player, "auto")
+				end
+			end
+		end
+	end
+end
+
+-- The Straw Blast product: `amount` straws searched at once, needle and finds included.
+function Search.blast(player, amount)
+	local d = PlayerData.get(player)
+	if not d then
+		return
+	end
+	local flags = PlayerData.flags(player)
+	if bagRoom(d) <= 0 then
+		Search.sell(player, "auto") -- a blast always sells on the spot
+	end
+	local taken, hit = dig(player, d, "hay", amount)
+	if taken > 0 then
+		Search.sell(player, "auto")
+	end
+	if hit then
+		needleFound(player, false)
+	elseif taken > 0 and rng:NextNumber() < Economy.luckyChance(d, flags.luckyCharm) * 10 then
+		luckyFind(player, d, flags)
+	end
+end
+
+-- VIP: machines kept working for up to an hour after the player left.
+function Search.offline(player)
+	local d = PlayerData.get(player)
+	if not d or d.lastSeen <= 0 or not PlayerData.flags(player).vip then
+		return
+	end
+	local seconds = math.clamp(os.time() - d.lastSeen, 0, Config.VipOfflineSeconds)
+	local amount = dig(player, d, "hay", math.floor(Economy.machineRate(d, PlayerData.flags(player).doubleMachines) * seconds))
+	if amount > 0 then
+		Remotes.Announce:FireClient(player, { kind = "notice", text = "Your machines gathered " .. Format.commas(amount) .. " straws while you were away (VIP)." })
+	end
+end
+
+local function nearMerchant(player)
+	local part = root(player)
+	return part ~= nil and (Vector3.new(part.Position.X, 0, part.Position.Z) - Vector3.new(World.MERCHANT.X, 0, World.MERCHANT.Z)).Magnitude <= Config.MerchantRange
+end
+
 function Search.init()
 	Remotes.Search.OnServerEvent:Connect(Search.request)
-	Remotes.ToggleAuto.OnServerEvent:Connect(function(player, on)
-		player:SetAttribute("AutoOn", on == true)
-	end)
+	Remotes.Sell.OnServerInvoke = function(player)
+		if not nearMerchant(player) then
+			return false, "Walk to the merchant's stall to sell."
+		end
+		local coins = Search.sell(player, "merchant")
+		return coins > 0, if coins > 0 then "Sold for " .. Format.short(coins) .. " coins." else "Your bag is empty."
+	end
+	Remotes.Whistle.OnServerInvoke = function(player)
+		local d = PlayerData.get(player)
+		if not d or d.whistles <= 0 then
+			return false, "No Merchant's Whistles left."
+		end
+		if d.bagStraw <= 0 and d.bagGolden <= 0 then
+			return false, "Your bag is empty."
+		end
+		PlayerData.update(player, function(data)
+			data.whistles -= 1
+		end)
+		local coins = Search.sell(player, "whistle")
+		return true, "The merchant comes running! Sold for " .. Format.short(coins) .. " coins."
+	end
 	Players.PlayerRemoving:Connect(function(player)
 		lastSearch[player] = nil
 	end)
-	-- the Auto Search pass searches by itself while you hold your tool next to a haystack
 	task.spawn(function()
 		while true do
-			task.wait(Config.AutoSearchInterval)
-			for _, player in ipairs(Players:GetPlayers()) do
-				if player:GetAttribute("AutoOn") and PlayerData.hasPass(player, "AutoSearch") and holdingTool(player) then
-					task.spawn(Search.perform, player)
-				end
-			end
+			task.wait(1)
+			tickMachines()
 		end
 	end)
 end
@@ -1542,10 +1490,10 @@ return Search
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001C">
+			<Item class="ModuleScript" referent="RBX0001B">
 				<Properties>
 					<string name="Name">Shop</string>
-					<ProtectedString name="Source"><![CDATA[-- Buying the next search tool with coins, and rebirth (start again for more coins a search).
+					<ProtectedString name="Source"><![CDATA[-- Buying with coins: tools (in order), bags, machines and perks. One remote: Buy(kind, index).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -1556,61 +1504,128 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local PlayerData = require(script.Parent.PlayerData)
 local Tools = require(script.Parent.Tools)
+local Achievements = require(script.Parent.Achievements)
 
 local Shop = {}
 
-local function buyTool(player, level)
-	local data = PlayerData.get(player)
-	if not data then
-		return false, "Still loading your progress..."
+local function pay(player, d, price)
+	if d.coins < price then
+		return false, "You need " .. Format.short(price - d.coins) .. " more coins."
 	end
-	if type(level) ~= "number" or level ~= data.tool + 1 then
+	return true
+end
+
+local buyers = {}
+
+function buyers.tool(player, d, level)
+	if level ~= d.tool + 1 then
 		return false, "Buy the tools in order."
 	end
 	local tool = Config.Tools[level]
 	if not tool then
 		return false, "You already have the best tool!"
 	end
-	if data.coins < tool.price then
-		return false, "You need " .. Format.short(tool.price - data.coins) .. " more coins."
+	local ok, message = pay(player, d, tool.price)
+	if not ok then
+		return false, message
 	end
-	PlayerData.update(player, function(d)
-		d.coins -= tool.price
-		d.tool = level
+	PlayerData.update(player, function(data)
+		data.coins -= tool.price
+		data.tool = level
+		for _, perk in ipairs(Config.Perks) do
+			data.perks[perk.id] = 0 -- perks belong to the tool
+		end
 	end)
 	Tools.give(player, level)
-	return true, "You got the " .. tool.name .. "! " .. Format.commas(tool.power) .. " straws a search."
+	return true, "You got the " .. tool.name .. ": " .. tool.power .. " straws a search. Perks start again on a new tool."
 end
 
-local function rebirth(player)
-	local data = PlayerData.get(player)
-	if not data then
-		return false, "Still loading your progress..."
+function buyers.bag(player, d, level)
+	if level ~= d.bag + 1 then
+		return false, "Buy the bags in order."
 	end
-	local cost = Economy.rebirthCost(data.rebirths)
-	if data.coins < cost then
-		return false, "Rebirth needs " .. Format.short(cost) .. " coins."
+	local bag = Config.Bags[level]
+	if not bag then
+		return false, "You already have the biggest bag!"
 	end
-	PlayerData.update(player, function(d)
-		d.coins = 0
-		d.tool = 1
-		d.rebirths += 1
+	local ok, message = pay(player, d, bag.price)
+	if not ok then
+		return false, message
+	end
+	PlayerData.update(player, function(data)
+		data.coins -= bag.price
+		data.bag = level
 	end)
-	Tools.give(player, 1)
-	local bonus = math.floor(Config.RebirthCoinBonus * (data.rebirths) * 100 + 0.5)
-	return true, "Rebirth! Every search now earns +" .. bonus .. "% coins."
+	return true, "You got the " .. bag.name .. ": it holds " .. Format.commas(bag.size) .. " straws."
+end
+
+function buyers.machine(player, d, index)
+	local m = Config.Machines[index]
+	if not m then
+		return false, "No such machine."
+	end
+	local owned = d.machines[index]
+	if owned >= m.max then
+		return false, "You own the most " .. m.name .. "s allowed (" .. m.max .. ")."
+	end
+	local price = Economy.machinePrice(index, owned)
+	local ok, message = pay(player, d, price)
+	if not ok then
+		return false, message
+	end
+	PlayerData.update(player, function(data)
+		data.coins -= price
+		data.machines[index] = owned + 1
+	end)
+	return true, "A " .. m.name .. " joins your yard: +" .. m.rate .. " straws a second, even while you're not clicking."
+end
+
+function buyers.perk(player, d, index)
+	local perk = Config.Perks[index]
+	if not perk then
+		return false, "No such perk."
+	end
+	if d.perks[perk.id] >= perk.levels then
+		return false, perk.name .. " is already maxed on this tool."
+	end
+	local price = Economy.perkPrice(d, index)
+	local ok, message = pay(player, d, price)
+	if not ok then
+		return false, message
+	end
+	PlayerData.update(player, function(data)
+		data.coins -= price
+		data.perks[perk.id] += 1
+		if Economy.perksMaxed(data) then
+			data.stats.perks_maxed += 1
+		end
+	end)
+	return true, perk.name .. " " .. d.perks[perk.id] .. "/" .. perk.levels .. " on your " .. Economy.tool(d.tool).name .. "."
 end
 
 function Shop.init()
-	Remotes.BuyTool.OnServerInvoke = buyTool
-	Remotes.Rebirth.OnServerInvoke = rebirth
+	Remotes.Buy.OnServerInvoke = function(player, kind, index)
+		local d = PlayerData.get(player)
+		if not d then
+			return false, "Still loading your progress..."
+		end
+		local buyer = type(kind) == "string" and buyers[kind]
+		if not buyer or type(index) ~= "number" or index ~= math.floor(index) then
+			return false, "Nothing to buy there."
+		end
+		local ok, message = buyer(player, d, index)
+		if ok then
+			Achievements.check(player)
+		end
+		return ok, message
+	end
 end
 
 return Shop
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001D">
+			<Item class="ModuleScript" referent="RBX0001C">
 				<Properties>
 					<string name="Name">Tools</string>
 					<ProtectedString name="Source"><![CDATA[-- The search tools: a pitchfork-shaped Tool per level, coloured from Config.Tools.
@@ -1718,41 +1733,46 @@ return Tools
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001E">
+			<Item class="ModuleScript" referent="RBX0001D">
 				<Properties>
 					<string name="Name">World</string>
-					<ProtectedString name="Source"><![CDATA[-- Hollow Creek Farm at sunset: terrain, plaza, paths, fence, trees, signpost and the notice
--- board. The landmarks beside each haystack come from Landmarks.
+					<ProtectedString name="Source"><![CDATA[-- Hollow Creek Farm at sunset: terrain, plaza, the merchant's stall, the machine yard, the
+-- barn with the Golden Loft above it, fence and trees. The haystacks are in Haystack.luau.
 local Lighting = game:GetService("Lighting")
 
 local Build = require(script.Parent.Build)
-local Landmarks = require(script.Parent.Landmarks)
 
 local World = {}
-local notice = {}
-
 local terrain = workspace.Terrain
 local AUTUMN = { { 214, 120, 40 }, { 196, 72, 44 }, { 232, 176, 54 }, { 150, 150, 58 } }
 local WOOD = { 122, 86, 52 }
 
--- Ground and the spawn point come first, so nobody spawns into the void.
+World.HAYSTACK = Vector3.new(0, 0, -110) -- the giant haystack, north of the plaza
+World.MERCHANT = Vector3.new(74, 0, 10) -- the merchant's stall, east
+World.YARD = Vector3.new(-80, 0, 0) -- the machine yard, west
+World.BARN = Vector3.new(0, 0, 96) -- the barn, south; the Golden Loft is above it
+World.LOFT = Vector3.new(0, 130, 96) -- the secret level floats high above the barn
+
 function World.ground()
 	terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(118, 136, 58))
 	terrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(124, 94, 62))
 	terrain:SetMaterialColor(Enum.Material.Cobblestone, Color3.fromRGB(152, 138, 120))
 	terrain:FillBlock(CFrame.new(0, -8, 0), Vector3.new(640, 16, 640), Enum.Material.Grass)
-	terrain:FillCylinder(CFrame.new(0, -2, 0), 4, 34, Enum.Material.Cobblestone)
-
+	terrain:FillCylinder(CFrame.new(0, -2, 0), 4, 30, Enum.Material.Cobblestone)
+	for _, target in ipairs({ World.HAYSTACK, World.MERCHANT, World.YARD, World.BARN }) do
+		local dir = Vector3.new(target.X, 0, target.Z).Unit
+		local from, to = dir * 28 + Vector3.new(0, -2, 0), target - dir * 20 + Vector3.new(0, -2, 0)
+		terrain:FillBlock(CFrame.lookAt((from + to) / 2, to), Vector3.new(7, 4, (to - from).Magnitude), Enum.Material.Ground)
+	end
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "Spawn"
 	spawn.Anchored = true
 	spawn.Size = Vector3.new(12, 1, 12)
-	spawn.CFrame = CFrame.new(0, 0.5, 20) -- faces north, towards the notice board
+	spawn.CFrame = CFrame.new(0, 0.5, 16) -- faces north, towards the haystack
 	spawn.Color = Color3.fromRGB(196, 150, 92)
 	spawn.Material = Enum.Material.WoodPlanks
 	spawn.Duration = 0
 	spawn.Neutral = true
-	spawn.TopSurface = Enum.SurfaceType.Smooth
 	spawn.Parent = workspace
 end
 
@@ -1783,10 +1803,6 @@ function World.lighting()
 	bloom.Size = 20
 	bloom.Threshold = 1.4
 	bloom.Parent = Lighting
-	local rays = Instance.new("SunRaysEffect")
-	rays.Intensity = 0.06
-	rays.Spread = 0.5
-	rays.Parent = Lighting
 	local grade = Instance.new("ColorCorrectionEffect")
 	grade.Saturation = 0.1
 	grade.Contrast = 0.06
@@ -1794,21 +1810,10 @@ function World.lighting()
 	grade.Parent = Lighting
 end
 
-local function paths(piles)
-	for _, pile in ipairs(piles) do
-		local target = Vector3.new(pile.x, -2, pile.z)
-		local dir = Vector3.new(pile.x, 0, pile.z).Unit
-		local from = dir * 30 + Vector3.new(0, -2, 0)
-		local to = target - dir * 16
-		terrain:FillBlock(CFrame.lookAt((from + to) / 2, to), Vector3.new(7, 4, (to - from).Magnitude), Enum.Material.Ground)
-	end
-end
-
 local function fence(folder)
-	local count, radius = 56, 214
+	local count, radius = 56, 200
 	for i = 0, count - 1 do
-		local a = i / count * math.pi * 2
-		local b = (i + 1) / count * math.pi * 2
+		local a, b = i / count * math.pi * 2, (i + 1) / count * math.pi * 2
 		local p = Vector3.new(math.cos(a) * radius, 0, math.sin(a) * radius)
 		local q = Vector3.new(math.cos(b) * radius, 0, math.sin(b) * radius)
 		Build.part({ name = "Post", size = Vector3.new(1.2, 5, 1.2), cframe = CFrame.new(p + Vector3.new(0, 2.5, 0)), color = WOOD, material = "Wood", parent = folder })
@@ -1823,7 +1828,7 @@ local function trees(folder)
 	local rng = Random.new(7)
 	for i = 1, 40 do
 		local a = i / 40 * math.pi * 2 + rng:NextNumber(-0.05, 0.05)
-		local r = rng:NextNumber(232, 290)
+		local r = rng:NextNumber(218, 275)
 		local base = CFrame.new(math.cos(a) * r, 0, math.sin(a) * r)
 		local height = rng:NextNumber(10, 16)
 		Build.post({ name = "Trunk", color = { 96, 66, 44 }, material = "Wood", parent = folder }, base, height, 2.6)
@@ -1836,19 +1841,9 @@ local function trees(folder)
 end
 
 local function plaza(folder)
-	-- signpost in the middle, one arm per side of the farm
-	Build.post({ name = "Signpost", color = WOOD, material = "Wood", parent = folder }, CFrame.new(0, 0, 0), 12, 1)
-	local arms = { { "NORTH", -90, 10.6 }, { "EAST", 0, 9.4 }, { "SOUTH", 90, 8.2 }, { "WEST", 180, 7 } }
-	for _, arm in ipairs(arms) do
-		local cf = CFrame.new(0, arm[3], 0) * CFrame.Angles(0, math.rad(-arm[2]), 0) * CFrame.new(4.6, 0, 0)
-		local board = Build.part({ name = arm[1], size = Vector3.new(8, 1.5, 0.35), cframe = cf, color = { 214, 184, 130 }, material = "WoodPlanks", parent = folder })
-		Build.text(board, Enum.NormalId.Front, arm[1] .. " FIELDS")
-		Build.text(board, Enum.NormalId.Back, arm[1] .. " FIELDS")
-	end
-	-- lamps around the plaza
 	for i = 0, 3 do
 		local a = i / 4 * math.pi * 2 + math.pi / 4
-		local base = CFrame.new(math.cos(a) * 26, 0, math.sin(a) * 26)
+		local base = CFrame.new(math.cos(a) * 24, 0, math.sin(a) * 24)
 		Build.post({ name = "LampPost", color = { 52, 48, 46 }, material = "Metal", parent = folder }, base, 9, 0.6)
 		local lamp = Build.part({ name = "Lamp", size = Vector3.new(1.6, 1.6, 1.6), cframe = base * CFrame.new(0, 9.6, 0), color = { 255, 196, 110 }, material = "Neon", parent = folder })
 		local light = Instance.new("PointLight")
@@ -1857,76 +1852,84 @@ local function plaza(folder)
 		light.Brightness = 1.6
 		light.Parent = lamp
 	end
-	-- a few hay bales to sit on
-	for i = 0, 5 do
-		local a = i / 6 * math.pi * 2
-		local cf = CFrame.new(math.cos(a) * 20, 1.5, math.sin(a) * 20) * CFrame.Angles(0, -a, 0)
-		Build.part({ name = "Bale", size = Vector3.new(5, 3, 3), cframe = cf, color = { 220, 184, 96 }, material = "Grass", parent = folder })
-	end
-	-- the notice board shows the current case
-	local boardCf = CFrame.lookAt(Vector3.new(0, 7, -14), Vector3.new(0, 7, 20))
-	for _, x in ipairs({ -7.4, 7.4 }) do
-		Build.part({ name = "BoardLeg", size = Vector3.new(0.8, 12, 0.8), cframe = boardCf * CFrame.new(x, -1, 0.4), color = WOOD, material = "Wood", parent = folder })
-	end
-	local board = Build.part({ name = "NoticeBoard", size = Vector3.new(14, 8, 0.5), cframe = boardCf, color = { 92, 64, 40 }, material = "WoodPlanks", parent = folder })
-	local gui = Instance.new("SurfaceGui")
-	gui.Face = Enum.NormalId.Front
-	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	gui.PixelsPerStud = 50
-	gui.LightInfluence = 0.5
-	gui.Parent = board
-	local paper = Instance.new("Frame")
-	paper.Size = UDim2.new(1, -30, 1, -30)
-	paper.Position = UDim2.fromOffset(15, 15)
-	paper.BackgroundColor3 = Color3.fromRGB(246, 234, 204)
-	paper.Parent = gui
-	local function line(name, y, height, font, size)
-		local label = Instance.new("TextLabel")
-		label.Name = name
-		label.Size = UDim2.new(1, -30, height, 0)
-		label.Position = UDim2.new(0, 15, y, 0)
-		label.BackgroundTransparency = 1
-		label.Font = font
-		label.TextScaled = true
-		label.TextWrapped = true
-		label.TextColor3 = Color3.fromRGB(58, 38, 22)
-		label.Text = ""
-		local limit = Instance.new("UITextSizeConstraint")
-		limit.MaxTextSize = size
-		limit.Parent = label
-		label.Parent = paper
-		return label
-	end
-	notice.case = line("Case", 0.05, 0.14, Enum.Font.FredokaOne, 40)
-	notice.title = line("Title", 0.2, 0.18, Enum.Font.FredokaOne, 64)
-	notice.intro = line("Intro", 0.42, 0.34, Enum.Font.Gotham, 34)
-	notice.help = line("Help", 0.8, 0.14, Enum.Font.GothamBold, 30)
-	notice.help.Text = "Search any haystack. Every search can turn up a clue."
-end
-
-function World.setNotice(number, title, intro)
-	if notice.case then
-		notice.case.Text = "CASE #" .. number
-		notice.title.Text = title
-		notice.intro.Text = intro
+	local signs = { { "HAYSTACK", World.HAYSTACK }, { "MERCHANT", World.MERCHANT }, { "MACHINE YARD", World.YARD }, { "BARN", World.BARN } }
+	Build.post({ name = "Signpost", color = WOOD, material = "Wood", parent = folder }, CFrame.new(0, 0, -4), 11, 1)
+	for i, sign in ipairs(signs) do
+		local towards = Vector3.new(sign[2].X, 0, sign[2].Z).Unit
+		local cf = CFrame.lookAt(Vector3.new(0, 10.4 - i * 1.4, -4) + towards * 4.4, Vector3.new(0, 10.4 - i * 1.4, -4) + towards * 20)
+		local board = Build.part({ name = sign[1], size = Vector3.new(8, 1.3, 0.35), cframe = cf, color = { 214, 184, 130 }, material = "WoodPlanks", parent = folder })
+		Build.text(board, Enum.NormalId.Front, sign[1])
+		Build.text(board, Enum.NormalId.Back, sign[1])
 	end
 end
 
-function World.build(piles)
+local function merchant(folder)
+	local cf = CFrame.lookAt(World.MERCHANT, Vector3.new(0, 0, World.MERCHANT.Z)) -- the counter faces the plaza
+	Build.part({ name = "Counter", size = Vector3.new(12, 3.6, 3), cframe = cf * CFrame.new(0, 1.8, -3), color = { 150, 104, 60 }, material = "WoodPlanks", parent = folder })
+	for _, x in ipairs({ -5.5, 5.5 }) do
+		Build.part({ name = "StallPost", size = Vector3.new(0.7, 10, 0.7), cframe = cf * CFrame.new(x, 5, 2), color = WOOD, material = "Wood", parent = folder })
+	end
+	local awning = Build.part({ name = "Awning", size = Vector3.new(14, 0.4, 9), cframe = cf * CFrame.new(0, 10.2, -1) * CFrame.Angles(math.rad(-8), 0, 0), color = { 200, 60, 50 }, material = "Fabric", parent = folder })
+	for i = 0, 6 do
+		Build.part({ name = "Stripe", size = Vector3.new(1, 0.42, 9), cframe = awning.CFrame * CFrame.new(-6 + i * 2, 0, 0), color = { 246, 240, 226 }, material = "Fabric", parent = folder })
+	end
+	local sign = Build.part({ name = "MerchantSign", size = Vector3.new(10, 2, 0.4), cframe = cf * CFrame.new(0, 7.2, 2), color = { 246, 234, 204 }, material = "WoodPlanks", parent = folder })
+	Build.text(sign, Enum.NormalId.Front, "HAY MERCHANT: straw bought here")
+	-- the merchant himself
+	local body = cf * CFrame.new(0, 0, 5)
+	Build.part({ name = "MerchantBody", size = Vector3.new(2.4, 3.2, 1.4), cframe = body * CFrame.new(0, 3.6, 0), color = { 80, 110, 70 }, material = "Fabric", parent = folder })
+	Build.part({ name = "MerchantHead", shape = "Ball", size = Vector3.new(1.8, 1.8, 1.8), cframe = body * CFrame.new(0, 6.1, 0), color = { 230, 190, 150 }, parent = folder })
+	Build.part({ name = "MerchantHat", shape = "Cylinder", size = Vector3.new(0.3, 3.4, 3.4), cframe = body * CFrame.new(0, 6.9, 0) * CFrame.Angles(0, 0, math.rad(90)), color = { 112, 84, 48 }, material = "Fabric", parent = folder })
+	for _, x in ipairs({ -1.9, 1.9 }) do
+		Build.part({ name = "MerchantLeg", size = Vector3.new(0.9, 2, 0.9), cframe = body * CFrame.new(x * 0.4, 1, 0), color = { 60, 50, 44 }, material = "Fabric", parent = folder })
+	end
+	Build.part({ name = "Scales", size = Vector3.new(2, 0.3, 1.2), cframe = cf * CFrame.new(-3, 3.75, -3), color = { 200, 170, 80 }, material = "Metal", parent = folder })
+	local coins = Build.part({ name = "CoinPile", shape = "Ball", size = Vector3.new(1.6, 1, 1.6), cframe = cf * CFrame.new(3, 3.9, -3), color = { 245, 200, 66 }, material = "Metal", parent = folder })
+	coins.Reflectance = 0.3
+end
+
+local function yard(folder)
+	local cf = CFrame.new(World.YARD)
+	terrain:FillBlock(cf * CFrame.new(0, -2, 0), Vector3.new(44, 4, 34), Enum.Material.Ground)
+	for _, z in ipairs({ -17, 17 }) do
+		Build.part({ name = "YardRail", size = Vector3.new(44, 0.5, 0.5), cframe = cf * CFrame.new(0, 2.4, z), color = WOOD, material = "Wood", parent = folder })
+	end
+	local sign = Build.part({ name = "YardSign", size = Vector3.new(12, 2.2, 0.4), cframe = cf * CFrame.new(0, 7, -17) , color = { 246, 234, 204 }, material = "WoodPlanks", parent = folder })
+	Build.text(sign, Enum.NormalId.Front, "MACHINE YARD: your machines work here")
+	Build.text(sign, Enum.NormalId.Back, "MACHINE YARD")
+	for _, x in ipairs({ -6, 6 }) do
+		Build.part({ name = "SignPost", size = Vector3.new(0.6, 7, 0.6), cframe = cf * CFrame.new(x, 3.5, -17), color = WOOD, material = "Wood", parent = folder })
+	end
+end
+
+local function barn(folder)
+	local cf = CFrame.lookAt(World.BARN, Vector3.new(0, 0, 0)) -- the doors face the plaza
+	Build.part({ name = "BarnWalls", size = Vector3.new(30, 18, 22), cframe = cf * CFrame.new(0, 9, 0), color = { 176, 52, 40 }, material = "WoodPlanks", parent = folder })
+	Build.roof({ name = "BarnRoof", color = { 86, 62, 52 }, material = "Slate", parent = folder }, cf * CFrame.new(0, 18, 0) * CFrame.Angles(0, math.rad(90), 0), 32, 21.9)
+	Build.part({ name = "BarnDoorFrame", size = Vector3.new(10, 12, 0.3), cframe = cf * CFrame.new(0, 6, -11.1), color = { 240, 232, 214 }, material = "WoodPlanks", parent = folder })
+	Build.part({ name = "BarnDoor", size = Vector3.new(8.6, 10.6, 0.3), cframe = cf * CFrame.new(0, 5.8, -11.2), color = { 150, 42, 34 }, material = "WoodPlanks", parent = folder })
+	-- the loft hatch: the way up to the Golden Loft (the client opens it once all ten achievements are done)
+	local hatch = Build.part({ name = "LoftHatch", size = Vector3.new(5, 5, 0.4), cframe = cf * CFrame.new(0, 14.5, -11.2), color = { 60, 44, 30 }, material = "Wood", parent = folder })
+	Build.text(hatch, Enum.NormalId.Front, "GOLDEN LOFT\n10 achievements open it", { color = Color3.fromRGB(245, 200, 66), pixels = 30 })
+	local window = Build.part({ name = "LoftGlow", size = Vector3.new(4, 4, 0.2), cframe = cf * CFrame.new(0, 14.5, -11.45), color = { 255, 214, 90 }, material = "Neon", transparency = 0.6, collide = false, parent = folder })
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255, 200, 80)
+	light.Range = 18
+	light.Brightness = 0.8
+	light.Parent = window
+end
+
+function World.build()
 	World.lighting()
 	local farm = Instance.new("Folder")
 	farm.Name = "Farm"
 	farm.Parent = workspace
-	paths(piles)
 	fence(farm)
 	trees(farm)
 	plaza(farm)
-	local landmarks = Instance.new("Folder")
-	landmarks.Name = "Landmarks"
-	landmarks.Parent = workspace
-	for _, pile in ipairs(piles) do
-		Landmarks.build(pile, landmarks)
-	end
+	merchant(farm)
+	yard(farm)
+	barn(farm)
 end
 
 return World
@@ -1935,34 +1938,33 @@ return World
 			</Item>
 		</Item>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX0001F">
+	<Item class="StarterPlayer" referent="RBX0001E">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX00020">
+		<Item class="StarterPlayerScripts" referent="RBX0001F">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX00021">
+			<Item class="Folder" referent="RBX00020">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX00022">
+				<Item class="ModuleScript" referent="RBX00021">
 					<Properties>
 						<string name="Name">Hud</string>
-						<ProtectedString name="Source"><![CDATA[-- The always-on screen: the great haystack counter at the top, your coins and search power
--- on the left, and the buttons for the shop, the clue book, rebirth and auto search.
+						<ProtectedString name="Source"><![CDATA[-- The always-on screen: your haystack progress at the top, your bag, coins and rates on the
+-- left, the buttons for the shop and achievements, and the active boosts.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
+local Economy = require(Shared:WaitForChild("Economy"))(Config)
 local Format = require(Shared:WaitForChild("Format"))
-local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local Ui = require(script.Parent.Ui)
 
 local player = Players.LocalPlayer
-local gameState = ReplicatedStorage:WaitForChild("GameState")
 
 local Hud = {}
 
@@ -1971,91 +1973,109 @@ function Hud.mount(gui, open)
 		Name = "Haystack",
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0, 6),
-		Size = UDim2.fromOffset(470, 80),
+		Size = UDim2.fromOffset(470, 86),
 		BackgroundColor3 = Ui.colors.wood,
 		Parent = gui,
 	}, { Ui.corner(14), Ui.stroke(Ui.colors.woodDark, 3) })
 	Ui.autoScale(top)
-	local caseLabel = Ui.label({ Size = UDim2.new(1, -20, 0, 22), Position = UDim2.fromOffset(10, 4), TextColor3 = Ui.colors.hay, Parent = top }, 20)
-	local countLabel = Ui.label({ Size = UDim2.new(1, -20, 0, 26), Position = UDim2.fromOffset(10, 27), Parent = top }, 26)
-	local bar = Ui.make("Frame", { Size = UDim2.new(1, -24, 0, 14), Position = UDim2.fromOffset(12, 58), BackgroundColor3 = Ui.colors.woodDark, Parent = top }, { Ui.corner(7) })
-	local fill = Ui.make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Ui.colors.hay, Parent = bar }, { Ui.corner(7) })
+	local title = Ui.label({ Size = UDim2.new(1, -20, 0, 22), Position = UDim2.fromOffset(10, 4), TextColor3 = Ui.colors.hay, Parent = top }, 20)
+	local countLabel = Ui.label({ Size = UDim2.new(1, -20, 0, 24), Position = UDim2.fromOffset(10, 27), Parent = top }, 22)
+	local bar = Ui.make("Frame", { Size = UDim2.new(1, -24, 0, 14), Position = UDim2.fromOffset(12, 55), BackgroundColor3 = Ui.colors.woodDark, Parent = top }, { Ui.corner(7) })
+	local fill = Ui.make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Ui.colors.hay, Parent = bar }, { Ui.corner(7) })
+	local warmth = Ui.label({ Size = UDim2.new(1, -20, 0, 14), Position = UDim2.fromOffset(10, 70), TextColor3 = Ui.colors.cream, Parent = top }, 13)
 
 	local left = Ui.make("Frame", {
 		Name = "Left",
 		AnchorPoint = Vector2.new(0, 0.5),
 		Position = UDim2.new(0, 10, 0.5, 0),
-		Size = UDim2.fromOffset(200, 380),
+		Size = UDim2.fromOffset(210, 420),
 		BackgroundTransparency = 1,
 		Parent = gui,
 	}, { Ui.make("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }) })
 	Ui.autoScale(left)
-	local stats = Ui.make("Frame", { LayoutOrder = 1, Size = UDim2.fromOffset(200, 106), BackgroundColor3 = Ui.colors.wood, Parent = left }, { Ui.corner(12), Ui.stroke(Ui.colors.woodDark, 3) })
-	local coinsLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 40), Position = UDim2.fromOffset(8, 6), TextColor3 = Ui.colors.hay, Parent = stats }, 36)
-	local powerLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 22), Position = UDim2.fromOffset(8, 50), Parent = stats }, 20)
-	local bonusLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 22), Position = UDim2.fromOffset(8, 76), Parent = stats }, 18)
+	local stats = Ui.make("Frame", { LayoutOrder = 1, Size = UDim2.fromOffset(210, 150), BackgroundColor3 = Ui.colors.wood, Parent = left }, { Ui.corner(12), Ui.stroke(Ui.colors.woodDark, 3) })
+	local coinsLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 38), Position = UDim2.fromOffset(8, 6), TextColor3 = Ui.colors.hay, Parent = stats }, 34)
+	local bagLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 22), Position = UDim2.fromOffset(8, 46), Parent = stats }, 18)
+	local bagBar = Ui.make("Frame", { Size = UDim2.new(1, -16, 0, 10), Position = UDim2.fromOffset(8, 70), BackgroundColor3 = Ui.colors.woodDark, Parent = stats }, { Ui.corner(5) })
+	local bagFill = Ui.make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Ui.colors.green, Parent = bagBar }, { Ui.corner(5) })
+	local powerLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 20), Position = UDim2.fromOffset(8, 84), Parent = stats }, 16)
+	local machineLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 20), Position = UDim2.fromOffset(8, 104), Parent = stats }, 16)
+	local bonusLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 20), Position = UDim2.fromOffset(8, 124), Parent = stats }, 16)
 
 	local function button(order, text, colour, onClick)
-		local b = Ui.button(text, colour, { LayoutOrder = order, Size = UDim2.fromOffset(200, 50), Parent = left })
+		local b = Ui.button(text, colour, { LayoutOrder = order, Size = UDim2.fromOffset(210, 48), Parent = left })
 		b.Activated:Connect(onClick)
 		return b
 	end
 	button(2, "SHOP", Ui.colors.green, function()
 		open("Shop")
 	end)
-	local cluesButton = button(3, "CLUE BOOK", Ui.colors.blue, function()
-		open("Clue Book")
+	local achievementsButton = button(3, "ACHIEVEMENTS", Ui.colors.blue, function()
+		open("Achievements")
 	end)
-	button(4, "REBIRTH", Ui.colors.purple, function()
-		open("Rebirth")
+	button(4, "FINDS", Ui.colors.purple, function()
+		open("Finds")
 	end)
-	local autoButton = button(5, "AUTO: OFF", Ui.colors.grey, function()
-		Remotes.ToggleAuto:FireServer(not player:GetAttribute("AutoOn"))
-	end)
+	local boosts = Ui.label({ LayoutOrder = 5, Size = UDim2.fromOffset(210, 60), TextColor3 = Ui.colors.hay, TextYAlignment = Enum.TextYAlignment.Top, Parent = left }, 15)
 
-	local function refreshHaystack()
-		local total = gameState:GetAttribute("TotalStraws") or Config.TotalStraws
-		local remaining = gameState:GetAttribute("Remaining") or total
-		caseLabel.Text = "CASE #" .. (gameState:GetAttribute("Case") or 1) .. ": " .. (gameState:GetAttribute("CaseTitle") or "")
-		if gameState:GetAttribute("Phase") == "solved" then
-			countLabel.Text = "NEEDLE FOUND! The next case starts soon..."
+	local function refresh()
+		local searched, total = player:GetAttribute("Searched") or 0, Config.TotalStraws
+		local inLoft = player:GetAttribute("InLoft") == true
+		if inLoft then
+			searched, total = player:GetAttribute("LoftSearched") or 0, Config.Loft.straws
+			title.Text = "THE GOLDEN LOFT: " .. (player:GetAttribute("GoldenNeedles") or 0) .. " golden needle(s) found"
 		else
-			countLabel.Text = Format.commas(remaining) .. " straws left. 1 needle."
+			title.Text = "YOUR HAYSTACK: " .. (player:GetAttribute("Needles") or 0) .. " needle(s) found"
 		end
-		fill.Size = UDim2.fromScale(math.clamp(remaining / total, 0, 1), 1)
-	end
-
-	local function refreshPlayer()
+		countLabel.Text = Format.commas(total - searched) .. " straws left. 1 needle."
+		fill.Size = UDim2.fromScale(math.clamp(searched / total, 0, 1), 1)
+		local w = player:GetAttribute("Warmth")
+		warmth.Text = if (player:GetAttribute("Tool") or 1) >= Config.DetectorLevel and w then
+			"Needle Detector: " .. (if w >= 0.99 then "IT'S IN THE NEXT HANDFUL!" elseif w > 0.7 then "HOT" elseif w > 0.3 then "warm" else "cold")
+		else ""
 		coinsLabel.Text = Format.short(player:GetAttribute("Coins") or 0) .. " coins"
-		powerLabel.Text = Format.short(player:GetAttribute("Power") or 0) .. " straws a search"
-		bonusLabel.Text = "Coin bonus: x" .. string.format("%.1f", player:GetAttribute("Multiplier") or 1)
-		autoButton.Visible = player:GetAttribute("PassAutoSearch") == true
-		local on = player:GetAttribute("AutoOn") == true
-		autoButton.Text = on and "AUTO: ON" or "AUTO: OFF"
-		autoButton.BackgroundColor3 = on and Ui.colors.green or Ui.colors.grey
+		local size = Economy.bag(player:GetAttribute("Bag") or 1).size
+		local carried = (player:GetAttribute("BagStraw") or 0) + (player:GetAttribute("BagGolden") or 0)
+		bagLabel.Text = "Bag: " .. Format.commas(carried) .. " / " .. Format.commas(size) .. (if carried >= size then " FULL!" else "")
+		bagFill.Size = UDim2.fromScale(math.clamp(carried / size, 0, 1), 1)
+		bagFill.BackgroundColor3 = if carried >= size then Ui.colors.red else Ui.colors.green
+		powerLabel.Text = (player:GetAttribute("Power") or 1) .. " straws a search"
+		machineLabel.Text = "Machines: " .. string.format("%.2g", player:GetAttribute("MachineRate") or 0) .. " a second"
+		bonusLabel.Text = "Coin bonus: x" .. string.format("%.2f", player:GetAttribute("Multiplier") or 1)
+		achievementsButton.Text = "ACHIEVEMENTS " .. (player:GetAttribute("Achievements") or 0) .. "/" .. #Config.Achievements
+		local lines, now = {}, os.time()
+		for name, label in pairs({ SpeedBoost = "2x speed", CoinBoost = "2x coins", LuckyCharm = "Lucky charm" }) do
+			local until_ = player:GetAttribute("Boost_" .. name) or 0
+			if until_ > now then
+				table.insert(lines, label .. ": " .. math.ceil((until_ - now) / 60) .. " min left")
+			end
+		end
+		local whistles = player:GetAttribute("Whistles") or 0
+		if whistles > 0 then
+			table.insert(lines, "Merchant's Whistles: " .. whistles)
+		end
+		boosts.Text = table.concat(lines, "\n")
 	end
 
-	gameState.AttributeChanged:Connect(refreshHaystack)
-	player.AttributeChanged:Connect(refreshPlayer)
-	refreshHaystack()
-	refreshPlayer()
-
-	local hud = {}
-	function hud.setClues(found, count)
-		cluesButton.Text = if count > 0 then "CLUE BOOK " .. found .. "/" .. count else "CLUE BOOK"
-	end
-	return hud
+	player.AttributeChanged:Connect(refresh)
+	task.spawn(function()
+		while true do
+			refresh()
+			task.wait(5) -- the boost timers count down
+		end
+	end)
+	return { refresh = refresh }
 end
 
 return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX00023">
+				<Item class="LocalScript" referent="RBX00022">
 					<Properties>
 						<string name="Name">Main</string>
-						<ProtectedString name="Source"><![CDATA[-- The player's side of the game: builds the UI, listens to the farm, and turns clicks with
--- your fork into searches (the server decides what each search finds).
+						<ProtectedString name="Source"><![CDATA[-- The player's side of the game: builds the UI, listens to the farm, turns clicks with your
+-- fork into searches, and offers SELL at the merchant and the climb into the Golden Loft.
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -2072,56 +2092,109 @@ local Panels = require(script.Parent:WaitForChild("Panels"))
 local WorldFx = require(script.Parent:WaitForChild("WorldFx"))
 
 local player = Players.LocalPlayer
-local gameState = ReplicatedStorage:WaitForChild("GameState")
-
 local gui = Ui.make("ScreenGui", { Name = "HaystackUi", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
-local state = { case = 0, clues = {} }
 
 Notify.mount(gui)
-local panels = Panels.mount(gui, state, Notify)
-local hud = Hud.mount(gui, panels.open)
-WorldFx.start(gui)
+local panels = Panels.mount(gui, Notify)
+Hud.mount(gui, panels.open)
+WorldFx.start()
 
-local function cluesChanged()
-	hud.setClues(#state.clues, gameState:GetAttribute("ClueCount") or 0)
-	panels.refresh()
-	WorldFx.setClues(state.clues, gameState:GetAttribute("Phase") == "solved")
+local function ask(remote, ...)
+	local ok, success, message = pcall(remote.InvokeServer, remote, ...)
+	if not ok then
+		return false, "The farm didn't answer. Try again."
+	end
+	return success, message
 end
 
-Remotes.Clue.OnClientEvent:Connect(function(clue)
-	if clue.case ~= state.case then
-		state.case, state.clues = clue.case, {}
+-- The action button at the bottom: SELL at the merchant, CLIMB at the loft hatch, whistle anywhere.
+local action = Ui.button("", Ui.colors.green, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -100), Size = UDim2.fromOffset(300, 54), Visible = false, Parent = gui })
+Ui.autoScale(action)
+local actionKind = nil
+action.Activated:Connect(function()
+	if actionKind == "sell" then
+		local ok, message = ask(Remotes.Sell)
+		Notify.toast(message, ok and Ui.colors.green or Ui.colors.red)
+	elseif actionKind == "loft" then
+		local ok, message = ask(Remotes.Loft, "up")
+		Notify.toast(message, ok and Ui.colors.purple or Ui.colors.red)
+	elseif actionKind == "down" then
+		local _, message = ask(Remotes.Loft, "down")
+		Notify.toast(message, Ui.colors.wood)
+	elseif actionKind == "whistle" then
+		local ok, message = ask(Remotes.Whistle)
+		Notify.toast(message, ok and Ui.colors.green or Ui.colors.red)
 	end
-	state.clues[clue.index] = clue
-	Notify.toast("NEW CLUE " .. clue.index .. "/" .. clue.count .. ": " .. clue.text, Ui.colors.blue)
-	cluesChanged()
+end)
+
+local MERCHANT, BARN, LOFT_PAD = Vector3.new(74, 0, 10), Vector3.new(0, 0, 96), Vector3.new(0, 130, 132)
+local function flat(a, b)
+	return (Vector3.new(a.X, 0, a.Z) - Vector3.new(b.X, 0, b.Z)).Magnitude
+end
+task.spawn(function()
+	while true do
+		task.wait(0.25)
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		local kind, text, colour = nil, "", Ui.colors.green
+		if root then
+			local inLoft = root.Position.Y > 100
+			player:SetAttribute("InLoft", inLoft)
+			local carried = (player:GetAttribute("BagStraw") or 0) + (player:GetAttribute("BagGolden") or 0)
+			if not inLoft and flat(root.Position, MERCHANT) <= Config.MerchantRange then
+				kind, text = "sell", "SELL " .. Format.commas(carried) .. " STRAW"
+			elseif not inLoft and flat(root.Position, BARN + Vector3.new(0, 0, -14)) <= 9 and root.Position.Z < BARN.Z then
+				kind, text, colour = "loft", (if player:GetAttribute("LoftOpen") then "CLIMB INTO THE GOLDEN LOFT" else "LOFT LOCKED: 10 ACHIEVEMENTS"), Ui.colors.purple
+			elseif inLoft and flat(root.Position, LOFT_PAD) <= 6 then
+				kind, text, colour = "down", "GO BACK DOWN", Ui.colors.wood
+			elseif (player:GetAttribute("Whistles") or 0) > 0 and carried > 0 then
+				kind, text, colour = "whistle", "WHISTLE: SELL HERE (" .. player:GetAttribute("Whistles") .. " left)", Ui.colors.blue
+			end
+		end
+		actionKind = kind
+		action.Visible = kind ~= nil
+		action.Text, action.BackgroundColor3 = text, colour
+	end
+end)
+
+Remotes.SearchFx.OnClientEvent:Connect(function(message)
+	if message.kind == "search" then
+		WorldFx.searched(message)
+		if message.warmth then
+			player:SetAttribute("Warmth", message.warmth)
+		end
+		if message.full then
+			Notify.toast("Your bag is full! Sell it to the merchant.", Ui.colors.red)
+		end
+	elseif message.kind == "full" then
+		Notify.toast("Your bag is full! Sell it to the merchant (or buy a bigger bag).", Ui.colors.red)
+	elseif message.kind == "sold" then
+		Notify.toast("Sold " .. Format.commas(message.straws) .. " straw for " .. Format.short(message.coins) .. " coins" .. (if message.reason == "auto" then " (Auto Sell)" else ""), Ui.colors.green)
+	elseif message.kind == "find" then
+		panels.addFind(message.name, message.story)
+		Notify.banner("LUCKY FIND: " .. message.name, message.story .. "\nThe merchant pays " .. Format.short(message.coins) .. " coins for it.", 6)
+	end
 end)
 
 Remotes.Announce.OnClientEvent:Connect(function(message)
-	if message.kind == "case" then
-		state.case, state.clues = message.case, {}
-		cluesChanged()
-		Notify.banner("CASE #" .. message.case .. ": " .. message.title, message.intro .. "\n\nSearch any haystack. Every search can turn up a clue.", 9)
-	elseif message.kind == "solved" then
-		cluesChanged()
-		WorldFx.celebrate(message.pileId)
-		local who = if message.finderId == player.UserId then "You" else message.finder
-		local prize = if message.finderId == player.UserId
-			then "\nYou earned " .. Format.short(message.prize) .. " coins!"
-			else "\nEveryone who searched this case earned a reward."
-		Notify.banner(who .. " found the " .. message.needle .. "!", "It was in the " .. message.pile .. " haystack. " .. message.reveal .. prize .. "\nNext case in " .. message.nextIn .. " seconds.", 10)
+	if message.kind == "needle" then
+		local me = message.finderId == player.UserId
+		if me then
+			WorldFx.celebrate(message.golden)
+			Notify.banner(if message.golden then "YOU FOUND THE GOLDEN NEEDLE!" else "YOU FOUND THE NEEDLE!",
+				"You earned " .. Format.short(message.prize) .. " coins" .. (if message.golden then "." else " and +20% coins forever. A new needle is now hidden in a fresh haystack."), 12)
+		else
+			Notify.toast(message.finder .. " found " .. (if message.golden then "a golden needle!" else "their needle!"), Ui.colors.hay)
+		end
+	elseif message.kind == "loft" then
+		Notify.toast(message.finder .. " unlocked the Golden Loft!", Ui.colors.purple)
 	elseif message.kind == "notice" then
 		Notify.toast(message.text, Ui.colors.wood)
 	end
 end)
 
-local lastBeep = 0
-Remotes.SearchFx.OnClientEvent:Connect(function(message)
-	WorldFx.searched(message)
-	if message.detector and os.clock() - lastBeep > 6 then
-		lastBeep = os.clock()
-		Notify.toast("Your Needle Detector is beeping like crazy!", Ui.colors.green)
-	end
+Remotes.Achievement.OnClientEvent:Connect(function(a)
+	Notify.banner("ACHIEVEMENT: " .. a.name, a.text .. "\n" .. a.done .. " of " .. a.total .. " done." .. (if a.done >= a.total then " The Golden Loft is open!" else ""), 7)
 end)
 
 -- Clicking (or tapping) with your search tool asks the server to search.
@@ -2152,7 +2225,6 @@ local function onCharacter(character)
 	local equipped = false
 	local function arrive(tool)
 		hookTool(tool)
-		-- hold the fork straight away the first time it arrives after spawning
 		if not equipped and tool:IsA("Tool") and tool:GetAttribute("Level") ~= nil then
 			equipped = true
 			task.defer(function()
@@ -2176,29 +2248,18 @@ if player.Character then
 	task.spawn(onCharacter, player.Character)
 end
 
--- Catch up on the current case (and any clues found before this script started).
-task.spawn(function()
-	local ok, snapshot = pcall(function()
-		return Remotes.GetState:InvokeServer()
-	end)
-	if ok and type(snapshot) == "table" and #state.clues == 0 then
-		state.case, state.clues = snapshot.case, snapshot.clues
-	end
-	cluesChanged()
-end)
-
 task.delay(2, function()
 	Notify.banner(
 		"Welcome to " .. Config.FarmName .. "!",
-		"A needle is hidden in one of " .. Format.commas(Config.TotalStraws) .. " straws. Walk up to a haystack and click or tap "
-			.. "with your fork to search. Searching earns coins and clues, and the clues tell you which haystack hides the needle.",
-		10
+		"A needle is hidden somewhere in " .. Format.commas(Config.TotalStraws) .. " straws. Walk to the haystack and click with your fork to search. "
+			.. "Sell your straw to the merchant, buy better tools and machines, and finish all ten achievements to open the Golden Loft.",
+		12
 	)
 end)
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00024">
+				<Item class="ModuleScript" referent="RBX00023">
 					<Properties>
 						<string name="Name">Notify</string>
 						<ProtectedString name="Source"><![CDATA[-- Messages: small toasts under the haystack counter, and a big banner for case news.
@@ -2301,10 +2362,110 @@ return Notify
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00025">
+				<Item class="ModuleScript" referent="RBX00024">
 					<Properties>
 						<string name="Name">Panels</string>
-						<ProtectedString name="Source"><![CDATA[-- The windows: the Shop (tools for coins, extras for Robux), the Clue Book and Rebirth.
+						<ProtectedString name="Source"><![CDATA[-- The Achievements window and the Finds notebook (the story bits your lucky finds revealed).
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Format = require(Shared:WaitForChild("Format"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local Ui = require(script.Parent.Ui)
+local Shop = require(script.Parent.Shop)
+
+local Panels = {}
+
+function Panels.mount(gui, notify)
+	local windows, refreshers = {}, {}
+	windows.Shop = Shop.mount(gui, notify)
+	refreshers.Shop = Shop.refresh
+
+	-- Achievements
+	local achievements, achievementsBody = Ui.window(gui, "Achievements")
+	windows.Achievements = achievements
+	local header = Ui.paragraph("", { LayoutOrder = 0, Font = Ui.font, TextSize = 22, Parent = achievementsBody })
+	local rows = {}
+	for i, a in ipairs(Config.Achievements) do
+		local frame = Ui.make("Frame", { LayoutOrder = i, Size = UDim2.new(1, 0, 0, 62), BackgroundColor3 = Ui.colors.paper, Parent = achievementsBody }, { Ui.corner(10) })
+		local name = Ui.label({ Text = a.name, Size = UDim2.new(0.68, -12, 0, 28), Position = UDim2.fromOffset(12, 4), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Ui.colors.ink, TextStrokeTransparency = 1, Parent = frame }, 22)
+		Ui.label({ Text = a.text, Size = UDim2.new(0.68, -12, 0, 24), Position = UDim2.fromOffset(12, 34), Font = Ui.body, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Ui.colors.grey, TextStrokeTransparency = 1, Parent = frame }, 15)
+		local state = Ui.label({ Size = UDim2.new(0.3, -12, 1, -12), Position = UDim2.new(0.7, 0, 0, 6), TextColor3 = Ui.colors.grey, TextStrokeTransparency = 1, Parent = frame }, 18)
+		rows[a.id] = { frame = frame, name = name, state = state }
+	end
+	Ui.paragraph("Complete all ten to open the Golden Loft above the barn.", { LayoutOrder = 99, TextColor3 = Ui.colors.purple, Font = Ui.font, TextSize = 20, Parent = achievementsBody })
+	refreshers.Achievements = function()
+		task.spawn(function()
+			local ok, list = pcall(function()
+				return Remotes.GetAchievements:InvokeServer()
+			end)
+			if not ok or type(list) ~= "table" then
+				return
+			end
+			local done = 0
+			for _, a in ipairs(list) do
+				local r = rows[a.id]
+				if r then
+					if a.done then
+						done += 1
+						r.state.Text, r.state.TextColor3 = "DONE", Ui.colors.green
+						r.frame.BackgroundColor3 = Color3.fromRGB(226, 244, 220)
+					else
+						r.state.Text = Format.short(math.min(a.value, a.goal)) .. " / " .. Format.short(a.goal)
+						r.state.TextColor3 = Ui.colors.grey
+					end
+				end
+			end
+			header.Text = done .. " of " .. #list .. " achievements done"
+		end)
+	end
+
+	-- Finds notebook
+	local finds, findsBody = Ui.window(gui, "Finds")
+	windows.Finds = finds
+	local found = {}
+	Ui.paragraph("Odd things turn up in the hay. The merchant pays for them, and each one tells a bit of the story.", { LayoutOrder = 0, TextColor3 = Ui.colors.grey, Parent = findsBody })
+	local empty = Ui.paragraph("Nothing found yet. Keep searching!", { LayoutOrder = 1, Parent = findsBody })
+	refreshers.Finds = function() end
+
+	local function open(name)
+		for key, frame in pairs(windows) do
+			if key == name then
+				frame.Visible = not frame.Visible
+				if frame.Visible then
+					refreshers[key]()
+				end
+			else
+				frame.Visible = false
+			end
+		end
+	end
+
+	local panels = { open = open }
+	function panels.addFind(name, story)
+		if found[name] then
+			return
+		end
+		found[name] = true
+		empty.Visible = false
+		local n = 0
+		for _ in pairs(found) do
+			n += 1
+		end
+		Ui.paragraph("You found " .. name .. ". " .. story, { LayoutOrder = n + 1, TextColor3 = Ui.colors.blue, Parent = findsBody })
+	end
+	return panels
+end
+
+return Panels
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX00025">
+					<Properties>
+						<string name="Name">Shop</string>
+						<ProtectedString name="Source"><![CDATA[-- The Shop window: tabs for Tools, Bags, Machines, Perks (coins) and Robux.
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -2313,20 +2474,23 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Economy = require(Shared:WaitForChild("Economy"))(Config)
 local Format = require(Shared:WaitForChild("Format"))
-local Piles = require(Shared:WaitForChild("Piles"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local Ui = require(script.Parent.Ui)
 
 local player = Players.LocalPlayer
-local gameState = ReplicatedStorage:WaitForChild("GameState")
 
 local ROBUX = {
-	{ kind = "pass", key = "DoubleCoins", title = "2x Coins", text = "Every search earns double coins, forever." },
-	{ kind = "pass", key = "AutoSearch", title = "Auto Search", text = "Searches by itself while you hold your tool by a haystack." },
-	{ kind = "product", key = "ClueHint", title = "Clue Hint", text = "Get your next clue right now." },
+	{ kind = "product", key = "SpeedBoost", title = "2x Speed (1 hour)", text = "Every search takes twice the straws." },
+	{ kind = "product", key = "CoinBoost", title = "2x Coins (1 hour)", text = "The merchant pays double." },
+	{ kind = "product", key = "LuckyCharm", title = "Lucky Charm (1 hour)", text = "5x the chance of a lucky find." },
+	{ kind = "product", key = "StrawBlast", title = "Straw Blast", text = "Search 100,000 straws at once." },
+	{ kind = "product", key = "MerchantWhistle", title = "Merchant's Whistle x10", text = "Sell your bag anywhere, ten times." },
+	{ kind = "pass", key = "AutoSell", title = "Auto Sell", text = "Your bag sells itself when it fills up." },
+	{ kind = "pass", key = "DoubleMachines", title = "Double Machines", text = "Every machine works twice as fast." },
+	{ kind = "pass", key = "VIP", title = "VIP", text = "+25% coins, and machines keep working for an hour after you leave." },
 }
 
-local Panels = {}
+local Shop = {}
 
 local function ask(remote, ...)
 	local ok, success, message = pcall(remote.InvokeServer, remote, ...)
@@ -2336,154 +2500,173 @@ local function ask(remote, ...)
 	return success, message
 end
 
-function Panels.mount(gui, state, notify)
-	local windows = {}
-	local refreshers = {}
-
-	local function open(name)
-		for key, frame in pairs(windows) do
-			if key == name then
-				frame.Visible = not frame.Visible
-				if frame.Visible and refreshers[key] then
-					refreshers[key]()
-				end
-			else
-				frame.Visible = false
-			end
-		end
-	end
-
-	-- Shop
-	local shop, shopBody = Ui.window(gui, "Shop")
-	windows.Shop = shop
-	local buyButtons = {}
-	for level, tool in ipairs(Config.Tools) do
-		local row = Ui.make("Frame", { LayoutOrder = level, Size = UDim2.new(1, 0, 0, 66), BackgroundColor3 = Ui.colors.paper, Parent = shopBody }, { Ui.corner(10) })
-		Ui.label({ Text = tool.name, Size = UDim2.new(0.58, -12, 0, 30), Position = UDim2.fromOffset(12, 5), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Ui.colors.ink, TextStrokeTransparency = 1, Parent = row }, 26)
-		Ui.label({ Text = Format.commas(tool.power) .. " straws a search", Size = UDim2.new(0.58, -12, 0, 22), Position = UDim2.fromOffset(12, 38), Font = Ui.body, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Ui.colors.grey, TextStrokeTransparency = 1, Parent = row }, 18)
-		local buy = Ui.button("", Ui.colors.green, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0.4, 0, 0, 48), Parent = row })
-		buy.Activated:Connect(function()
-			local ok, message = ask(Remotes.BuyTool, level)
-			notify.toast(message, ok and Ui.colors.green or Ui.colors.red)
-			if refreshers.Shop then
-				refreshers.Shop()
-			end
-		end)
-		buyButtons[level] = buy
-	end
-	local order = #Config.Tools
-	for _, item in ipairs(ROBUX) do
-		local id = if item.kind == "pass" then Config.GamePasses[item.key] else Config.Products[item.key]
-		if id and id ~= 0 then
-			order += 1
-			local row = Ui.make("Frame", { LayoutOrder = order, Size = UDim2.new(1, 0, 0, 66), BackgroundColor3 = Color3.fromRGB(226, 236, 250), Parent = shopBody }, { Ui.corner(10) })
-			Ui.label({ Text = item.title, Size = UDim2.new(0.62, -12, 0, 30), Position = UDim2.fromOffset(12, 5), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Ui.colors.ink, TextStrokeTransparency = 1, Parent = row }, 26)
-			Ui.label({ Text = item.text, Size = UDim2.new(0.62, -12, 0, 24), Position = UDim2.fromOffset(12, 37), Font = Ui.body, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Ui.colors.grey, TextStrokeTransparency = 1, Parent = row }, 16)
-			local buy = Ui.button("ROBUX", Ui.colors.blue, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0.34, 0, 0, 48), Parent = row })
-			buy.Activated:Connect(function()
-				if item.kind == "pass" then
-					MarketplaceService:PromptGamePassPurchase(player, id)
-				else
-					MarketplaceService:PromptProductPurchase(player, id)
-				end
-			end)
-		end
-	end
-	refreshers.Shop = function()
-		local coins, owned = player:GetAttribute("Coins") or 0, player:GetAttribute("Tool") or 1
-		for level, button in pairs(buyButtons) do
-			local tool = Config.Tools[level]
-			if level <= owned then
-				button.Text, button.BackgroundColor3 = "OWNED", Ui.colors.grey
-			elseif level == owned + 1 then
-				button.Text = "BUY " .. Format.short(tool.price)
-				button.BackgroundColor3 = if coins >= tool.price then Ui.colors.green else Ui.colors.red
-			else
-				button.Text, button.BackgroundColor3 = "LOCKED", Ui.colors.grey
-			end
-		end
-	end
-
-	-- Clue Book
-	local book, bookBody = Ui.window(gui, "Clue Book")
-	windows["Clue Book"] = book
-	refreshers["Clue Book"] = function()
-		for _, child in ipairs(bookBody:GetChildren()) do
-			if child:IsA("GuiObject") then
-				child:Destroy()
-			end
-		end
-		local n = 0
-		local function line(text, props)
-			n += 1
-			props = props or {}
-			props.LayoutOrder = n
-			props.Parent = bookBody
-			return Ui.paragraph(text, props)
-		end
-		line("CASE #" .. (gameState:GetAttribute("Case") or 1) .. ": " .. (gameState:GetAttribute("CaseTitle") or ""), { Font = Ui.font, TextSize = 26 })
-		line(gameState:GetAttribute("CaseIntro") or "", { TextColor3 = Ui.colors.grey })
-		local count = gameState:GetAttribute("ClueCount") or 0
-		line("Clues found: " .. #state.clues .. " of " .. count, { Font = Ui.font, TextSize = 22 })
-		if #state.clues == 0 then
-			line("None yet. Every search of any haystack can turn up a clue.")
-		end
-		for i, clue in ipairs(state.clues) do
-			line(i .. ". " .. clue.text, { TextColor3 = Ui.colors.blue })
-		end
-		local latest = state.clues[#state.clues]
-		local possible = {}
-		for _, id in ipairs(latest and latest.possible or {}) do
-			possible[id] = true
-		end
-		line("The haystacks:", { Font = Ui.font, TextSize = 22 })
-		for _, pile in ipairs(Piles) do
-			local out = latest ~= nil and not possible[pile.id]
-			local text = pile.name .. " (" .. pile.side .. ")" .. (if out then ": ruled out" elseif latest and #latest.possible == 1 then ": THE NEEDLE IS HERE!" else "")
-			line(text, { TextColor3 = if out then Ui.colors.grey else Ui.colors.ink })
-		end
-	end
-
-	-- Rebirth
-	local rebirth, rebirthBody = Ui.window(gui, "Rebirth")
-	windows.Rebirth = rebirth
-	local info = Ui.paragraph("", { LayoutOrder = 1, Parent = rebirthBody })
-	local go = Ui.button("REBIRTH", Ui.colors.purple, { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 56), Parent = rebirthBody })
-	go.Activated:Connect(function()
-		local ok, message = ask(Remotes.Rebirth)
-		notify.toast(message, ok and Ui.colors.purple or Ui.colors.red)
-		if ok then
-			rebirth.Visible = false
-		end
-	end)
-	refreshers.Rebirth = function()
-		local rebirths = player:GetAttribute("Rebirths") or 0
-		local cost = Economy.rebirthCost(rebirths)
-		info.Text = "Start again with 0 coins and the " .. Config.Tools[1].name .. ", and earn +"
-			.. math.floor(Config.RebirthCoinBonus * 100) .. "% coins on every search, forever.\n\n"
-			.. "Rebirths so far: " .. rebirths .. ".\nThis one costs " .. Format.short(cost) .. " coins. You have "
-			.. Format.short(player:GetAttribute("Coins") or 0) .. "."
-	end
-
-	player.AttributeChanged:Connect(function()
-		for key, frame in pairs(windows) do
-			if frame.Visible and key ~= "Clue Book" and refreshers[key] then
-				refreshers[key]()
-			end
-		end
-	end)
-
-	local panels = {}
-	panels.open = open
-	function panels.refresh()
-		if book.Visible then
-			refreshers["Clue Book"]()
-		end
-	end
-	return panels
+-- One line in the shop: a name, a description and a button.
+local function row(parent, order, name, text, colour)
+	local frame = Ui.make("Frame", { LayoutOrder = order, Size = UDim2.new(1, 0, 0, 66), BackgroundColor3 = colour or Ui.colors.paper, Parent = parent }, { Ui.corner(10) })
+	Ui.label({ Text = name, Size = UDim2.new(0.6, -12, 0, 30), Position = UDim2.fromOffset(12, 5), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Ui.colors.ink, TextStrokeTransparency = 1, Parent = frame }, 24)
+	local sub = Ui.label({ Text = text, Size = UDim2.new(0.6, -12, 0, 24), Position = UDim2.fromOffset(12, 37), Font = Ui.body, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Ui.colors.grey, TextStrokeTransparency = 1, Parent = frame }, 15)
+	local button = Ui.button("", Ui.colors.green, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0.37, 0, 0, 48), Parent = frame })
+	return button, sub
 end
 
-return Panels
+local function priceButton(button, price, owned, next_)
+	local coins = player:GetAttribute("Coins") or 0
+	if owned then
+		button.Text, button.BackgroundColor3 = "OWNED", Ui.colors.grey
+	elseif not next_ then
+		button.Text, button.BackgroundColor3 = "LOCKED", Ui.colors.grey
+	else
+		button.Text = "BUY " .. Format.short(price)
+		button.BackgroundColor3 = if coins >= price then Ui.colors.green else Ui.colors.red
+	end
+end
+
+function Shop.mount(gui, notify)
+	local frame, body = Ui.window(gui, "Shop")
+	frame.Size = UDim2.fromOffset(600, 520)
+	local tabs = Ui.make("Frame", { Size = UDim2.new(1, -24, 0, 40), Position = UDim2.fromOffset(12, 64), BackgroundTransparency = 1, Parent = frame }, { Ui.make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
+	body.Position = UDim2.fromOffset(12, 110)
+	body.Size = UDim2.new(1, -24, 1, -118)
+	local pages, refreshers, buttons = {}, {}, {}
+
+	local function buy(kind, index)
+		local ok, message = ask(Remotes.Buy, kind, index)
+		notify.toast(message, ok and Ui.colors.green or Ui.colors.red)
+		Shop.refresh()
+	end
+
+	local function page(name, colour, build)
+		local list = Ui.make("Frame", { Name = name, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Visible = false, Parent = body }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }) })
+		pages[name] = list
+		refreshers[name] = build(list)
+		local tab = Ui.button(name, colour, { LayoutOrder = #buttons + 1, Size = UDim2.new(0.19, 0, 1, 0), Parent = tabs })
+		table.insert(buttons, tab)
+		tab.Activated:Connect(function()
+			for key, p in pairs(pages) do
+				p.Visible = key == name
+			end
+			Shop.refresh()
+		end)
+	end
+
+	page("Tools", Ui.colors.green, function(list)
+		local rows = {}
+		for level, tool in ipairs(Config.Tools) do
+			rows[level] = row(list, level, tool.name, tool.power .. " straws a search")
+			rows[level].Activated:Connect(function()
+				buy("tool", level)
+			end)
+		end
+		return function()
+			local owned = player:GetAttribute("Tool") or 1
+			for level, button in ipairs(rows) do
+				priceButton(button, Config.Tools[level].price, level <= owned, level == owned + 1)
+			end
+		end
+	end)
+
+	page("Bags", Ui.colors.blue, function(list)
+		local rows = {}
+		for level, bag in ipairs(Config.Bags) do
+			rows[level] = row(list, level, bag.name, "holds " .. Format.commas(bag.size) .. " straws")
+			rows[level].Activated:Connect(function()
+				buy("bag", level)
+			end)
+		end
+		return function()
+			local owned = player:GetAttribute("Bag") or 1
+			for level, button in ipairs(rows) do
+				priceButton(button, Config.Bags[level].price, level <= owned, level == owned + 1)
+			end
+		end
+	end)
+
+	page("Machines", Ui.colors.wood, function(list)
+		local rows, subs = {}, {}
+		for i, m in ipairs(Config.Machines) do
+			rows[i], subs[i] = row(list, i, m.name, "")
+			rows[i].Activated:Connect(function()
+				buy("machine", i)
+			end)
+		end
+		return function()
+			for i, m in ipairs(Config.Machines) do
+				local owned = player:GetAttribute("Machine_" .. i) or 0
+				subs[i].Text = "+" .. m.rate .. " straws a second each. You own " .. owned .. " of " .. m.max .. "."
+				priceButton(rows[i], Economy.machinePrice(i, owned), owned >= m.max, owned < m.max)
+				if owned >= m.max then
+					rows[i].Text = "MAXED"
+				end
+			end
+		end
+	end)
+
+	page("Perks", Ui.colors.purple, function(list)
+		local rows, subs = {}, {}
+		for i, perk in ipairs(Config.Perks) do
+			rows[i], subs[i] = row(list, i, perk.name, perk.text)
+			rows[i].Activated:Connect(function()
+				buy("perk", i)
+			end)
+		end
+		local note = Ui.paragraph("Perks belong to the tool you hold. A new tool starts with none.", { LayoutOrder = 9, TextColor3 = Ui.colors.grey, Parent = list })
+		return function()
+			local d = { tool = player:GetAttribute("Tool") or 1, perks = {} }
+			for _, perk in ipairs(Config.Perks) do
+				d.perks[perk.id] = player:GetAttribute("Perk_" .. perk.id) or 0
+			end
+			for i, perk in ipairs(Config.Perks) do
+				local level = d.perks[perk.id]
+				subs[i].Text = perk.text .. ". Level " .. level .. "/" .. perk.levels .. " on your " .. Economy.tool(d.tool).name .. "."
+				priceButton(rows[i], Economy.perkPrice(d, i), level >= perk.levels, level < perk.levels)
+				if level >= perk.levels then
+					rows[i].Text = "MAXED"
+				end
+			end
+			note.Visible = true
+		end
+	end)
+
+	page("Robux", Ui.colors.red, function(list)
+		local any = false
+		for order, item in ipairs(ROBUX) do
+			local id = if item.kind == "pass" then Config.GamePasses[item.key] else Config.Products[item.key]
+			if id and id ~= 0 then
+				any = true
+				local button = row(list, order, item.title, item.text, Color3.fromRGB(226, 236, 250))
+				button.Text, button.BackgroundColor3 = "ROBUX", Ui.colors.blue
+				button.Activated:Connect(function()
+					if item.kind == "pass" then
+						MarketplaceService:PromptGamePassPurchase(player, id)
+					else
+						MarketplaceService:PromptProductPurchase(player, id)
+					end
+				end)
+			end
+		end
+		if not any then
+			Ui.paragraph("Robux items appear here once the game is published and the items are created.", { TextColor3 = Ui.colors.grey, Parent = list })
+		end
+		return function() end
+	end)
+
+	pages.Tools.Visible = true
+
+	function Shop.refresh()
+		if not frame.Visible then
+			return
+		end
+		for name, p in pairs(pages) do
+			if p.Visible then
+				refreshers[name]()
+			end
+		end
+	end
+	player.AttributeChanged:Connect(Shop.refresh)
+	return frame
+end
+
+return Shop
 ]]></ProtectedString>
 					</Properties>
 				</Item>
@@ -2665,12 +2848,11 @@ return Ui
 				<Item class="ModuleScript" referent="RBX00027">
 					<Properties>
 						<string name="Name">WorldFx</string>
-						<ProtectedString name="Source"><![CDATA[-- What you see in the world: a label over each haystack (name, straws left, what your clues
--- say), straw bursts and floating coins when you search, and the windmill's turning sails.
+						<ProtectedString name="Source"><![CDATA[-- What you see in the world: labels over the haystacks and the merchant, straw bursts and
+-- floating text when you search, your own machines in the yard, and the loft hatch.
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -2682,206 +2864,145 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 local WorldFx = {}
-local tags = {} -- [pile id] = { model, core, count, fill, status, attachment, emitter }
-local possible = nil -- pile ids your latest clue still allows (nil before your first clue)
-local solved = false
-local here = nil -- the panel for the haystack you're standing at
+local mounds = {} -- "hay" | "gold" -> { core, attachment, emitter }
+local yard = nil
 
-local function refreshTag(tag)
-	local remaining = tag.model:GetAttribute("Remaining") or 0
-	local total = tag.model:GetAttribute("Total") or 1
-	tag.count.Text = Format.commas(remaining) .. " straws"
-	tag.fill.Size = UDim2.fromScale(math.clamp(remaining / total, 0, 1), 1)
-	local id = tag.model.Name
-	if remaining <= 0 then
-		tag.status.Text, tag.status.TextColor3 = "SEARCHED OUT", Ui.colors.grey
-	elseif possible and not possible.set[id] then
-		tag.status.Text, tag.status.TextColor3 = "RULED OUT", Color3.fromRGB(255, 120, 100)
-	elseif possible and possible.count == 1 and not solved then
-		tag.status.Text, tag.status.TextColor3 = "THE NEEDLE IS HERE!", Color3.fromRGB(140, 255, 140)
-	elseif possible then
-		tag.status.Text, tag.status.TextColor3 = "COULD BE HERE", Ui.colors.hay
-	else
-		tag.status.Text = ""
+local function billboard(adornee, size, offset, lines)
+	local gui = Ui.make("BillboardGui", { Adornee = adornee, Size = size, StudsOffset = offset, MaxDistance = 400, LightInfluence = 0, ResetOnSpawn = false, Parent = playerGui })
+	local out = {}
+	local y = 0
+	for _, line in ipairs(lines) do
+		out[line.key] = Ui.label({ Text = line.text or "", Size = UDim2.fromScale(1, line.h), Position = UDim2.fromScale(0, y), TextColor3 = line.color or Ui.colors.white, Parent = gui }, line.max or 60)
+		y += line.h
 	end
+	return gui, out
 end
 
-local function makeTag(model)
+local function tagMound(model, key, title)
 	local core = model:WaitForChild("Core")
-	local gui = Ui.make("BillboardGui", {
-		Name = "PileTag_" .. model.Name,
-		Adornee = core,
-		Size = UDim2.fromScale(16, 6),
-		StudsOffset = Vector3.new(0, 17, 0),
-		MaxDistance = 350,
-		LightInfluence = 0,
-		ResetOnSpawn = false,
-		Parent = playerGui,
-	})
-	Ui.label({ Text = (model:GetAttribute("DisplayName") or model.Name) .. " haystack", Size = UDim2.fromScale(1, 0.32), Parent = gui }, 60)
-	local count = Ui.label({ Size = UDim2.fromScale(1, 0.22), Position = UDim2.fromScale(0, 0.32), TextColor3 = Ui.colors.hay, Parent = gui }, 44)
-	local bar = Ui.make("Frame", { Size = UDim2.fromScale(0.8, 0.1), Position = UDim2.fromScale(0.1, 0.57), BackgroundColor3 = Ui.colors.woodDark, Parent = gui }, { Ui.corner(6) })
-	local fill = Ui.make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Ui.colors.hay, Parent = bar }, { Ui.corner(6) })
-	local status = Ui.label({ Size = UDim2.fromScale(1, 0.26), Position = UDim2.fromScale(0, 0.72), Parent = gui }, 44)
-	local attachment = Ui.make("Attachment", { Name = "StrawFx", Parent = core })
+	local attachment = Ui.make("Attachment", { Name = "StrawFx", Position = Vector3.new(0, core.Size.Y * 0.4, 0), Parent = core })
 	local emitter = Ui.make("ParticleEmitter", {
 		Rate = 0,
-		Lifetime = NumberRange.new(0.6, 1.1),
-		Speed = NumberRange.new(14, 26),
-		SpreadAngle = Vector2.new(65, 65),
+		Lifetime = NumberRange.new(0.6, 1.2),
+		Speed = NumberRange.new(16, 30),
+		SpreadAngle = Vector2.new(70, 70),
 		Acceleration = Vector3.new(0, -40, 0),
-		Size = NumberSequence.new(0.7, 0.2),
+		Size = NumberSequence.new(0.8, 0.2),
 		Rotation = NumberRange.new(0, 360),
 		RotSpeed = NumberRange.new(-200, 200),
-		Color = ColorSequence.new(Color3.fromRGB(242, 212, 120)),
-		LightEmission = 0.15,
+		Color = ColorSequence.new(if key == "gold" then Color3.fromRGB(255, 220, 90) else Color3.fromRGB(242, 212, 120)),
+		LightEmission = if key == "gold" then 0.6 else 0.15,
 		EmissionDirection = Enum.NormalId.Top,
 		Parent = attachment,
 	})
-	local tag = { model = model, core = core, gui = gui, count = count, fill = fill, status = status, attachment = attachment, emitter = emitter }
-	tags[model.Name] = tag
-	model:GetAttributeChangedSignal("Remaining"):Connect(function()
-		refreshTag(tag)
-	end)
-	refreshTag(tag)
+	billboard(core, UDim2.fromScale(22, 5), Vector3.new(0, core.Size.Y * 0.5 + 10, 0), {
+		{ key = "title", text = title, h = 0.5, color = if key == "gold" then Ui.colors.hay else Ui.colors.white },
+		{ key = "sub", text = "Hold your fork and click to search", h = 0.5, color = Ui.colors.cream, max = 44 },
+	})
+	mounds[key] = { core = core, attachment = attachment, emitter = emitter }
 end
 
-local function floatText(tag, text, colour)
-	local gui = Ui.make("BillboardGui", {
-		Adornee = tag.core,
-		Size = UDim2.fromScale(10, 2.5),
-		StudsOffset = Vector3.new(math.random(-4, 4), tag.core.Size.Y * 0.5 + 2, 0),
-		LightInfluence = 0,
-		AlwaysOnTop = true,
-		ResetOnSpawn = false,
-		Parent = playerGui,
-	})
+local function floatText(core, text, colour)
+	local gui = Ui.make("BillboardGui", { Adornee = core, Size = UDim2.fromScale(12, 2.5), StudsOffset = Vector3.new(math.random(-6, 6), core.Size.Y * 0.5 + 2, 0), LightInfluence = 0, AlwaysOnTop = true, ResetOnSpawn = false, Parent = playerGui })
 	local label = Ui.label({ Text = text, Size = UDim2.fromScale(1, 1), TextColor3 = colour, Parent = gui }, 60)
-	TweenService:Create(gui, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { StudsOffset = gui.StudsOffset + Vector3.new(0, 4, 0) }):Play()
+	TweenService:Create(gui, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { StudsOffset = gui.StudsOffset + Vector3.new(0, 5, 0) }):Play()
 	TweenService:Create(label, TweenInfo.new(1), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
 	Debris:AddItem(gui, 1.1)
 end
 
-local function burst(tag, count)
-	tag.attachment.Position = Vector3.new(0, tag.core.Size.Y * 0.42, 0)
-	tag.emitter:Emit(count)
-end
-
 function WorldFx.searched(message)
-	local tag = tags[message.pile]
-	if not tag then
+	local m = mounds[message.where or "hay"]
+	if not m then
 		return
 	end
-	if message.empty then
-		floatText(tag, "Nothing left here!", Ui.colors.grey)
+	m.emitter:Emit(math.clamp(4 + math.floor(message.straws / 2), 4, 24))
+	floatText(m.core, "+" .. Format.commas(message.straws) .. (if message.where == "gold" then " golden straw" else " straw"), Ui.colors.hay)
+end
+
+function WorldFx.celebrate(golden)
+	local m = mounds[if golden then "gold" else "hay"]
+	if m then
+		m.emitter:Emit(120)
+		floatText(m.core, if golden then "GOLDEN NEEDLE!" else "NEEDLE FOUND!", Color3.fromRGB(140, 255, 140))
+	end
+end
+
+-- Your machines, shown in the yard: one small model per machine you own (only you see them).
+local function refreshYard()
+	if not yard then
 		return
 	end
-	burst(tag, math.clamp(math.floor(message.straws / 500) + 6, 6, 24))
-	floatText(tag, "+" .. Format.short(message.coins) .. " coins", Ui.colors.hay)
-end
-
-function WorldFx.celebrate(pileId)
-	local tag = tags[pileId]
-	if tag then
-		burst(tag, 80)
-		floatText(tag, "NEEDLE FOUND!", Color3.fromRGB(140, 255, 140))
-	end
-end
-
--- clues: your clues this case, in order. The latest one says which haystacks are still possible.
-function WorldFx.setClues(clues, isSolved)
-	solved = isSolved == true
-	local latest = clues[#clues]
-	if latest then
-		possible = { set = {}, count = #latest.possible }
-		for _, id in ipairs(latest.possible) do
-			possible.set[id] = true
-		end
-	else
-		possible = nil
-	end
-	for _, tag in pairs(tags) do
-		refreshTag(tag)
-	end
-end
-
-local function spinWindmill()
-	local landmarks = workspace:WaitForChild("Landmarks", 60)
-	local windmill = landmarks and landmarks:WaitForChild("windmill", 30)
-	local blades = windmill and windmill:WaitForChild("Blades", 30)
-	if not blades then
+	yard:ClearAllChildren()
+	local origin = workspace:FindFirstChild("Farm") and workspace.Farm:FindFirstChild("YardSign")
+	local base = if origin then origin.Position - Vector3.new(0, 7, -17) + Vector3.new(0, 0, 4) else nil
+	if not base then
 		return
 	end
-	RunService.RenderStepped:Connect(function(dt)
-		blades:PivotTo(blades:GetPivot() * CFrame.Angles(0, 0, dt * 0.5))
-	end)
-end
-
--- Close to a haystack its floating label sits behind the top bar, so it hides and the
--- same facts show in a panel above the hotbar instead.
-local function buildHerePanel(gui)
-	local frame = Ui.make("Frame", {
-		Name = "Here",
-		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -96),
-		Size = UDim2.fromOffset(380, 76),
-		BackgroundColor3 = Ui.colors.wood,
-		Visible = false,
-		Parent = gui,
-	}, { Ui.corner(14), Ui.stroke(Ui.colors.woodDark, 3) })
-	Ui.autoScale(frame)
-	here = {
-		frame = frame,
-		name = Ui.label({ Size = UDim2.new(1, -20, 0, 26), Position = UDim2.fromOffset(10, 4), Parent = frame }, 26),
-		count = Ui.label({ Size = UDim2.new(1, -20, 0, 20), Position = UDim2.fromOffset(10, 31), TextColor3 = Ui.colors.hay, Parent = frame }, 20),
-		status = Ui.label({ Size = UDim2.new(1, -20, 0, 20), Position = UDim2.fromOffset(10, 52), Parent = frame }, 20),
-	}
-end
-
-local function watchNearby()
-	while true do
-		task.wait(0.2)
-		local character = player.Character
-		local root = character and character:FindFirstChild("HumanoidRootPart")
-		local nearest, best = nil, Config.SearchRange + 4
-		if root then
-			for _, tag in pairs(tags) do
-				local centre = tag.model:GetPivot().Position
-				local flat = Vector3.new(root.Position.X - centre.X, 0, root.Position.Z - centre.Z).Magnitude
-				if flat < best then
-					nearest, best = tag, flat
-				end
+	local n = 0
+	for i, m in ipairs(Config.Machines) do
+		for _ = 1, player:GetAttribute("Machine_" .. i) or 0 do
+			local col, rowi = n % 8, math.floor(n / 8)
+			local cf = CFrame.new(base + Vector3.new(-17.5 + col * 5, 0, 2 + rowi * 6))
+			local body = Ui.make("Part", { Anchored = true, CanCollide = false, CanQuery = false, Size = Vector3.new(3, 2.4 + i * 0.4, 3), CFrame = cf * CFrame.new(0, 1.2 + i * 0.2, 0), Color = Color3.fromRGB(m.color[1], m.color[2], m.color[3]), Material = Enum.Material.Metal, Parent = yard })
+			local wheel = Ui.make("Part", { Anchored = true, CanCollide = false, CanQuery = false, Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.4, 2.2, 2.2), CFrame = cf * CFrame.new(0, 2.6 + i * 0.4, -1.6) * CFrame.Angles(0, math.rad(90), 0), Color = Color3.fromRGB(80, 70, 60), Material = Enum.Material.Wood, Parent = yard })
+			Ui.make("UIScale", { Parent = body }) -- harmless marker so the model reads as "machine"
+			TweenService:Create(wheel, TweenInfo.new(2 - i * 0.2, Enum.EasingStyle.Linear, Enum.EasingDirection.In, -1), { CFrame = wheel.CFrame * CFrame.Angles(math.rad(180), 0, 0) }):Play()
+			if n == 0 then
+				billboard(body, UDim2.fromScale(14, 3), Vector3.new(0, 5, 0), { { key = "t", text = "Your machines", h = 1, color = Ui.colors.hay } })
 			end
-		end
-		for _, tag in pairs(tags) do
-			tag.gui.Enabled = tag ~= nearest
-		end
-		if here then
-			here.frame.Visible = nearest ~= nil
-			if nearest then
-				here.name.Text = (nearest.model:GetAttribute("DisplayName") or "") .. " haystack (" .. (nearest.model:GetAttribute("Side") or "") .. ")"
-				here.count.Text = nearest.count.Text .. " left. Click to search!"
-				here.status.Text = if nearest.status.Text ~= "" then nearest.status.Text else "Find clues to rule haystacks out"
-				here.status.TextColor3 = if nearest.status.Text ~= "" then nearest.status.TextColor3 else Ui.colors.white
-			end
+			n += 1
 		end
 	end
 end
 
-function WorldFx.start(gui)
-	buildHerePanel(gui)
-	task.spawn(watchNearby)
+local function tagMerchant()
+	local farm = workspace:WaitForChild("Farm", 60)
+	local head = farm and farm:WaitForChild("MerchantHead", 30)
+	if head then
+		billboard(head, UDim2.fromScale(16, 4), Vector3.new(0, 4, 0), {
+			{ key = "t", text = "Hay Merchant", h = 0.5, color = Ui.colors.hay },
+			{ key = "s", text = "Walk up and press SELL", h = 0.5, color = Ui.colors.cream, max = 44 },
+		})
+	end
+end
+
+local function tagHatch()
+	local farm = workspace:WaitForChild("Farm", 60)
+	local hatch = farm and farm:WaitForChild("LoftHatch", 30)
+	if hatch then
+		local _, labels = billboard(hatch, UDim2.fromScale(16, 4), Vector3.new(0, 5, 0), {
+			{ key = "t", text = "The Golden Loft", h = 0.5, color = Ui.colors.hay },
+			{ key = "s", text = "", h = 0.5, color = Ui.colors.cream, max = 44 },
+		})
+		local function refresh()
+			labels.s.Text = if player:GetAttribute("LoftOpen") then "Walk up to climb in" else "Locked: finish all 10 achievements"
+		end
+		player:GetAttributeChangedSignal("LoftOpen"):Connect(refresh)
+		refresh()
+	end
+end
+
+function WorldFx.start()
 	task.spawn(function()
 		local folder = workspace:WaitForChild("Haystacks", 60)
-		if not folder then
-			return
+		if folder then
+			tagMound(folder:WaitForChild("Haystack", 30), "hay", "THE HAYSTACK: " .. Format.commas(Config.TotalStraws) .. " straws, 1 needle")
+			tagMound(folder:WaitForChild("GoldenHaystack", 30), "gold", "THE GOLDEN HAYSTACK: golden straw pays 20x")
 		end
-		for _, model in ipairs(folder:GetChildren()) do
-			task.spawn(makeTag, model)
-		end
-		folder.ChildAdded:Connect(makeTag)
 	end)
-	task.spawn(spinWindmill)
+	task.spawn(tagMerchant)
+	task.spawn(tagHatch)
+	yard = Instance.new("Folder")
+	yard.Name = "MyMachines"
+	yard.Parent = workspace
+	task.spawn(function()
+		workspace:WaitForChild("Farm", 60)
+		task.wait(1)
+		refreshYard()
+		for i in ipairs(Config.Machines) do
+			player:GetAttributeChangedSignal("Machine_" .. i):Connect(refreshYard)
+		end
+	end)
 end
 
 return WorldFx

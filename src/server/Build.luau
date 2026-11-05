@@ -27,6 +27,10 @@ function Build.part(spec)
 	p.Transparency = spec.transparency or 0
 	p.TopSurface = Enum.SurfaceType.Smooth
 	p.BottomSurface = Enum.SurfaceType.Smooth
+	if spec.collide == false then
+		p.CanQuery = false
+		p.CanTouch = false
+	end
 	p.Parent = spec.parent
 	return p
 end

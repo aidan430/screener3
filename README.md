@@ -1,8 +1,9 @@
 # Needle in the Haystack
 
-An original Roblox mystery simulator. A needle is hidden in one of ten haystacks on Hollow
-Creek Farm: 5,000,000 straws in all. Search with your fork, earn coins, buy better tools, and
-follow the clues to the right haystack before anyone else.
+An original Roblox simulator. One giant haystack of 5,000,000 straws hides a needle. Search
+with your fork, sell your straw to the merchant, buy better tools, bags, machines and perks,
+and work through ten achievements to open the secret Golden Loft. Finding the needle takes
+about a day of play.
 
 ## Play it in Roblox Studio (about 15 minutes the first time)
 
@@ -12,8 +13,9 @@ follow the clues to the right haystack before anyone else.
    open the file, then *Download raw file*).
 3. **Open it.** Double-click the file, or in Studio choose *File*, then *Open from File*.
    The world is empty until you press Play: the farm is built when the game starts.
-4. **Play-test.** Press *Play* (or F5). Walk to a haystack (WASD), then click with your fork
-   to search. Press *Stop* (Shift+F5) to finish.
+4. **Play-test.** Press *Play* (or F5). Walk north to the haystack (WASD), click with your
+   fork to search, then carry your straw to the merchant (east) and press SELL. Press *Stop*
+   (Shift+F5) to finish.
 5. **If something breaks**, open *View*, then *Output*. Red lines are errors: take a
    screenshot and send it to me, and I'll fix it.
 
@@ -33,8 +35,9 @@ Progress isn't saved while testing an unpublished game; that is normal.
 Robux items are built in but switched off. To turn one on:
 
 1. On create.roblox.com open your game, then *Monetization*.
-2. *Passes*: create **2x Coins** and **Auto Search**, and set their prices.
-   *Developer Products*: create **Clue Hint** and set its price.
+2. *Passes*: create **Auto Sell**, **Double Machines** and **VIP**, and set their prices.
+   *Developer Products*: create **2x Speed (1 hour)**, **2x Coins (1 hour)**, **Lucky Charm
+   (1 hour)**, **Straw Blast** and **Merchant's Whistle x10**, and set their prices.
 3. Copy each item's ID (a long number) and send me the IDs. They aren't secret. I'll put
    them into the game and rebuild the file. Open the new file and publish again.
 

@@ -1,9 +1,8 @@
--- What you see in the world: a label over each haystack (name, straws left, what your clues
--- say), straw bursts and floating coins when you search, and the windmill's turning sails.
+-- What you see in the world: labels over the haystacks and the merchant, straw bursts and
+-- floating text when you search, your own machines in the yard, and the loft hatch.
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -15,206 +14,145 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 local WorldFx = {}
-local tags = {} -- [pile id] = { model, core, count, fill, status, attachment, emitter }
-local possible = nil -- pile ids your latest clue still allows (nil before your first clue)
-local solved = false
-local here = nil -- the panel for the haystack you're standing at
+local mounds = {} -- "hay" | "gold" -> { core, attachment, emitter }
+local yard = nil
 
-local function refreshTag(tag)
-	local remaining = tag.model:GetAttribute("Remaining") or 0
-	local total = tag.model:GetAttribute("Total") or 1
-	tag.count.Text = Format.commas(remaining) .. " straws"
-	tag.fill.Size = UDim2.fromScale(math.clamp(remaining / total, 0, 1), 1)
-	local id = tag.model.Name
-	if remaining <= 0 then
-		tag.status.Text, tag.status.TextColor3 = "SEARCHED OUT", Ui.colors.grey
-	elseif possible and not possible.set[id] then
-		tag.status.Text, tag.status.TextColor3 = "RULED OUT", Color3.fromRGB(255, 120, 100)
-	elseif possible and possible.count == 1 and not solved then
-		tag.status.Text, tag.status.TextColor3 = "THE NEEDLE IS HERE!", Color3.fromRGB(140, 255, 140)
-	elseif possible then
-		tag.status.Text, tag.status.TextColor3 = "COULD BE HERE", Ui.colors.hay
-	else
-		tag.status.Text = ""
+local function billboard(adornee, size, offset, lines)
+	local gui = Ui.make("BillboardGui", { Adornee = adornee, Size = size, StudsOffset = offset, MaxDistance = 400, LightInfluence = 0, ResetOnSpawn = false, Parent = playerGui })
+	local out = {}
+	local y = 0
+	for _, line in ipairs(lines) do
+		out[line.key] = Ui.label({ Text = line.text or "", Size = UDim2.fromScale(1, line.h), Position = UDim2.fromScale(0, y), TextColor3 = line.color or Ui.colors.white, Parent = gui }, line.max or 60)
+		y += line.h
 	end
+	return gui, out
 end
 
-local function makeTag(model)
+local function tagMound(model, key, title)
 	local core = model:WaitForChild("Core")
-	local gui = Ui.make("BillboardGui", {
-		Name = "PileTag_" .. model.Name,
-		Adornee = core,
-		Size = UDim2.fromScale(16, 6),
-		StudsOffset = Vector3.new(0, 17, 0),
-		MaxDistance = 350,
-		LightInfluence = 0,
-		ResetOnSpawn = false,
-		Parent = playerGui,
-	})
-	Ui.label({ Text = (model:GetAttribute("DisplayName") or model.Name) .. " haystack", Size = UDim2.fromScale(1, 0.32), Parent = gui }, 60)
-	local count = Ui.label({ Size = UDim2.fromScale(1, 0.22), Position = UDim2.fromScale(0, 0.32), TextColor3 = Ui.colors.hay, Parent = gui }, 44)
-	local bar = Ui.make("Frame", { Size = UDim2.fromScale(0.8, 0.1), Position = UDim2.fromScale(0.1, 0.57), BackgroundColor3 = Ui.colors.woodDark, Parent = gui }, { Ui.corner(6) })
-	local fill = Ui.make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Ui.colors.hay, Parent = bar }, { Ui.corner(6) })
-	local status = Ui.label({ Size = UDim2.fromScale(1, 0.26), Position = UDim2.fromScale(0, 0.72), Parent = gui }, 44)
-	local attachment = Ui.make("Attachment", { Name = "StrawFx", Parent = core })
+	local attachment = Ui.make("Attachment", { Name = "StrawFx", Position = Vector3.new(0, core.Size.Y * 0.4, 0), Parent = core })
 	local emitter = Ui.make("ParticleEmitter", {
 		Rate = 0,
-		Lifetime = NumberRange.new(0.6, 1.1),
-		Speed = NumberRange.new(14, 26),
-		SpreadAngle = Vector2.new(65, 65),
+		Lifetime = NumberRange.new(0.6, 1.2),
+		Speed = NumberRange.new(16, 30),
+		SpreadAngle = Vector2.new(70, 70),
 		Acceleration = Vector3.new(0, -40, 0),
-		Size = NumberSequence.new(0.7, 0.2),
+		Size = NumberSequence.new(0.8, 0.2),
 		Rotation = NumberRange.new(0, 360),
 		RotSpeed = NumberRange.new(-200, 200),
-		Color = ColorSequence.new(Color3.fromRGB(242, 212, 120)),
-		LightEmission = 0.15,
+		Color = ColorSequence.new(if key == "gold" then Color3.fromRGB(255, 220, 90) else Color3.fromRGB(242, 212, 120)),
+		LightEmission = if key == "gold" then 0.6 else 0.15,
 		EmissionDirection = Enum.NormalId.Top,
 		Parent = attachment,
 	})
-	local tag = { model = model, core = core, gui = gui, count = count, fill = fill, status = status, attachment = attachment, emitter = emitter }
-	tags[model.Name] = tag
-	model:GetAttributeChangedSignal("Remaining"):Connect(function()
-		refreshTag(tag)
-	end)
-	refreshTag(tag)
+	billboard(core, UDim2.fromScale(22, 5), Vector3.new(0, core.Size.Y * 0.5 + 10, 0), {
+		{ key = "title", text = title, h = 0.5, color = if key == "gold" then Ui.colors.hay else Ui.colors.white },
+		{ key = "sub", text = "Hold your fork and click to search", h = 0.5, color = Ui.colors.cream, max = 44 },
+	})
+	mounds[key] = { core = core, attachment = attachment, emitter = emitter }
 end
 
-local function floatText(tag, text, colour)
-	local gui = Ui.make("BillboardGui", {
-		Adornee = tag.core,
-		Size = UDim2.fromScale(10, 2.5),
-		StudsOffset = Vector3.new(math.random(-4, 4), tag.core.Size.Y * 0.5 + 2, 0),
-		LightInfluence = 0,
-		AlwaysOnTop = true,
-		ResetOnSpawn = false,
-		Parent = playerGui,
-	})
+local function floatText(core, text, colour)
+	local gui = Ui.make("BillboardGui", { Adornee = core, Size = UDim2.fromScale(12, 2.5), StudsOffset = Vector3.new(math.random(-6, 6), core.Size.Y * 0.5 + 2, 0), LightInfluence = 0, AlwaysOnTop = true, ResetOnSpawn = false, Parent = playerGui })
 	local label = Ui.label({ Text = text, Size = UDim2.fromScale(1, 1), TextColor3 = colour, Parent = gui }, 60)
-	TweenService:Create(gui, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { StudsOffset = gui.StudsOffset + Vector3.new(0, 4, 0) }):Play()
+	TweenService:Create(gui, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { StudsOffset = gui.StudsOffset + Vector3.new(0, 5, 0) }):Play()
 	TweenService:Create(label, TweenInfo.new(1), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
 	Debris:AddItem(gui, 1.1)
 end
 
-local function burst(tag, count)
-	tag.attachment.Position = Vector3.new(0, tag.core.Size.Y * 0.42, 0)
-	tag.emitter:Emit(count)
-end
-
 function WorldFx.searched(message)
-	local tag = tags[message.pile]
-	if not tag then
+	local m = mounds[message.where or "hay"]
+	if not m then
 		return
 	end
-	if message.empty then
-		floatText(tag, "Nothing left here!", Ui.colors.grey)
+	m.emitter:Emit(math.clamp(4 + math.floor(message.straws / 2), 4, 24))
+	floatText(m.core, "+" .. Format.commas(message.straws) .. (if message.where == "gold" then " golden straw" else " straw"), Ui.colors.hay)
+end
+
+function WorldFx.celebrate(golden)
+	local m = mounds[if golden then "gold" else "hay"]
+	if m then
+		m.emitter:Emit(120)
+		floatText(m.core, if golden then "GOLDEN NEEDLE!" else "NEEDLE FOUND!", Color3.fromRGB(140, 255, 140))
+	end
+end
+
+-- Your machines, shown in the yard: one small model per machine you own (only you see them).
+local function refreshYard()
+	if not yard then
 		return
 	end
-	burst(tag, math.clamp(math.floor(message.straws / 500) + 6, 6, 24))
-	floatText(tag, "+" .. Format.short(message.coins) .. " coins", Ui.colors.hay)
-end
-
-function WorldFx.celebrate(pileId)
-	local tag = tags[pileId]
-	if tag then
-		burst(tag, 80)
-		floatText(tag, "NEEDLE FOUND!", Color3.fromRGB(140, 255, 140))
-	end
-end
-
--- clues: your clues this case, in order. The latest one says which haystacks are still possible.
-function WorldFx.setClues(clues, isSolved)
-	solved = isSolved == true
-	local latest = clues[#clues]
-	if latest then
-		possible = { set = {}, count = #latest.possible }
-		for _, id in ipairs(latest.possible) do
-			possible.set[id] = true
-		end
-	else
-		possible = nil
-	end
-	for _, tag in pairs(tags) do
-		refreshTag(tag)
-	end
-end
-
-local function spinWindmill()
-	local landmarks = workspace:WaitForChild("Landmarks", 60)
-	local windmill = landmarks and landmarks:WaitForChild("windmill", 30)
-	local blades = windmill and windmill:WaitForChild("Blades", 30)
-	if not blades then
+	yard:ClearAllChildren()
+	local origin = workspace:FindFirstChild("Farm") and workspace.Farm:FindFirstChild("YardSign")
+	local base = if origin then origin.Position - Vector3.new(0, 7, -17) + Vector3.new(0, 0, 4) else nil
+	if not base then
 		return
 	end
-	RunService.RenderStepped:Connect(function(dt)
-		blades:PivotTo(blades:GetPivot() * CFrame.Angles(0, 0, dt * 0.5))
-	end)
-end
-
--- Close to a haystack its floating label sits behind the top bar, so it hides and the
--- same facts show in a panel above the hotbar instead.
-local function buildHerePanel(gui)
-	local frame = Ui.make("Frame", {
-		Name = "Here",
-		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -96),
-		Size = UDim2.fromOffset(380, 76),
-		BackgroundColor3 = Ui.colors.wood,
-		Visible = false,
-		Parent = gui,
-	}, { Ui.corner(14), Ui.stroke(Ui.colors.woodDark, 3) })
-	Ui.autoScale(frame)
-	here = {
-		frame = frame,
-		name = Ui.label({ Size = UDim2.new(1, -20, 0, 26), Position = UDim2.fromOffset(10, 4), Parent = frame }, 26),
-		count = Ui.label({ Size = UDim2.new(1, -20, 0, 20), Position = UDim2.fromOffset(10, 31), TextColor3 = Ui.colors.hay, Parent = frame }, 20),
-		status = Ui.label({ Size = UDim2.new(1, -20, 0, 20), Position = UDim2.fromOffset(10, 52), Parent = frame }, 20),
-	}
-end
-
-local function watchNearby()
-	while true do
-		task.wait(0.2)
-		local character = player.Character
-		local root = character and character:FindFirstChild("HumanoidRootPart")
-		local nearest, best = nil, Config.SearchRange + 4
-		if root then
-			for _, tag in pairs(tags) do
-				local centre = tag.model:GetPivot().Position
-				local flat = Vector3.new(root.Position.X - centre.X, 0, root.Position.Z - centre.Z).Magnitude
-				if flat < best then
-					nearest, best = tag, flat
-				end
+	local n = 0
+	for i, m in ipairs(Config.Machines) do
+		for _ = 1, player:GetAttribute("Machine_" .. i) or 0 do
+			local col, rowi = n % 8, math.floor(n / 8)
+			local cf = CFrame.new(base + Vector3.new(-17.5 + col * 5, 0, 2 + rowi * 6))
+			local body = Ui.make("Part", { Anchored = true, CanCollide = false, CanQuery = false, Size = Vector3.new(3, 2.4 + i * 0.4, 3), CFrame = cf * CFrame.new(0, 1.2 + i * 0.2, 0), Color = Color3.fromRGB(m.color[1], m.color[2], m.color[3]), Material = Enum.Material.Metal, Parent = yard })
+			local wheel = Ui.make("Part", { Anchored = true, CanCollide = false, CanQuery = false, Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.4, 2.2, 2.2), CFrame = cf * CFrame.new(0, 2.6 + i * 0.4, -1.6) * CFrame.Angles(0, math.rad(90), 0), Color = Color3.fromRGB(80, 70, 60), Material = Enum.Material.Wood, Parent = yard })
+			Ui.make("UIScale", { Parent = body }) -- harmless marker so the model reads as "machine"
+			TweenService:Create(wheel, TweenInfo.new(2 - i * 0.2, Enum.EasingStyle.Linear, Enum.EasingDirection.In, -1), { CFrame = wheel.CFrame * CFrame.Angles(math.rad(180), 0, 0) }):Play()
+			if n == 0 then
+				billboard(body, UDim2.fromScale(14, 3), Vector3.new(0, 5, 0), { { key = "t", text = "Your machines", h = 1, color = Ui.colors.hay } })
 			end
-		end
-		for _, tag in pairs(tags) do
-			tag.gui.Enabled = tag ~= nearest
-		end
-		if here then
-			here.frame.Visible = nearest ~= nil
-			if nearest then
-				here.name.Text = (nearest.model:GetAttribute("DisplayName") or "") .. " haystack (" .. (nearest.model:GetAttribute("Side") or "") .. ")"
-				here.count.Text = nearest.count.Text .. " left. Click to search!"
-				here.status.Text = if nearest.status.Text ~= "" then nearest.status.Text else "Find clues to rule haystacks out"
-				here.status.TextColor3 = if nearest.status.Text ~= "" then nearest.status.TextColor3 else Ui.colors.white
-			end
+			n += 1
 		end
 	end
 end
 
-function WorldFx.start(gui)
-	buildHerePanel(gui)
-	task.spawn(watchNearby)
+local function tagMerchant()
+	local farm = workspace:WaitForChild("Farm", 60)
+	local head = farm and farm:WaitForChild("MerchantHead", 30)
+	if head then
+		billboard(head, UDim2.fromScale(16, 4), Vector3.new(0, 4, 0), {
+			{ key = "t", text = "Hay Merchant", h = 0.5, color = Ui.colors.hay },
+			{ key = "s", text = "Walk up and press SELL", h = 0.5, color = Ui.colors.cream, max = 44 },
+		})
+	end
+end
+
+local function tagHatch()
+	local farm = workspace:WaitForChild("Farm", 60)
+	local hatch = farm and farm:WaitForChild("LoftHatch", 30)
+	if hatch then
+		local _, labels = billboard(hatch, UDim2.fromScale(16, 4), Vector3.new(0, 5, 0), {
+			{ key = "t", text = "The Golden Loft", h = 0.5, color = Ui.colors.hay },
+			{ key = "s", text = "", h = 0.5, color = Ui.colors.cream, max = 44 },
+		})
+		local function refresh()
+			labels.s.Text = if player:GetAttribute("LoftOpen") then "Walk up to climb in" else "Locked: finish all 10 achievements"
+		end
+		player:GetAttributeChangedSignal("LoftOpen"):Connect(refresh)
+		refresh()
+	end
+end
+
+function WorldFx.start()
 	task.spawn(function()
 		local folder = workspace:WaitForChild("Haystacks", 60)
-		if not folder then
-			return
+		if folder then
+			tagMound(folder:WaitForChild("Haystack", 30), "hay", "THE HAYSTACK: " .. Format.commas(Config.TotalStraws) .. " straws, 1 needle")
+			tagMound(folder:WaitForChild("GoldenHaystack", 30), "gold", "THE GOLDEN HAYSTACK: golden straw pays 20x")
 		end
-		for _, model in ipairs(folder:GetChildren()) do
-			task.spawn(makeTag, model)
-		end
-		folder.ChildAdded:Connect(makeTag)
 	end)
-	task.spawn(spinWindmill)
+	task.spawn(tagMerchant)
+	task.spawn(tagHatch)
+	yard = Instance.new("Folder")
+	yard.Name = "MyMachines"
+	yard.Parent = workspace
+	task.spawn(function()
+		workspace:WaitForChild("Farm", 60)
+		task.wait(1)
+		refreshYard()
+		for i in ipairs(Config.Machines) do
+			player:GetAttributeChangedSignal("Machine_" .. i):Connect(refreshYard)
+		end
+	end)
 end
 
 return WorldFx

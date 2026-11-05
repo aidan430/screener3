@@ -8,14 +8,14 @@
         "$className": "Folder",
         "Search": { "$className": "RemoteEvent" },
         "SearchFx": { "$className": "RemoteEvent" },
-        "Clue": { "$className": "RemoteEvent" },
         "Announce": { "$className": "RemoteEvent" },
-        "ToggleAuto": { "$className": "RemoteEvent" },
-        "BuyTool": { "$className": "RemoteFunction" },
-        "Rebirth": { "$className": "RemoteFunction" },
-        "GetState": { "$className": "RemoteFunction" }
-      },
-      "GameState": { "$className": "Folder" }
+        "Achievement": { "$className": "RemoteEvent" },
+        "Sell": { "$className": "RemoteFunction" },
+        "Whistle": { "$className": "RemoteFunction" },
+        "Buy": { "$className": "RemoteFunction" },
+        "Loft": { "$className": "RemoteFunction" },
+        "GetAchievements": { "$className": "RemoteFunction" }
+      }
     },
     "ServerScriptService": {
       "Server": { "$path": "src/server" }

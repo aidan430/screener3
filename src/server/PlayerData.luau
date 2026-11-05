@@ -1,6 +1,6 @@
--- Each player's saved progress (coins, tool, rebirths, needles found) and the leaderboard.
--- If the DataStore can't be read (Studio before publishing, or an outage), the player plays
--- with fresh progress that is not saved, so a failed read never overwrites good data.
+-- Each player's saved progress and the leaderboard. If the DataStore can't be read (Studio
+-- before publishing, or an outage), the player plays with fresh progress that is not saved,
+-- so a failed read never overwrites good data.
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10,12 +10,13 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Economy = require(Shared:WaitForChild("Economy"))(Config)
 
+local Profile = require(script.Parent.Profile)
+
 local PlayerData = {}
-local profiles = {} -- [player] = { data, saveable, dirty }
-local passes = {} -- [player] = { DoubleCoins = true, ... } (checked each visit, not saved)
+local profiles = {} -- [player] = { data, saveable, dirty, joined }
+local passes = {} -- [player] = { VIP = true, ... } (checked each visit, not saved)
 local loadedCallbacks = {}
 
-local DEFAULTS = { coins = 0, tool = 1, rebirths = 0, needles = 0, solved = 0, clues = 0, straws = 0 }
 local MAX_RECEIPTS = 50
 
 local store = nil
@@ -34,28 +35,9 @@ local function key(player)
 	return "player_" .. player.UserId
 end
 
-local function fresh(saved)
-	local data = { receipts = {} }
-	for name, value in pairs(DEFAULTS) do
-		data[name] = value
-		if type(saved) == "table" and type(saved[name]) == type(value) then
-			data[name] = saved[name]
-		end
-	end
-	if type(saved) == "table" and type(saved.receipts) == "table" then
-		for _, id in ipairs(saved.receipts) do
-			if type(id) == "string" then
-				table.insert(data.receipts, id)
-			end
-		end
-	end
-	data.tool = math.clamp(math.floor(data.tool), 1, #Config.Tools)
-	return data
-end
-
 local function load(player)
 	if not store then
-		return fresh(nil), false
+		return Profile.fresh(nil), false
 	end
 	local tries = if RunService:IsStudio() then 1 else 3
 	for attempt = 1, tries do
@@ -63,16 +45,17 @@ local function load(player)
 			return store:GetAsync(key(player))
 		end)
 		if ok then
-			return fresh(saved), true
+			return Profile.fresh(saved), true
 		end
 		warn("[PlayerData] could not load " .. player.Name .. ": " .. tostring(saved))
 		if attempt < tries then
 			task.wait(attempt * 2)
 		end
 	end
-	return fresh(nil), false
+	return Profile.fresh(nil), false
 end
 
+-- Everything the client shows comes from these attributes (and leaderstats).
 local function publish(player, profile)
 	local d = profile.data
 	local stats = player:FindFirstChild("leaderstats")
@@ -80,17 +63,65 @@ local function publish(player, profile)
 		stats.Coins.Value = d.coins
 		stats.Needles.Value = d.needles
 	end
+	local flags = PlayerData.flags(player)
 	player:SetAttribute("Coins", d.coins)
 	player:SetAttribute("Tool", d.tool)
-	player:SetAttribute("Power", Economy.power(d.tool))
-	player:SetAttribute("Rebirths", d.rebirths)
+	player:SetAttribute("Bag", d.bag)
+	player:SetAttribute("BagStraw", d.bagStraw)
+	player:SetAttribute("BagGolden", d.bagGolden)
+	player:SetAttribute("Searched", d.searched)
+	player:SetAttribute("LoftSearched", d.loft.searched)
 	player:SetAttribute("Needles", d.needles)
-	player:SetAttribute("Multiplier", PlayerData.multiplier(player))
+	player:SetAttribute("GoldenNeedles", d.loft.needles)
+	player:SetAttribute("Power", Economy.power(d, flags.speedBoost))
+	player:SetAttribute("MachineRate", Economy.machineRate(d, flags.doubleMachines))
+	player:SetAttribute("Multiplier", Economy.coinMultiplier(flags) * (1 + 0.2 * d.needles))
+	player:SetAttribute("Whistles", d.whistles)
+	for _, perk in ipairs(Config.Perks) do
+		player:SetAttribute("Perk_" .. perk.id, d.perks[perk.id])
+	end
+	for i in ipairs(Config.Machines) do
+		player:SetAttribute("Machine_" .. i, d.machines[i])
+	end
+	for name, until_ in pairs(d.boosts) do
+		player:SetAttribute("Boost_" .. name, until_)
+	end
+	local done = 0
+	for _, a in ipairs(Config.Achievements) do
+		if d.achievements[a.id] then
+			done += 1
+		end
+	end
+	player:SetAttribute("Achievements", done)
+	player:SetAttribute("LoftOpen", done >= #Config.Achievements)
 end
 
 function PlayerData.get(player)
 	local profile = profiles[player]
 	return profile and profile.data
+end
+
+function PlayerData.sessionSeconds(player)
+	local profile = profiles[player]
+	return if profile then os.time() - profile.joined else 0
+end
+
+-- Passes and active boosts, as the rest of the game sees them.
+function PlayerData.flags(player)
+	local d = PlayerData.get(player)
+	local own = passes[player] or {}
+	local now = os.time()
+	local function boost(name)
+		return d ~= nil and (d.boosts[name] or 0) > now
+	end
+	return {
+		vip = own.VIP == true,
+		autoSell = own.AutoSell == true,
+		doubleMachines = own.DoubleMachines == true,
+		speedBoost = boost("SpeedBoost"),
+		coinBoost = boost("CoinBoost"),
+		luckyCharm = boost("LuckyCharm"),
+	}
 end
 
 -- Change a player's data and show the change everywhere. Returns false if not loaded yet.
@@ -105,12 +136,6 @@ function PlayerData.update(player, change)
 	return true
 end
 
-function PlayerData.addCoins(player, amount)
-	return PlayerData.update(player, function(d)
-		d.coins += amount
-	end)
-end
-
 function PlayerData.setPass(player, name, owned)
 	passes[player] = passes[player] or {}
 	passes[player][name] = owned
@@ -119,15 +144,6 @@ function PlayerData.setPass(player, name, owned)
 	if profile then
 		publish(player, profile)
 	end
-end
-
-function PlayerData.hasPass(player, name)
-	return passes[player] ~= nil and passes[player][name] == true
-end
-
-function PlayerData.multiplier(player)
-	local d = PlayerData.get(player)
-	return Economy.multiplier(d and d.rebirths or 0, PlayerData.hasPass(player, "DoubleCoins"))
 end
 
 -- Waits up to `timeout` seconds for a player's data. Returns it, or nil.
@@ -159,6 +175,7 @@ function PlayerData.save(player)
 		return false
 	end
 	local data = profile.data
+	data.lastSeen = os.time()
 	local ok, err = pcall(function()
 		store:UpdateAsync(key(player), function()
 			return data
@@ -190,7 +207,7 @@ local function added(player)
 	if player.Parent == nil then
 		return -- left while loading
 	end
-	local profile = { data = data, saveable = saveable, dirty = false }
+	local profile = { data = data, saveable = saveable, dirty = false, joined = os.time() }
 	profiles[player] = profile
 	publish(player, profile)
 	for _, callback in ipairs(loadedCallbacks) do

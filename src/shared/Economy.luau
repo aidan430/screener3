@@ -1,53 +1,106 @@
--- Coins, search power, needle odds and haystack size. Plain maths: no Roblox services.
+-- Rates, prices and odds. Plain maths: no Roblox services.
 -- Usage: local Economy = require(Shared.Economy)(Config)
 return function(Config)
 	local Economy = {}
 
+	local function perkLevel(data, id)
+		return (data.perks and data.perks[id]) or 0
+	end
+
 	function Economy.tool(level)
-		local tools = Config.Tools
-		return tools[math.clamp(level, 1, #tools)]
+		return Config.Tools[math.clamp(level, 1, #Config.Tools)]
 	end
 
-	-- straws searched in one go with this tool
-	function Economy.power(level)
-		return Economy.tool(level).power
+	function Economy.bag(level)
+		return Config.Bags[math.clamp(level, 1, #Config.Bags)]
 	end
 
-	function Economy.multiplier(rebirths, doubleCoins)
-		local m = 1 + Config.RebirthCoinBonus * rebirths
-		if doubleCoins then
+	-- straws one search takes, with the Sharpened perk and any speed boost
+	function Economy.power(data, speedBoost)
+		local p = Economy.tool(data.tool).power * (1 + Config.Perks[1].per_level * perkLevel(data, "sharp"))
+		if speedBoost then
+			p *= 2
+		end
+		return math.max(1, math.floor(p + 0.5))
+	end
+
+	function Economy.cooldown(data)
+		return Config.SearchCooldown * (1 - Config.Perks[2].per_level * perkLevel(data, "swift"))
+	end
+
+	function Economy.luckyChance(data, charm)
+		local c = Config.LuckyChance + Config.Perks[3].per_level * perkLevel(data, "lucky")
+		return if charm then c * 5 else c
+	end
+
+	-- straws a second from the player's machines
+	function Economy.machineRate(data, doubled)
+		local rate = 0
+		for i, m in ipairs(Config.Machines) do
+			rate += ((data.machines and data.machines[i]) or 0) * m.rate
+		end
+		return if doubled then rate * 2 else rate
+	end
+
+	function Economy.machineCount(data)
+		local n = 0
+		for i in ipairs(Config.Machines) do
+			n += (data.machines and data.machines[i]) or 0
+		end
+		return n
+	end
+
+	function Economy.machinePrice(index, owned)
+		local m = Config.Machines[index]
+		return math.floor(m.price * m.growth ^ owned + 0.5)
+	end
+
+	-- perks are priced for the tool you hold: the free fork pays Wooden Pitchfork prices
+	function Economy.perkPrice(data, perkIndex)
+		local perk = Config.Perks[perkIndex]
+		local level = perkLevel(data, perk.id)
+		local scale = math.max(Economy.tool(data.tool).price, Config.Tools[2].price) / Config.Tools[2].price
+		return math.floor(perk.price * perk.growth ^ level * scale + 0.5)
+	end
+
+	function Economy.perksMaxed(data)
+		for _, perk in ipairs(Config.Perks) do
+			if perkLevel(data, perk.id) < perk.levels then
+				return false
+			end
+		end
+		return true
+	end
+
+	function Economy.coinMultiplier(flags)
+		local m = 1
+		if flags.vip then
+			m += Config.VipCoinBonus
+		end
+		if flags.coinBoost then
 			m *= 2
 		end
 		return m
 	end
 
-	function Economy.coinsFor(straws, multiplier)
-		if straws <= 0 then
-			return 0
-		end
-		return math.floor(straws * Config.CoinsPerStraw * multiplier + 0.5)
+	-- what the merchant pays for `straws` straws (golden straws pay Loft.coinMultiplier more)
+	function Economy.coinsFor(straws, golden, multiplier)
+		local each = Config.CoinsPerStraw * (if golden then Config.Loft.coinMultiplier else 1)
+		return math.floor(straws * each * multiplier + 0.5)
 	end
 
-	function Economy.rebirthCost(rebirths)
-		return Config.RebirthBaseCost * (rebirths + 1)
+	-- where the needle hides: a straw index, never in the first `earliest` share
+	function Economy.needleAt(total, earliest, rng)
+		return math.floor(total * earliest + rng:NextNumber() * total * (1 - earliest)) + 1
 	end
 
-	-- The needle is equally likely to be any straw still in its haystack, so a handful of
-	-- straws finds it with probability handful / remaining. The last handful always does.
-	function Economy.needleChance(handful, remaining)
-		if remaining <= 0 then
-			return 0
+	-- 0 (cold) to 1 (the next handful has it): how warm the Needle Detector shows
+	function Economy.warmth(searched, needleAt, total)
+		local left = needleAt - searched
+		if left <= 0 then
+			return 1
 		end
-		return math.min(1, handful / remaining)
-	end
-
-	-- A haystack's size follows the cube root of what is left (its volume shrinks with it).
-	function Economy.pileScale(remaining, total)
-		if total <= 0 then
-			return Config.MinPileScale
-		end
-		local left = math.clamp(remaining / total, 0, 1)
-		return Config.MinPileScale + (1 - Config.MinPileScale) * left ^ (1 / 3)
+		return math.clamp(1 - left / (total * 0.1), 0, 1)
 	end
 
 	return Economy
