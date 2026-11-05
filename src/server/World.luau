@@ -28,10 +28,10 @@ local function prompt(parent, action, text, object, key)
 end
 
 function World.ground()
-	terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(118, 136, 58))
+	terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(118, 136, 58)) -- Grass is the straw heap
 	terrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(124, 94, 62))
 	terrain:SetMaterialColor(Enum.Material.Cobblestone, Color3.fromRGB(152, 138, 120))
-	terrain:FillBlock(CFrame.new(0, -8, 0), Vector3.new(420, 16, 420), Enum.Material.Grass)
+	terrain:FillBlock(CFrame.new(0, -8, 0), Vector3.new(420, 16, 420), Enum.Material.LeafyGrass)
 	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(30, 4, 330), Enum.Material.Ground)
 	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(330, 4, 30), Enum.Material.Ground)
 	terrain:FillCylinder(CFrame.new(0, -2, 0), 4, 22, Enum.Material.Cobblestone)
