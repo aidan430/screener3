@@ -109,18 +109,33 @@ local function goldenHarvest(player, d, amount)
 	return amount, hit
 end
 
+-- Tells the player why a click didn't harvest (at most every 1.5 seconds).
+local lastNope = {}
+local function nope(player, reason)
+	if os.clock() - (lastNope[player] or 0) > 1.5 then
+		lastNope[player] = os.clock()
+		Remotes.SearchFx:FireClient(player, { kind = "nope", reason = reason })
+	end
+end
+
 local function harvest(player, target)
 	local d, c = PlayerData.get(player), character(player)
 	local now = os.clock()
-	if not d or not c or not holdingTool(c) or now - (lastHarvest[player] or 0) < Economy.cooldown(d) * 0.9 then
+	if not d then
+		return nope(player, "Still loading your farm...")
+	elseif not c then
 		return
+	elseif not holdingTool(c) then
+		return nope(player, "Hold your fork to harvest (press 1).")
+	elseif now - (lastHarvest[player] or 0) < Economy.cooldown(d) * 0.9 then
+		return -- clicking faster than the tool swings: just ignored
 	end
 	if typeof(target) ~= "Instance" or not target:IsA("BasePart") then
-		return
+		return nope(player, "That isn't a clump of hay.")
 	end
 	local head = c:FindFirstChild("Head")
 	if not head or (head.Position - target.Position).Magnitude > Config.Reach + 6 then
-		return
+		return nope(player, "Too far away. Step closer to the clump.")
 	end
 	lastHarvest[player] = now
 	local flags = PlayerData.flags(player)
@@ -141,8 +156,10 @@ local function harvest(player, target)
 	else
 		local plotIndex = Plots.of(player)
 		local clump = target:GetAttribute("Clump")
-		if not plotIndex or not clump or not target:IsDescendantOf(Plots.folder(plotIndex)) then
-			return
+		if not plotIndex then
+			return nope(player, "You don't have a farm yet (all four plots may be taken).")
+		elseif not clump or not target:IsDescendantOf(Plots.folder(plotIndex)) then
+			return nope(player, "That's not your pile. Yours is on the farm marked YOUR FARM.")
 		end
 		taken, gone = Piles.take(plotIndex, d, clump, power)
 		hit = gone and clump == d.needleClump
@@ -152,7 +169,7 @@ local function harvest(player, target)
 		end)
 	end
 	if taken <= 0 then
-		return
+		return nope(player, "Nothing left in that clump.")
 	end
 	PlayerData.update(player, function(data)
 		data.stats.searches += 1
@@ -195,7 +212,7 @@ function Search.init()
 		end
 	end)
 	Players.PlayerRemoving:Connect(function(player)
-		lastHarvest[player] = nil
+		lastHarvest[player], lastNope[player] = nil, nil
 	end)
 end
 

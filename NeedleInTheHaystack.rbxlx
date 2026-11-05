@@ -2099,18 +2099,33 @@ local function goldenHarvest(player, d, amount)
 	return amount, hit
 end
 
+-- Tells the player why a click didn't harvest (at most every 1.5 seconds).
+local lastNope = {}
+local function nope(player, reason)
+	if os.clock() - (lastNope[player] or 0) > 1.5 then
+		lastNope[player] = os.clock()
+		Remotes.SearchFx:FireClient(player, { kind = "nope", reason = reason })
+	end
+end
+
 local function harvest(player, target)
 	local d, c = PlayerData.get(player), character(player)
 	local now = os.clock()
-	if not d or not c or not holdingTool(c) or now - (lastHarvest[player] or 0) < Economy.cooldown(d) * 0.9 then
+	if not d then
+		return nope(player, "Still loading your farm...")
+	elseif not c then
 		return
+	elseif not holdingTool(c) then
+		return nope(player, "Hold your fork to harvest (press 1).")
+	elseif now - (lastHarvest[player] or 0) < Economy.cooldown(d) * 0.9 then
+		return -- clicking faster than the tool swings: just ignored
 	end
 	if typeof(target) ~= "Instance" or not target:IsA("BasePart") then
-		return
+		return nope(player, "That isn't a clump of hay.")
 	end
 	local head = c:FindFirstChild("Head")
 	if not head or (head.Position - target.Position).Magnitude > Config.Reach + 6 then
-		return
+		return nope(player, "Too far away. Step closer to the clump.")
 	end
 	lastHarvest[player] = now
 	local flags = PlayerData.flags(player)
@@ -2131,8 +2146,10 @@ local function harvest(player, target)
 	else
 		local plotIndex = Plots.of(player)
 		local clump = target:GetAttribute("Clump")
-		if not plotIndex or not clump or not target:IsDescendantOf(Plots.folder(plotIndex)) then
-			return
+		if not plotIndex then
+			return nope(player, "You don't have a farm yet (all four plots may be taken).")
+		elseif not clump or not target:IsDescendantOf(Plots.folder(plotIndex)) then
+			return nope(player, "That's not your pile. Yours is on the farm marked YOUR FARM.")
 		end
 		taken, gone = Piles.take(plotIndex, d, clump, power)
 		hit = gone and clump == d.needleClump
@@ -2142,7 +2159,7 @@ local function harvest(player, target)
 		end)
 	end
 	if taken <= 0 then
-		return
+		return nope(player, "Nothing left in that clump.")
 	end
 	PlayerData.update(player, function(data)
 		data.stats.searches += 1
@@ -2185,7 +2202,7 @@ function Search.init()
 		end
 	end)
 	Players.PlayerRemoving:Connect(function(player)
-		lastHarvest[player] = nil
+		lastHarvest[player], lastNope[player] = nil, nil
 	end)
 end
 
@@ -3157,6 +3174,7 @@ return Cursor
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
@@ -3211,8 +3229,70 @@ function Harvest.target()
 	return target
 end
 
+-- A click that hit no harvestable clump: say what the crosshair is on (at most every 2 s).
+local lastMiss = 0
+Harvest.onMiss = nil
+function Harvest.miss()
+	if os.clock() - lastMiss < 2 or not Harvest.onMiss then
+		return
+	end
+	lastMiss = os.clock()
+	local camera, character = workspace.CurrentCamera, player.Character
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { character }
+	local result = camera and workspace:Raycast(camera.CFrame.Position, camera.CFrame.LookVector * 300, params)
+	local plot = player:GetAttribute("Plot")
+	if not plot then
+		Harvest.onMiss("Your farm isn't ready yet. Wait a moment.")
+	elseif not result then
+		Harvest.onMiss("Aim the dot in the middle of the screen at a clump of your pile.")
+	elseif result.Instance:GetAttribute("Clump") then
+		local head = character and character:FindFirstChild("Head")
+		local far = head and (result.Position - head.Position).Magnitude or 0
+		if far > Config.Reach then
+			Harvest.onMiss("Too far: " .. math.floor(far) .. " studs. Get within " .. Config.Reach .. ".")
+		else
+			Harvest.onMiss("That's not your pile. Yours is on the farm marked YOUR FARM.")
+		end
+	else
+		Harvest.onMiss("That's " .. result.Instance.Name .. ", not hay. Aim the dot at a clump of your pile.")
+	end
+end
+
 local function cooldown()
 	return Config.SearchCooldown * (1 - Config.Perks[2].per_level * (player:GetAttribute("Perk_swift") or 0))
+end
+
+-- One swing: harvest the clump under the crosshair (shared by the tool and the mouse button).
+local function swing(tool)
+	local part, point = aim()
+	if not part then
+		Harvest.miss()
+		return
+	end
+	if os.clock() - lastSwing < cooldown() then
+		return
+	end
+	lastSwing = os.clock()
+	Remotes.Harvest:FireServer(part)
+	-- instant feel: a puff where you hit, a tiny camera push and the combo
+	Juice.burst(point, 6, part.Name:sub(1, 6) == "Golden")
+	Juice.punch(1.2)
+	Juice.hit()
+	local anim = Instance.new("StringValue") -- the default Animate script plays a swing for this
+	anim.Name = "toolanim"
+	anim.Value = "Slash"
+	anim.Parent = tool
+	task.delay(0.5, function()
+		anim:Destroy()
+	end)
+end
+
+local function heldTool()
+	local character = player.Character
+	local tool = character and character:FindFirstChildOfClass("Tool")
+	return if tool and tool:GetAttribute("Level") ~= nil then tool else nil
 end
 
 local function hookTool(tool)
@@ -3221,27 +3301,18 @@ local function hookTool(tool)
 	end
 	hooked[tool] = true
 	tool.Activated:Connect(function()
-		local part, point = aim()
-		if not part or os.clock() - lastSwing < cooldown() then
-			return
-		end
-		lastSwing = os.clock()
-		Remotes.Harvest:FireServer(part)
-		-- instant feel: a puff where you hit, a tiny camera push and the combo
-		Juice.burst(point, 6, part.Name:sub(1, 6) == "Golden")
-		Juice.punch(1.2)
-		Juice.hit()
-		local swing = Instance.new("StringValue") -- the default Animate script plays a swing for this
-		swing.Name = "toolanim"
-		swing.Value = "Slash"
-		swing.Parent = tool
-		task.delay(0.5, function()
-			swing:Destroy()
-		end)
+		swing(tool)
 	end)
 end
 
 function Harvest.start()
+	-- the mouse button too, in case the tool's own click doesn't come through in first person
+	UserInputService.InputBegan:Connect(function(input, processed)
+		local tool = heldTool()
+		if not processed and tool and input.UserInputType == Enum.UserInputType.MouseButton1 then
+			swing(tool)
+		end
+	end)
 	RunService.RenderStepped:Connect(function()
 		local part = aim()
 		target = part
@@ -3271,6 +3342,9 @@ function Harvest.start()
 			arrive(tool)
 		end
 		character.ChildAdded:Connect(hookTool)
+		for _, tool in ipairs(character:GetChildren()) do
+			hookTool(tool) -- already held when this script started
+		end
 	end
 	player.CharacterAdded:Connect(onCharacter)
 	if player.Character then
@@ -3646,6 +3720,9 @@ panels = Panels.mount(gui, Notify, {
 		Notify.toast(if ok then tostring(message) else "Try again.", if ok and success then Ui.colors.green else Ui.colors.red)
 	end,
 })
+Harvest.onMiss = function(text)
+	Notify.toast(text, Ui.colors.wood)
+end
 Harvest.start()
 WorldFx.start()
 
@@ -3704,6 +3781,8 @@ Remotes.SearchFx.OnClientEvent:Connect(function(message)
 		if message.full then
 			Notify.toast("Your tool is full! Sell at the merchant in the hub.", Ui.colors.red)
 		end
+	elseif message.kind == "nope" then
+		Notify.toast(message.reason, Ui.colors.wood)
 	elseif message.kind == "full" then
 		Notify.toast("Your tool is full! Sell at the merchant (or buy a bigger tool).", Ui.colors.red)
 	elseif message.kind == "sold" then

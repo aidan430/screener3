@@ -40,6 +40,9 @@ panels = Panels.mount(gui, Notify, {
 		Notify.toast(if ok then tostring(message) else "Try again.", if ok and success then Ui.colors.green else Ui.colors.red)
 	end,
 })
+Harvest.onMiss = function(text)
+	Notify.toast(text, Ui.colors.wood)
+end
 Harvest.start()
 WorldFx.start()
 
@@ -98,6 +101,8 @@ Remotes.SearchFx.OnClientEvent:Connect(function(message)
 		if message.full then
 			Notify.toast("Your tool is full! Sell at the merchant in the hub.", Ui.colors.red)
 		end
+	elseif message.kind == "nope" then
+		Notify.toast(message.reason, Ui.colors.wood)
 	elseif message.kind == "full" then
 		Notify.toast("Your tool is full! Sell at the merchant (or buy a bigger tool).", Ui.colors.red)
 	elseif message.kind == "sold" then

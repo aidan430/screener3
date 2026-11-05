@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
@@ -57,8 +58,70 @@ function Harvest.target()
 	return target
 end
 
+-- A click that hit no harvestable clump: say what the crosshair is on (at most every 2 s).
+local lastMiss = 0
+Harvest.onMiss = nil
+function Harvest.miss()
+	if os.clock() - lastMiss < 2 or not Harvest.onMiss then
+		return
+	end
+	lastMiss = os.clock()
+	local camera, character = workspace.CurrentCamera, player.Character
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { character }
+	local result = camera and workspace:Raycast(camera.CFrame.Position, camera.CFrame.LookVector * 300, params)
+	local plot = player:GetAttribute("Plot")
+	if not plot then
+		Harvest.onMiss("Your farm isn't ready yet. Wait a moment.")
+	elseif not result then
+		Harvest.onMiss("Aim the dot in the middle of the screen at a clump of your pile.")
+	elseif result.Instance:GetAttribute("Clump") then
+		local head = character and character:FindFirstChild("Head")
+		local far = head and (result.Position - head.Position).Magnitude or 0
+		if far > Config.Reach then
+			Harvest.onMiss("Too far: " .. math.floor(far) .. " studs. Get within " .. Config.Reach .. ".")
+		else
+			Harvest.onMiss("That's not your pile. Yours is on the farm marked YOUR FARM.")
+		end
+	else
+		Harvest.onMiss("That's " .. result.Instance.Name .. ", not hay. Aim the dot at a clump of your pile.")
+	end
+end
+
 local function cooldown()
 	return Config.SearchCooldown * (1 - Config.Perks[2].per_level * (player:GetAttribute("Perk_swift") or 0))
+end
+
+-- One swing: harvest the clump under the crosshair (shared by the tool and the mouse button).
+local function swing(tool)
+	local part, point = aim()
+	if not part then
+		Harvest.miss()
+		return
+	end
+	if os.clock() - lastSwing < cooldown() then
+		return
+	end
+	lastSwing = os.clock()
+	Remotes.Harvest:FireServer(part)
+	-- instant feel: a puff where you hit, a tiny camera push and the combo
+	Juice.burst(point, 6, part.Name:sub(1, 6) == "Golden")
+	Juice.punch(1.2)
+	Juice.hit()
+	local anim = Instance.new("StringValue") -- the default Animate script plays a swing for this
+	anim.Name = "toolanim"
+	anim.Value = "Slash"
+	anim.Parent = tool
+	task.delay(0.5, function()
+		anim:Destroy()
+	end)
+end
+
+local function heldTool()
+	local character = player.Character
+	local tool = character and character:FindFirstChildOfClass("Tool")
+	return if tool and tool:GetAttribute("Level") ~= nil then tool else nil
 end
 
 local function hookTool(tool)
@@ -67,27 +130,18 @@ local function hookTool(tool)
 	end
 	hooked[tool] = true
 	tool.Activated:Connect(function()
-		local part, point = aim()
-		if not part or os.clock() - lastSwing < cooldown() then
-			return
-		end
-		lastSwing = os.clock()
-		Remotes.Harvest:FireServer(part)
-		-- instant feel: a puff where you hit, a tiny camera push and the combo
-		Juice.burst(point, 6, part.Name:sub(1, 6) == "Golden")
-		Juice.punch(1.2)
-		Juice.hit()
-		local swing = Instance.new("StringValue") -- the default Animate script plays a swing for this
-		swing.Name = "toolanim"
-		swing.Value = "Slash"
-		swing.Parent = tool
-		task.delay(0.5, function()
-			swing:Destroy()
-		end)
+		swing(tool)
 	end)
 end
 
 function Harvest.start()
+	-- the mouse button too, in case the tool's own click doesn't come through in first person
+	UserInputService.InputBegan:Connect(function(input, processed)
+		local tool = heldTool()
+		if not processed and tool and input.UserInputType == Enum.UserInputType.MouseButton1 then
+			swing(tool)
+		end
+	end)
 	RunService.RenderStepped:Connect(function()
 		local part = aim()
 		target = part
@@ -117,6 +171,9 @@ function Harvest.start()
 			arrive(tool)
 		end
 		character.ChildAdded:Connect(hookTool)
+		for _, tool in ipairs(character:GetChildren()) do
+			hookTool(tool) -- already held when this script started
+		end
 	end
 	player.CharacterAdded:Connect(onCharacter)
 	if player.Character then
