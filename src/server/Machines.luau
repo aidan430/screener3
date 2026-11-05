@@ -74,7 +74,7 @@ local function tickMachines()
 		if d and Plots.of(player) then
 			local flags = PlayerData.flags(player)
 			local plot = Economy.plot(d.placed, flags.doubleMachines, player:GetAttribute("BurnersFueled"))
-			local powered = plot.machines > 0 and plot.share >= 1
+			local powered = plot.draw > 0 and plot.share >= 1 -- machines and feeders alike
 			if running[player] ~= powered then
 				running[player] = powered
 				Structures.light(player, powered)

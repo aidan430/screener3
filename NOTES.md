@@ -237,3 +237,24 @@ Owner's request: the depth of a factory-style needle game, with original systems
   to 60 pellet sacks (1.5M), each round x2. Shown on a card on the right.
 - Code: `HayItems` (the items), `Processing` (machines' sensors), `LooseHay` (you and the hay),
   `Factory` (feeders, burners, belt speeds), `Orders`, `PiecesFactory`.
+
+## Second review fixes (2026-11-05)
+- Hay Arms and Throwers couldn't be placed after buying (missing from the build bar and the
+  Inv_/Own_ attributes): fixed.
+- Delivery orders now count straws, not items (dropping tiny bundles can't farm them), and
+  pay a modest bonus of about 0.2-0.5 coins a straw; `OrderGrowth` 2 -> 1.5, applied to both
+  the straws asked for and the reward. Was up to 50 coins a straw, doubling every round.
+- Hay Burner fuel is one saved pool per player (`d.fuel`), so taking back a piece (which rebuilds
+  every model) no longer wipes it; the HUD's power numbers update when burners light or go out.
+- The Bale Wrapper no longer waits between taking a bale and making the wrapped one (leaving
+  in between lost the straws).
+- Stamina is spent only on a click that actually harvests. "You're full" is rate-limited like
+  the other reasons (holding the button spammed it). Belt deliveries fill the basket without
+  a toast each. Feeders restart within a second when power returns, and machine/feeder lamps
+  light with power whether or not you have silo machines.
+- Client: the guide line survives a respawn; a quick V tap-release-tap no longer doubles the
+  detector's polling; clump milestones aren't skipped when machines take several at once;
+  the left HUD column sits under the goal card on short screens; the order card hides in
+  build mode; toasts sit under the top bar at every screen size; stale "sell at the merchant"
+  wording.
+- Not changed: the splitter's sideways push vs the belt's own motion needs checking in Studio.

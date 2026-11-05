@@ -40,6 +40,10 @@ function Guide.start()
 			local carried, capacity = player:GetAttribute("Carried") or 0, player:GetAttribute("Capacity") or 1
 			local show = root ~= nil and target ~= nil and carried >= capacity
 			if show then
+				if from.Parent == nil or not from:IsDescendantOf(workspace) then -- after a respawn
+					from = Instance.new("Attachment")
+					beam.Attachment0 = from
+				end
 				from.Parent = root
 				from.Position = Vector3.new(0, -1.5, 0)
 				to.WorldPosition = target.Position + Vector3.new(0, 2, 0)

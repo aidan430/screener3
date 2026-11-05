@@ -96,6 +96,7 @@ step("guide", function()
 end)
 step("orders", function()
 	OrderCard.mount(gui)
+	OrderCard.hidden = BuildMode.active -- out of the way of the build buttons
 end)
 step("teleporters", function()
 	Teleport.mount(gui)
@@ -194,11 +195,13 @@ player:GetAttributeChangedSignal("ClumpsLeft"):Connect(function()
 	local now = player:GetAttribute("ClumpsLeft") or Config.Clumps
 	if lastClumps and now < lastClumps then
 		local done = Config.Clumps - now
-		if done % 100 == 0 then
+		local before = Config.Clumps - lastClumps
+		if done // 100 > before // 100 then -- passed a hundred, even if machines took several at once
+			done = done // 100 * 100
 			Juice.confetti()
 			Notify.banner(done .. " CLUMPS HARVESTED!", math.floor(done / Config.Clumps * 100) .. "% of your pile. The needle is in one of the " .. Format.commas(now) .. " left.", 5)
-		elseif done % 10 == 0 then
-			Notify.toast(done .. " clumps harvested!", Ui.colors.wood)
+		elseif done // 10 > before // 10 then
+			Notify.toast(done // 10 * 10 .. " clumps cleared!", Ui.colors.wood)
 		end
 	end
 	lastClumps = now
@@ -217,17 +220,17 @@ Remotes.SearchFx.OnClientEvent:Connect(function(message)
 			hud.refresh()
 		end
 		if message.full then
-			Notify.toast("Your tool is full! Sell at the merchant in the hub.", Ui.colors.red)
+			Notify.toast("You're full! Dump your hay in your trader's basket.", Ui.colors.red)
 		end
 	elseif message.kind == "nope" then
 		Notify.toast(message.reason, Ui.colors.wood)
 	elseif message.kind == "full" then
-		Notify.toast("Your tool is full! Sell at the merchant (or buy a bigger tool).", Ui.colors.red)
-	elseif message.kind == "sold" then
-		Juice.coins(message.coins)
-		Notify.toast("Sold " .. Format.commas(message.straws) .. " straw for " .. Format.short(message.coins) .. " coins", Ui.colors.green)
+		Notify.toast("You're full! Dump your hay in your trader's basket (or buy a bucket).", Ui.colors.red)
 	elseif message.kind == "dumped" then
 		HayFx.dump(message.basket, message.straws, message.reason ~= "bale" and message.reason ~= "belt")
+		if message.quiet then
+			return -- belt deliveries: the basket fills, no message (the HUD shows the basket)
+		end
 		if message.coins > 0 then
 			Juice.coins(message.coins) -- golden straw is paid for at once
 		end

@@ -47,7 +47,7 @@ local function feed(player, d, model, def, share)
 	if now < (model:GetAttribute("Next") or 0) then
 		return
 	end
-	model:SetAttribute("Next", now + def.every / math.max(share, 0.05))
+	model:SetAttribute("Next", now + (if share > 0 then def.every / share else 1)) -- unpowered: look again soon
 	local out = model:FindFirstChild("Out")
 	local plotIndex = Plots.of(player)
 	if share <= 0 or not out or HayItems.full(plotIndex) then
@@ -76,24 +76,26 @@ local function tick(player)
 	if not d or not folder then
 		return
 	end
-	-- burners: use up hay; count the ones still burning
-	local fueled = 0
+	-- burners: all of them burn from your one saved pool of fuel while it lasts
+	local burners = {}
 	for _, model in ipairs(folder:GetChildren()) do
-		local fuel = model:GetAttribute("Fuel")
 		if model:GetAttribute("Item") == "burner" then
-			fuel = math.max(0, (fuel or 0) - TICK)
-			model:SetAttribute("Fuel", fuel)
-			if fuel > 0 then
-				fueled += 1
-			end
-			local glow = model:FindFirstChild("Glow")
-			if glow then
-				glow.Transparency = if fuel > 0 then 0 else 0.8
-			end
+			table.insert(burners, model)
+		end
+	end
+	local fueled = if d.fuel > 0 then #burners else 0
+	if fueled > 0 then
+		d.fuel = math.max(0, d.fuel - fueled * TICK)
+	end
+	for _, model in ipairs(burners) do
+		local glow = model:FindFirstChild("Glow")
+		if glow then
+			glow.Transparency = if fueled > 0 then 0 else 0.8
 		end
 	end
 	if player:GetAttribute("BurnersFueled") ~= fueled then
 		player:SetAttribute("BurnersFueled", fueled)
+		PlayerData.update(player, function() end) -- the HUD's power numbers change with it
 	end
 	local share = Economy.plot(d.placed, PlayerData.flags(player).doubleMachines, fueled).share
 	for _, model in ipairs(folder:GetChildren()) do

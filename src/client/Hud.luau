@@ -34,7 +34,7 @@ function Hud.mount(gui, open)
 	local pileFill = bar(top, 54, Ui.colors.hay)
 	local warmth = Ui.label({ Size = UDim2.new(1, -20, 0, 14), Position = UDim2.fromOffset(10, 67), TextColor3 = Ui.colors.cream, Parent = top }, 13)
 
-	local left = Ui.make("Frame", { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 10, 0.5, 0), Size = UDim2.fromOffset(220, 488), BackgroundTransparency = 1, Parent = gui }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
+	local left = Ui.make("Frame", { AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0, 10, 0, 140), Size = UDim2.fromOffset(220, 488), BackgroundTransparency = 1, Parent = gui }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
 	Ui.autoScale(left)
 	local stats = Ui.make("Frame", { LayoutOrder = 1, Size = UDim2.fromOffset(220, 194), BackgroundColor3 = Ui.colors.wood, BackgroundTransparency = 0.1, Parent = left }, { Ui.corner(12), Ui.stroke(Ui.colors.woodDark, 3) })
 	local coinsLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 36), Position = UDim2.fromOffset(8, 4), TextColor3 = Ui.colors.hay, Parent = stats }, 32)
@@ -72,6 +72,7 @@ function Hud.mount(gui, open)
 	Ui.label({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.fromOffset(560, 18), Text = "M: mouse & menus   Q: shop   B: build   E: use   " .. Config.DropKey .. ": drop hay   " .. Config.HomeKey .. ": home", TextTransparency = 0.3, Parent = gui }, 15)
 
 	local function refresh()
+		left.Position = UDim2.new(0, 10, 0, 60 + 74 * Ui.screenScale()) -- just under the goal card
 		local needles = player:GetAttribute("Needles") or 0
 		if Hud.state.inLoft then
 			local searched = player:GetAttribute("LoftSearched") or 0

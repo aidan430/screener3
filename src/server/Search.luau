@@ -162,13 +162,8 @@ local function harvest(player, target)
 		if flags.autoSell then
 			Search.sell(player, "auto")
 		else
-			status(player, "You're full. Dump your hay in your trader's basket.")
-			Remotes.SearchFx:FireClient(player, { kind = "full" })
-			return
+			return nope(player, "You're full! Dump your hay in your trader's basket.")
 		end
-	end
-	if not Stamina.spend(player, Config.Stamina.perHarvest) then
-		return status(player, "Catching your breath...") -- a short rest, then carry on
 	end
 	local power = math.min(Economy.power(d, flags.speedBoost), room(d))
 	local taken, hit, golden, gone = 0, false, false, false
@@ -178,6 +173,9 @@ local function harvest(player, target)
 			return nope(player, "That isn't your hay.")
 		end
 		golden = true
+		if not Stamina.spend(player, Config.Stamina.perHarvest) then
+			return status(player, "Catching your breath...") -- a short rest, then carry on
+		end
 		taken, hit = goldenHarvest(player, d, power)
 	else
 		local plotIndex = Plots.of(player)
@@ -189,6 +187,9 @@ local function harvest(player, target)
 			return nope(player, "That's not your heap. Yours is on the farm marked YOUR FARM.")
 		elseif (head.Position - Piles.position(plotIndex, clump)).Magnitude > Config.Reach + 6 then
 			return nope(player, "Too far away. Step closer to the hay.")
+		end
+		if not Stamina.spend(player, Config.Stamina.perHarvest) then
+			return status(player, "Catching your breath...") -- a short rest, then carry on
 		end
 		taken, gone = Piles.take(plotIndex, d, clump, power)
 		hit = gone and clump == d.needleClump

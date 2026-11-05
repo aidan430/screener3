@@ -43,8 +43,11 @@ function Detector.start(gui, notify)
 	end
 
 	-- ask the server while the key is held (about 4 times a second)
+	local sweeping = 0
 	local function sweep()
-		while holding do
+		sweeping += 1
+		local mine = sweeping -- a quick release and press again starts a new sweep; the old one stops
+		while holding and mine == sweeping do
 			local ok, answer = pcall(Remotes.Detect.InvokeServer, Remotes.Detect)
 			if ok and type(answer) == "number" then
 				signal = math.clamp(math.floor(answer), 0, cfg.levels)

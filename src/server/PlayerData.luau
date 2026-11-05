@@ -102,7 +102,7 @@ local function publish(player, profile)
 		player:SetAttribute("Fitness_" .. f.id, d.fitness[f.id])
 	end
 	player:SetAttribute("Detector", d.detector)
-	for _, list in ipairs({ Config.Pieces, Config.Machines, Config.Generators }) do
+	for _, list in ipairs({ Config.Pieces, Config.Machines, Config.Generators, Config.Feeders or {} }) do
 		for _, def in ipairs(list) do
 			player:SetAttribute("Inv_" .. def.id, d.inventory[def.id] or 0)
 			player:SetAttribute("Own_" .. def.id, Economy.owned(d, def.id))

@@ -37,18 +37,20 @@ Config.Processing = {
 	pellet = { value = 1.7, straws = 500, name = "pellet sack" },
 }
 
--- Delivery orders: a truck driver asks for a batch; deliver it to your basket for a reward.
--- Orders go round in this order, each round paying `OrderGrowth` times more.
+-- Delivery orders: a truck driver asks for straws of one kind (loose bundles, bales, wrapped
+-- bales, pellet sacks). Everything of that kind reaching your basket counts by its straws; the
+-- reward is a bonus on top of the sale (about 0.2-0.5 coins a straw). Each full round of orders
+-- asks for and pays OrderGrowth times more, so the bonus per straw stays the same.
 Config.Orders = {
-	{ kind = "bundle", count = 10, reward = 2000 },
-	{ kind = "bale", count = 5, reward = 12000 },
-	{ kind = "bundle", count = 40, reward = 15000 },
-	{ kind = "bale", count = 20, reward = 60000 },
-	{ kind = "wrapped", count = 10, reward = 150000 },
-	{ kind = "pellet", count = 20, reward = 400000 },
-	{ kind = "wrapped", count = 30, reward = 600000 },
-	{ kind = "pellet", count = 60, reward = 1500000 },
+	{ kind = "bundle", straws = 2000, reward = 400 },
+	{ kind = "bale", straws = 10000, reward = 3000 },
+	{ kind = "bundle", straws = 20000, reward = 4000 },
+	{ kind = "bale", straws = 40000, reward = 12000 },
+	{ kind = "wrapped", straws = 40000, reward = 16000 },
+	{ kind = "pellet", straws = 20000, reward = 10000 },
+	{ kind = "wrapped", straws = 100000, reward = 40000 },
+	{ kind = "pellet", straws = 100000, reward = 50000 },
 }
-Config.OrderGrowth = 2
+Config.OrderGrowth = 1.5
 
 return Config

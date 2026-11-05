@@ -10,7 +10,7 @@ function Notify.mount(gui)
 	stack = Ui.make("Frame", {
 		Name = "Toasts",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 98),
+		Position = UDim2.new(0.5, 0, 0, 6 + 92 * Ui.screenScale()), -- just under the top bar
 		Size = UDim2.fromOffset(460, 220),
 		BackgroundTransparency = 1,
 		Parent = gui,

@@ -24,7 +24,7 @@ removeBox.LineThickness = 0.1
 removeBox.Parent = player:WaitForChild("PlayerGui")
 
 local ALL = {}
-for _, list in ipairs({ Config.Pieces, Config.Generators, Config.Machines }) do
+for _, list in ipairs({ Config.Pieces, Config.Generators, Config.Machines, Config.Feeders or {} }) do
 	for _, def in ipairs(list) do
 		table.insert(ALL, def)
 	end

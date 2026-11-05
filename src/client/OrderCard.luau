@@ -21,7 +21,7 @@ function OrderCard.mount(gui)
 		local wanted = player:GetAttribute("OrderText")
 		local done, count = player:GetAttribute("OrderDone") or 0, player:GetAttribute("OrderCount") or 1
 		card.Visible = wanted ~= nil
-		text.Text = (wanted or "") .. ": " .. done .. "/" .. count
+		text.Text = (wanted or "") .. ": " .. Format.short(done) .. "/" .. Format.short(count)
 		title.Text = "DELIVERY ORDER  +" .. Format.short(player:GetAttribute("OrderReward") or 0)
 		Juice.ease(fill, 0.4, { Size = UDim2.fromScale(math.clamp(done / count, 0, 1), 1) })
 	end
@@ -29,6 +29,13 @@ function OrderCard.mount(gui)
 		player:GetAttributeChangedSignal(name):Connect(refresh)
 	end
 	refresh()
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+			local hide = OrderCard.hidden and OrderCard.hidden()
+			card.Visible = player:GetAttribute("OrderText") ~= nil and not hide
+		end
+	end)
 end
 
 return OrderCard

@@ -49,8 +49,8 @@ local handlers = {}
 function handlers.BasketSensor(player, item, hit, kind)
 	local straws = HayItems.resolve(item, player)
 	Hauling.add(player, straws, kind)
-	Orders.delivered(player, kind)
-	Remotes.SearchFx:FireClient(player, { kind = "dumped", straws = straws, coins = 0, reason = if kind == "bundle" then "belt" else "bale", basket = hit.Parent:FindFirstChild("Basket") })
+	Orders.delivered(player, kind, straws)
+	Remotes.SearchFx:FireClient(player, { kind = "dumped", straws = straws, coins = 0, quiet = true, reason = if kind == "bundle" then "belt" else "bale", basket = hit.Parent:FindFirstChild("Basket") })
 end
 
 function handlers.BalerIntake(player, item, hit, kind)
@@ -80,18 +80,17 @@ function handlers.WrapperIntake(player, item, hit, kind)
 	if kind ~= "bale" or not cf then
 		return
 	end
-	local straws = item:GetAttribute("Straws") or 0
-	HayItems.resolve(item, player)
-	task.wait(1.2) -- the wrapper spins it round
-	if not HayItems.spawn(player, "wrapped", straws, cf, push) then
+	local straws = HayItems.resolve(item, player)
+	if straws > 0 and not HayItems.spawn(player, "wrapped", straws, cf, push) then
 		Hauling.add(player, straws, "wrapped") -- no room for it: it goes straight to the basket
 	end
 end
 
-function handlers.BurnerIntake(player, item, hit)
+function handlers.BurnerIntake(player, item)
 	local straws = HayItems.resolve(item, player)
-	local burner = hit.Parent
-	burner:SetAttribute("Fuel", (burner:GetAttribute("Fuel") or 0) + straws * Config.BurnerSecondsPerStraw)
+	PlayerData.update(player, function(data)
+		data.fuel += straws * Config.BurnerSecondsPerStraw -- shared by all your burners (saved)
+	end)
 end
 
 function handlers.SplitterBelt(_, item, hit)

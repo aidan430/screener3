@@ -348,19 +348,21 @@ Config.Processing = {
 	pellet = { value = 1.7, straws = 500, name = "pellet sack" },
 }
 
--- Delivery orders: a truck driver asks for a batch; deliver it to your basket for a reward.
--- Orders go round in this order, each round paying `OrderGrowth` times more.
+-- Delivery orders: a truck driver asks for straws of one kind (loose bundles, bales, wrapped
+-- bales, pellet sacks). Everything of that kind reaching your basket counts by its straws; the
+-- reward is a bonus on top of the sale (about 0.2-0.5 coins a straw). Each full round of orders
+-- asks for and pays OrderGrowth times more, so the bonus per straw stays the same.
 Config.Orders = {
-	{ kind = "bundle", count = 10, reward = 2000 },
-	{ kind = "bale", count = 5, reward = 12000 },
-	{ kind = "bundle", count = 40, reward = 15000 },
-	{ kind = "bale", count = 20, reward = 60000 },
-	{ kind = "wrapped", count = 10, reward = 150000 },
-	{ kind = "pellet", count = 20, reward = 400000 },
-	{ kind = "wrapped", count = 30, reward = 600000 },
-	{ kind = "pellet", count = 60, reward = 1500000 },
+	{ kind = "bundle", straws = 2000, reward = 400 },
+	{ kind = "bale", straws = 10000, reward = 3000 },
+	{ kind = "bundle", straws = 20000, reward = 4000 },
+	{ kind = "bale", straws = 40000, reward = 12000 },
+	{ kind = "wrapped", straws = 40000, reward = 16000 },
+	{ kind = "pellet", straws = 20000, reward = 10000 },
+	{ kind = "wrapped", straws = 100000, reward = 40000 },
+	{ kind = "pellet", straws = 100000, reward = 50000 },
 }
-Config.OrderGrowth = 2
+Config.OrderGrowth = 1.5
 
 return Config
 ]]></ProtectedString>
@@ -1497,7 +1499,7 @@ local function feed(player, d, model, def, share)
 	if now < (model:GetAttribute("Next") or 0) then
 		return
 	end
-	model:SetAttribute("Next", now + def.every / math.max(share, 0.05))
+	model:SetAttribute("Next", now + (if share > 0 then def.every / share else 1)) -- unpowered: look again soon
 	local out = model:FindFirstChild("Out")
 	local plotIndex = Plots.of(player)
 	if share <= 0 or not out or HayItems.full(plotIndex) then
@@ -1526,24 +1528,26 @@ local function tick(player)
 	if not d or not folder then
 		return
 	end
-	-- burners: use up hay; count the ones still burning
-	local fueled = 0
+	-- burners: all of them burn from your one saved pool of fuel while it lasts
+	local burners = {}
 	for _, model in ipairs(folder:GetChildren()) do
-		local fuel = model:GetAttribute("Fuel")
 		if model:GetAttribute("Item") == "burner" then
-			fuel = math.max(0, (fuel or 0) - TICK)
-			model:SetAttribute("Fuel", fuel)
-			if fuel > 0 then
-				fueled += 1
-			end
-			local glow = model:FindFirstChild("Glow")
-			if glow then
-				glow.Transparency = if fuel > 0 then 0 else 0.8
-			end
+			table.insert(burners, model)
+		end
+	end
+	local fueled = if d.fuel > 0 then #burners else 0
+	if fueled > 0 then
+		d.fuel = math.max(0, d.fuel - fueled * TICK)
+	end
+	for _, model in ipairs(burners) do
+		local glow = model:FindFirstChild("Glow")
+		if glow then
+			glow.Transparency = if fueled > 0 then 0 else 0.8
 		end
 	end
 	if player:GetAttribute("BurnersFueled") ~= fueled then
 		player:SetAttribute("BurnersFueled", fueled)
+		PlayerData.update(player, function() end) -- the HUD's power numbers change with it
 	end
 	local share = Economy.plot(d.placed, PlayerData.flags(player).doubleMachines, fueled).share
 	for _, model in ipairs(folder:GetChildren()) do
@@ -2326,7 +2330,7 @@ local function tickMachines()
 		if d and Plots.of(player) then
 			local flags = PlayerData.flags(player)
 			local plot = Economy.plot(d.placed, flags.doubleMachines, player:GetAttribute("BurnersFueled"))
-			local powered = plot.machines > 0 and plot.share >= 1
+			local powered = plot.draw > 0 and plot.share >= 1 -- machines and feeders alike
 			if running[player] ~= powered then
 				running[player] = powered
 				Structures.light(player, powered)
@@ -2674,10 +2678,10 @@ return Monetization
 			<Item class="ModuleScript" referent="RBX0002B">
 				<Properties>
 					<string name="Name">Orders</string>
-					<ProtectedString name="Source"><![CDATA[-- Delivery orders: one at a time, a truck driver asks for a batch of something (bundles, bales,
--- wrapped bales, pellet sacks). Everything of that kind that reaches your basket counts; when
--- the batch is complete you're paid the reward and the next order comes in. Orders go round
--- Config.Orders, each full round paying Config.OrderGrowth times more.
+					<ProtectedString name="Source"><![CDATA[-- Delivery orders: one at a time, a truck driver asks for straws of one kind (bundles, bales,
+-- wrapped bales, pellet sacks). Everything of that kind that reaches your basket counts by its
+-- straws; when it's complete you're paid the reward and the next order comes in. Orders go
+-- round Config.Orders, each full round asking for and paying Config.OrderGrowth times more.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -2688,14 +2692,14 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local PlayerData = require(script.Parent.PlayerData)
 
 local Orders = {}
-local NAMES = { bundle = "bundles of hay", bale = "hay bales", wrapped = "wrapped bales", pellet = "pellet sacks" }
+local NAMES = { bundle = "as loose bundles", bale = "as hay bales", wrapped = "as wrapped bales", pellet = "as pellet sacks" }
 
--- The order with number `n` (1, 2, 3...): which kind, how many, and the reward.
+-- The order with number `n` (1, 2, 3...): which kind, how many straws, and the reward.
 function Orders.at(n)
 	local list = Config.Orders
 	local def = list[(n - 1) % #list + 1]
-	local round = (n - 1) // #list
-	return def.kind, def.count, math.floor(def.reward * Config.OrderGrowth ^ round)
+	local grow = Config.OrderGrowth ^ ((n - 1) // #list)
+	return def.kind, math.floor(def.straws * grow), math.floor(def.reward * grow)
 end
 
 function Orders.publish(player)
@@ -2704,14 +2708,14 @@ function Orders.publish(player)
 		return
 	end
 	local kind, count, reward = Orders.at(d.order)
-	player:SetAttribute("OrderText", "Deliver " .. count .. " " .. NAMES[kind] .. " to your basket")
+	player:SetAttribute("OrderText", "Deliver " .. Format.commas(count) .. " straws " .. NAMES[kind] .. " to your basket")
 	player:SetAttribute("OrderDone", math.min(d.orderDone, count))
 	player:SetAttribute("OrderCount", count)
 	player:SetAttribute("OrderReward", reward)
 end
 
--- One item of `kind` reached the player's basket.
-function Orders.delivered(player, kind)
+-- `straws` of `kind` reached the player's basket.
+function Orders.delivered(player, kind, straws)
 	local d = PlayerData.get(player)
 	if not d then
 		return
@@ -2720,7 +2724,7 @@ function Orders.delivered(player, kind)
 	if kind ~= want then
 		return
 	end
-	if d.orderDone + 1 >= count then
+	if d.orderDone + straws >= count then
 		PlayerData.update(player, function(data)
 			data.coins += reward
 			data.order += 1
@@ -2729,7 +2733,7 @@ function Orders.delivered(player, kind)
 		Remotes.SearchFx:FireClient(player, { kind = "order", coins = reward, text = "Order complete! The driver pays " .. Format.short(reward) .. " coins." })
 	else
 		PlayerData.update(player, function(data)
-			data.orderDone += 1
+			data.orderDone += straws
 		end)
 	end
 	Orders.publish(player)
@@ -3465,7 +3469,7 @@ local function publish(player, profile)
 		player:SetAttribute("Fitness_" .. f.id, d.fitness[f.id])
 	end
 	player:SetAttribute("Detector", d.detector)
-	for _, list in ipairs({ Config.Pieces, Config.Machines, Config.Generators }) do
+	for _, list in ipairs({ Config.Pieces, Config.Machines, Config.Generators, Config.Feeders or {} }) do
 		for _, def in ipairs(list) do
 			player:SetAttribute("Inv_" .. def.id, d.inventory[def.id] or 0)
 			player:SetAttribute("Own_" .. def.id, Economy.owned(d, def.id))
@@ -3808,8 +3812,8 @@ local handlers = {}
 function handlers.BasketSensor(player, item, hit, kind)
 	local straws = HayItems.resolve(item, player)
 	Hauling.add(player, straws, kind)
-	Orders.delivered(player, kind)
-	Remotes.SearchFx:FireClient(player, { kind = "dumped", straws = straws, coins = 0, reason = if kind == "bundle" then "belt" else "bale", basket = hit.Parent:FindFirstChild("Basket") })
+	Orders.delivered(player, kind, straws)
+	Remotes.SearchFx:FireClient(player, { kind = "dumped", straws = straws, coins = 0, quiet = true, reason = if kind == "bundle" then "belt" else "bale", basket = hit.Parent:FindFirstChild("Basket") })
 end
 
 function handlers.BalerIntake(player, item, hit, kind)
@@ -3839,18 +3843,17 @@ function handlers.WrapperIntake(player, item, hit, kind)
 	if kind ~= "bale" or not cf then
 		return
 	end
-	local straws = item:GetAttribute("Straws") or 0
-	HayItems.resolve(item, player)
-	task.wait(1.2) -- the wrapper spins it round
-	if not HayItems.spawn(player, "wrapped", straws, cf, push) then
+	local straws = HayItems.resolve(item, player)
+	if straws > 0 and not HayItems.spawn(player, "wrapped", straws, cf, push) then
 		Hauling.add(player, straws, "wrapped") -- no room for it: it goes straight to the basket
 	end
 end
 
-function handlers.BurnerIntake(player, item, hit)
+function handlers.BurnerIntake(player, item)
 	local straws = HayItems.resolve(item, player)
-	local burner = hit.Parent
-	burner:SetAttribute("Fuel", (burner:GetAttribute("Fuel") or 0) + straws * Config.BurnerSecondsPerStraw)
+	PlayerData.update(player, function(data)
+		data.fuel += straws * Config.BurnerSecondsPerStraw -- shared by all your burners (saved)
+	end)
 end
 
 function handlers.SplitterBelt(_, item, hit)
@@ -3929,6 +3932,7 @@ function Profile.fresh(saved)
 		baleStore = number(saved, "baleStore", 0), -- straws inside your bale makers, not yet a bale
 		loose = number(saved, "loose", 0), -- straws lying about as bundles and bales
 		pressStore = number(saved, "pressStore", 0), -- straws inside your pellet presses
+		fuel = number(saved, "fuel", 0), -- burner-seconds of hay in your Hay Burners
 		beltLevel = math.clamp(math.floor(number(saved, "beltLevel", 1)), 1, #Config.BeltSpeeds),
 		order = math.max(1, math.floor(number(saved, "order", 1))), -- which delivery order (counts up forever)
 		orderDone = math.max(0, math.floor(number(saved, "orderDone", 0))), -- delivered towards it
@@ -5185,13 +5189,8 @@ local function harvest(player, target)
 		if flags.autoSell then
 			Search.sell(player, "auto")
 		else
-			status(player, "You're full. Dump your hay in your trader's basket.")
-			Remotes.SearchFx:FireClient(player, { kind = "full" })
-			return
+			return nope(player, "You're full! Dump your hay in your trader's basket.")
 		end
-	end
-	if not Stamina.spend(player, Config.Stamina.perHarvest) then
-		return status(player, "Catching your breath...") -- a short rest, then carry on
 	end
 	local power = math.min(Economy.power(d, flags.speedBoost), room(d))
 	local taken, hit, golden, gone = 0, false, false, false
@@ -5201,6 +5200,9 @@ local function harvest(player, target)
 			return nope(player, "That isn't your hay.")
 		end
 		golden = true
+		if not Stamina.spend(player, Config.Stamina.perHarvest) then
+			return status(player, "Catching your breath...") -- a short rest, then carry on
+		end
 		taken, hit = goldenHarvest(player, d, power)
 	else
 		local plotIndex = Plots.of(player)
@@ -5212,6 +5214,9 @@ local function harvest(player, target)
 			return nope(player, "That's not your heap. Yours is on the farm marked YOUR FARM.")
 		elseif (head.Position - Piles.position(plotIndex, clump)).Magnitude > Config.Reach + 6 then
 			return nope(player, "Too far away. Step closer to the hay.")
+		end
+		if not Stamina.spend(player, Config.Stamina.perHarvest) then
+			return status(player, "Catching your breath...") -- a short rest, then carry on
 		end
 		taken, gone = Piles.take(plotIndex, d, clump, power)
 		hit = gone and clump == d.needleClump
@@ -6560,7 +6565,7 @@ removeBox.LineThickness = 0.1
 removeBox.Parent = player:WaitForChild("PlayerGui")
 
 local ALL = {}
-for _, list in ipairs({ Config.Pieces, Config.Generators, Config.Machines }) do
+for _, list in ipairs({ Config.Pieces, Config.Generators, Config.Machines, Config.Feeders or {} }) do
 	for _, def in ipairs(list) do
 		table.insert(ALL, def)
 	end
@@ -6863,8 +6868,11 @@ function Detector.start(gui, notify)
 	end
 
 	-- ask the server while the key is held (about 4 times a second)
+	local sweeping = 0
 	local function sweep()
-		while holding do
+		sweeping += 1
+		local mine = sweeping -- a quick release and press again starts a new sweep; the old one stops
+		while holding and mine == sweeping do
 			local ok, answer = pcall(Remotes.Detect.InvokeServer, Remotes.Detect)
 			if ok and type(answer) == "number" then
 				signal = math.clamp(math.floor(answer), 0, cfg.levels)
@@ -7103,6 +7111,10 @@ function Guide.start()
 			local carried, capacity = player:GetAttribute("Carried") or 0, player:GetAttribute("Capacity") or 1
 			local show = root ~= nil and target ~= nil and carried >= capacity
 			if show then
+				if from.Parent == nil or not from:IsDescendantOf(workspace) then -- after a respawn
+					from = Instance.new("Attachment")
+					beam.Attachment0 = from
+				end
 				from.Parent = root
 				from.Position = Vector3.new(0, -1.5, 0)
 				to.WorldPosition = target.Position + Vector3.new(0, 2, 0)
@@ -7502,7 +7514,7 @@ function Hud.mount(gui, open)
 	local pileFill = bar(top, 54, Ui.colors.hay)
 	local warmth = Ui.label({ Size = UDim2.new(1, -20, 0, 14), Position = UDim2.fromOffset(10, 67), TextColor3 = Ui.colors.cream, Parent = top }, 13)
 
-	local left = Ui.make("Frame", { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 10, 0.5, 0), Size = UDim2.fromOffset(220, 488), BackgroundTransparency = 1, Parent = gui }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
+	local left = Ui.make("Frame", { AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0, 10, 0, 140), Size = UDim2.fromOffset(220, 488), BackgroundTransparency = 1, Parent = gui }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
 	Ui.autoScale(left)
 	local stats = Ui.make("Frame", { LayoutOrder = 1, Size = UDim2.fromOffset(220, 194), BackgroundColor3 = Ui.colors.wood, BackgroundTransparency = 0.1, Parent = left }, { Ui.corner(12), Ui.stroke(Ui.colors.woodDark, 3) })
 	local coinsLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 36), Position = UDim2.fromOffset(8, 4), TextColor3 = Ui.colors.hay, Parent = stats }, 32)
@@ -7540,6 +7552,7 @@ function Hud.mount(gui, open)
 	Ui.label({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.fromOffset(560, 18), Text = "M: mouse & menus   Q: shop   B: build   E: use   " .. Config.DropKey .. ": drop hay   " .. Config.HomeKey .. ": home", TextTransparency = 0.3, Parent = gui }, 15)
 
 	local function refresh()
+		left.Position = UDim2.new(0, 10, 0, 60 + 74 * Ui.screenScale()) -- just under the goal card
 		local needles = player:GetAttribute("Needles") or 0
 		if Hud.state.inLoft then
 			local searched = player:GetAttribute("LoftSearched") or 0
@@ -8081,6 +8094,7 @@ step("guide", function()
 end)
 step("orders", function()
 	OrderCard.mount(gui)
+	OrderCard.hidden = BuildMode.active -- out of the way of the build buttons
 end)
 step("teleporters", function()
 	Teleport.mount(gui)
@@ -8179,11 +8193,13 @@ player:GetAttributeChangedSignal("ClumpsLeft"):Connect(function()
 	local now = player:GetAttribute("ClumpsLeft") or Config.Clumps
 	if lastClumps and now < lastClumps then
 		local done = Config.Clumps - now
-		if done % 100 == 0 then
+		local before = Config.Clumps - lastClumps
+		if done // 100 > before // 100 then -- passed a hundred, even if machines took several at once
+			done = done // 100 * 100
 			Juice.confetti()
 			Notify.banner(done .. " CLUMPS HARVESTED!", math.floor(done / Config.Clumps * 100) .. "% of your pile. The needle is in one of the " .. Format.commas(now) .. " left.", 5)
-		elseif done % 10 == 0 then
-			Notify.toast(done .. " clumps harvested!", Ui.colors.wood)
+		elseif done // 10 > before // 10 then
+			Notify.toast(done // 10 * 10 .. " clumps cleared!", Ui.colors.wood)
 		end
 	end
 	lastClumps = now
@@ -8202,17 +8218,17 @@ Remotes.SearchFx.OnClientEvent:Connect(function(message)
 			hud.refresh()
 		end
 		if message.full then
-			Notify.toast("Your tool is full! Sell at the merchant in the hub.", Ui.colors.red)
+			Notify.toast("You're full! Dump your hay in your trader's basket.", Ui.colors.red)
 		end
 	elseif message.kind == "nope" then
 		Notify.toast(message.reason, Ui.colors.wood)
 	elseif message.kind == "full" then
-		Notify.toast("Your tool is full! Sell at the merchant (or buy a bigger tool).", Ui.colors.red)
-	elseif message.kind == "sold" then
-		Juice.coins(message.coins)
-		Notify.toast("Sold " .. Format.commas(message.straws) .. " straw for " .. Format.short(message.coins) .. " coins", Ui.colors.green)
+		Notify.toast("You're full! Dump your hay in your trader's basket (or buy a bucket).", Ui.colors.red)
 	elseif message.kind == "dumped" then
 		HayFx.dump(message.basket, message.straws, message.reason ~= "bale" and message.reason ~= "belt")
+		if message.quiet then
+			return -- belt deliveries: the basket fills, no message (the HUD shows the basket)
+		end
 		if message.coins > 0 then
 			Juice.coins(message.coins) -- golden straw is paid for at once
 		end
@@ -8438,7 +8454,7 @@ function Notify.mount(gui)
 	stack = Ui.make("Frame", {
 		Name = "Toasts",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 98),
+		Position = UDim2.new(0.5, 0, 0, 6 + 92 * Ui.screenScale()), -- just under the top bar
 		Size = UDim2.fromOffset(460, 220),
 		BackgroundTransparency = 1,
 		Parent = gui,
@@ -8658,7 +8674,7 @@ function OrderCard.mount(gui)
 		local wanted = player:GetAttribute("OrderText")
 		local done, count = player:GetAttribute("OrderDone") or 0, player:GetAttribute("OrderCount") or 1
 		card.Visible = wanted ~= nil
-		text.Text = (wanted or "") .. ": " .. done .. "/" .. count
+		text.Text = (wanted or "") .. ": " .. Format.short(done) .. "/" .. Format.short(count)
 		title.Text = "DELIVERY ORDER  +" .. Format.short(player:GetAttribute("OrderReward") or 0)
 		Juice.ease(fill, 0.4, { Size = UDim2.fromScale(math.clamp(done / count, 0, 1), 1) })
 	end
@@ -8666,6 +8682,13 @@ function OrderCard.mount(gui)
 		player:GetAttributeChangedSignal(name):Connect(refresh)
 	end
 	refresh()
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+			local hide = OrderCard.hidden and OrderCard.hidden()
+			card.Visible = player:GetAttribute("OrderText") ~= nil and not hide
+		end
+	end)
 end
 
 return OrderCard
