@@ -43,7 +43,7 @@ function Juice.sound(name, pitch)
 end
 
 function Juice.mount(screen, coinsLabel)
-	gui, coinTarget = screen, coinsLabel
+	gui, coinTarget = screen, coinsLabel -- coinsLabel may be nil if the HUD failed
 	comboLabel = Ui.label({ AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0.5, 40, 0.5, -30), Size = UDim2.fromOffset(220, 40), TextXAlignment = Enum.TextXAlignment.Left, TextTransparency = 1, TextStrokeTransparency = 1, TextColor3 = Ui.colors.hay, Parent = screen }, 34)
 end
 
@@ -161,6 +161,9 @@ end
 
 -- Counts a TextLabel smoothly from one number to another.
 function Juice.countTo(label, holder, value, format)
+	if label.Text == "" then
+		label.Text = format(holder.Value)
+	end
 	ease(holder, 0.6, { Value = value }, Enum.EasingStyle.Quart)
 	if not holder:GetAttribute("Hooked") then
 		holder:SetAttribute("Hooked", true)

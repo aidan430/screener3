@@ -23,37 +23,74 @@ local WorldFx = require(script.Parent:WaitForChild("WorldFx"))
 local player = Players.LocalPlayer
 local gui = Ui.make("ScreenGui", { Name = "HaystackUi", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
 
-Cursor.mount(gui)
-Notify.mount(gui)
-local panels
-local hud = Hud.mount(gui, function(name)
-	panels.open(name)
-end)
-Juice.mount(gui, hud.coins)
-BuildMode.mount(gui, Notify)
-panels = Panels.mount(gui, Notify, {
-	Build = function()
-		BuildMode.toggle()
-	end,
-	Whistle = function()
-		local ok, success, message = pcall(Remotes.Whistle.InvokeServer, Remotes.Whistle)
-		Notify.toast(if ok then tostring(message) else "Try again.", if ok and success then Ui.colors.green else Ui.colors.red)
-	end,
-})
-Harvest.onMiss = function(text)
-	Notify.toast(text, Ui.colors.wood)
+-- Errors show on screen (red, top right) so a broken part can be reported without the
+-- Output window. Each part starts on its own, so one failing can't stop harvesting.
+local errorBox = Ui.label({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 60), Size = UDim2.fromOffset(420, 160), TextColor3 = Color3.fromRGB(255, 90, 80), TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Font = Enum.Font.Code, Parent = gui }, 14)
+local function report(text)
+	errorBox.Text = string.sub(errorBox.Text .. "\n" .. text, -900)
 end
-Harvest.start()
-WorldFx.start()
+game:GetService("ScriptContext").Error:Connect(function(message, trace)
+	report("ERROR: " .. tostring(message) .. "\n" .. string.sub(tostring(trace), 1, 200))
+end)
+local function step(name, fn)
+	local ok, err = pcall(fn)
+	if not ok then
+		report("ERROR starting " .. name .. ": " .. tostring(err))
+	end
+end
+
+local panels, hud
+step("messages", function()
+	Notify.mount(gui)
+end)
+step("harvesting", function()
+	Harvest.onMiss = function(text)
+		Notify.toast(text, Ui.colors.wood)
+	end
+	Harvest.start()
+end)
+step("mouse", function()
+	Cursor.mount(gui)
+end)
+step("HUD", function()
+	hud = Hud.mount(gui, function(name)
+		if panels then
+			panels.open(name)
+		end
+	end)
+end)
+step("effects", function()
+	Juice.mount(gui, hud and hud.coins)
+end)
+step("building", function()
+	BuildMode.mount(gui, Notify)
+end)
+step("menus", function()
+	panels = Panels.mount(gui, Notify, {
+		Build = function()
+			BuildMode.toggle()
+		end,
+		Whistle = function()
+			local ok, success, message = pcall(Remotes.Whistle.InvokeServer, Remotes.Whistle)
+			Notify.toast(if ok then tostring(message) else "Try again.", if ok and success then Ui.colors.green else Ui.colors.red)
+		end,
+	})
+end)
+step("world effects", function()
+	WorldFx.start()
+end)
+if not hud then
+	hud = { refresh = function() end }
+end
 
 UserInputService.InputBegan:Connect(function(input, processed)
-	if not processed and input.KeyCode == Enum.KeyCode.Q then
+	if not processed and input.KeyCode == Enum.KeyCode.Q and panels then
 		panels.open("Shop")
 	end
 end)
 
 ProximityPromptService.PromptTriggered:Connect(function(prompt)
-	if prompt:GetAttribute("Action") == "wheel" then
+	if prompt:GetAttribute("Action") == "wheel" and panels then
 		panels.open("Wheel")
 	end
 end)
@@ -139,6 +176,8 @@ Remotes.Announce.OnClientEvent:Connect(function(message)
 		end)
 	elseif message.kind == "notice" then
 		Notify.toast(message.text, Ui.colors.wood)
+	elseif message.kind == "error" then
+		report(message.text)
 	end
 end)
 

@@ -137,9 +137,19 @@ end
 function Harvest.start()
 	-- the mouse button too, in case the tool's own click doesn't come through in first person
 	UserInputService.InputBegan:Connect(function(input, processed)
+		if input.UserInputType ~= Enum.UserInputType.MouseButton1 then
+			return
+		end
+		-- with the mouse locked to the crosshair, a click can't be meant for a menu
+		local locked = UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter
+		if processed and not locked then
+			return
+		end
 		local tool = heldTool()
-		if not processed and tool and input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if tool then
 			swing(tool)
+		elseif Harvest.onMiss and player.Character then
+			Harvest.onMiss("Hold your fork to harvest: press 1.")
 		end
 	end)
 	RunService.RenderStepped:Connect(function()

@@ -11,6 +11,13 @@ StarterPlayer.CameraMode = Enum.CameraMode.LockFirstPerson
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
+-- While testing in Studio, server errors also show on the players' screens.
+if RunService:IsStudio() then
+	game:GetService("ScriptContext").Error:Connect(function(message, trace)
+		Remotes.Announce:FireAllClients({ kind = "error", text = "SERVER ERROR: " .. tostring(message) .. "\n" .. string.sub(tostring(trace), 1, 200) })
+	end)
+end
+
 local Haystack = require(script.Parent.Haystack)
 local PlayerData = require(script.Parent.PlayerData)
 local Plots = require(script.Parent.Plots)
