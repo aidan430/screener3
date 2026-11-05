@@ -38,6 +38,7 @@ local LooseHay = require(script.Parent.LooseHay)
 local Processing = require(script.Parent.Processing)
 local Factory = require(script.Parent.Factory)
 local Orders = require(script.Parent.Orders)
+local Goals = require(script.Parent.Goals)
 
 StarterPlayer.CharacterMaxSlopeAngle = Config.MaxSlopeAngle -- the steep heap needs building to climb
 local Scenery = require(script.Parent.Scenery)
@@ -133,6 +134,7 @@ local parts = {
 	{ "LooseHay", LooseHay.init },
 	{ "Processing", Processing.init },
 	{ "Factory", Factory.init },
+	{ "Goals", Goals.init },
 }
 for _, part in ipairs(parts) do
 	local ok, err = pcall(part[2])

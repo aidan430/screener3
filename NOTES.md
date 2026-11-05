@@ -179,3 +179,19 @@ to the clump); infinite rotations in Place; two players loading a tool model at 
 broken tool; the new needle wasn't saved straight away and the heap rebuilt 6 s late (now at
 once); golden straw didn't auto-dump; stale Config comments.
 Not done yet: session locking for saves (a very quick server hop could lose that session).
+
+## Guided goals and coins a minute (2026-11-05)
+- **Goals (`Config.Goals`, 25 of them, `server/Goals.luau`, client `Goals.luau`):** an ordered
+  list that teaches the game: first hay, fill your tool, dump in the basket, a first sale, the
+  Wooden Pitchfork, a ladder, 10 clumps, a Tin Pail, stairs, drop a bundle (G), a conveyor, a
+  dynamo, a Clockwork Hen, the Iron Pitchfork, 25 clumps, a Farm Van, 10,000 sold, 20 power,
+  50 clumps, 3 machines, the Steel Rake, a Small Silo, a Bale Maker, a bale, 100 clumps.
+  Rewards 25 to 15,000 coins (55,400 in all, small next to the game's millions; `dev/pacing.py`
+  doesn't count them). The server checks the current goal every `GoalCheckSeconds` (2), pays,
+  and moves on; a returning player catches up on goals already met at once (paid, no fanfare).
+  Saved as a position (`d.goal`): add new goals at the end. Two goals a line in Config to keep
+  it under 300 lines. New saved counters: `stats.dumps`, `stats.drops`, `stats.bales_made`.
+  The card sits top left, under Roblox's buttons; a soft green glow and a toast each time,
+  confetti every fifth goal and the last.
+- **Coins a minute:** under the coins counter, what you earned in the last
+  `RateWindowSeconds` (60), counting only rises (spending and goal rewards don't count).

@@ -1,5 +1,5 @@
 -- Every number you might want to tune lives here. Change it, rebuild, play-test.
--- It requires only ConfigFactory (more of the same numbers), so the server, the client and the checks can all read it.
+-- It requires only ConfigFactory and ConfigGoals (more of the same numbers), so the server, the client and the checks can all read it.
 local Config = {}
 
 Config.Title = "Needle in the Haystack"
@@ -274,14 +274,17 @@ Config.BadgeIds = {} -- optional: { first_straw = 123456 } awards a Roblox badge
 -- The Golden Loft: a secret golden haystack above the hub where straw pays 20x.
 Config.Loft = { straws = 250000, coinMultiplier = 20, needleEarliest = 0.5 }
 
--- The factory line and processing chain (ConfigFactory.luau): its lists add to the ones above.
-for name, value in pairs(require(script.Parent:WaitForChild("ConfigFactory"))) do
-	if type(value) == "table" and type(Config[name]) == "table" and #value > 0 then
-		for _, entry in ipairs(value) do
-			table.insert(Config[name], entry)
+-- More numbers kept in companion files (to keep each under 300 lines): the factory line and
+-- processing chain, and the guided goals. Their lists add to the ones above.
+for _, file in ipairs({ "ConfigFactory", "ConfigGoals" }) do
+	for name, value in pairs(require(script.Parent:WaitForChild(file))) do
+		if type(value) == "table" and type(Config[name]) == "table" and #value > 0 then
+			for _, entry in ipairs(value) do
+				table.insert(Config[name], entry)
+			end
+		else
+			Config[name] = value
 		end
-	else
-		Config[name] = value
 	end
 end
 

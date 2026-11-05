@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT / "dev"))
 import pacing  # noqa: E402
 
 SHARED = ROOT / "src" / "shared"
-CONFIG = (SHARED / "Config.luau").read_text()
+CONFIG = "\n".join((SHARED / f).read_text() for f in ("Config.luau", "ConfigFactory.luau", "ConfigGoals.luau"))
 FINDS = json.loads((SHARED / "Finds.json").read_text())
 
 
@@ -99,6 +99,35 @@ class Achievements(unittest.TestCase):
         self.assertLessEqual(goals["machines"], sum(m["max"] for m in pacing.rows("Machines")))
         self.assertLessEqual(goals["power"], sum(g["power"] * g["max"] for g in pacing.rows("Generators")))
         self.assertLessEqual(goals["best_height"], max(c[1] for c in layout()))
+
+
+class Goals(unittest.TestCase):
+    def test_goals_are_unique_rewarded_and_checkable(self):
+        block = re.search(r"^Config\.Goals = \{(.*?)^\}", CONFIG, re.M | re.S).group(1)
+        goals = [dict(re.findall(r'(\w+) = ("[^"]*"|[\d.]+)', g)) for g in re.findall(r"\{ (id = .*?) \}", block)]
+        self.assertGreaterEqual(len(goals), 20)
+        ids = [g["id"] for g in goals]
+        self.assertEqual(len(ids), len(set(ids)), "goal ids must be unique")
+        stats = set(re.findall(r'"(\w+)"', re.search(r"Profile\.STATS = \{(.*?)\}", (ROOT / "src/server/Profile.luau").read_text()).group(1)))
+        items = {r["id"] for t in ("Pieces", "Machines", "Generators") for r in pacing.rows(t)}
+        trucks = {r["id"] for r in pacing.rows("Trucks")}
+        levels = {"tool": len(pacing.rows("Tools")), "bucket": len(pacing.rows("Buckets")), "silo": len(pacing.rows("Silos"))}
+        for g in goals:
+            kind, n = g["kind"].strip('"'), float(g["n"])
+            self.assertGreater(float(g["reward"]), 0, g["id"])
+            self.assertGreater(n, 0, g["id"])
+            self.assertIn(kind, {"stat", "tool", "bucket", "silo", "clumps", "placed", "truck", "machines", "power"}, g["id"])
+            key = g.get("key", '""').strip('"')
+            if kind == "stat":
+                self.assertIn(key, stats, g["id"])
+            elif kind == "placed":
+                self.assertIn(key, items, g["id"])
+            elif kind == "truck":
+                self.assertIn(key, trucks, g["id"])
+            elif kind in levels:
+                self.assertLessEqual(n, levels[kind], g["id"])
+            elif kind == "clumps":
+                self.assertLessEqual(n, float(pacing.number("Clumps")), g["id"])
 
 
 class Pacing(unittest.TestCase):

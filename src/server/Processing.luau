@@ -36,6 +36,9 @@ local function produce(player, machine, store, size, kind, outName)
 		end
 		PlayerData.update(player, function(data)
 			data[store] -= size
+			if kind == "bale" then
+				data.stats.bales_made += 1
+			end
 		end)
 		task.wait(0.6)
 	end

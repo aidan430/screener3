@@ -52,6 +52,7 @@ local function drop(player)
 	end
 	PlayerData.update(player, function(data)
 		data.carried -= straws
+		data.stats.drops += 1
 	end)
 end
 
