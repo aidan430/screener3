@@ -6,8 +6,13 @@ Do one step at a time. Each step says what it is, what to tap, and how you know 
 your password app, and from there into your own server (step 4 shows how).
 
 **Money fences you are setting up:** prepaid Claude credit, a $50 monthly limit, the
-factory's R50-a-day limit, R700 per smoke test, R10,000 per first stock batch and R15,000
-per product's whole start-up. Nothing is bought without your tap.
+factory's R50-a-day limit, R700 per smoke test and R15,000 per niche's whole start-up
+(R10,000 per first stock batch if you switch products back on). Nothing is bought without
+your tap.
+
+**What it hunts first:** the BPO. AI agents answer customers and follow up leads for South
+African businesses, and a person (you, at first) supervises. Products and software niches
+are paused; one line in `config/settings.yaml` (`niche_limit`) turns them back on.
 
 ## Stage A: switch it on
 
@@ -89,10 +94,19 @@ Done when: the dashboard's Warden panel button "WRITE REPORT NOW" sends you an e
    `set-key.sh PAYSTACK_SECRET_KEY`.
 3. Set the webhook URL to `https://yourdomain/api/paystack/webhook`.
 
-### 8. Quotes for the warehouse and for imports
-Ask a South African fulfilment warehouse (for example Parcel Ninja) and a clearing agent or
-freight forwarder for quotes. Say: a small online store starting with 30-40 units of one
-small product under 1 kg, later 5-20 orders a day, on Shopify. Ask for:
+### 8. Quotes for WhatsApp and a helpdesk (for the BPO)
+Ask two or three providers of the WhatsApp Business Platform with a shared inbox (a
+helpdesk that includes WhatsApp, email and chat) for quotes. Say: a small service business
+answering customers for 3-10 client businesses, about 300 conversations per client a month.
+Ask for: the monthly price per seat or per client, the fee per WhatsApp message on top of
+Meta's own rates, set-up fees, and how long Meta's business verification takes.
+Send me the numbers (they are not secret). I will put them into `config/services.yaml`, so
+every service is costed with your real prices instead of my estimates.
+
+**Only if you switch products back on:** ask a South African fulfilment warehouse (for
+example Parcel Ninja) and a clearing agent or freight forwarder for quotes. Say: a small
+online store starting with 30-40 units of one small product under 1 kg, later 5-20 orders a
+day, on Shopify. Ask for:
 - warehouse: setup fee, receiving per unit, storage per unit a month, pick and pack per
   order, packaging, courier rates (door to door and lockers), returns handling;
 - imports: air freight per kg from China to Johannesburg, clearing fee per shipment, and
@@ -106,7 +120,8 @@ every product is costed with your real prices instead of my estimates.
    (ZAR) on South African time.
 2. Add your card. Facebook may ask for your ID.
 For now you create each test's three ads by hand from the steps the dashboard shows after
-FUND TEST (about 10 minutes a test).
+FUND TEST (about 10 minutes a test). For the BPO, aim them at business owners and managers
+in the niche (the steps say which), not at shoppers.
 
 ### 10. Etsy and eBay keys: for price research
 - etsy.com/developers: create an app and save its key with `set-key.sh ETSY_API_KEY`.
@@ -114,7 +129,20 @@ FUND TEST (about 10 minutes a test).
   `set-key.sh EBAY_CLIENT_ID` and the Cert ID with `set-key.sh EBAY_CLIENT_SECRET`.
   If eBay asks about account-deletion notices, say you do not store eBay user data.
 
-## Stage C: only when a product wins
+## Stage C: only when a service wins
+
+The arena shows the niche at tower 6 with a **FUND LAUNCH** button. Tapping it buys and
+signs nothing: it gives you a shopping list and writes `client/first-client.md`, your
+checklist for the first client. Then:
+1. Register the company at CIPC (bizportal.gov.za) and register yourself as its information
+   officer with the Information Regulator (inforegulator.org.za). Both are online.
+2. Have a lawyer check the service agreement and the POPIA operator agreement. This is the
+   R3,000 line on the shopping list.
+3. Set up the WhatsApp number and helpdesk from step 8, then run 20 test conversations with
+   the first client watching before the free pilot month starts.
+4. You sign every client contract. The agents never do.
+
+## When a product wins (only if products are switched back on)
 
 The arena shows the product at tower 6 with a **FUND STOCK** button. Tapping it buys
 nothing: it gives you a shopping list and writes a draft first order. Then:
@@ -126,8 +154,8 @@ nothing: it gives you a shopping list and writes a draft first order. Then:
 ## Everyday use
 - Dashboard: `https://admin.yourdomain` (user `owner`). Check it when the Monday report
   arrives; it lists every decision waiting for you.
-- Your taps: FUND TEST (then make the ads), FUND STOCK, RETRY TRAINING, and "I handled it"
-  on alerts.
+- Your taps: FUND TEST (then make the ads), FUND LAUNCH or FUND STOCK, RETRY TRAINING,
+  and "I handled it" on alerts.
 - Updates: when I build something new I open a pull request. Merge it, then paste the
   install command from step 4 again. It keeps your settings.
 

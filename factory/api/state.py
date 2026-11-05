@@ -134,7 +134,7 @@ def dossiers(s, limit: int = 8) -> list[dict]:
                     "break_even": d.break_even_sales, "margin": d.margin, "score": d.score,
                     "demand_score": d.demand_score, "competition_score": d.competition_score,
                     "unit_cost_basis": d.unit_cost_basis, "reasoning": d.reasoning[:400], "url": c.url,
-                    "stock": arena_mod.stock_summary(d)})
+                    "stock": arena_mod.stock_summary(d), "service": arena_mod.service_summary(d)})
     return out
 
 

@@ -32,6 +32,22 @@ COMMERCE_POST = RawSignal(source="reddit", external_id="reddit:c1",
                           score=21, replies=14, matched=["where can I buy", "out of stock"])
 
 
+SERVICES_POST = RawSignal(  # the words a web search cited from a (FAKE) job advert
+    source="web", external_id="web:s1", url="https://www.pnet.co.za/jobs/customer-service-agent-online-store-1",
+    title="Customer Service Agent (WhatsApp and email) | Pnet",
+    text="Online store needs a Customer Service Agent to answer WhatsApp, email and live chat queries. "
+         "Salary: R9 500 per month. Monday to Saturday.", matched=["customer service agent salary"])
+
+
+def services_draft(signal_ids: list[int]):
+    from factory.scouts.distill import CardDraft, Distilled
+    return Distilled(cards=[CardDraft(
+        signal_id=signal_ids[0], title="WhatsApp replies for online stores",
+        problem="SA online stores pay an agent R9,500 a month to answer customer messages.",
+        quote="Online store needs a Customer Service Agent to answer WhatsApp, email and live chat queries.",
+        pay_evidence="Salary: R9 500 per month", pay_amount=9500, pay_currency="R", business_model="ai_support")])
+
+
 def commerce_draft(signal_ids: list[int]):
     from factory.scouts.distill import CardDraft, Distilled
     return Distilled(cards=[CardDraft(
@@ -73,12 +89,14 @@ class FakeMessages:
         if name == "Distilled":
             import re
             ids = [int(x) for x in re.findall(r'<post id="(\d+)"', prompt)]
-            out = commerce_draft(ids) if "product scout" in system else fake_draft(ids)
+            out = (commerce_draft(ids) if "product scout" in system else
+                   services_draft(ids) if "BPO" in system else fake_draft(ids))
         elif name == "Verdict":
             out = self.owner.verdict(system, prompt)
         elif name == "PageDraft":
             from factory.smoke.page import AdVariant, PageDraft, Targeting
-            name_ = "Trail Flask" if "physical product" in prompt else "Lease Nudge"
+            name_ = ("Trail Flask" if "physical product" in prompt else
+                     "Store Desk" if "monthly service" in prompt else "Lease Nudge")
             out = PageDraft(product_name=name_, headline="Lease renewals that send themselves",
                             subhead="Reminders for SA landlords.", benefits=["a", "b", "c"],
                             price_label="R99 / month", cta="Buy now",
@@ -88,6 +106,8 @@ class FakeMessages:
             from factory.dive.demand import Plan
             out = (Plan(terms=["collapsible dog water bottle"], business_model="local_stock")
                    if "dog water bottle" in prompt else
+                   Plan(terms=["customer service agent", "whatsapp support"], business_model="ai_support")
+                   if "WhatsApp replies" in prompt else
                    Plan(terms=["lease renewal reminders", "rent reminder"], business_model="micro_saas"))
         elif name == "Econ":
             out = self.owner.econ(prompt)
@@ -113,13 +133,15 @@ class FakeClaude:
         self.messages = FakeMessages(self)
         self.price = 9.0          # anchored to E1 (9.99 USD) unless a test changes it
         self.commerce_price = 599.0  # rand, anchored to E0 (R899 in the post)
+        self.service_price = 2999.0  # rand a month, anchored to E0 (R9 500 per month in the job advert)
+        self.service_extra = {}      # Econ fields a test sets for the services card
         self.hard_kill = False
         self.exam_mode = "pass"   # pass | fail_once | fail_always (the Support agent)
         self.graded = {}
 
     def training(self, name, system, prompt):
         from factory.training import exam, writer
-        roles = ["store", "content", "ads", "support", "books", "stock"]
+        roles = ["store", "content", "ads", "support", "books", "stock", "desk", "followup", "qa", "reporter"]
         if name == "Sops":
             return writer.Sops(brand_voice="Plain and friendly.", offer_summary="Lease renewal reminders.",
                                refund_policy="Full refund within 14 days (our default).",
@@ -137,7 +159,8 @@ class FakeClaude:
             return exam.Replies(replies=[exam.Reply(n=i, reply=f"reply {i}") for i in range(1, 6)])
         if name == "Grades":
             role = next(r for r in ("Store agent", "Content agent", "Ads agent", "Support agent", "Bookkeeper",
-                                    "Stock agent") if r in system)
+                                    "Stock agent", "Desk agent", "Follow-up agent", "QA agent", "Client reporter")
+                        if r in system)
             self.graded[role] = self.graded.get(role, 0) + 1
             fail = role == "Support agent" and (self.exam_mode == "fail_always"
                                                 or (self.exam_mode == "fail_once" and self.graded[role] == 1))
@@ -152,6 +175,14 @@ class FakeClaude:
         ns, system = SimpleNamespace, " ".join(system.split())
         if "physical products" in system:  # the web scout for a commerce niche
             hits = [(COMMERCE_POST.url, COMMERCE_POST.title, COMMERCE_POST.text[:150])]
+        elif "pay people to answer customer messages" in system:  # the web scout for a services niche
+            hits = [(SERVICES_POST.url, SERVICES_POST.title, SERVICES_POST.text)]
+        elif "businesses pay today" in system:  # the Deep Dive pay check for a service
+            hits = [("https://www.pnet.co.za/jobs/cs-agent-durban-2", "Customer Service Agent | Pnet",
+                     "Customer Service Agent, Durban. R8 000 - R10 000 per month. WhatsApp and email support."),
+                    ("https://www.example.co.za/outsourced-support", "Outsourced WhatsApp support",
+                     "Outsourced WhatsApp support from R4 500 per month for up to 500 conversations."),
+                    ("https://www.example.co.za/va", "Virtual assistant", "Virtual assistant, R95 per hour.")]
         elif "shops charge" in system:  # the Deep Dive price check
             hits = [("https://www.takealot.com/dog-bottle/PLID1", "Collapsible Dog Water Bottle | Takealot.com",
                      "Collapsible Dog Water Bottle 500ml R449 In stock"),
@@ -171,6 +202,12 @@ class FakeClaude:
 
     def econ(self, prompt=""):
         from factory.dive.economics import Econ
+        if "WhatsApp replies for online stores" in prompt:
+            return Econ(**{"business_model": "ai_support", "price_point": self.service_price, "currency": "R",
+                           "price_unit": "per month", "price_basis_id": "E0", "channel": "mixed",
+                           "demand_score": 7, "competition_score": 7, "score": 8,
+                           "reasoning": "A store pays an agent R9,500 a month; an AI desk at R2,999 undercuts it.",
+                           "evidence": ["Salary: R9 500 per month"], **self.service_extra})
         if "dog water bottle" in prompt:
             return Econ(business_model="local_stock", price_point=self.commerce_price, currency="R",
                         price_unit="one-off", price_basis_id="E0", weight_kg=0.3, duty_category="default",
@@ -188,6 +225,9 @@ class FakeClaude:
             if "dog water bottle" in prompt:
                 return Verdict(score=7, verdict="pass", reasoning="A priced import and an out-of-stock shop.",
                                evidence=["Takealot has been out of stock for months"])
+            if "WhatsApp replies for online stores" in prompt:
+                return Verdict(score=7, verdict="pass", reasoning="Rule 1: a job advert with a monthly salary.",
+                               evidence=["Salary: R9 500 per month"])
             if "Lease renewal" in prompt:
                 return Verdict(score=7, verdict="pass", reasoning="Rule 3: pays a person R450/month.",
                                evidence=["I pay someone R450 a month", "a quote the model made up"])

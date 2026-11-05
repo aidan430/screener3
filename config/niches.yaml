@@ -1,5 +1,5 @@
 # One entry = one scout. settings.yaml (niche_limit) decides how many are active:
-# the first N commerce niches, then the first M others.
+# the first N of each kind.
 # subreddits: where to listen. competitors: apps whose 1-2 star reviews to read.
 # keywords: used across upwork/fiverr/hn/trends searches.
 # kind: commerce = physical products for South African buyers, sold from stock
@@ -7,6 +7,42 @@
 # (config/commerce.yaml), name no competitor apps, and use web search only
 # (Reddit closed new API access on 31 Oct 2026).
 
+# kind: services = an AI-run BPO for South African businesses (the services lane):
+# Claude agents answer customers or follow up leads, people supervise. Their scouts
+# search outsourcing phrases (config/services.yaml): job ads with salaries, and
+# businesses that cannot keep up with enquiries. Web search only, no competitor apps.
+- slug: sa-online-stores-support
+  kind: services
+  region: ZA
+  keywords: [online store customer service, order queries, WhatsApp support, returns queries]
+  sources: [web]
+- slug: sa-car-dealers-leads
+  kind: services
+  region: ZA
+  keywords: [car dealership leads, AutoTrader leads, test drive bookings, dealer follow up]
+  sources: [web]
+- slug: sa-property-agencies
+  kind: services
+  region: ZA
+  keywords: [estate agent leads, rental enquiries, viewing bookings, tenant queries]
+  sources: [web]
+- slug: sa-hospitality-bookings
+  kind: services
+  region: ZA
+  keywords: [guesthouse bookings, restaurant reservations, WhatsApp bookings, after hours enquiries]
+  sources: [web]
+- slug: sa-trades-leads
+  kind: services
+  region: ZA
+  keywords: [quote requests, missed calls, call-out bookings, solar installer leads]
+  sources: [web]
+- slug: sa-gyms-members
+  kind: services
+  region: ZA
+  keywords: [gym membership enquiries, class bookings, trial follow up, member queries]
+  sources: [web]
+
+# kind: commerce = physical products (paused by niche_limit while the BPO comes first).
 - slug: sa-home-kitchen
   kind: commerce
   region: ZA

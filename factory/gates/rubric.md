@@ -4,7 +4,7 @@ Both gates read this file at runtime. The section text is sent to the judge
 verbatim. Bump the version line when you change a rubric; every GateResult
 records the version it was judged under.
 
-<!-- version: 2026-11-02.1 -->
+<!-- version: 2026-11-02.2 -->
 
 ## proof
 
@@ -25,6 +25,11 @@ For a physical product (business model local_stock), a shop or listing named in
 the material that sells this product or a close substitute at a stated price
 counts as a paid competitor, and complaints that South African buyers cannot
 get it (out of stock, overpriced, slow or costly to import) count as complaints.
+
+For a service for businesses (business model ai_support or ai_followup), a job
+advert with a salary for this work counts under rule 1 (a business already pays a
+person to do it), and an outsourcing provider with a stated price counts as a paid
+competitor under rule 2.
 
 Posts found by web search carry no vote or reply counts (`votes="unknown"`), so
 rule 3 cannot be met from them; judge them on rule 1, rule 2 or the local-stock
@@ -72,6 +77,22 @@ For a physical product sold in South Africa (local_stock), also KILL if it is:
 - heavier than 5 kg packed, fragile, or sold mainly in sizes (one-size apparel
   is fine),
 - something that needs a licence, certificate or fitting to sell or use.
+For a service for businesses (ai_support, ai_followup), AI agents do the work and
+people supervise: the owner's own calls to win clients are fine, and so are people
+taking escalations. KILL instead if the work:
+- needs a licence, registration or professional advice (financial advice, legal,
+  medical, insurance claims advice), or is debt collection,
+- handles health records, children's information, biometric data, criminal records
+  or credit records,
+- means contacting people for marketing who never asked to be contacted (POPIA
+  section 69, the Consumer Protection Act), or calling outside permitted hours,
+- takes card numbers (sending a payment link is fine), is a crisis, emergency or
+  counselling line, or needs someone on site,
+- would need a person on more than 1 in 5 conversations.
+For services, the build is the client's set-up (1-3 days): score 10 = repetitive
+questions or follow-ups the business's own FAQs and calendar can answer; 6 = some
+judgement calls but a clear escalation path; below 6 = a kill condition applies.
+
 For local_stock, the build is the store listing (1-2 days): score 10 = light,
 sturdy, one size, legal to sell anywhere in South Africa, and every buyer
 question can be answered from the catalogue; 6 = some risk (returns, fragility)

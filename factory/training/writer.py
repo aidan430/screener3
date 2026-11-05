@@ -23,6 +23,12 @@ must be exactly the Deep Dive price given. Describe only what the smoke-test pag
 promised; put anything you had to assume in `notes`. Keep it to 1-3 items."""
 
 
+SERVICE_FACTS = ("This is a monthly service sold to South African businesses: AI agents serve each client's "
+                 "customers or leads and a person supervises. 'Delivery' means the service levels (hours covered, "
+                 "reply times, hand-over to the client); 'refunds' means cancellation and credits. Each client's "
+                 "customer data belongs to that client; we process it as its operator (POPIA section 21).")
+
+
 class FAQ(BaseModel):
     question: str
     answer: str
@@ -66,6 +72,8 @@ def facts(card, niche, dossier, smoke) -> str:
              f"Smoke-test result: {smoke.buy_clicks} buy-clicks from {smoke.visitors} visitors",
              f"Price: {dossier.price_point:g} {dossier.currency} {dossier.price_unit}" if dossier and dossier.price_point
              else f"Price on the smoke-test page: {smoke.price_label}"]
+    if dossier and dossier.j("service"):
+        lines.append(SERVICE_FACTS)
     if dossier:
         lines.append(f"Deep Dive reasoning: {dossier.reasoning[:600]}")
         lines += [f"Risk: {r['risk']} ({r['severity']})" for r in dossier.j("risks")[:4]]
@@ -73,11 +81,11 @@ def facts(card, niche, dossier, smoke) -> str:
 
 
 def write_sops(card, material: str, cap_zar: float) -> Sops:
-    roles = ", ".join(config.squad_roles(card.lane))
+    roles = ", ".join(config.squad_roles(card.lane, card.business_model))
     sops = costs.call(stage_name="train", model=config.settings()["models"]["judge"],
                       system=SOPS_SYSTEM.format(roles=roles), prompt=material, output=Sops,
                       max_tokens=3000, card_id=card.id, cap_zar=cap_zar, note="playbook writer")
-    known = set(config.squad_roles(card.lane))
+    known = set(config.squad_roles(card.lane, card.business_model))
     sops.role_rules = [r for r in sops.role_rules if r.role in known]
     return sops
 

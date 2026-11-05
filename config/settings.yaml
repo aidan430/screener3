@@ -7,8 +7,9 @@ fx_zar:                     # rand per unit of currency (API spend is billed in 
   AUD: 12.00
   CAD: 13.50
 niche_limit:                # active niches: the first N of each kind in niches.yaml
-  commerce: 4               # physical products for South Africa come first
-  other: 2                  # digital and content niches keep running at a lower volume
+  services: 4               # the AI-run BPO for South African businesses comes first (your choice)
+  commerce: 0               # local-stock products: paused, not deleted (set a number to resume)
+  other: 0                  # digital and content niches: paused
 
 models:
   scout: claude-haiku-4-5     # scouts, distill, Deep Dive query planner

@@ -69,7 +69,7 @@
     var dpr = Math.min(devicePixelRatio || 1, 2), g = cv.getContext('2d');
     cv.width = W * dpr; cv.height = H * dpr; cv.style.aspectRatio = '1 / 1'; g.scale(dpr, dpr);
     var bg = scenery(dpr), S = null, skew = 0, sel = null, t = 0, mode = 'live', rp = null, hits = [], coins = [];
-    var lanePos = {digital: 'top', commerce: 'mid', content: 'bot'};
+    var lanePos = {digital: 'top', commerce: 'mid', services: 'bot'};  // /api/state's lanes replace these
 
     function towerXY(lane, n) { var pos = lanePos[lane] || 'mid'; return TOWER[pos][Math.max(1, Math.min(6, n)) - 1]; }
     function unitXY(u, i, n) { var tw = towerXY(u.lane, u.tower), pos = lanePos[u.lane] || 'mid', prev = u.tower > 1 ? TOWER[pos][u.tower - 2] : LANE[pos][0];

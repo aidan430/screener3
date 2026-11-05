@@ -38,8 +38,8 @@ def dossier_for(card_id: int) -> Dossier | None:
 def page_price(d: Dossier) -> tuple[float, str]:
     """The price a test page shows. Tests in South Africa show rand: a local-stock
     product its shop price, anything else its Deep Dive price converted, ending in 9."""
-    if d.j("unit"):
-        return float(d.price_zar), "ZAR"  # the shop price the landed costs were worked out for
+    if d.j("unit") or d.j("service"):
+        return float(d.price_zar), "ZAR"  # the rand price the landed or per-client costs were worked out for
     if d.currency != "ZAR" and d.price_zar and config.settings()["smoke"]["market"] == "ZA":
         return float(max(9, round(d.price_zar / 10) * 10 - 1)), "ZAR"
     return float(d.price_point), d.currency
@@ -48,7 +48,7 @@ def page_price(d: Dossier) -> tuple[float, str]:
 def price_label(d: Dossier | None) -> str:
     if not d or not d.price_point:
         return ""
-    unit = {"per month": " / month", "per year": " / year"}.get(d.price_unit, "")
+    unit = " / month" if d.j("service") else {"per month": " / month", "per year": " / year"}.get(d.price_unit, "")
     price, currency = page_price(d)
     return f"{SYMBOL.get(currency, currency + ' ')}{price:,.0f}{unit}" if currency == "ZAR" else \
         f"{SYMBOL.get(currency, currency + ' ')}{price:g}{unit}"
@@ -57,20 +57,26 @@ def price_label(d: Dossier | None) -> str:
 def prepare(card: Card) -> SmokeTest:
     dossier = dossier_for(card.id)
     stock, label = (dossier.j("unit") if dossier else {}), price_label(dossier)
-    d = page.draft(card, label, physical=bool(stock))
+    service = dossier.j("service") if dossier else {}
+    kind = "stock" if stock else "service" if service else ""
+    d = page.draft(card, label, kind=kind)
     d.price_label = label or d.price_label  # the page shows the price the Deep Dive costed, whatever the writer wrote
     slug = unique_slug(page.slugify(d.product_name))
     vercel = bool(config.env("VERCEL_TOKEN") and config.env("FACTORY_DOMAIN"))
-    path = deploy.write_local(slug, page.render(d, slug, api_base=None if vercel else "", physical=bool(stock)))
+    path = deploy.write_local(slug, page.render(d, slug, api_base=None if vercel else "", kind=kind))
     target, url = deploy.deploy(slug)
     ad_json = ads.ad_set(d, url, slug)
     steps = ads.manual_steps(ad_json)
     if dossier and dossier.capital_zar:
         steps += (f"\nIf this test wins, the full start-up needs about R{dossier.capital_zar:,.0f} "
-                  f"(break-even after {dossier.break_even_sales or '?'} sales). That is a separate approval.")
+                  f"(break-even after {dossier.break_even_sales or '?'} {'client-months' if service else 'sales'}). "
+                  "That is a separate approval.")
     if stock:
         steps += (f"\nThat includes a first stock batch of {stock['batch_units']} units for R{stock['batch_zar']:,.0f}. "
                   f"Each order leaves about R{stock['contribution_zar']:,.0f} before ads.")
+    if service:
+        steps += (f"\nEach client leaves about R{service['margin_zar']:,.0f} a month. Target the ads at South "
+                  "African business owners and managers in this niche, not consumers.")
     if target == "local":
         steps += ("\nNOTE: page is only on localhost. Set FACTORY_DOMAIN + VERCEL_TOKEN and re-run "
                   "`make smoke` before funding, or ads will point nowhere.")

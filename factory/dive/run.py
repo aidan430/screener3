@@ -15,6 +15,7 @@ from factory.dive import capital, demand, economics, risk
 from factory.gates.common import cards_with_status
 from factory.models import Card, Dossier, GateResult, Niche, RunLog, session, utcnow
 from factory.scouts.distill import verbatim
+from factory.services import unit as service_unit
 
 log = logging.getLogger("factory.dive")
 TOWER = 3
@@ -45,7 +46,7 @@ def dive_card(card: Card) -> Dossier:
         econ, material = economics.analyse(card, niche, plan.business_model, items, stats, comps,
                                            _left(cap, spent0))
         numbers = economics.compute(econ, items)
-        m, u = numbers["margin"], numbers.get("unit")
+        m, u, sv = numbers["margin"], numbers.get("unit"), numbers.get("service")
         job.summary = (f"{econ.business_model}: {econ.price_point:g} {econ.currency} {econ.price_unit}, "
                        f"margin {'unknown' if m is None else f'{m:.0%}'}, score {econ.score}/10")
         if u:
@@ -53,6 +54,9 @@ def dive_card(card: Card) -> Dossier:
             job.summary = (f"local stock at R{u['price_zar']:,.0f}: R{u['landed_zar']:,.0f} landed, "
                            f"R{u['contribution_zar']:,.0f} left per order, break-even "
                            f"{'never' if be_cr is None else f'{be_cr:.1%} of visitors'}, score {econ.score}/10")
+        if sv:
+            job.summary = (f"{econ.business_model} at R{sv['price_zar']:,.0f} a month: R{sv['cost_zar']:,.0f} to serve "
+                           f"a client ({sv['volume']} {sv['what']}), margin {m:.0%}, score {econ.score}/10")
     with agents.run("dive", "Risk analyst", **ctx) as job:
         risks = risk.assess(card, niche, econ.business_model, comps, _left(cap, spent0))
         hard = [r for r in risks.risks if r.hard_kill]
@@ -61,7 +65,8 @@ def dive_card(card: Card) -> Dossier:
         lines, total = capital.estimate(econ.business_model, numbers["unit_cost_zar"], numbers.get("unit"))
         be = capital.break_even(capital.sunk(lines), numbers["unit_profit_zar"])
         verdict, reasons = capital.gate(econ.business_model, econ.score, numbers, total, be, risks.risks)
-        job.summary = f"R{total:,.0f} to start, break-even {be or 'never'} sales: {verdict.upper()}"
+        what = "client-months" if sv else "sales"
+        job.summary = f"R{total:,.0f} to start, break-even {be or 'never'} {what}: {verdict.upper()}"
     kept = [e for e in econ.evidence if verbatim(e, material)]
     reasoning = econ.reasoning.strip()
     if len(kept) < len(econ.evidence):
@@ -74,7 +79,7 @@ def dive_card(card: Card) -> Dossier:
                 price_point=econ.price_point, currency=econ.currency.upper(), price_unit=econ.price_unit,
                 price_basis=econ.price_basis_id, capital_zar=total, capital_lines_json=json.dumps(lines),
                 break_even_sales=be, risks_json=json.dumps([r.model_dump() for r in risks.risks]),
-                unit_json=json.dumps(numbers.get("unit") or {}),
+                unit_json=json.dumps(numbers.get("unit") or {}), service_json=json.dumps(numbers.get("service") or {}),
                 demand_score=econ.demand_score, competition_score=econ.competition_score, score=econ.score,
                 verdict=verdict, reasoning=reasoning, kill_reasons_json=json.dumps(reasons),
                 **{k: numbers[k] for k in ("price_zar", "unit_cost_zar", "unit_cost_basis", "fees_zar",
@@ -113,9 +118,13 @@ def show(card: Card, d: Dossier) -> None:
         if d.j("unit"):
             for line in landed.lines(d.j("unit"))[1:]:
                 print(f"         {line}")
+        if d.j("service"):
+            for line in service_unit.lines(d.j("service")):
+                print(f"         {line}")
     print(f"           start-up R{d.capital_zar:,.0f}: "
           + "; ".join(f"{x[0]} R{x[1]:,.0f}" for x in d.j("capital_lines")))
-    print(f"           break-even {d.break_even_sales or 'never'} sales; demand {d.demand_score}/10, "
+    what = "client-months" if d.j("service") else "sales"
+    print(f"           break-even {d.break_even_sales or 'never'} {what}; demand {d.demand_score}/10, "
           f"competition {d.competition_score}/10")
     for line in textwrap.wrap(d.reasoning, 92)[:5]:
         print(f"           {line}")

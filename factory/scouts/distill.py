@@ -61,6 +61,29 @@ Hard rules:
 - Return at most {max_cards} cards, each from a different post where possible."""
 
 
+SERVICES_SYSTEM = """You are a scout for a new South African BPO whose AI agents answer customers
+and follow up leads for businesses, with people supervising. You read web excerpts
+(job adverts, forum posts, service adverts) and extract work that South African
+businesses already pay for and that our agents could take over.
+
+Hard rules:
+- Use ONLY the posts given. Never invent facts, prices, people or urls.
+- `quote` must be copied character-for-character from the post's text (20-300
+  characters): the words that show the work.
+- `pay_evidence` must also be copied verbatim and show money: a salary, an hourly or
+  monthly rate, a provider's price, or a business saying what it pays. If none, "".
+- `pay_amount` is the number in pay_evidence, else null. `pay_currency` is its
+  symbol or code as written ("R", "ZAR"...), else "".
+- `title` names the service for a business type (max 8 words), e.g. "WhatsApp
+  replies for car dealerships"; `problem` says who pays for what today and what goes wrong.
+- Skip work that needs a licence or professional advice (financial, legal, medical),
+  health or children's records, debt collection, cold marketing calls or messages to
+  people who never asked, or work done on site. Fewer good cards beat many weak ones.
+- `business_model` is ai_support for answering customers and ai_followup for
+  contacting leads who asked to be contacted; otherwise one of: {models}.
+- Return at most {max_cards} cards, each from a different post where possible."""
+
+
 class CardDraft(BaseModel):
     signal_id: int = Field(description="id of the post this card comes from")
     title: str = Field(description="short product-style name of the problem, max 8 words")
@@ -89,10 +112,13 @@ def verbatim(snippet: str, source: str) -> bool:
 
 
 def amount_in(amount: float | None, text: str) -> bool:
+    """Is this number written in the text? South Africans group thousands with a space ("R9 500")."""
     if amount is None:
         return False
-    digits = re.sub(r"[^\d.]", " ", text.replace(",", ""))
-    nums = {float(x) for x in digits.split() if re.fullmatch(r"\d+(\.\d+)?", x)}
+    plain = text.replace(",", "")
+    nums = set()
+    for t in (plain, re.sub(r"(?<=\d) (?=\d{3}(?!\d))", "", plain)):  # "R9 500" -> 9500 as well as 9 and 500
+        nums |= {float(x) for x in re.sub(r"[^\d.]", " ", t).split() if re.fullmatch(r"\d+(\.\d+)?", x)}
     return float(amount) in nums
 
 
@@ -133,7 +159,7 @@ def distill_niche(niche: Niche) -> list[Card]:
         return []
     cap = float(caps["scout_zar_per_niche"]) - costs.niche_zar(niche.slug)
     model = config.settings()["models"]["scout"]
-    prompt_for = COMMERCE_SYSTEM if niche.kind == "commerce" else SYSTEM
+    prompt_for = {"commerce": COMMERCE_SYSTEM, "services": SERVICES_SYSTEM}.get(niche.kind, SYSTEM)
     system = prompt_for.format(max_cards=max_cards, models=", ".join(config.enabled_models()))
     chars = int(caps["signal_chars"])
     # Trim the batch until the worst-case estimate fits the per-niche cap.
@@ -171,7 +197,7 @@ def save_cards(niche: Niche, signals: list[Signal], drafts: list[CardDraft]) -> 
                 continue
             pay_ev = d.pay_evidence if verbatim(d.pay_evidence, source_text) else ""
             amount = d.pay_amount if pay_ev and amount_in(d.pay_amount, pay_ev) else None
-            fallback = "local_stock" if niche.kind == "commerce" else ""
+            fallback = config.default_model(niche)
             model = d.business_model if d.business_model in config.enabled_models() else fallback
             card = Card(niche_id=niche.id, signal_id=sig.id, title=d.title.strip()[:120],
                         business_model=model, lane=config.lane_of(model),

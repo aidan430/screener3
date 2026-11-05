@@ -2,7 +2,7 @@
 PY := uv run python
 export PYTHONUNBUFFERED=1
 
-.PHONY: setup seed scout gates dive smoke train landed serve night schedule warden report state costs test
+.PHONY: setup seed scout gates dive smoke train landed service serve night schedule warden report state costs test
 
 setup:            ## install deps, create .env from template, create DB, seed niches
 	uv sync
@@ -30,6 +30,9 @@ train:            ## Training Academy: brief, policies, catalogue, squad exams, 
 
 landed:           ## what-if for one SA product, e.g. make landed ARGS="--price 499 --cost 75 --weight 0.4"
 	$(PY) -m factory.commerce.landed $(or $(ARGS),--price 499 --cost 75 --weight 0.4)
+
+service:          ## what-if for one BPO client a month, e.g. make service ARGS="--model ai_followup --price 4999"
+	$(PY) -m factory.services.unit $(or $(ARGS),--model ai_support --price 2999)
 
 serve:            ## dashboard + API at http://localhost:8000
 	$(PY) -m factory.api.server

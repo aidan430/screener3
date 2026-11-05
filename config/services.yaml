@@ -1,0 +1,58 @@
+# AI-run services for South African businesses (the `ai_support` and `ai_followup`
+# models): Claude agents do the work, people supervise. Every number is an
+# ASSUMPTION; Dossiers label each one and NOTES.md says where it came from.
+market: ZA
+
+volume:                         # per client per month, when the analyst gives no estimate
+  ai_support: 300               # customer conversations answered
+  ai_followup: 150              # leads followed up
+
+ai:                             # model prices come from settings.yaml (pricing)
+  agent_model: claude-haiku-4-5 # the squad agents who answer (squad.yaml: support, follow-up)
+  qa_model: claude-sonnet-4-6   # the QA agent
+  tokens_in_per_task: 8000      # instructions + catalogue + the whole conversation, all turns
+  tokens_out_per_task: 600
+  qa_share: 0.2                 # share of conversations the QA agent reviews
+  qa_tokens_in: 3000
+  qa_tokens_out: 300
+
+channels:                       # check Meta's live South African WhatsApp rate card (NOTES.md)
+  email_zar: 0.0
+  whatsapp_reply_zar: 0.25      # a reply inside the customer's 24-hour window: utility rate + provider fee
+  whatsapp_template_zar: 0.80   # a message we start (follow-ups): marketing rate ~R0.70 + provider fee
+  whatsapp_share: 0.6           # support conversations that arrive on WhatsApp
+  follow_up_messages: 2         # template messages per lead
+  voice_zar_per_minute: 2.50    # a voice-AI provider (not connected yet: needs your approval)
+  voice_minutes_per_lead: 3
+
+people:
+  supervisor_zar_per_hour: 120  # a South African team lead's cost per hour
+  escalation_share:             # tasks a person must take over
+    ai_support: 0.10
+    ai_followup: 0.15
+  minutes_per_escalation: 5
+  review_minutes_per_client: 60 # spot checks and the monthly call with the client
+
+overhead:
+  tools_zar_per_client:         # helpdesk seat, WhatsApp number, dialler
+    ai_support: 250
+    ai_followup: 350
+  payment_pct: 0.03
+  cac_zar_per_client: 1500      # ads and your time to win one client
+  client_months: 12             # how long a client is assumed to stay (spreads the cost to win them)
+
+gate:
+  max_break_even_client_months: 12   # sunk start-up money must come back within this many client-months
+
+research:
+  phrases:                      # web searches for services niches (first 8 are used)
+    - looking for customer service
+    - customer service agent salary
+    - outsource customer support
+    - can't keep up with WhatsApp
+    - missed calls
+    - leads go cold
+    - after hours enquiries
+    - virtual assistant
+    - call centre
+    - per month

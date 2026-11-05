@@ -3,7 +3,8 @@
 Sonnet picks the business model and a price point anchored to a cited evidence
 item. Code then does the arithmetic in rand: fees, assumed ad cost per sale,
 unit cost (from cited evidence, otherwise a labelled assumption) and margin.
-A local-stock product is priced in rand and costed by factory/commerce/landed.py.
+A local-stock product is priced in rand and costed by factory/commerce/landed.py;
+a service for businesses is priced per client per month by factory/services/unit.py.
 """
 from __future__ import annotations
 
@@ -14,6 +15,8 @@ from pydantic import BaseModel, Field
 from factory import config, costs
 from factory.commerce import landed
 from factory.dive import capital
+from factory.scouts.distill import amount_in
+from factory.services import unit
 
 SYSTEM = """You are the Economics analyst in a venture studio's Deep Dive department.
 Decide how this niche would make money and whether the numbers can work for one
@@ -31,6 +34,15 @@ Rules:
   stock held by a fulfilment warehouse. For it, also estimate weight_kg (packed,
   per unit) and duty_category (one of: {duties}). Its unit_cost is a supplier or
   wholesale price per unit, never a retail price.
+- ai_support and ai_followup are services sold to South African businesses: AI
+  agents answer a business's customers (ai_support) or follow up leads who asked to
+  be contacted (ai_followup), and a person supervises. Price them in ZAR per month
+  per client, anchored to what a business pays for this work today: a salary in a
+  job advert or an outsourced provider's price, ideally an item marked per month.
+  Set volume_per_month (conversations or leads a month for one client) only if an
+  evidence item shows a volume, and cite it in volume_basis_id; otherwise leave it
+  null and the system applies a labelled assumption. channel: email, whatsapp or
+  mixed; voice only for ai_followup.
 - demand_score 0-10: how much paying demand the evidence shows (ratings,
   favourites, listing counts, people asking to pay).
 - competition_score 0-10: 10 = existing options are weak, overpriced or
@@ -51,6 +63,9 @@ class Econ(BaseModel):
     unit_cost_basis_id: str = ""
     weight_kg: float | None = Field(default=None, description="local_stock only: packed kg per unit")
     duty_category: str = Field(default="default", description="local_stock only: customs duty category")
+    volume_per_month: int | None = Field(default=None, description="services only: conversations or leads a month")
+    volume_basis_id: str = ""
+    channel: str = Field(default="", description="services only: email, whatsapp, voice or mixed")
     demand_score: int = Field(ge=0, le=10)
     competition_score: int = Field(ge=0, le=10)
     score: int = Field(ge=0, le=10)
@@ -64,7 +79,7 @@ def _material(card, niche, model: str, items: dict, stats: dict, comps: list[dic
     for k, it in items.items():
         bits = [k, it["source"], it.get("market") or "", it["title"][:120]]
         if it.get("price"):
-            bits.append(f"price {it['price']:g} {it.get('currency', '')}")
+            bits.append(f"price {it['price']:g} {it.get('currency', '')} {it.get('period') or ''}".strip())
         if it.get("metric"):
             bits.append(f"{int(it['metric'])} {it.get('metric_label', '')}")
         if it.get("quote"):
@@ -111,10 +126,17 @@ def compute(e: Econ, items: dict) -> dict:
     elif not basis.get("price"):
         flags.append(f"{e.price_basis_id} shows no price to anchor to")
     else:
+        anchor, period = float(basis["price"]), basis.get("period") or ""
+        if period and period != e.price_unit:  # compare like with like: a year is 12 months
+            if {period, e.price_unit} == {"per month", "per year"}:
+                anchor = anchor / 12 if period == "per year" else anchor * 12
+            else:
+                flags.append(f"price is {e.price_unit} but {e.price_basis_id} is {period}")
         if code(basis.get("currency")) not in ("", e.currency):
             flags.append(f"price currency {e.currency} differs from {e.price_basis_id} ({basis.get('currency')})")
-        elif e.price_point > float(basis["price"]) * 1.25:
-            flags.append(f"price {e.price_point:g} is more than 25% above {e.price_basis_id} ({basis['price']:g})")
+        elif e.price_point > anchor * 1.25:
+            flags.append(f"price {e.price_point:g} is more than 25% above {e.price_basis_id} "
+                         f"({basis['price']:g}{' ' + period if period else ''})")
     price_zar = config.to_zar(e.price_point, e.currency)
     out = {"price_zar": price_zar, "fees_zar": None, "cac_zar": None, "unit_cost_zar": None,
            "unit_cost_basis": "", "unit_profit_zar": None, "margin": None, "flags": flags, "unit": None}
@@ -123,6 +145,8 @@ def compute(e: Econ, items: dict) -> dict:
         return out
     if m.get("landed"):
         return _local_stock(e, items, out, m)
+    if m.get("service"):
+        return _service(e, items, out)
     uc = None
     if e.unit_cost is not None and e.unit_cost_basis_id in items:
         uc = config.to_zar(e.unit_cost, e.unit_cost_currency or e.currency)
@@ -155,4 +179,28 @@ def _local_stock(e: Econ, items: dict, out: dict, m: dict) -> dict:
     out.update(price_zar=price, fees_zar=u["per_order_zar"], cac_zar=u["cac_good_zar"], unit_cost_zar=u["landed_zar"],
                unit_cost_basis=f"landed in SA; supplier price {basis}", unit_profit_zar=profit,
                margin=round(profit / price, 4), unit=u)
+    return out
+
+
+def _service(e: Econ, items: dict, out: dict) -> dict:
+    """A service for South African businesses: its price and cost per client per month."""
+    if e.price_unit == "per year":  # sold monthly: a yearly figure becomes its monthly share
+        e.price_point, e.price_unit, out["price_zar"] = round(e.price_point / 12, 2), "per month", out["price_zar"] / 12
+    elif e.price_unit != "per month":
+        out["flags"].append(f"a service is sold per month, not {e.price_unit}")
+    vol, basis, note = None, "", ""
+    if e.volume_per_month:  # evidence only if the cited item's own words hold that number
+        it = items.get(e.volume_basis_id) or {}
+        if amount_in(e.volume_per_month, f"{it.get('title', '')} {it.get('quote') or ''}"):
+            vol, basis = int(e.volume_per_month), f"evidence {e.volume_basis_id}"
+        else:
+            note = f"; the analyst's {e.volume_per_month} a month is not in {e.volume_basis_id or 'any item'}"
+    channel = (e.channel or "").strip().lower()
+    if channel == "voice" and e.business_model != "ai_followup":
+        channel = "mixed"  # answering calls by voice is not offered yet
+    s = unit.unit_economics(e.business_model, out["price_zar"], vol, channel, basis)
+    out.update(price_zar=s["price_zar"], fees_zar=s["fees_zar"], cac_zar=s["cac_month_zar"],
+               unit_cost_zar=s["delivery_zar"], unit_profit_zar=s["margin_zar"], margin=s["margin"], service=s,
+               unit_cost_basis=f"one client's month: {s['volume']} {s['what']} ({s['volume_basis']}{note}); "
+                               f"AI, channels, supervisor and tools are assumptions (config/services.yaml)")
     return out

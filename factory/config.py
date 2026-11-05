@@ -85,15 +85,20 @@ def commerce() -> dict:
     return yaml.safe_load((CONFIG_DIR / "commerce.yaml").read_text())
 
 
+@lru_cache
+def services() -> dict:
+    return yaml.safe_load((CONFIG_DIR / "services.yaml").read_text())
+
+
 def enabled_models() -> list[str]:
     """Business models the scouts and analysts may choose (`enabled: false` switches one off)."""
     return [k for k, m in business_models()["models"].items() if m.get("enabled", True)]
 
 
-def squad_roles(lane: str = "") -> dict:
-    """The roles in one niche's squad: a lane may name its own set in squad.yaml."""
+def squad_roles(lane: str = "", model: str = "") -> dict:
+    """The roles in one niche's squad: a business model, then a lane, may name its own set in squad.yaml."""
     sq = squad()
-    keys = sq.get("lanes", {}).get(lane) or sq["default_roles"]
+    keys = sq.get("models", {}).get(model) or sq.get("lanes", {}).get(lane) or sq["default_roles"]
     return {k: sq["roles"][k] for k in keys}
 
 
@@ -107,11 +112,21 @@ def sources_for(niche) -> list[str]:
     return [k for k in on if (k in listed if listed else k not in OPT_IN_SOURCES)]
 
 
+KIND_MODEL = {"commerce": "local_stock", "services": "ai_support"}  # a niche kind's default business model
+
+
 def phrases_for(niche) -> list[str]:
-    """Search phrases for a niche: buying phrases for commerce niches, pain phrases otherwise."""
-    if getattr(niche, "kind", "") == "commerce":
+    """Search phrases: buying phrases (commerce), outsourcing phrases (services), pain phrases otherwise."""
+    kind = getattr(niche, "kind", "")
+    if kind == "commerce":
         return commerce()["research"]["phrases"]
+    if kind == "services":
+        return services()["research"]["phrases"]
     return pain_phrases()
+
+
+def default_model(niche, fallback: str = "") -> str:
+    return KIND_MODEL.get(getattr(niche, "kind", ""), fallback)
 
 
 def lane_of(model: str) -> str:

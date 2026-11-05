@@ -4,7 +4,9 @@ Nothing is bought automatically. Launching creates the Venture row (a mine at
 the Market, status building), prepares the venture folder for the Claude Code
 session that builds it, and returns the shopping list from the Dossier. For a
 local-stock product the button reads FUND STOCK, and the folder gets
-stock/first-order.md: the draft first order for the owner to place.
+stock/first-order.md: the draft first order for the owner to place. A service for
+businesses gets client/first-client.md: what to sign and set up before the first
+client's pilot.
 """
 from __future__ import annotations
 
@@ -62,6 +64,37 @@ def first_order(folder: Path, name: str, u: dict) -> Path:
     return path
 
 
+def first_client(folder: Path, name: str, sv: dict) -> Path:
+    """The checklist for the first client of a service. Nothing is signed or sent: the owner does it."""
+    rows = [f"| {label} | R{v:,.2f} | {basis} |" for label, v, basis in sv["lines"]]
+    text = "\n".join([
+        f"# First client: {name}", "",
+        "Nothing has been signed, sent or bought. This is your checklist; a person does every step.", "",
+        f"- Offer: R{sv['price_zar']:,.0f} a month for about {sv['volume']} {sv['what']} ({sv['channel']} channel)",
+        f"- Cost to serve one client: about R{sv['cost_zar']:,.0f} a month; margin R{sv['margin_zar']:,.0f}",
+        f"- The free pilot month costs about R{sv['delivery_zar']:,.0f} to run", "",
+        "## Before the first conversation", "",
+        "1. Register the company (CIPC) and register its information officer with the Information Regulator",
+        "   (POPIA section 55).",
+        "2. Have a lawyer check the service agreement and the operator agreement. The client is the responsible",
+        "   party for its customers' data and you are its operator (POPIA sections 20 and 21): you act only on its",
+        "   instructions, keep the data secure and report any breach to it at once.",
+        "3. Agree the service levels in writing: hours covered, reply times, what the agents may and may not say,",
+        "   and who at the client takes each hand-over.",
+        "4. Collect the client's FAQs, prices and policies; the squad answers only from these.",
+        "5. Follow-up work: get proof that each lead asked to be contacted, the client's contact hours, and an",
+        "   opt-out line for every message (POPIA section 69, the Consumer Protection Act). No cold lists.",
+        "6. Call recording: tell every caller at the start (RICA). Voice needs a voice-AI provider, which is",
+        "   not connected: it is a new tool you would approve first.",
+        "7. Run 20 test conversations with the client watching before go-live.", "",
+        "## The numbers behind it", "", "| Line | Rand a month | Basis |", "|---|---|---|", *rows, "",
+        "Every number here is an assumption until a month of the client's real volumes replaces it."])
+    path = folder / "client" / "first-client.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text + "\n")
+    return path
+
+
 def launch(card_id: int) -> dict:
     with session() as s:
         card = s.get(Card, card_id)
@@ -80,7 +113,9 @@ def launch(card_id: int) -> dict:
             subprocess.run(["git", "init", "-q", str(d)], check=False)
         dossier = s.exec(select(Dossier).where(Dossier.card_id == card_id).order_by(Dossier.id.desc())).first()
         unit = dossier.j("unit") if dossier else {}
+        service = dossier.j("service") if dossier else {}
         order = first_order(d, t.name, unit) if unit else None
+        client = first_client(d, t.name, service) if service else None
         v = s.exec(select(Venture).where(Venture.slug == t.slug)).first() or Venture(
             slug=t.slug, name=t.name, price_label=t.price_label, build_id=b.id if b else None)
         squad.status, squad.launched_at = "launched", utcnow()
@@ -95,7 +130,9 @@ def launch(card_id: int) -> dict:
     lines, total = shopping_list(card_id)
     items = "\n".join(f"- {x[0]}: R{x[1]:,.0f}" for x in lines) or "- (no capital lines in the Dossier)"
     first = "Stock approved" if order else "Launch approved"
-    stock = (f"First: open {order} (samples, a fulfilment warehouse, then the first order).\n" if order else "")
+    stock = (f"First: open {order} (samples, a fulfilment warehouse, then the first order).\n" if order else
+             f"First: open {client} (company, contracts and consent before the first client's pilot).\n" if client
+             else "")
     return {"ok": True, "message": (
         f"{first} for {t.name}. Nothing is bought automatically. Your shopping list (R{total:,.0f}):\n"
         f"{items}\n{stock}Then start the build: cd {d} && claude \"Read CLAUDE.md and build it.\"\n"
