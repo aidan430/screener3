@@ -144,3 +144,6 @@ commit 7d2617e). Both in git history.
   for every loose bit of hay. An ID loads as a saved Model (InsertService, keeps textures) or
   else as a mesh (AssetService:CreateMeshPartAsync); if neither works the built-in look stays
   and Output says why. Both need the assets to be owned by the game's owner.
+- **Ladder (200 coins, Build tab):** the owner's ladder model (111414262141412), stood up and
+  scaled to 20 studs, with an invisible TrussPart inside that characters climb. Wooden rails
+  and rungs stand in if the model won't load. Stack ladders to go higher.

@@ -107,6 +107,7 @@ Config.Generators = {
 
 -- Building pieces for climbing your pile, placed anywhere on your plot.
 Config.Pieces = {
+	{ id = "ladder", name = "Ladder", price = 200, size = { 4, 20, 2 }, model = 111414262141412, text = "Climb 20 studs straight up. Stack them to go higher." },
 	{ id = "stairs", name = "Stairs", price = 300, size = { 8, 10, 10 }, text = "Climbs 10 studs over 10 studs." },
 	{ id = "landing", name = "Landing", price = 150, size = { 10, 1, 10 }, text = "A 10 by 10 floor to stand and turn on." },
 	{ id = "pillar", name = "Pillar", price = 100, size = { 2, 10, 2 }, text = "A 10-stud post to hold things up." },

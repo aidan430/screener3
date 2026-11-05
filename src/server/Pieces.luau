@@ -7,6 +7,7 @@ local Config = require(Shared:WaitForChild("Config"))
 local Economy = require(Shared:WaitForChild("Economy"))(Config)
 
 local Build = require(script.Parent.Build)
+local Assets = require(script.Parent.Assets)
 
 local Pieces = {}
 local WOOD, DARK, METAL = { 168, 122, 74 }, { 110, 76, 46 }, { 140, 144, 150 }
@@ -27,6 +28,43 @@ end
 
 function builders.landing(model, cf)
 	p(model, cf * CFrame.new(0, 0.5, 0), Vector3.new(10, 1, 10), WOOD)
+end
+
+-- A ladder: the owner's imported ladder model (or wooden rails and rungs if it won't load),
+-- with an invisible truss inside, which is what Roblox characters climb.
+function builders.ladder(model, cf)
+	local def = Economy.item("ladder").def
+	local height = def.size[2]
+	local template = def.model and Assets.template(def.model)
+	if template then
+		local look = template:Clone()
+		local size = look.Size
+		local turn = CFrame.new() -- stand its longest side up
+		if size.X >= size.Y and size.X >= size.Z then
+			turn = CFrame.Angles(0, 0, math.rad(90))
+		elseif size.Z >= size.Y and size.Z >= size.X then
+			turn = CFrame.Angles(math.rad(90), 0, 0)
+		end
+		look.Size = size * (height / math.max(size.X, size.Y, size.Z))
+		look.CFrame = cf * CFrame.new(0, height / 2, 0) * turn
+		look.Anchored, look.CanCollide, look.CanQuery = true, false, true
+		look.Parent = model
+	else
+		for _, x in ipairs({ -1.5, 1.5 }) do
+			p(model, cf * CFrame.new(x, height / 2, 0), Vector3.new(0.4, height, 0.4), DARK, "Wood")
+		end
+		for y = 1, height - 1, 1.5 do
+			p(model, cf * CFrame.new(0, y, 0), Vector3.new(3, 0.25, 0.3), WOOD, "Wood")
+		end
+	end
+	local truss = Instance.new("TrussPart")
+	truss.Name = "Climb"
+	truss.Anchored = true
+	truss.Size = Vector3.new(2, height, 2)
+	truss.CFrame = cf * CFrame.new(0, height / 2, 0)
+	truss.Transparency = 1
+	truss.Style = Enum.Style.NoSupports
+	truss.Parent = model
 end
 
 function builders.pillar(model, cf)
