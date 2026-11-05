@@ -82,11 +82,17 @@ local function select(id)
 	refreshBar()
 end
 
+local snappedBase = nil
+
+function BuildMode.active()
+	return active
+end
+
 local function place()
 	if not selected or not ghost then
 		return
 	end
-	local base = ghost.CFrame.Position - Vector3.new(0, ghost.Size.Y / 2, 0)
+	local base = snappedBase or (ghost.CFrame.Position - Vector3.new(0, ghost.Size.Y / 2, 0))
 	local ok, message = Remotes.Place:InvokeServer(selected, base, rotation)
 	notify.toast(message, if ok then Ui.colors.green else Ui.colors.red)
 	if ok then
@@ -111,6 +117,7 @@ function BuildMode.toggle(on)
 	active = if on == nil then not active else on
 	bar.Visible, status.Visible = active, active
 	if active then
+		Cursor.need("key", false) -- opened from the HUD button: lock the mouse again so clicks place
 		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 		if humanoid then
 			humanoid:UnequipTools()
@@ -208,6 +215,7 @@ function BuildMode.mount(gui, notifier)
 			local grid = Config.BuildGrid
 			local p = hit.Position
 			local snapped = Vector3.new(math.floor(p.X / grid + 0.5) * grid, p.Y, math.floor(p.Z / grid + 0.5) * grid)
+			snappedBase = snapped -- place exactly where the check below was done, not mid-glide
 			local cf = CFrame.new(snapped + Vector3.new(0, ghost.Size.Y / 2, 0)) * CFrame.Angles(0, math.rad(rotation), 0)
 			ghost.CFrame = ghost.CFrame:Lerp(cf, 0.5) -- glides into place
 			arrow.CFrame = ghost.CFrame * CFrame.new(0, ghost.Size.Y / 2 + 0.5, -ghost.Size.Z / 2)

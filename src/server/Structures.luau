@@ -87,7 +87,7 @@ local function place(player, id, position, rotation)
 	if type(id) ~= "string" or not Economy.item(id) or (d.inventory[id] or 0) <= 0 then
 		return false, "Buy that in the shop first."
 	end
-	if typeof(position) ~= "Vector3" or type(rotation) ~= "number" or rotation ~= rotation then
+	if typeof(position) ~= "Vector3" or type(rotation) ~= "number" or rotation ~= rotation or math.abs(rotation) > 1e6 then
 		return false, "Can't build there."
 	end
 	if not Plots.contains(plotIndex, position, 1) then

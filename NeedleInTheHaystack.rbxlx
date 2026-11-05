@@ -86,7 +86,7 @@ Config.Tools = {
 	{ name = "Twin Turbines", power = 19, capacity = 75000, price = 1700000, shaft = { 40, 44, 52 }, head = { 255, 170, 40 }, material = "Metal" },
 	{ name = "Needle Detector", power = 22, capacity = 100000, price = 3400000, shaft = { 40, 44, 52 }, head = { 70, 255, 150 }, material = "Neon" },
 }
-Config.DetectorLevel = 10
+Config.DetectorLevel = 10 -- from this tool on, the HUD shows how close the needle is
 Config.LoadSize = 2.4 -- studs across the hay on a full tool
 
 -- Buckets hang at your hip and carry what the tool can't: tool fills first, then the bucket.
@@ -97,7 +97,7 @@ Config.Buckets = {
 	{ name = "Big Tub", capacity = 6000, price = 60000, size = 2 },
 	{ name = "Hay Barrel", capacity = 20000, price = 400000, size = 2.4 },
 	{ name = "Giant Basket", capacity = 60000, price = 2500000, size = 2.8 },
-} -- from this tool on, the HUD shows how close the needle is
+}
 
 -- The silo on your plot holds what your machines harvest until you next sell.
 Config.Silos = {
@@ -218,7 +218,7 @@ Config.Jetpack = {
 	fallSpeed = 7, -- studs a second drifting down after you let go (a soft landing)
 	thrust = 2.5, -- most force it pushes with, in body weights: it can never fling you
 	ease = 5, -- how quickly the speed eases to its target (higher = snappier)
-	ceiling = 275, -- no lift above this height (the pile is 255 high; the loft starts at 300)
+	ceiling = 275, -- no lift above this height (the haystack is 80 high; the loft starts at 300)
 	fuelSeconds = 0, -- seconds of flight before you land to refuel; 0 = unlimited
 	refuelSeconds = 4, -- seconds on the ground to refill a full tank
 	hoverKey = "H", -- F already places things in build mode
@@ -944,10 +944,14 @@ local InsertService = game:GetService("InsertService")
 local loaded = {} -- [asset id] = a template part, or false if it couldn't be loaded as a model
 
 function Assets.template(id)
-	if loaded[id] ~= nil then
+	local waited = 0
+	while loaded[id] == "loading" and waited < 20 do -- another caller is loading it: wait for that
+		waited += task.wait(0.1)
+	end
+	if loaded[id] ~= nil and loaded[id] ~= "loading" then
 		return loaded[id]
 	end
-	loaded[id] = false
+	loaded[id] = "loading"
 	local ok, asset = pcall(function()
 		return InsertService:LoadAsset(id)
 	end)
@@ -964,13 +968,14 @@ function Assets.template(id)
 		end
 		asset:Destroy()
 	end
-	if not loaded[id] then -- not a model: try it as a mesh ID, which keeps the mesh's real size
+	if loaded[id] == "loading" then -- not a model: try it as a mesh ID, which keeps the mesh's real size
 		local made, meshPart = pcall(function()
 			return AssetService:CreateMeshPartAsync("rbxassetid://" .. id)
 		end)
 		if made and meshPart then
 			loaded[id] = meshPart
 		else
+			loaded[id] = false
 			warn("[Assets] Couldn't load " .. tostring(id) .. " as a model or a mesh: " .. tostring(asset) .. " / " .. tostring(meshPart))
 		end
 	end
@@ -1357,7 +1362,7 @@ Hauling.stallOf = stallOf
 local function autoDump(player)
 	local d = PlayerData.get(player)
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-	local stall = d and root and (d.carried + d.siloStraw) > 0 and stallOf(player)
+	local stall = d and root and (d.carried + d.carriedGolden + d.siloStraw) > 0 and stallOf(player)
 	local basket = stall and stall:FindFirstChild("Basket")
 	if basket and (basket.Position - root.Position).Magnitude <= Config.AutoDumpRange then
 		Hauling.dump(player, "trader", basket)
@@ -1637,15 +1642,19 @@ function LooseHay.watch(item)
 			Remotes.SearchFx:FireClient(player, { kind = "dumped", straws = straws, coins = 0, reason = if baled then "bale" else "belt", basket = hit.Parent:FindFirstChild("Basket") })
 		elseif hit.Name == "BalerIntake" and item:GetAttribute("Kind") == "bundle" then
 			local straws = resolve(item, player)
-			local d = PlayerData.get(player)
+			local baler = hit.Parent
 			PlayerData.update(player, function(data)
 				data.baleStore += straws
 			end)
-			while d and d.baleStore >= Config.BaleStraws do
+			while true do
+				local d = PlayerData.get(player)
+				if not d or d.baleStore < Config.BaleStraws or not baler.Parent or not baler:FindFirstChild("BaleOut") then
+					break -- what's left stays in baleStore (saved) for the next bundle
+				end
 				PlayerData.update(player, function(data)
 					data.baleStore -= Config.BaleStraws
 				end)
-				spawnBale(player, hit.Parent)
+				spawnBale(player, baler)
 				task.wait(0.6)
 			end
 		end
@@ -1730,7 +1739,9 @@ function LooseHay.init()
 				local plotIndex = Plots.of(player)
 				for _, item in ipairs(plotIndex and looseFolder(plotIndex):GetChildren() or {}) do
 					local old = os.time() - (item:GetAttribute("Born") or 0) > Config.LooseHayMinutes * 60
-					if (old and carrying[player] ~= item) or item.Position.Y < -20 then
+					if ownerOf(item) ~= player then
+						item:Destroy() -- left behind by someone else; their straws are saved as theirs
+					elseif (old and carrying[player] ~= item) or item.Position.Y < -20 then
 						local baled = item:GetAttribute("Kind") == "bale"
 						Hauling.add(player, resolve(item, player), baled)
 					end
@@ -2312,7 +2323,7 @@ function builders.trader(model, cf)
 	local sign = p(model, cf * CFrame.new(0, 10.8, -0.6), Vector3.new(6, 1.6, 0.3), WOOD)
 	Build.text(sign, Enum.NormalId.Front, "TRADER")
 	-- the trader: boots, overalls, a checked shirt, a friendly face and a wide straw hat
-	local body = cf * CFrame.new(0, 0, 3.2) * CFrame.Angles(0, math.rad(180), 0)
+	local body = cf * CFrame.new(0, 0, 3.2) -- facing the front, where customers come
 	for _, x in ipairs({ -0.5, 0.5 }) do
 		p(model, body * CFrame.new(x, 1, 0), Vector3.new(0.9, 2, 0.9), { 64, 82, 130 }, "Fabric")
 	end
@@ -2331,7 +2342,7 @@ function builders.trader(model, cf)
 	fill.Transparency = 1
 	fill.CanCollide = false
 	prompt(basket, "sell", "Dump hay", "Your trader")
-	sensor(model, cf * CFrame.new(0, 3.2, -3.6), Vector3.new(4.6, 2.4, 4.6), "BasketSensor") -- hay off a belt or a carried bale
+	sensor(model, cf * CFrame.new(0, 1.9, -3.6), Vector3.new(6, 3.8, 6), "BasketSensor") -- hay off a belt or a carried bale
 end
 
 -- A teleporter pad: step on, press E and pick another of your pads.
@@ -2533,6 +2544,25 @@ function Piles.position(plotIndex, clump)
 	return origin(plotIndex) + Vector3.new(c[1], c[2], c[3])
 end
 
+-- True if a clump is on the surface: started already, or next to open air (an emptied clump
+-- or the outside of the heap). Players can't dig into the middle without digging their way in.
+function Piles.exposed(d, index)
+	if d.partial[tostring(index)] then
+		return true
+	end
+	local c = Layout.cell[index]
+	for _, o in ipairs({ { 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 } }) do
+		local layer = c[2] + o[2]
+		if layer >= 0 then -- the ground under the bottom layer isn't open air
+			local next = Layout.lookup(c[1] + o[1], layer, c[3] + o[3])
+			if not next or Profile.clumpLeft(d, next) <= 0 then
+				return true
+			end
+		end
+	end
+	return false
+end
+
 -- The clump nearest a point on (or just inside) the heap's surface, if one is left there.
 function Piles.clumpAt(plotIndex, d, point)
 	local o = origin(plotIndex)
@@ -2543,7 +2573,7 @@ function Piles.clumpAt(plotIndex, d, point)
 		for dy = -1, 1 do
 			for dz = -1, 1 do
 				local index = Layout.lookup(gx + dx, layer + dy, gz + dz)
-				if index and Profile.clumpLeft(d, index) > 0 then
+				if index and Profile.clumpLeft(d, index) > 0 and Piles.exposed(d, index) then
 					local distance = (Piles.position(plotIndex, index) - point).Magnitude
 					if distance < bestDistance then
 						best, bestDistance = index, distance
@@ -3029,7 +3059,7 @@ function Plots.release(player)
 		byPlayer[player] = nil
 		signs[index].Text = "FREE PLOT"
 		for _, child in ipairs(Plots.folder(index):GetChildren()) do
-			if child.Name == "Pile" or child.Name == "Built" then
+			if child.Name == "Pile" or child.Name == "Built" or child.Name == "Loose" then -- loose straws are saved
 				child:Destroy()
 			end
 		end
@@ -4254,17 +4284,13 @@ function Search.needleFound(player, golden, position)
 			data.loft.needleAt = Economy.needleAt(Config.Loft.straws, Config.Loft.needleEarliest, rng)
 		else
 			data.needles += 1
-			Piles.resetData(data) -- saved at once, so leaving now can't lose the new needle
+			Piles.resetData(data)
 		end
 	end)
+	task.spawn(PlayerData.save, player) -- saved at once, so leaving now can't lose the new needle
 	Remotes.Announce:FireAllClients({ kind = "needle", finder = player.DisplayName, finderId = player.UserId, golden = golden, prize = prize, position = position })
-	if not golden and plotIndex then
-		task.delay(6, function() -- let the celebration play, then a fresh pile with a new needle
-			local current = PlayerData.get(player)
-			if current and Plots.of(player) == plotIndex then
-				Piles.rebuild(plotIndex, current)
-			end
-		end)
+	if not golden and plotIndex then -- a fresh heap with a new needle grows back straight away
+		Piles.rebuild(plotIndex, PlayerData.get(player))
 	end
 	Achievements.check(player)
 end
@@ -4358,6 +4384,8 @@ local function harvest(player, target)
 		local clump = Plots.contains(plotIndex, point, 0) and Piles.clumpAt(plotIndex, d, point)
 		if not clump then
 			return nope(player, "That's not your heap. Yours is on the farm marked YOUR FARM.")
+		elseif (head.Position - Piles.position(plotIndex, clump)).Magnitude > Config.Reach + 6 then
+			return nope(player, "Too far away. Step closer to the hay.")
 		end
 		taken, gone = Piles.take(plotIndex, d, clump, power)
 		hit = gone and clump == d.needleClump
@@ -4695,7 +4723,7 @@ local function place(player, id, position, rotation)
 	if type(id) ~= "string" or not Economy.item(id) or (d.inventory[id] or 0) <= 0 then
 		return false, "Buy that in the shop first."
 	end
-	if typeof(position) ~= "Vector3" or type(rotation) ~= "number" or rotation ~= rotation then
+	if typeof(position) ~= "Vector3" or type(rotation) ~= "number" or rotation ~= rotation or math.abs(rotation) > 1e6 then
 		return false, "Can't build there."
 	end
 	if not Plots.contains(plotIndex, position, 1) then
@@ -5572,11 +5600,17 @@ local function select(id)
 	refreshBar()
 end
 
+local snappedBase = nil
+
+function BuildMode.active()
+	return active
+end
+
 local function place()
 	if not selected or not ghost then
 		return
 	end
-	local base = ghost.CFrame.Position - Vector3.new(0, ghost.Size.Y / 2, 0)
+	local base = snappedBase or (ghost.CFrame.Position - Vector3.new(0, ghost.Size.Y / 2, 0))
 	local ok, message = Remotes.Place:InvokeServer(selected, base, rotation)
 	notify.toast(message, if ok then Ui.colors.green else Ui.colors.red)
 	if ok then
@@ -5601,6 +5635,7 @@ function BuildMode.toggle(on)
 	active = if on == nil then not active else on
 	bar.Visible, status.Visible = active, active
 	if active then
+		Cursor.need("key", false) -- opened from the HUD button: lock the mouse again so clicks place
 		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 		if humanoid then
 			humanoid:UnequipTools()
@@ -5698,6 +5733,7 @@ function BuildMode.mount(gui, notifier)
 			local grid = Config.BuildGrid
 			local p = hit.Position
 			local snapped = Vector3.new(math.floor(p.X / grid + 0.5) * grid, p.Y, math.floor(p.Z / grid + 0.5) * grid)
+			snappedBase = snapped -- place exactly where the check below was done, not mid-glide
 			local cf = CFrame.new(snapped + Vector3.new(0, ghost.Size.Y / 2, 0)) * CFrame.Angles(0, math.rad(rotation), 0)
 			ghost.CFrame = ghost.CFrame:Lerp(cf, 0.5) -- glides into place
 			arrow.CFrame = ghost.CFrame * CFrame.new(0, ghost.Size.Y / 2 + 0.5, -ghost.Size.Z / 2)
@@ -6008,8 +6044,8 @@ function Harvest.start()
 		local tool = heldTool()
 		if tool then
 			swing(tool)
-		elseif Harvest.onMiss and player.Character then
-			Harvest.onMiss("Hold your fork to harvest: press 1.")
+		elseif Harvest.onMiss and player.Character and not (Harvest.isBuilding and Harvest.isBuilding()) then
+			Harvest.onMiss("Hold your tool to harvest: press 1.")
 		end
 	end)
 	RunService.RenderStepped:Connect(function()
@@ -6140,14 +6176,22 @@ function HayFx.dump(basket, straws, fromYou)
 	end
 	local bottom = basket.CFrame * CFrame.new(-basket.Size.X / 2 + 0.3, 0, 0) -- the cylinder's axis is X
 	local rim = basket.CFrame * CFrame.new(basket.Size.X / 2 - 0.1, 0, 0)
+	local token = (fill:GetAttribute("FxToken") or 0) + 1
+	fill:SetAttribute("FxToken", token) -- a newer dump takes over the animation
 	fill.CFrame = bottom
 	fill.Transparency = 0
 	task.delay(count * 0.06 + 0.3, function()
 		Juice.ease(fill, 0.5, { CFrame = rim }, Enum.EasingStyle.Back)
 		Juice.burst(top, 18, false)
 		task.delay(0.6 + Config.BasketDrainSeconds * 0.25, function()
+			if fill:GetAttribute("FxToken") ~= token then
+				return
+			end
 			Juice.ease(fill, Config.BasketDrainSeconds, { CFrame = bottom }, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
 			task.delay(Config.BasketDrainSeconds, function()
+				if fill:GetAttribute("FxToken") ~= token then
+					return
+				end
 				fill.Transparency = 1
 			end)
 		end)
@@ -6707,7 +6751,7 @@ local Offer = require(script.Parent:WaitForChild("Offer"))
 local Animals = require(script.Parent:WaitForChild("Animals"))
 
 local player = Players.LocalPlayer
-local gui = Ui.make("ScreenGui", { Name = "HaystackUi", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
+local gui = Ui.make("ScreenGui", { Name = "HaystackUi", ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
 
 -- Errors show on screen (red, top right) so a broken part can be reported without the
 -- Output window. Each part starts on its own, so one failing can't stop harvesting.
@@ -6750,6 +6794,7 @@ step("effects", function()
 end)
 step("building", function()
 	BuildMode.mount(gui, Notify)
+	Harvest.isBuilding = BuildMode.active
 end)
 step("menus", function()
 	panels = Panels.mount(gui, Notify, {
@@ -6926,6 +6971,10 @@ Remotes.Announce.OnClientEvent:Connect(function(message)
 			Juice.confetti()
 			Notify.banner("WHEEL OF FORTUNE: " .. message.name, message.text, 7)
 		end)
+	elseif message.kind == "loft" then
+		if message.finderId ~= player.UserId then
+			Notify.toast(message.finder .. " found the way into the Golden Loft!", Ui.colors.hay)
+		end
 	elseif message.kind == "notice" then
 		Notify.toast(message.text, Ui.colors.wood)
 	elseif message.kind == "error" then
@@ -7455,7 +7504,7 @@ function Panels.mount(gui, notify, actions)
 				frame.Visible = not frame.Visible
 				if frame.Visible then
 					local scale = frame:FindFirstChildOfClass("UIScale")
-					local full = scale and scale.Scale or 1
+					local full = Ui.screenScale() -- not scale.Scale: that may be mid-tween
 					if scale then
 						scale.Scale = full * 0.9
 						Juice.ease(scale, 0.25, { Scale = full }, Enum.EasingStyle.Back)
@@ -7878,6 +7927,10 @@ function Ui.maxText(size)
 end
 
 -- Scales `frame` (around its AnchorPoint) with the screen height.
+Ui.screenScale = function()
+	return screenScale()
+end
+
 function Ui.autoScale(frame)
 	local scale = Ui.make("UIScale", { Scale = screenScale(), Parent = frame })
 	table.insert(scales, scale)

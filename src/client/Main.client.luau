@@ -28,7 +28,7 @@ local Offer = require(script.Parent:WaitForChild("Offer"))
 local Animals = require(script.Parent:WaitForChild("Animals"))
 
 local player = Players.LocalPlayer
-local gui = Ui.make("ScreenGui", { Name = "HaystackUi", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
+local gui = Ui.make("ScreenGui", { Name = "HaystackUi", ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
 
 -- Errors show on screen (red, top right) so a broken part can be reported without the
 -- Output window. Each part starts on its own, so one failing can't stop harvesting.
@@ -71,6 +71,7 @@ step("effects", function()
 end)
 step("building", function()
 	BuildMode.mount(gui, Notify)
+	Harvest.isBuilding = BuildMode.active
 end)
 step("menus", function()
 	panels = Panels.mount(gui, Notify, {
@@ -247,6 +248,10 @@ Remotes.Announce.OnClientEvent:Connect(function(message)
 			Juice.confetti()
 			Notify.banner("WHEEL OF FORTUNE: " .. message.name, message.text, 7)
 		end)
+	elseif message.kind == "loft" then
+		if message.finderId ~= player.UserId then
+			Notify.toast(message.finder .. " found the way into the Golden Loft!", Ui.colors.hay)
+		end
 	elseif message.kind == "notice" then
 		Notify.toast(message.text, Ui.colors.wood)
 	elseif message.kind == "error" then

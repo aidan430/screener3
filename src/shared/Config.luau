@@ -74,7 +74,7 @@ Config.Tools = {
 	{ name = "Twin Turbines", power = 19, capacity = 75000, price = 1700000, shaft = { 40, 44, 52 }, head = { 255, 170, 40 }, material = "Metal" },
 	{ name = "Needle Detector", power = 22, capacity = 100000, price = 3400000, shaft = { 40, 44, 52 }, head = { 70, 255, 150 }, material = "Neon" },
 }
-Config.DetectorLevel = 10
+Config.DetectorLevel = 10 -- from this tool on, the HUD shows how close the needle is
 Config.LoadSize = 2.4 -- studs across the hay on a full tool
 
 -- Buckets hang at your hip and carry what the tool can't: tool fills first, then the bucket.
@@ -85,7 +85,7 @@ Config.Buckets = {
 	{ name = "Big Tub", capacity = 6000, price = 60000, size = 2 },
 	{ name = "Hay Barrel", capacity = 20000, price = 400000, size = 2.4 },
 	{ name = "Giant Basket", capacity = 60000, price = 2500000, size = 2.8 },
-} -- from this tool on, the HUD shows how close the needle is
+}
 
 -- The silo on your plot holds what your machines harvest until you next sell.
 Config.Silos = {
@@ -206,7 +206,7 @@ Config.Jetpack = {
 	fallSpeed = 7, -- studs a second drifting down after you let go (a soft landing)
 	thrust = 2.5, -- most force it pushes with, in body weights: it can never fling you
 	ease = 5, -- how quickly the speed eases to its target (higher = snappier)
-	ceiling = 275, -- no lift above this height (the pile is 255 high; the loft starts at 300)
+	ceiling = 275, -- no lift above this height (the haystack is 80 high; the loft starts at 300)
 	fuelSeconds = 0, -- seconds of flight before you land to refuel; 0 = unlimited
 	refuelSeconds = 4, -- seconds on the ground to refill a full tank
 	hoverKey = "H", -- F already places things in build mode

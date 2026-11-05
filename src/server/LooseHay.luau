@@ -101,15 +101,19 @@ function LooseHay.watch(item)
 			Remotes.SearchFx:FireClient(player, { kind = "dumped", straws = straws, coins = 0, reason = if baled then "bale" else "belt", basket = hit.Parent:FindFirstChild("Basket") })
 		elseif hit.Name == "BalerIntake" and item:GetAttribute("Kind") == "bundle" then
 			local straws = resolve(item, player)
-			local d = PlayerData.get(player)
+			local baler = hit.Parent
 			PlayerData.update(player, function(data)
 				data.baleStore += straws
 			end)
-			while d and d.baleStore >= Config.BaleStraws do
+			while true do
+				local d = PlayerData.get(player)
+				if not d or d.baleStore < Config.BaleStraws or not baler.Parent or not baler:FindFirstChild("BaleOut") then
+					break -- what's left stays in baleStore (saved) for the next bundle
+				end
 				PlayerData.update(player, function(data)
 					data.baleStore -= Config.BaleStraws
 				end)
-				spawnBale(player, hit.Parent)
+				spawnBale(player, baler)
 				task.wait(0.6)
 			end
 		end
@@ -194,7 +198,9 @@ function LooseHay.init()
 				local plotIndex = Plots.of(player)
 				for _, item in ipairs(plotIndex and looseFolder(plotIndex):GetChildren() or {}) do
 					local old = os.time() - (item:GetAttribute("Born") or 0) > Config.LooseHayMinutes * 60
-					if (old and carrying[player] ~= item) or item.Position.Y < -20 then
+					if ownerOf(item) ~= player then
+						item:Destroy() -- left behind by someone else; their straws are saved as theirs
+					elseif (old and carrying[player] ~= item) or item.Position.Y < -20 then
 						local baled = item:GetAttribute("Kind") == "bale"
 						Hauling.add(player, resolve(item, player), baled)
 					end

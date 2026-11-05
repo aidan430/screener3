@@ -116,7 +116,7 @@ Hauling.stallOf = stallOf
 local function autoDump(player)
 	local d = PlayerData.get(player)
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-	local stall = d and root and (d.carried + d.siloStraw) > 0 and stallOf(player)
+	local stall = d and root and (d.carried + d.carriedGolden + d.siloStraw) > 0 and stallOf(player)
 	local basket = stall and stall:FindFirstChild("Basket")
 	if basket and (basket.Position - root.Position).Magnitude <= Config.AutoDumpRange then
 		Hauling.dump(player, "trader", basket)

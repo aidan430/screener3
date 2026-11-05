@@ -165,3 +165,17 @@ commit 7d2617e). Both in git history.
   colour 208,170,87); `HayTexture` is "" (plain straw gold) until that's uploaded, then
   `HayTextureStuds` 5. New `HeapLumpiness` 0.45: a fixed random dent per terrain cell, so the
   surface is lumpy like forked hay. `GroundTextureStuds` 6 -> 16 (grass bigger).
+
+## Review fixes (2026-11-05)
+Two independent reviews (server, client). Fixed: crosshair offset by the top-bar inset
+(IgnoreGuiInset); Golden Loft announcement unhandled; "hold your tool" spam in build mode;
+the trader faced backwards; the basket sensor missed belt-height hay; pieces placed mid-glide
+off-grid; the BUILD button left the mouse free; two quick dumps hid the basket fill; the shop
+window shrank when toggled quickly; loose hay could be paid twice after leave/rejoin (now
+cleared with the plot, and only its owner is credited); the bale maker could lose straws or
+loop forever after a take-back or a leave; a hacked client could dig straight to the needle
+(only surface clumps, or ones already started, can be harvested now, and reach is measured
+to the clump); infinite rotations in Place; two players loading a tool model at once got a
+broken tool; the new needle wasn't saved straight away and the heap rebuilt 6 s late (now at
+once); golden straw didn't auto-dump; stale Config comments.
+Not done yet: session locking for saves (a very quick server hop could lose that session).

@@ -62,6 +62,10 @@ function Ui.maxText(size)
 end
 
 -- Scales `frame` (around its AnchorPoint) with the screen height.
+Ui.screenScale = function()
+	return screenScale()
+end
+
 function Ui.autoScale(frame)
 	local scale = Ui.make("UIScale", { Scale = screenScale(), Parent = frame })
 	table.insert(scales, scale)

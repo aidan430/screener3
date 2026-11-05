@@ -149,7 +149,7 @@ function Panels.mount(gui, notify, actions)
 				frame.Visible = not frame.Visible
 				if frame.Visible then
 					local scale = frame:FindFirstChildOfClass("UIScale")
-					local full = scale and scale.Scale or 1
+					local full = Ui.screenScale() -- not scale.Scale: that may be mid-tween
 					if scale then
 						scale.Scale = full * 0.9
 						Juice.ease(scale, 0.25, { Scale = full }, Enum.EasingStyle.Back)

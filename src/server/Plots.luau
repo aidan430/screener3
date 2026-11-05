@@ -91,7 +91,7 @@ function Plots.release(player)
 		byPlayer[player] = nil
 		signs[index].Text = "FREE PLOT"
 		for _, child in ipairs(Plots.folder(index):GetChildren()) do
-			if child.Name == "Pile" or child.Name == "Built" then
+			if child.Name == "Pile" or child.Name == "Built" or child.Name == "Loose" then -- loose straws are saved
 				child:Destroy()
 			end
 		end

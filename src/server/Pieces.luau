@@ -140,7 +140,7 @@ function builders.trader(model, cf)
 	local sign = p(model, cf * CFrame.new(0, 10.8, -0.6), Vector3.new(6, 1.6, 0.3), WOOD)
 	Build.text(sign, Enum.NormalId.Front, "TRADER")
 	-- the trader: boots, overalls, a checked shirt, a friendly face and a wide straw hat
-	local body = cf * CFrame.new(0, 0, 3.2) * CFrame.Angles(0, math.rad(180), 0)
+	local body = cf * CFrame.new(0, 0, 3.2) -- facing the front, where customers come
 	for _, x in ipairs({ -0.5, 0.5 }) do
 		p(model, body * CFrame.new(x, 1, 0), Vector3.new(0.9, 2, 0.9), { 64, 82, 130 }, "Fabric")
 	end
@@ -159,7 +159,7 @@ function builders.trader(model, cf)
 	fill.Transparency = 1
 	fill.CanCollide = false
 	prompt(basket, "sell", "Dump hay", "Your trader")
-	sensor(model, cf * CFrame.new(0, 3.2, -3.6), Vector3.new(4.6, 2.4, 4.6), "BasketSensor") -- hay off a belt or a carried bale
+	sensor(model, cf * CFrame.new(0, 1.9, -3.6), Vector3.new(6, 3.8, 6), "BasketSensor") -- hay off a belt or a carried bale
 end
 
 -- A teleporter pad: step on, press E and pick another of your pads.

@@ -12,10 +12,14 @@ local InsertService = game:GetService("InsertService")
 local loaded = {} -- [asset id] = a template part, or false if it couldn't be loaded as a model
 
 function Assets.template(id)
-	if loaded[id] ~= nil then
+	local waited = 0
+	while loaded[id] == "loading" and waited < 20 do -- another caller is loading it: wait for that
+		waited += task.wait(0.1)
+	end
+	if loaded[id] ~= nil and loaded[id] ~= "loading" then
 		return loaded[id]
 	end
-	loaded[id] = false
+	loaded[id] = "loading"
 	local ok, asset = pcall(function()
 		return InsertService:LoadAsset(id)
 	end)
@@ -32,13 +36,14 @@ function Assets.template(id)
 		end
 		asset:Destroy()
 	end
-	if not loaded[id] then -- not a model: try it as a mesh ID, which keeps the mesh's real size
+	if loaded[id] == "loading" then -- not a model: try it as a mesh ID, which keeps the mesh's real size
 		local made, meshPart = pcall(function()
 			return AssetService:CreateMeshPartAsync("rbxassetid://" .. id)
 		end)
 		if made and meshPart then
 			loaded[id] = meshPart
 		else
+			loaded[id] = false
 			warn("[Assets] Couldn't load " .. tostring(id) .. " as a model or a mesh: " .. tostring(asset) .. " / " .. tostring(meshPart))
 		end
 	end

@@ -184,8 +184,8 @@ function Harvest.start()
 		local tool = heldTool()
 		if tool then
 			swing(tool)
-		elseif Harvest.onMiss and player.Character then
-			Harvest.onMiss("Hold your fork to harvest: press 1.")
+		elseif Harvest.onMiss and player.Character and not (Harvest.isBuilding and Harvest.isBuilding()) then
+			Harvest.onMiss("Hold your tool to harvest: press 1.")
 		end
 	end)
 	RunService.RenderStepped:Connect(function()

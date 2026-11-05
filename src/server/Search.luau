@@ -83,17 +83,13 @@ function Search.needleFound(player, golden, position)
 			data.loft.needleAt = Economy.needleAt(Config.Loft.straws, Config.Loft.needleEarliest, rng)
 		else
 			data.needles += 1
-			Piles.resetData(data) -- saved at once, so leaving now can't lose the new needle
+			Piles.resetData(data)
 		end
 	end)
+	task.spawn(PlayerData.save, player) -- saved at once, so leaving now can't lose the new needle
 	Remotes.Announce:FireAllClients({ kind = "needle", finder = player.DisplayName, finderId = player.UserId, golden = golden, prize = prize, position = position })
-	if not golden and plotIndex then
-		task.delay(6, function() -- let the celebration play, then a fresh pile with a new needle
-			local current = PlayerData.get(player)
-			if current and Plots.of(player) == plotIndex then
-				Piles.rebuild(plotIndex, current)
-			end
-		end)
+	if not golden and plotIndex then -- a fresh heap with a new needle grows back straight away
+		Piles.rebuild(plotIndex, PlayerData.get(player))
 	end
 	Achievements.check(player)
 end
@@ -187,6 +183,8 @@ local function harvest(player, target)
 		local clump = Plots.contains(plotIndex, point, 0) and Piles.clumpAt(plotIndex, d, point)
 		if not clump then
 			return nope(player, "That's not your heap. Yours is on the farm marked YOUR FARM.")
+		elseif (head.Position - Piles.position(plotIndex, clump)).Magnitude > Config.Reach + 6 then
+			return nope(player, "Too far away. Step closer to the hay.")
 		end
 		taken, gone = Piles.take(plotIndex, d, clump, power)
 		hit = gone and clump == d.needleClump

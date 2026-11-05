@@ -67,14 +67,22 @@ function HayFx.dump(basket, straws, fromYou)
 	end
 	local bottom = basket.CFrame * CFrame.new(-basket.Size.X / 2 + 0.3, 0, 0) -- the cylinder's axis is X
 	local rim = basket.CFrame * CFrame.new(basket.Size.X / 2 - 0.1, 0, 0)
+	local token = (fill:GetAttribute("FxToken") or 0) + 1
+	fill:SetAttribute("FxToken", token) -- a newer dump takes over the animation
 	fill.CFrame = bottom
 	fill.Transparency = 0
 	task.delay(count * 0.06 + 0.3, function()
 		Juice.ease(fill, 0.5, { CFrame = rim }, Enum.EasingStyle.Back)
 		Juice.burst(top, 18, false)
 		task.delay(0.6 + Config.BasketDrainSeconds * 0.25, function()
+			if fill:GetAttribute("FxToken") ~= token then
+				return
+			end
 			Juice.ease(fill, Config.BasketDrainSeconds, { CFrame = bottom }, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
 			task.delay(Config.BasketDrainSeconds, function()
+				if fill:GetAttribute("FxToken") ~= token then
+					return
+				end
 				fill.Transparency = 1
 			end)
 		end)

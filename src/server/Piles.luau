@@ -57,6 +57,25 @@ function Piles.position(plotIndex, clump)
 	return origin(plotIndex) + Vector3.new(c[1], c[2], c[3])
 end
 
+-- True if a clump is on the surface: started already, or next to open air (an emptied clump
+-- or the outside of the heap). Players can't dig into the middle without digging their way in.
+function Piles.exposed(d, index)
+	if d.partial[tostring(index)] then
+		return true
+	end
+	local c = Layout.cell[index]
+	for _, o in ipairs({ { 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 } }) do
+		local layer = c[2] + o[2]
+		if layer >= 0 then -- the ground under the bottom layer isn't open air
+			local next = Layout.lookup(c[1] + o[1], layer, c[3] + o[3])
+			if not next or Profile.clumpLeft(d, next) <= 0 then
+				return true
+			end
+		end
+	end
+	return false
+end
+
 -- The clump nearest a point on (or just inside) the heap's surface, if one is left there.
 function Piles.clumpAt(plotIndex, d, point)
 	local o = origin(plotIndex)
@@ -67,7 +86,7 @@ function Piles.clumpAt(plotIndex, d, point)
 		for dy = -1, 1 do
 			for dz = -1, 1 do
 				local index = Layout.lookup(gx + dx, layer + dy, gz + dz)
-				if index and Profile.clumpLeft(d, index) > 0 then
+				if index and Profile.clumpLeft(d, index) > 0 and Piles.exposed(d, index) then
 					local distance = (Piles.position(plotIndex, index) - point).Magnitude
 					if distance < bestDistance then
 						best, bestDistance = index, distance
