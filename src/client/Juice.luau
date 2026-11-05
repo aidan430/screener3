@@ -27,19 +27,24 @@ local function ease(instance, seconds, goal, style, direction)
 end
 Juice.ease = ease
 
--- Plays a sound from Config.Sounds if one is set (IDs from the Toolbox; "" = silent).
+-- Plays a sound from Config.Sounds if one is set (IDs from the Toolbox; "" = silent), with
+-- Config.SoundSettings' volume, pitch and a little random wobble. One that fails to load stays silent.
 function Juice.sound(name, pitch)
 	local id = Config.Sounds and Config.Sounds[name]
-	if not id or id == "" then
+	if type(id) ~= "string" or id == "" then
 		return
 	end
-	local sound = Instance.new("Sound")
-	sound.SoundId = id
-	sound.Volume = 0.5
-	sound.PlaybackSpeed = pitch or 1
-	sound.Parent = SoundService
-	sound:Play()
-	Debris:AddItem(sound, 3)
+	local settings = (Config.SoundSettings and Config.SoundSettings[name]) or {}
+	local wobble = settings.wobble or 0
+	pcall(function()
+		local sound = Instance.new("Sound")
+		sound.SoundId = id
+		sound.Volume = settings.volume or 0.5
+		sound.PlaybackSpeed = (pitch or 1) * (settings.pitch or 1) * (1 + (math.random() * 2 - 1) * wobble)
+		sound.Parent = SoundService
+		sound:Play()
+		Debris:AddItem(sound, 3)
+	end)
 end
 
 function Juice.mount(screen, coinsLabel)

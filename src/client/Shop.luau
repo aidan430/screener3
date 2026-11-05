@@ -22,6 +22,7 @@ local ROBUX = {
 	{ kind = "pass", key = "AutoSell", title = "Auto Sell", text = "Your load sells itself when your tool is full." },
 	{ kind = "pass", key = "DoubleMachines", title = "Double Machines", text = "Every machine works twice as fast." },
 	{ kind = "pass", key = "VIP", title = "VIP", text = "+25% coins; machines work an hour after you leave." },
+	{ kind = "pass", key = "Jetpack", title = "Jetpack", text = "Hold Space in the air to fly up and hover over your pile." },
 }
 
 local Shop = {}
