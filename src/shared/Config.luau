@@ -53,7 +53,7 @@ Config.CoinsPerStraw = 1
 -- flip = false if it comes out upside down (the working end should point up). Without a
 -- model a tool is built as a pitchfork from the colours below.
 Config.Tools = {
-	{ name = "Garden Trowel", model = 89866055047467, length = 3, power = 1, capacity = 300, price = 0, shaft = { 112, 82, 58 }, head = { 128, 98, 78 }, material = "CorrodedMetal" },
+	{ name = "Garden Trowel", model = 139238222017221, length = 3, power = 1, capacity = 300, price = 0, shaft = { 112, 82, 58 }, head = { 128, 98, 78 }, material = "CorrodedMetal" },
 	{ name = "Wooden Pitchfork", power = 2, capacity = 1000, price = 400, shaft = { 160, 116, 72 }, head = { 176, 128, 82 }, material = "Wood" },
 	{ name = "Iron Pitchfork", power = 3, capacity = 2500, price = 2400, shaft = { 150, 108, 66 }, head = { 165, 170, 178 }, material = "Metal" },
 	{ name = "Steel Rake", power = 5, capacity = 5000, price = 10000, shaft = { 120, 84, 50 }, head = { 190, 196, 204 }, material = "Metal" },
