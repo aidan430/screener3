@@ -47,6 +47,11 @@ Config.HayModel = 0
 Config.HayMesh = ""
 Config.HayMeshTexture = ""
 Config.HayTint = { 255, 246, 225 }
+-- The fields and plot floors (terrain and parts of the LeafyGrass material), the same way.
+Config.GroundTexture = "rbxassetid://92652087782912" -- the owner's grass (gltf_embedded_2)
+Config.GroundNormal = "rbxassetid://81088945047843" -- its normal map (gltf_embedded_3)
+Config.GroundTextureStuds = 6
+Config.GroundTint = { 230, 236, 210 } -- the ground's colour with the texture on
 Config.HeapMounds = 16 -- loose hay mounds round the foot of each heap (just for looks) -- the heap's colour with the texture on (white = the image as is)
 Config.MaxSlopeAngle = 46 -- players can't walk up anything steeper: they build to climb
 -- The needle hides deep inside the upper heap: between these shares of the height, and no
@@ -5035,6 +5040,7 @@ return Wheel
 local Lighting = game:GetService("Lighting")
 
 local Build = require(script.Parent.Build)
+local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
 
 local World = {}
 local terrain = workspace.Terrain
@@ -5063,7 +5069,8 @@ end
 
 function World.ground()
 	-- Terrain Grass is kept for the straw heaps, so the fields are LeafyGrass in an autumn green.
-	terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(118, 136, 58))
+	local g = if Config.GroundTexture ~= "" then Config.GroundTint else { 118, 136, 58 }
+	terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(g[1], g[2], g[3]))
 	terrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(124, 94, 62))
 	terrain:SetMaterialColor(Enum.Material.Cobblestone, Color3.fromRGB(152, 138, 120))
 	terrain:FillBlock(CFrame.new(0, -8, 0), Vector3.new(GROUND, 16, GROUND), Enum.Material.LeafyGrass)
@@ -7993,8 +8000,9 @@ return WorldFx
 	<Item class="MaterialService" referent="RBX00049">
 		<Properties>
 			<string name="Name">MaterialService</string>
-			<string name="GrassName">Hay</string>
 			<bool name="Use2022Materials">true</bool>
+			<string name="GrassName">Hay</string>
+			<string name="LeafyGrassName">Field</string>
 		</Properties>
 		<Item class="MaterialVariant" referent="RBX0004A">
 			<Properties>
@@ -8003,6 +8011,16 @@ return WorldFx
 				<token name="MaterialPattern">1</token>
 				<float name="StudsPerTile">3.0</float>
 				<Content name="ColorMap"><url>rbxassetid://92326825877863</url></Content>
+			</Properties>
+		</Item>
+		<Item class="MaterialVariant" referent="RBX0004B">
+			<Properties>
+				<string name="Name">Field</string>
+				<token name="BaseMaterial">1284</token>
+				<token name="MaterialPattern">1</token>
+				<float name="StudsPerTile">6.0</float>
+				<Content name="ColorMap"><url>rbxassetid://92652087782912</url></Content>
+				<Content name="NormalMap"><url>rbxassetid://81088945047843</url></Content>
 			</Properties>
 		</Item>
 	</Item>

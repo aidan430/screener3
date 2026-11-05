@@ -154,3 +154,8 @@ commit 7d2617e). Both in git history.
   held straight out in front, working end forward (`flip`, `roll`, `bladeTop`, `loadAt`,
   `loadSize` per tool tune it). The hay on a tool now sits on a Weld whose offset keeps its
   bottom on the blade (or tines) as it grows, so it never sinks through.
+- **Grass texture on the fields:** `GroundTexture` = the owner's gltf_embedded_2 (92652087782912)
+  with `GroundNormal` gltf_embedded_3 (81088945047843), every `GroundTextureStuds` 6, tint
+  `GroundTint`. `dev/build.py` writes it as the MaterialVariant "Field" over LeafyGrass (the
+  terrain fields and the plot floors). gltf_embedded_0 (grass blades with transparency) and
+  internal_ground_... aren't used.

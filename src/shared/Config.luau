@@ -35,6 +35,11 @@ Config.HayModel = 0
 Config.HayMesh = ""
 Config.HayMeshTexture = ""
 Config.HayTint = { 255, 246, 225 }
+-- The fields and plot floors (terrain and parts of the LeafyGrass material), the same way.
+Config.GroundTexture = "rbxassetid://92652087782912" -- the owner's grass (gltf_embedded_2)
+Config.GroundNormal = "rbxassetid://81088945047843" -- its normal map (gltf_embedded_3)
+Config.GroundTextureStuds = 6
+Config.GroundTint = { 230, 236, 210 } -- the ground's colour with the texture on
 Config.HeapMounds = 16 -- loose hay mounds round the foot of each heap (just for looks) -- the heap's colour with the texture on (white = the image as is)
 Config.MaxSlopeAngle = 46 -- players can't walk up anything steeper: they build to climb
 -- The needle hides deep inside the upper heap: between these shares of the height, and no

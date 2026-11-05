@@ -4,6 +4,7 @@
 local Lighting = game:GetService("Lighting")
 
 local Build = require(script.Parent.Build)
+local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
 
 local World = {}
 local terrain = workspace.Terrain
@@ -32,7 +33,8 @@ end
 
 function World.ground()
 	-- Terrain Grass is kept for the straw heaps, so the fields are LeafyGrass in an autumn green.
-	terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(118, 136, 58))
+	local g = if Config.GroundTexture ~= "" then Config.GroundTint else { 118, 136, 58 }
+	terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(g[1], g[2], g[3]))
 	terrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(124, 94, 62))
 	terrain:SetMaterialColor(Enum.Material.Cobblestone, Color3.fromRGB(152, 138, 120))
 	terrain:FillBlock(CFrame.new(0, -8, 0), Vector3.new(GROUND, 16, GROUND), Enum.Material.LeafyGrass)
