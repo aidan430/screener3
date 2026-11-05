@@ -22,12 +22,15 @@ Config.PileRadiusTop = 4
 Config.PileDome = 2.5 -- above 1: the sides stay wide for longer, then round over
 Config.PileCurve = 0.7 -- below 1: a fuller, rounder top
 Config.HeapColour = { 222, 186, 92 } -- straw gold (the terrain Grass material is the heap)
+Config.HeapLumpiness = 0.45 -- 0 = a smooth dome; higher = a lumpier, more hay-like surface
 -- Your hay texture: upload garden-hay.jpg (and its normal map) in Studio (Asset Manager > Import),
 -- paste the IDs here ("rbxassetid://123"), rebuild. The heap, the hay on tools and the bundles
 -- then wear it. Empty = plain straw-gold Grass.
-Config.HayTexture = "rbxassetid://92326825877863"
+-- (92326825877863, the first upload, was too dark: from a distance it read as dirt. Upload
+-- assets/hay/garden-hay-golden.jpg and put its ID here.)
+Config.HayTexture = ""
 Config.HayNormal = ""
-Config.HayTextureStuds = 3 -- how many studs one copy of the texture covers
+Config.HayTextureStuds = 5 -- how many studs one copy of the texture covers
 -- The hay model you imported and uploaded (a Model or a mesh ID): lumps on tools, flying hay,
 -- bundles, bales' neighbours and the mounds round the heap use it. 0 = rounded hay balls.
 Config.HayModel = 0
@@ -38,7 +41,7 @@ Config.HayTint = { 255, 246, 225 }
 -- The fields and plot floors (terrain and parts of the LeafyGrass material), the same way.
 Config.GroundTexture = "rbxassetid://92652087782912" -- the owner's grass (gltf_embedded_2)
 Config.GroundNormal = "rbxassetid://81088945047843" -- its normal map (gltf_embedded_3)
-Config.GroundTextureStuds = 6
+Config.GroundTextureStuds = 16
 Config.GroundTint = { 230, 236, 210 } -- the ground's colour with the texture on
 Config.HeapMounds = 16 -- loose hay mounds round the foot of each heap (just for looks) -- the heap's colour with the texture on (white = the image as is)
 Config.MaxSlopeAngle = 46 -- players can't walk up anything steeper: they build to climb

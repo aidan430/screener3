@@ -159,3 +159,9 @@ commit 7d2617e). Both in git history.
   `GroundTint`. `dev/build.py` writes it as the MaterialVariant "Field" over LeafyGrass (the
   terrain fields and the plot floors). gltf_embedded_0 (grass blades with transparency) and
   internal_ground_... aren't used.
+- **Owner's feedback (heap looked like dirt):** the first hay image (92326825877863) is dark
+  brown and averaged out to soil from a distance; tinting can only darken a texture. Made
+  `assets/hay/garden-hay-golden.jpg` (levels stretched and mapped onto a straw gradient, average
+  colour 208,170,87); `HayTexture` is "" (plain straw gold) until that's uploaded, then
+  `HayTextureStuds` 5. New `HeapLumpiness` 0.45: a fixed random dent per terrain cell, so the
+  surface is lumpy like forked hay. `GroundTextureStuds` 6 -> 16 (grass bigger).

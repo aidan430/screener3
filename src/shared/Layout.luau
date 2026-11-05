@@ -66,7 +66,10 @@ return function(Config)
 			local r = radius[c[2]]
 			local d = math.sqrt(c[4]) * s
 			out.cell[index] = { c[1], c[2], c[3] }
-			out.shape[index] = math.clamp((r - d) / s + 0.5, 0.35, 1)
+			-- fullness rounds the outside smoothly, then a fixed random dent per cell makes the
+			-- surface lumpy, like hay forked onto a pile, instead of a smooth dome of dirt
+			local hash = bit32.bxor(c[1] * 73856093, c[2] * 19349663, c[3] * 83492791) % 1000 / 1000
+			out.shape[index] = math.clamp(((r - d) / s + 0.5) * (1 - Config.HeapLumpiness * hash), 0.3, 1)
 			out.core[index] = math.clamp(d / math.max(r, s), 0, 1)
 			grid[c[1] .. "," .. c[2] .. "," .. c[3]] = index
 		end
