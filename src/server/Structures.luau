@@ -124,7 +124,7 @@ end
 
 function Structures.init()
 	Remotes.Place.OnServerInvoke = place
-	Remotes.Remove.OnServerInvoke = remove
+	Remotes.TakeBack.OnServerInvoke = remove
 	ProximityPromptService.PromptTriggered:Connect(function(prompt, player)
 		local direction = prompt:GetAttribute("Direction")
 		local model = prompt:FindFirstAncestorOfClass("Model")

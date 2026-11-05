@@ -137,7 +137,25 @@ def check(tree: Node) -> list[str]:
         for ref in luau.references(node.source, "Remotes"):
             if ref != "Parent" and remotes.child(ref) is None:
                 errors.append(f"{rel}: Remotes has no '{ref}'")
+    for node in tree.walk():
+        for child in node.children:
+            if child.name in INSTANCE_MEMBERS:
+                errors.append(f"{node.name}.{child.name}: '{child.name}' is a built-in Roblox name, so a dot can't reach it; rename it")
     return errors
+
+
+# Names every Roblox object already has: `Folder.Remove` finds the built-in function, not a
+# child called Remove, so a child with one of these names can't be reached with a dot.
+INSTANCE_MEMBERS = {
+    "Name", "Parent", "ClassName", "Archivable", "Changed", "ChildAdded", "ChildRemoved",
+    "DescendantAdded", "DescendantRemoving", "Destroying", "AncestryChanged", "AttributeChanged",
+    "Destroy", "Remove", "Clone", "ClearAllChildren", "GetChildren", "GetDescendants",
+    "FindFirstChild", "FindFirstChildOfClass", "FindFirstChildWhichIsA", "FindFirstAncestor",
+    "FindFirstAncestorOfClass", "FindFirstAncestorWhichIsA", "WaitForChild", "IsA",
+    "IsAncestorOf", "IsDescendantOf", "GetAttribute", "SetAttribute", "GetAttributes",
+    "GetAttributeChangedSignal", "GetPropertyChangedSignal", "GetFullName", "GetTags",
+    "HasTag", "AddTag", "RemoveTag", "GetActor",
+}
 
 
 def ancestors(tree: Node, node: Node) -> list[Node]:

@@ -102,7 +102,7 @@ end
 
 local function takeBack()
 	if hovered then
-		local ok, message = Remotes.Remove:InvokeServer(hovered)
+		local ok, message = Remotes.TakeBack:InvokeServer(hovered)
 		notify.toast(message, if ok then Ui.colors.wood else Ui.colors.red)
 	end
 end

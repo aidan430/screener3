@@ -29,7 +29,7 @@
         "Place": {
           "$className": "RemoteFunction"
         },
-        "Remove": {
+        "TakeBack": {
           "$className": "RemoteFunction"
         },
         "EquipSkin": {

@@ -548,7 +548,7 @@ end
 			</Item>
 			<Item class="RemoteFunction" referent="RBX0000F">
 				<Properties>
-					<string name="Name">Remove</string>
+					<string name="Name">TakeBack</string>
 				</Properties>
 			</Item>
 			<Item class="RemoteFunction" referent="RBX00010">
@@ -1081,15 +1081,24 @@ PlayerData.onLoaded(function(player, saveable)
 	end
 end)
 
-Plots.init()
-Monetization.init() -- before PlayerData.init, so early players get their passes checked
-PlayerData.init()
-Achievements.init()
-Structures.init()
-Search.init()
-Machines.init()
-Shop.init()
-Loft.init()
+-- Each part starts on its own: if one breaks, its error shows in Output and the rest still run.
+local parts = {
+	{ "Search", Search.init }, -- harvesting first: it matters most
+	{ "Plots", Plots.init },
+	{ "Monetization", Monetization.init }, -- before PlayerData, so early players get their passes checked
+	{ "PlayerData", PlayerData.init },
+	{ "Achievements", Achievements.init },
+	{ "Structures", Structures.init },
+	{ "Machines", Machines.init },
+	{ "Shop", Shop.init },
+	{ "Loft", Loft.init },
+}
+for _, part in ipairs(parts) do
+	local ok, err = pcall(part[2])
+	if not ok then
+		warn("[Start] " .. part[1] .. " failed to start: " .. tostring(err))
+	end
+end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
@@ -2518,7 +2527,7 @@ end
 
 function Structures.init()
 	Remotes.Place.OnServerInvoke = place
-	Remotes.Remove.OnServerInvoke = remove
+	Remotes.TakeBack.OnServerInvoke = remove
 	ProximityPromptService.PromptTriggered:Connect(function(prompt, player)
 		local direction = prompt:GetAttribute("Direction")
 		local model = prompt:FindFirstAncestorOfClass("Model")
@@ -3036,7 +3045,7 @@ end
 
 local function takeBack()
 	if hovered then
-		local ok, message = Remotes.Remove:InvokeServer(hovered)
+		local ok, message = Remotes.TakeBack:InvokeServer(hovered)
 		notify.toast(message, if ok then Ui.colors.wood else Ui.colors.red)
 	end
 end

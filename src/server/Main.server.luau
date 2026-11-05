@@ -79,12 +79,21 @@ PlayerData.onLoaded(function(player, saveable)
 	end
 end)
 
-Plots.init()
-Monetization.init() -- before PlayerData.init, so early players get their passes checked
-PlayerData.init()
-Achievements.init()
-Structures.init()
-Search.init()
-Machines.init()
-Shop.init()
-Loft.init()
+-- Each part starts on its own: if one breaks, its error shows in Output and the rest still run.
+local parts = {
+	{ "Search", Search.init }, -- harvesting first: it matters most
+	{ "Plots", Plots.init },
+	{ "Monetization", Monetization.init }, -- before PlayerData, so early players get their passes checked
+	{ "PlayerData", PlayerData.init },
+	{ "Achievements", Achievements.init },
+	{ "Structures", Structures.init },
+	{ "Machines", Machines.init },
+	{ "Shop", Shop.init },
+	{ "Loft", Loft.init },
+}
+for _, part in ipairs(parts) do
+	local ok, err = pcall(part[2])
+	if not ok then
+		warn("[Start] " .. part[1] .. " failed to start: " .. tostring(err))
+	end
+end
