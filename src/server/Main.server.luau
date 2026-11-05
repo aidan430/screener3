@@ -35,11 +35,17 @@ local Monetization = require(script.Parent.Monetization)
 local Carry = require(script.Parent.Carry)
 
 StarterPlayer.CharacterMaxSlopeAngle = Config.MaxSlopeAngle -- the steep heap needs building to climb
+local Scenery = require(script.Parent.Scenery)
 
 World.build()
 Plots.build()
 Plots.onRelease = Piles.clear
 Haystack.build()
+-- the countryside is decoration: if any of it fails, warn and carry on
+local sceneryOk, sceneryError = pcall(Scenery.build)
+if not sceneryOk then
+	warn("[Start] Scenery failed to build: " .. tostring(sceneryError))
+end
 
 local function toPlot(player)
 	local plotIndex = Plots.of(player)

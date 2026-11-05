@@ -1307,11 +1307,17 @@ local Monetization = require(script.Parent.Monetization)
 local Carry = require(script.Parent.Carry)
 
 StarterPlayer.CharacterMaxSlopeAngle = Config.MaxSlopeAngle -- the steep heap needs building to climb
+local Scenery = require(script.Parent.Scenery)
 
 World.build()
 Plots.build()
 Plots.onRelease = Piles.clear
 Haystack.build()
+-- the countryside is decoration: if any of it fails, warn and carry on
+local sceneryOk, sceneryError = pcall(Scenery.build)
+if not sceneryOk then
+	warn("[Start] Scenery failed to build: " .. tostring(sceneryError))
+end
 
 local function toPlot(player)
 	local plotIndex = Plots.of(player)
@@ -2386,6 +2392,975 @@ return Profile
 			</Item>
 			<Item class="ModuleScript" referent="RBX00022">
 				<Properties>
+					<string name="Name">Scenery</string>
+					<ProtectedString name="Source"><![CDATA[-- The countryside of Hollow Creek Farm, in the wide ring between the plots and the fence:
+-- a farmyard (barn, silos, farmhouse) up the north lane, animal pens to the west, pumpkin and
+-- corn fields to the east, a duck pond, windmill, water tower and orchard to the south.
+-- All plain anchored Parts in workspace.Scenery; animals and windmill sails are animated on
+-- each client (client/Animals). Nothing here goes inside the plots or on the roads.
+local Build = require(script.Parent.Build)
+local Kit = require(script.Parent.SceneryKit)
+local Props = require(script.Parent.SceneryProps)
+local Nature = require(script.Parent.SceneryNature)
+local Pens = require(script.Parent.SceneryAnimals)
+
+local Scenery = {}
+local C = Kit.C
+local part, bit, beam = Kit.part, Kit.bit, Kit.beam
+
+local function facing(x, z, toX, toZ)
+	return CFrame.lookAt(Vector3.new(x, 0, z), Vector3.new(toX, 0, toZ))
+end
+
+-- A big red barn with a gambrel roof, sliding doors and a hay loft opening. Front is local -Z.
+local function barn(folder, base)
+	local m = Kit.model(folder, "Barn")
+	local W, D, H = 40, 52, 20
+	part(m, base, "Foundation", Vector3.new(W + 1, 1.5, D + 1), Vector3.new(0, 0.75, 0), C.stone, "Cobblestone")
+	part(m, base, "BarnWalls", Vector3.new(W, H, D), Vector3.new(0, H / 2, 0), C.red, "WoodPlanks")
+	for _, x in ipairs({ -W / 2, W / 2 }) do
+		for _, z in ipairs({ -D / 2, D / 2 }) do
+			part(m, base, "CornerTrim", Vector3.new(1.2, H, 1.2), Vector3.new(x, H / 2, z), C.trim, "WoodPlanks")
+		end
+		for _, z in ipairs({ -14, 0, 14 }) do -- side windows
+			part(m, base, "Window", Vector3.new(0.4, 4, 4), Vector3.new(x * 1.01, 11, z), C.shadow, "Wood")
+			part(m, base, "WindowTrim", Vector3.new(0.3, 4.8, 0.6), Vector3.new(x * 1.02, 11, z), C.trim, "WoodPlanks", { collide = false })
+			part(m, base, "WindowTrim", Vector3.new(0.3, 0.6, 4.8), Vector3.new(x * 1.02, 11, z), C.trim, "WoodPlanks", { collide = false })
+		end
+	end
+	-- the gambrel roof: a steep lower slope and a shallow upper one on each side
+	local profile = { { W / 2 + 1.4, H - 0.8 }, { W * 0.32, H + 9 }, { 0, H + 13 } }
+	for _, s in ipairs({ -1, 1 }) do
+		for i = 1, 2 do
+			local a, b = profile[i], profile[i + 1]
+			local p1, p2 = Vector3.new(s * a[1], a[2], 0), Vector3.new(s * b[1], b[2], 0)
+			local angle = math.atan2(p2.Y - p1.Y, p2.X - p1.X)
+			part(m, base, "Roof", Vector3.new((p2 - p1).Magnitude + 0.6, 0.8, D + 2), CFrame.new((p1 + p2) / 2) * CFrame.Angles(0, 0, angle), C.roof, "WoodPlanks")
+		end
+	end
+	part(m, base, "RoofRidge", Vector3.new(1.4, 1, D + 2.4), Vector3.new(0, H + 13.3, 0), C.darkWood, "Wood")
+	for _, z in ipairs({ -D / 2 + 0.4, D / 2 - 0.4 }) do -- the gable ends, in planks
+		for t = 0, 12 do
+			local half = if t < 9 then W / 2 - (W / 2 - W * 0.32) * (t + 0.5) / 9 else W * 0.32 * (1 - (t - 8.5) / 4)
+			part(m, base, "Gable", Vector3.new(half * 2, 1.02, 0.8), Vector3.new(0, H + t + 0.5, z), C.red, "WoodPlanks")
+		end
+	end
+	local front = -D / 2
+	-- the hay loft opening, with its hood, hoist beam and a bale peeking out
+	part(m, base, "LoftOpening", Vector3.new(7, 6, 0.3), Vector3.new(0, H + 5, front - 0.15), C.shadow, "Wood")
+	for _, e in ipairs({ { 0, H + 8.2, 8.2, 0.6 }, { 0, H + 1.8, 8.2, 0.6 }, { -3.8, H + 5, 0.6, 6.8 }, { 3.8, H + 5, 0.6, 6.8 } }) do
+		bit(m, base, "LoftTrim", Vector3.new(e[3], e[4], 0.3), Vector3.new(e[1], e[2], front - 0.35), C.trim, "WoodPlanks")
+	end
+	part(m, base, "HoistBeam", Vector3.new(0.8, 0.8, 5), Vector3.new(0, H + 9.4, front - 2), C.darkWood, "Wood")
+	bit(m, base, "Rope", Vector3.new(0.15, 3.2, 0.15), Vector3.new(0, H + 7.4, front - 4), { 196, 170, 120 }, "Fabric")
+	bit(m, base, "HangingBale", Vector3.new(2.4, 1.6, 1.6), Vector3.new(0, H + 5, front - 4), C.hay, "Fabric")
+	bit(m, base, "LoftBale", Vector3.new(3, 2, 1.6), Vector3.new(1.4, H + 3, front - 0.4), C.hay, "Fabric")
+	-- the big doors, slid open on their rail
+	part(m, base, "Doorway", Vector3.new(16, 15, 0.4), Vector3.new(0, 7.5, front - 0.2), C.shadow, "Wood")
+	part(m, base, "DoorRail", Vector3.new(36, 0.5, 0.5), Vector3.new(0, 15.6, front - 0.9), C.black, "Metal", { collide = false })
+	for _, x in ipairs({ -12.5, 12.5 }) do
+		local z = front - 0.8
+		part(m, base, "BarnDoor", Vector3.new(9, 15, 0.6), Vector3.new(x, 7.5, z), C.red, "WoodPlanks")
+		for _, e in ipairs({ { 0, 14.6, 9, 0.8 }, { 0, 0.4, 9, 0.8 }, { -4.1, 7.5, 0.8, 15 }, { 4.1, 7.5, 0.8, 15 } }) do
+			bit(m, base, "DoorTrim", Vector3.new(e[3], e[4], 0.3), Vector3.new(x + e[1], e[2], z - 0.4), C.trim, "WoodPlanks")
+		end
+		for _, s in ipairs({ -1, 1 }) do
+			beam(m, base, "DoorBrace", Vector3.new(x - 3.6 * s, 1, z - 0.45), Vector3.new(x + 3.6 * s, 14, z - 0.45), 0.7, C.trim, "WoodPlanks", { collide = false })
+		end
+	end
+	for _, x in ipairs({ -18, 18 }) do
+		Kit.lantern(m, base * CFrame.new(x, 0, front - 3), 7)
+	end
+	-- a weathervane on the ridge
+	bit(m, base, "VanePost", Vector3.new(0.3, 4, 0.3), Vector3.new(0, H + 15.6, 6), C.black, "Metal")
+	bit(m, base, "VaneArrow", Vector3.new(0.3, 0.3, 4), Vector3.new(0, H + 17, 6), C.black, "Metal")
+	bit(m, base, "VaneRooster", Vector3.new(0.3, 1.4, 1.6), Vector3.new(0, H + 18, 6), C.black, "Metal")
+	-- square bales stacked by the door
+	for i, p in ipairs({ { 0, 0 }, { 3.2, 0 }, { 1.6, 1 } }) do
+		part(m, base, "SquareBale" .. i, Vector3.new(3, 2, 2), Vector3.new(W / 2 - 3 + p[1], 1 + p[2] * 2, front - 5), C.hay, "Fabric")
+	end
+end
+
+-- One window on a wall: `frame` is the window's centre on the wall, local -Z pointing out.
+local function window(m, frame)
+	bit(m, frame, "WindowFrame", Vector3.new(4.2, 5.2, 0.3), Vector3.new(0, 0, -0.15), C.trim, "WoodPlanks")
+	bit(m, frame, "WindowGlow", Vector3.new(3.4, 4.4, 0.3), Vector3.new(0, 0, -0.25), { 230, 168, 96 }, "Neon")
+	bit(m, frame, "Mullion", Vector3.new(0.3, 4.4, 0.2), Vector3.new(0, 0, -0.45), C.trim, "WoodPlanks")
+	bit(m, frame, "Mullion", Vector3.new(3.4, 0.3, 0.2), Vector3.new(0, 0, -0.45), C.trim, "WoodPlanks")
+	for _, x in ipairs({ -2.9, 2.9 }) do
+		bit(m, frame, "Shutter", Vector3.new(1.4, 4.8, 0.25), Vector3.new(x, 0, -0.15), { 70, 96, 72 }, "WoodPlanks")
+	end
+end
+
+-- A two-storey farmhouse with a porch, warm windows and a smoking chimney. Front is local -Z.
+local function farmhouse(folder, base)
+	local m = Kit.model(folder, "Farmhouse")
+	local W, D, H = 34, 24, 17
+	part(m, base, "Foundation", Vector3.new(W + 1, 1, D + 1), Vector3.new(0, 0.5, 0), C.stone, "Cobblestone")
+	part(m, base, "HouseWalls", Vector3.new(W, H, D), Vector3.new(0, H / 2 + 1, 0), C.cream, "WoodPlanks")
+	Build.roof({ name = "Roof", color = { 116, 64, 52 }, material = "WoodPlanks", parent = m }, base * CFrame.new(0, H + 1, 0) * CFrame.Angles(0, math.rad(90), 0), D + 3, W)
+	local chimney = part(m, base, "Chimney", Vector3.new(3.4, H + 15, 3.4), Vector3.new(W / 2 - 4, (H + 17) / 2, 4), { 150, 74, 58 }, "Brick")
+	part(m, base, "ChimneyCap", Vector3.new(4.2, 0.8, 4.2), Vector3.new(W / 2 - 4, H + 16.4, 4), C.stone, "Concrete")
+	local smoke = Instance.new("ParticleEmitter")
+	smoke.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	smoke.Rate = 1.5
+	smoke.Lifetime = NumberRange.new(6, 9)
+	smoke.Speed = NumberRange.new(2, 3)
+	smoke.SpreadAngle = Vector2.new(8, 8)
+	smoke.EmissionDirection = Enum.NormalId.Top
+	smoke.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 2), NumberSequenceKeypoint.new(1, 7) })
+	smoke.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 1) })
+	smoke.Color = ColorSequence.new(Color3.fromRGB(226, 218, 210))
+	smoke.Parent = chimney
+	local front = -D / 2
+	for _, x in ipairs({ -11, 11 }) do
+		window(m, base * CFrame.new(x, 6.5, front))
+	end
+	for _, x in ipairs({ -11, 0, 11 }) do
+		window(m, base * CFrame.new(x, 13.5, front))
+	end
+	for _, s in ipairs({ -1, 1 }) do
+		for _, y in ipairs({ 6.5, 13.5 }) do
+			window(m, base * CFrame.new(s * W / 2, y, 0) * CFrame.Angles(0, -s * math.pi / 2, 0))
+		end
+	end
+	part(m, base, "FrontDoor", Vector3.new(3.6, 7, 0.3), Vector3.new(0, 5.5, front - 0.15), { 74, 96, 70 }, "WoodPlanks")
+	bit(m, base, "DoorKnob", Vector3.new(0.4, 0.4, 0.4), Vector3.new(1.2, 5.2, front - 0.4), { 220, 180, 80 }, "Metal", "Ball")
+	-- the porch: floor, steps, posts, rail and a sloping roof
+	local pz = front - 4
+	part(m, base, "Porch", Vector3.new(W - 4, 1.2, 8), Vector3.new(0, 1.6, pz), C.plank, "WoodPlanks")
+	part(m, base, "Step", Vector3.new(6, 1.5, 1.4), Vector3.new(0, 0.75, front - 8.7), C.plank, "WoodPlanks")
+	part(m, base, "Step", Vector3.new(6, 0.8, 1.4), Vector3.new(0, 0.4, front - 10.1), C.plank, "WoodPlanks")
+	for _, x in ipairs({ -14.5, -3.4, 3.4, 14.5 }) do
+		part(m, base, "PorchPost", Vector3.new(0.8, 7.6, 0.8), Vector3.new(x, 6, front - 7.4), C.trim, "Wood")
+	end
+	part(m, base, "PorchRoof", Vector3.new(W - 2, 0.6, 9.4), CFrame.new(0, 10.2, pz - 0.4) * CFrame.Angles(math.rad(-7), 0, 0), { 116, 64, 52 }, "WoodPlanks")
+	for _, x in ipairs({ -9, 9 }) do
+		for _, y in ipairs({ 3, 4.6 }) do
+			part(m, base, "PorchRail", Vector3.new(11, 0.35, 0.35), Vector3.new(x, y, front - 7.4), C.trim, "Wood", { collide = y > 4 })
+		end
+	end
+	part(m, base, "Bench", Vector3.new(5, 0.5, 1.6), Vector3.new(-9, 3.6, front - 2), C.darkWood, "Wood")
+	part(m, base, "BenchBack", Vector3.new(5, 2, 0.4), Vector3.new(-9, 4.8, front - 1.2), C.darkWood, "Wood")
+	for i, p in ipairs({ { 5.8, 2.2 }, { 8.4, 1.1 }, { -5.8, 1.6 } }) do
+		local s = p[2] + 0.4
+		bit(m, base, "PorchPumpkin" .. i, Vector3.new(s, s, s), Vector3.new(p[1], 2.2 + s / 2 - 0.1, front - 6), C.pumpkin, "SmoothPlastic", "Ball")
+	end
+	Kit.lantern(m, base * CFrame.new(-6, 0, front - 12), 6)
+	Kit.lantern(m, base * CFrame.new(6, 0, front - 12), 6)
+end
+
+-- A grain silo: a ribbed tall cylinder with a dome and a ladder.
+local function silo(folder, base, dia, height)
+	local m = Kit.model(folder, "Silo")
+	Kit.post(m, base, "SiloBody", Vector3.zero, height, dia, { 198, 194, 184 }, "CorrugatedSteel")
+	for y = 6, height - 4, 8 do
+		Kit.post(m, base, "SiloBand", Vector3.new(0, y, 0), 0.6, dia + 0.4, { 150, 146, 140 }, "Metal", { collide = false })
+	end
+	part(m, base, "SiloDome", Vector3.new(dia, dia, dia), Vector3.new(0, height, 0), { 214, 210, 200 }, "Metal", { shape = "Ball" })
+	local z = -(dia / 2 + 0.4)
+	for _, x in ipairs({ -0.8, 0.8 }) do
+		bit(m, base, "LadderRail", Vector3.new(0.25, height - 3, 0.25), Vector3.new(x, height / 2 + 0.5, z), C.black, "Metal")
+	end
+	for y = 2, height - 2, 2 do
+		bit(m, base, "LadderRung", Vector3.new(1.6, 0.2, 0.2), Vector3.new(0, y, z), C.black, "Metal")
+	end
+end
+
+-- A wooden windmill. Its sails (model "Sails", PrimaryPart "Hub") turn on each client.
+local function windmill(folder, base)
+	local m = Kit.model(folder, "Windmill")
+	Kit.post(m, base, "MillBase", Vector3.zero, 8, 18, { 160, 146, 128 }, "Cobblestone")
+	Kit.post(m, base, "MillBody", Vector3.new(0, 8, 0), 12, 15, { 172, 128, 84 }, "WoodPlanks")
+	Kit.post(m, base, "MillTop", Vector3.new(0, 20, 0), 10, 12, { 186, 140, 92 }, "WoodPlanks")
+	Kit.post(m, base, "Gallery", Vector3.new(0, 7.6, 0), 0.6, 22, C.darkWood, "WoodPlanks")
+	part(m, base, "MillCap", Vector3.new(13, 13, 13), Vector3.new(0, 30, 0), { 120, 70, 54 }, "WoodPlanks", { shape = "Ball" })
+	part(m, base, "MillDoor", Vector3.new(3.4, 6, 0.4), Vector3.new(0, 3, -8.9), C.shadow, "Wood")
+	for _, y in ipairs({ 13, 24 }) do
+		bit(m, base, "MillWindow", Vector3.new(2, 2.4, 0.3), Vector3.new(0, y, if y < 20 then -7.5 else -6), { 230, 168, 96 }, "Neon")
+	end
+	bit(m, base, "Axle", Vector3.new(1.4, 1.4, 5), Vector3.new(0, 28, -8.2), C.darkWood, "Wood")
+	local sails = Kit.model(m, "Sails")
+	local hubCf = base * CFrame.new(0, 28, -10.6)
+	local hub = bit(sails, hubCf, "Hub", Vector3.new(2.6, 2.6, 2.6), Vector3.zero, C.darkWood, "Wood", "Ball")
+	sails.PrimaryPart = hub
+	for k = 0, 3 do
+		local arm = hubCf * CFrame.Angles(0, 0, k * math.pi / 2)
+		bit(sails, arm, "Spar", Vector3.new(0.7, 18, 0.5), Vector3.new(0, 9.6, 0), C.darkWood, "Wood")
+		bit(sails, arm, "SailCloth", Vector3.new(4.2, 13, 0.2), Vector3.new(2.6, 11.5, 0.3), { 236, 224, 200 }, "Fabric")
+		bit(sails, arm, "SailEdge", Vector3.new(0.25, 13.4, 0.3), Vector3.new(4.8, 11.5, 0.3), C.darkWood, "Wood")
+		for y = 5.5, 17.5, 4 do
+			bit(sails, arm, "SailBar", Vector3.new(4.8, 0.25, 0.3), Vector3.new(2.5, y, 0.1), C.darkWood, "Wood")
+		end
+	end
+	Kit.lantern(m, base * CFrame.new(4, 0, -11), 6)
+end
+
+function Scenery.build()
+	local folder = Instance.new("Folder")
+	folder.Name = "Scenery"
+	folder.Parent = workspace
+	local jobs = {
+		{ "lanes and pond", function() Nature.terrain() end },
+		{ "barn", function() barn(folder, facing(-95, -262, -95, 0)) end },
+		{ "silos", function()
+			silo(folder, CFrame.new(-138, 0, -272), 16, 46)
+			silo(folder, CFrame.new(-138, 0, -250), 14, 40)
+		end },
+		{ "farmhouse", function() farmhouse(folder, facing(85, -258, 85, 0)) end },
+		{ "windmill", function() windmill(folder, facing(112, 255, 0, 0)) end },
+		{ "props", function() Props.build(folder) end },
+		{ "nature", function() Nature.build(folder) end },
+		{ "animals", function() Pens.build(folder) end },
+	}
+	for _, job in ipairs(jobs) do
+		local ok, err = pcall(job[2])
+		if not ok then
+			warn("[Scenery] " .. job[1] .. " failed: " .. tostring(err))
+		end
+	end
+end
+
+return Scenery
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00023">
+				<Properties>
+					<string name="Name">SceneryAnimals</string>
+					<ProtectedString name="Source"><![CDATA[-- Animal pens to the west of the plots and the cute blocky animals in them: cows, sheep, pigs,
+-- chickens (with their coop) and ducks on the pond. The animals are anchored, walk-through
+-- Models (pivot at their feet, facing local -Z); client/Animals moves them gently. Each one
+-- carries attributes: Kind, PenMin/PenMax (where it may wander), HeadHinge/TailHinge (local
+-- points its "Head" and "Tail" parts turn about).
+local Kit = require(script.Parent.SceneryKit)
+
+local Pens = {}
+local C = Kit.C
+local part, bit = Kit.part, Kit.bit
+
+-- A rail fence round a pen, with a gate gap in the middle of its east side (toward the lane).
+local function pen(m, cx, cz, w, d)
+	local fence = Kit.model(m, "PenFence")
+	local half = { w / 2, d / 2 }
+	for _, side in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
+		local alongX = side[1] == 0
+		local length = if alongX then w else d
+		local gated = side[1] == 1
+		local spans = if gated then { { -length / 2, -3 }, { 3, length / 2 } } else { { -length / 2, length / 2 } }
+		local function at(along, y)
+			return if alongX then Vector3.new(cx + along, y, cz + side[2] * half[2]) else Vector3.new(cx + side[1] * half[1], y, cz + along)
+		end
+		for _, span in ipairs(spans) do
+			local n = math.max(1, math.floor((span[2] - span[1]) / 5 + 0.5))
+			for i = 0, n do
+				local along = span[1] + (span[2] - span[1]) * i / n
+				part(fence, CFrame.new(), "PenPost", Vector3.new(0.7, if gated and math.abs(along) < 4 then 5 else 4, 0.7), at(along, 2), C.wood, "Wood")
+			end
+			for _, y in ipairs({ 1.6, 3.2 }) do
+				local l = span[2] - span[1]
+				part(fence, CFrame.new(), "PenRail", if alongX then Vector3.new(l, 0.35, 0.3) else Vector3.new(0.3, 0.35, l), at((span[1] + span[2]) / 2, y), C.plank, "Wood")
+			end
+		end
+	end
+	return Vector3.new(cx - w / 2 + 4, 0, cz - d / 2 + 4), Vector3.new(cx + w / 2 - 4, 0, cz + d / 2 - 4)
+end
+
+local function trough(m, base, water)
+	part(m, base, "Trough", Vector3.new(6, 1.6, 2), Vector3.new(0, 0.8, 0), if water then C.metal else C.wood, if water then "Metal" else "WoodPlanks")
+	bit(m, base, if water then "TroughWater" else "TroughFeed", Vector3.new(5.6, 0.2, 1.6), Vector3.new(0, 1.55, 0), if water then { 96, 140, 150 } else C.hay, "SmoothPlastic")
+end
+
+-- A little red chicken coop on stilts, door facing local -Z, with a ramp down.
+local function coop(m, base)
+	for _, x in ipairs({ -2.6, 2.6 }) do
+		for _, z in ipairs({ -3.4, 3.4 }) do
+			part(m, base, "CoopStilt", Vector3.new(0.6, 2.4, 0.6), Vector3.new(x, 1.2, z), C.darkWood, "Wood")
+		end
+	end
+	part(m, base, "Coop", Vector3.new(6, 4, 8), Vector3.new(0, 4.4, 0), C.red, "WoodPlanks")
+	for _, s in ipairs({ -1, 1 }) do
+		part(m, base, "CoopRoof", Vector3.new(4.4, 0.4, 9), CFrame.new(s * 1.9, 7.2, 0) * CFrame.Angles(0, 0, s * math.rad(-30)), C.roof, "WoodPlanks")
+	end
+	bit(m, base, "CoopDoor", Vector3.new(1.8, 2, 0.2), Vector3.new(0, 3.6, -4.05), C.shadow, "Wood")
+	Kit.beam(m, base, "Ramp", Vector3.new(0, 2.6, -4.1), Vector3.new(0, 0.2, -8), 1.6, C.plank, "WoodPlanks", { collide = false })
+end
+
+-- Builds an animal: `parts` is a list of { name, size, position, colour, shape?, material? }.
+local function animal(folder, kind, at, yaw, parts, head, tail, min, max)
+	local m = Instance.new("Model")
+	m.Name = kind
+	local root = CFrame.new(at) * CFrame.Angles(0, yaw, 0)
+	local r = part(m, root, "Root", Vector3.new(1, 1, 1), Vector3.zero, C.trim, "SmoothPlastic", { collide = false, shadow = false, transparency = 1 })
+	m.PrimaryPart = r
+	for _, p in ipairs(parts) do
+		bit(m, root, p[1], p[2], p[3], p[4], p[6] or "SmoothPlastic", p[5])
+	end
+	m:SetAttribute("Kind", kind)
+	m:SetAttribute("PenMin", min)
+	m:SetAttribute("PenMax", max)
+	m:SetAttribute("HeadHinge", head)
+	m:SetAttribute("TailHinge", tail)
+	m.Parent = folder
+	return m
+end
+
+local V = Vector3.new
+local PINK, BLACK, CREAM, YELLOW, RED = { 236, 160, 164 }, { 40, 36, 36 }, { 240, 234, 220 }, { 240, 196, 70 }, { 210, 60, 50 }
+
+local function cow(folder, at, yaw, min, max, brown)
+	local coat = if brown then { 158, 104, 66 } else { 242, 238, 228 }
+	local spot = if brown then CREAM else BLACK
+	local p = {
+		{ "Body", V(4, 3.4, 7.4), V(0, 4.6, 0), coat },
+		{ "Spot", V(0.2, 1.6, 2), V(2.05, 4.9, 1), spot },
+		{ "Spot", V(0.2, 1.4, 1.8), V(-2.05, 4.3, -1.6), spot },
+		{ "Spot", V(2, 0.2, 2.2), V(0.6, 6.35, 1.6), spot },
+		{ "Udder", V(1.6, 0.8, 1.4), V(0, 2.6, 1.8), PINK },
+		{ "Head", V(2.6, 2.6, 2.8), V(0, 6, -4.8), coat },
+		{ "Head", V(2.4, 1.4, 0.8), V(0, 5.4, -6.4), PINK },
+		{ "Head", V(0.45, 0.45, 0.45), V(0.8, 6.6, -6.25), BLACK, "Ball" },
+		{ "Head", V(0.45, 0.45, 0.45), V(-0.8, 6.6, -6.25), BLACK, "Ball" },
+		{ "Head", V(0.4, 0.9, 0.4), V(0.9, 7.6, -4.6), CREAM },
+		{ "Head", V(0.4, 0.9, 0.4), V(-0.9, 7.6, -4.6), CREAM },
+		{ "Head", V(1, 0.4, 0.6), V(1.7, 6.8, -4.4), coat },
+		{ "Head", V(1, 0.4, 0.6), V(-1.7, 6.8, -4.4), coat },
+		{ "Tail", V(0.3, 3, 0.3), V(0, 4.7, 3.85), coat },
+		{ "Tail", V(0.6, 0.8, 0.6), V(0, 3.1, 3.85), spot },
+	}
+	for _, x in ipairs({ -1.4, 1.4 }) do
+		for _, z in ipairs({ -2.6, 2.6 }) do
+			table.insert(p, { "Leg", V(1, 3, 1), V(x, 1.5, z), coat })
+		end
+	end
+	return animal(folder, "Cow", at, yaw, p, V(0, 6, -3.6), V(0, 6.1, 3.85), min, max)
+end
+
+local function pig(folder, at, yaw, min, max)
+	local p = {
+		{ "Body", V(3, 2.6, 4.6), V(0, 2.6, 0), PINK },
+		{ "Head", V(2.2, 2.2, 1.8), V(0, 3, -3), PINK },
+		{ "Head", V(1.2, 0.9, 0.5), V(0, 2.7, -4.1), { 222, 132, 140 } },
+		{ "Head", V(0.35, 0.35, 0.35), V(0.55, 3.5, -3.92), BLACK, "Ball" },
+		{ "Head", V(0.35, 0.35, 0.35), V(-0.55, 3.5, -3.92), BLACK, "Ball" },
+		{ "Head", V(0.8, 0.2, 0.7), V(0.75, 4.15, -2.7), { 222, 132, 140 } },
+		{ "Head", V(0.8, 0.2, 0.7), V(-0.75, 4.15, -2.7), { 222, 132, 140 } },
+		{ "Tail", V(0.3, 0.3, 0.8), V(0, 3.3, 2.6), PINK },
+		{ "Tail", V(0.4, 0.4, 0.4), V(0, 3.6, 2.9), PINK, "Ball" },
+	}
+	for _, x in ipairs({ -1, 1 }) do
+		for _, z in ipairs({ -1.6, 1.6 }) do
+			table.insert(p, { "Leg", V(0.8, 1.4, 0.8), V(x, 0.7, z), PINK })
+		end
+	end
+	return animal(folder, "Pig", at, yaw, p, V(0, 3, -2.2), V(0, 3.3, 2.3), min, max)
+end
+
+local function sheep(folder, at, yaw, min, max)
+	local dark = { 62, 54, 52 }
+	local p = {
+		{ "Body", V(2.6, 2.2, 3.6), V(0, 2.9, 0), CREAM, nil, "Fabric" },
+		{ "Wool", V(2.9, 2.9, 2.9), V(0, 3.1, -0.9), CREAM, "Ball", "Fabric" },
+		{ "Wool", V(2.9, 2.9, 2.9), V(0, 3.1, 0.9), CREAM, "Ball", "Fabric" },
+		{ "Wool", V(2.4, 2.4, 2.4), V(0, 3.7, 0), CREAM, "Ball", "Fabric" },
+		{ "Head", V(1.4, 1.6, 1.8), V(0, 3.6, -2.6), dark },
+		{ "Head", V(1.3, 1.3, 1.3), V(0, 4.5, -2.3), CREAM, "Ball", "Fabric" },
+		{ "Head", V(0.8, 0.3, 0.4), V(0.95, 3.9, -2.3), dark },
+		{ "Head", V(0.8, 0.3, 0.4), V(-0.95, 3.9, -2.3), dark },
+		{ "Head", V(0.3, 0.3, 0.3), V(0.42, 3.9, -3.5), CREAM, "Ball" },
+		{ "Head", V(0.3, 0.3, 0.3), V(-0.42, 3.9, -3.5), CREAM, "Ball" },
+		{ "Tail", V(0.9, 0.9, 0.9), V(0, 3.3, 2.3), CREAM, "Ball", "Fabric" },
+	}
+	for _, x in ipairs({ -0.9, 0.9 }) do
+		for _, z in ipairs({ -1.3, 1.3 }) do
+			table.insert(p, { "Leg", V(0.6, 1.8, 0.6), V(x, 0.9, z), dark })
+		end
+	end
+	return animal(folder, "Sheep", at, yaw, p, V(0, 3.6, -1.8), V(0, 3.5, 2), min, max)
+end
+
+local function chicken(folder, at, yaw, min, max, brown)
+	local feathers = if brown then { 176, 108, 60 } else { 246, 242, 232 }
+	local p = {
+		{ "Body", V(1.4, 1.3, 1.8), V(0, 1.5, 0.1), feathers },
+		{ "Wing", V(0.2, 0.8, 1.2), V(0.75, 1.5, 0.1), feathers },
+		{ "Wing", V(0.2, 0.8, 1.2), V(-0.75, 1.5, 0.1), feathers },
+		{ "Tail", V(0.9, 1.1, 0.5), V(0, 2.1, 1.1), feathers },
+		{ "Head", V(0.9, 1, 0.9), V(0, 2.5, -0.8), feathers },
+		{ "Head", V(0.3, 0.3, 0.45), V(0, 2.4, -1.4), YELLOW },
+		{ "Head", V(0.2, 0.5, 0.6), V(0, 3.1, -0.8), RED },
+		{ "Head", V(0.2, 0.35, 0.2), V(0, 2.05, -1.25), RED },
+		{ "Head", V(0.2, 0.2, 0.2), V(0.42, 2.65, -1.05), BLACK, "Ball" },
+		{ "Head", V(0.2, 0.2, 0.2), V(-0.42, 2.65, -1.05), BLACK, "Ball" },
+		{ "Leg", V(0.2, 0.9, 0.2), V(0.3, 0.45, 0), YELLOW },
+		{ "Leg", V(0.2, 0.9, 0.2), V(-0.3, 0.45, 0), YELLOW },
+	}
+	return animal(folder, "Chicken", at, yaw, p, V(0, 2.1, -0.5), V(0, 1.8, 0.9), min, max)
+end
+
+local function duck(folder, at, yaw, min, max, mallard)
+	local coat = if mallard then { 150, 120, 92 } else { 246, 244, 236 }
+	local p = {
+		{ "Body", V(1.4, 1, 2.2), V(0, 0.3, 0), coat },
+		{ "Tail", V(0.6, 0.4, 0.5), V(0, 0.7, 1.2), coat },
+		{ "Head", V(0.9, 0.9, 0.9), V(0, 1.3, -0.9), if mallard then { 60, 110, 70 } else coat },
+		{ "Head", V(0.5, 0.2, 0.5), V(0, 1.2, -1.5), { 238, 150, 50 } },
+		{ "Head", V(0.18, 0.18, 0.18), V(0.46, 1.45, -1.05), BLACK, "Ball" },
+		{ "Head", V(0.18, 0.18, 0.18), V(-0.46, 1.45, -1.05), BLACK, "Ball" },
+	}
+	return animal(folder, "Duck", at, yaw, p, V(0, 0.8, -0.6), V(0, 0.6, 1), min, max)
+end
+
+-- Puts `count` animals at random spots inside min..max.
+local function herd(folder, rng, count, min, max, make)
+	for i = 1, count do
+		local at = Vector3.new(rng:NextNumber(min.X, max.X), min.Y, rng:NextNumber(min.Z, max.Z))
+		make(folder, at, rng:NextNumber(0, math.pi * 2), min, max, i % 2 == 0)
+	end
+end
+
+function Pens.build(folder)
+	local m = Kit.model(folder, "Pens")
+	local animals = Instance.new("Folder")
+	animals.Name = "Animals"
+	animals.Parent = folder
+	local rng = Random.new(3)
+	local min, max = pen(m, -250, 0, 70, 56) -- cows
+	trough(m, CFrame.new(-280, 0, -18) * CFrame.Angles(0, math.pi / 2, 0), true)
+	trough(m, CFrame.new(-280, 0, 16) * CFrame.Angles(0, math.pi / 2, 0), false)
+	herd(animals, rng, 4, min, max, cow)
+	min, max = pen(m, -245, 72, 50, 40) -- sheep
+	trough(m, CFrame.new(-245, 0, 89), true)
+	herd(animals, rng, 4, min, max, sheep)
+	min, max = pen(m, -240, -82, 40, 32) -- pigs, with their mud
+	trough(m, CFrame.new(-240, 0, -95), false)
+	herd(animals, rng, 3, min, max, pig)
+	min, max = pen(m, -235, 135, 40, 34) -- chickens and their coop
+	coop(m, CFrame.lookAt(Vector3.new(-249, 0, 135), Vector3.new(0, 0, 135)))
+	herd(animals, rng, 9, min + Vector3.new(8, 0, 0), max, chicken)
+	-- ducks paddle about the pond (it is centred at -90, 268, radius 30; the dock is on its north side)
+	herd(animals, rng, 4, Vector3.new(-107, -1.1, 257), Vector3.new(-73, -1.1, 285), duck)
+end
+
+return Pens
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00024">
+				<Properties>
+					<string name="Name">SceneryKit</string>
+					<ProtectedString name="Source"><![CDATA[-- Shared helpers for the countryside around the plots (see Scenery): a part maker that works
+-- in a local frame, the farm's warm sunset colours, and the areas the scenery keeps clear.
+local Build = require(script.Parent.Build)
+
+local Kit = {}
+
+Kit.C = {
+	red = { 168, 52, 42 },
+	trim = { 240, 232, 214 },
+	wood = { 122, 86, 52 },
+	darkWood = { 84, 58, 38 },
+	plank = { 164, 120, 76 },
+	roof = { 92, 70, 64 },
+	cream = { 236, 222, 190 },
+	stone = { 150, 140, 128 },
+	metal = { 184, 184, 178 },
+	black = { 44, 38, 36 },
+	shadow = { 40, 28, 22 },
+	hay = { 222, 184, 92 },
+	pumpkin = { 232, 124, 36 },
+	stem = { 92, 110, 48 },
+	glow = { 255, 196, 120 },
+	soil = { 104, 74, 48 },
+}
+Kit.AUTUMN = { { 214, 120, 40 }, { 196, 72, 44 }, { 232, 176, 54 }, { 150, 150, 58 }, { 178, 96, 40 } }
+
+-- Areas kept clear of trees and bushes: the plots and hub, lanes, buildings, pens, fields.
+-- Each is { minX, minZ, maxX, maxZ }.
+Kit.KEEP_CLEAR = {
+	{ -172, -172, 172, 172 }, -- plots, roads and hub
+	{ -16, -500, 16, -160 }, -- north lane to the gate
+	{ -180, -310, 135, -195 }, -- farmyard: barn, silos, farmhouse, tractor
+	{ -300, -110, -160, 170 }, -- animal pens and their path
+	{ -215, -160, -175, -120 }, -- bales by the pens
+	{ 180, -125, 320, 135 }, -- pumpkin and corn fields
+	{ 300, -170, 340, -130 }, -- bales by the fields
+	{ -140, 215, -30, 320 }, -- duck pond
+	{ 80, 215, 145, 295 }, -- windmill
+	{ -300, 225, -240, 290 }, -- water tower
+	{ 200, 190, 410, 410 }, -- orchard
+	{ 20, 195, 60, 235 }, -- bales in the south meadow
+}
+
+function Kit.clear(x, z, margin)
+	margin = margin or 0
+	for _, r in ipairs(Kit.KEEP_CLEAR) do
+		if x > r[1] - margin and x < r[3] + margin and z > r[2] - margin and z < r[4] + margin then
+			return false
+		end
+	end
+	return true
+end
+
+function Kit.model(parent, name)
+	local m = Instance.new("Model")
+	m.Name = name
+	m.Parent = parent
+	return m
+end
+
+-- One anchored part at `at` (a CFrame or Vector3) in the frame `base`.
+-- opts: shape, collide (default true), shadow (default true), transparency, class
+function Kit.part(parent, base, name, size, at, color, material, opts)
+	local spec = {}
+	if opts then
+		for k, v in pairs(opts) do
+			spec[k] = v
+		end
+	end
+	spec.name = name
+	spec.size = size
+	spec.cframe = base * (if typeof(at) == "Vector3" then CFrame.new(at) else at)
+	spec.color = color
+	spec.material = material or "SmoothPlastic"
+	spec.parent = parent
+	return Build.part(spec)
+end
+
+-- A small decoration: walk-through, and only the bigger bits cast shadows.
+function Kit.bit(parent, base, name, size, at, color, material, shape)
+	return Kit.part(parent, base, name, size, at, color, material, { collide = false, shape = shape, shadow = size.Magnitude > 3 })
+end
+
+-- A square beam from local point a to local point b (not straight up: use a part for that).
+function Kit.beam(parent, base, name, a, b, thick, color, material, opts)
+	local length = (b - a).Magnitude
+	return Kit.part(parent, base, name, Vector3.new(thick, thick, length), CFrame.lookAt((a + b) / 2, b), color, material, opts)
+end
+
+-- A standing cylinder whose bottom centre is at local point `at`.
+function Kit.post(parent, base, name, at, height, diameter, color, material, opts)
+	local cf = CFrame.new(at + Vector3.new(0, height / 2, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	local o = opts or {}
+	o.shape = "Cylinder"
+	return Kit.part(parent, base, name, Vector3.new(height, diameter, diameter), cf, color, material, o)
+end
+
+-- A glowing lantern on a short post, with a soft warm light.
+function Kit.lantern(parent, base, height)
+	height = height or 7
+	Kit.part(parent, base, "LanternPost", Vector3.new(0.6, height, 0.6), Vector3.new(0, height / 2, 0), Kit.C.darkWood, "Wood", { collide = false })
+	Kit.bit(parent, base, "LanternCap", Vector3.new(1.6, 0.4, 1.6), Vector3.new(0, height + 1.4, 0), Kit.C.black, "Metal")
+	local glow = Kit.bit(parent, base, "Lantern", Vector3.new(1.1, 1.3, 1.1), Vector3.new(0, height + 0.6, 0), Kit.C.glow, "Neon")
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255, 186, 116)
+	light.Range = 16
+	light.Brightness = 1.2
+	light.Parent = glow
+	return glow
+end
+
+-- A wooden sign on two posts, facing local -Z. Plain, friendly words only.
+function Kit.sign(parent, base, text, width)
+	width = width or 10
+	for _, x in ipairs({ -width / 2 + 0.6, width / 2 - 0.6 }) do
+		Kit.part(parent, base, "SignPost", Vector3.new(0.6, 6, 0.6), Vector3.new(x, 3, 0), Kit.C.darkWood, "Wood", { collide = false })
+	end
+	local board = Kit.part(parent, base, "SignBoard", Vector3.new(width, 2.6, 0.4), Vector3.new(0, 5, 0), { 214, 176, 118 }, "WoodPlanks", { collide = false })
+	Build.text(board, Enum.NormalId.Front, text, { pixels = 30 })
+	return board
+end
+
+return Kit
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00025">
+				<Properties>
+					<string name="Name">SceneryNature</string>
+					<ProtectedString name="Source"><![CDATA[-- The living countryside (see Scenery): dirt lanes, the duck pond, the pumpkin and corn
+-- fields, an apple orchard, and autumn trees and bushes scattered wherever the farm is clear.
+-- Terrain Grass is never used here (it is kept for the straw heaps).
+local Kit = require(script.Parent.SceneryKit)
+
+local Nature = {}
+local C = Kit.C
+local part, bit = Kit.part, Kit.bit
+local terrain = workspace.Terrain
+local ORIGIN = CFrame.new()
+
+Nature.POND = Vector3.new(-90, 0, 268)
+Nature.POND_RADIUS = 30
+Nature.WATER_Y = -1
+
+local function dirt(x, z, sx, sz, material)
+	terrain:FillBlock(CFrame.new(x, -2, z), Vector3.new(sx, 4, sz), material or Enum.Material.Ground)
+end
+
+function Nature.terrain()
+	dirt(0, -332.5, 16, 335) -- the north lane, from the end of the road out through the gate
+	dirt(-5, -216, 210, 12) -- the farmyard lane, barn to farmhouse
+	dirt(-95, -229, 24, 14) -- in front of the barn doors
+	dirt(85, -228.5, 6, 13) -- up to the farmhouse steps
+	dirt(-190, 0, 50, 10) -- from the west road to the pens
+	dirt(-208, 25, 8, 250) -- along the pen gates
+	dirt(250, -70, 110, 90) -- the pumpkin patch
+	dirt(250, 75, 110, 100) -- the corn rows
+	dirt(-240, -84, 16, 12, Enum.Material.Mud) -- the pigs' favourite mud
+	local pond = Nature.POND
+	terrain:FillCylinder(CFrame.new(pond.X, -4, pond.Z), 8, Nature.POND_RADIUS + 4, Enum.Material.Mud)
+	terrain:FillCylinder(CFrame.new(pond.X, -3, pond.Z), 6, Nature.POND_RADIUS, Enum.Material.Air)
+	terrain:FillCylinder(CFrame.new(pond.X, -3.5, pond.Z), 5, Nature.POND_RADIUS, Enum.Material.Water)
+	terrain.WaterColor = Color3.fromRGB(86, 124, 112)
+	terrain.WaterWaveSize = 0.05
+	terrain.WaterWaveSpeed = 4
+end
+
+local function tree(m, base, rng, height)
+	Kit.post(m, base, "Trunk", Vector3.zero, height, rng:NextNumber(2, 3), { 96, 66, 44 }, "Wood")
+	for _ = 1, 3 do
+		local s = rng:NextNumber(9, 15)
+		local offset = Vector3.new(rng:NextNumber(-3.5, 3.5), height + rng:NextNumber(-1, 4), rng:NextNumber(-3.5, 3.5))
+		part(m, base, "Leaves", Vector3.new(s, s, s), offset, Kit.AUTUMN[rng:NextInteger(1, #Kit.AUTUMN)], "Fabric", { shape = "Ball", collide = false })
+	end
+end
+
+local function bush(m, base, rng)
+	local color = if rng:NextNumber() < 0.6 then { 96, 122, 52 } else Kit.AUTUMN[rng:NextInteger(1, #Kit.AUTUMN)]
+	for _ = 1, rng:NextInteger(2, 3) do
+		local s = rng:NextNumber(3, 6)
+		bit(m, base, "Bush", Vector3.new(s, s, s), Vector3.new(rng:NextNumber(-2, 2), s * 0.35, rng:NextNumber(-2, 2)), color, "Fabric", "Ball")
+	end
+end
+
+-- Trees and bushes wherever the farm is clear, between the plots and the tree line.
+local function wilds(folder)
+	local m = Kit.model(folder, "Trees")
+	local rng = Random.new(23)
+	local planted = 0
+	for _ = 1, 400 do
+		local x, z = rng:NextNumber(-445, 445), rng:NextNumber(-445, 445)
+		if planted < 80 and Kit.clear(x, z, 10) then
+			tree(m, CFrame.new(x, 0, z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), rng, rng:NextNumber(10, 18))
+			planted += 1
+		end
+	end
+	local bushes = Kit.model(folder, "Bushes")
+	for _ = 1, 300 do
+		local x, z = rng:NextNumber(-450, 450), rng:NextNumber(-450, 450)
+		if Kit.clear(x, z, 4) then
+			bush(bushes, CFrame.new(x, 0, z), rng)
+		end
+	end
+end
+
+local function orchard(folder)
+	local m = Kit.model(folder, "Orchard")
+	local rng = Random.new(5)
+	for x = 225, 385, 32 do
+		for z = 225, 385, 32 do
+			local base = CFrame.new(x + rng:NextNumber(-2, 2), 0, z + rng:NextNumber(-2, 2))
+			Kit.post(m, base, "Trunk", Vector3.zero, 7, 1.6, { 104, 72, 48 }, "Wood")
+			for _, o in ipairs({ { -1.5, 8, 0, 9 }, { 1.6, 9, 0.8, 8 } }) do
+				part(m, base, "Leaves", Vector3.new(o[4], o[4], o[4]), Vector3.new(o[1], o[2], o[3]), { 104, 128, 56 }, "Fabric", { shape = "Ball", collide = false })
+			end
+			for _ = 1, 5 do
+				local a, b = rng:NextNumber(0, 6.28), rng:NextNumber(-0.4, 0.9)
+				local at = Vector3.new(math.cos(a) * math.cos(b) * 4.6, 8.5 + math.sin(b) * 4.4, math.sin(a) * math.cos(b) * 4.6)
+				bit(m, base, "Apple", Vector3.new(0.8, 0.8, 0.8), at, { 196, 54, 44 }, "SmoothPlastic", "Ball")
+			end
+			if rng:NextNumber() < 0.5 then
+				bit(m, base, "FallenApple", Vector3.new(0.8, 0.8, 0.8), Vector3.new(rng:NextNumber(-3, 3), 0.4, rng:NextNumber(-3, 3)), { 196, 54, 44 }, "SmoothPlastic", "Ball")
+			end
+		end
+	end
+end
+
+local function pumpkins(folder)
+	local m = Kit.model(folder, "PumpkinPatch")
+	local rng = Random.new(31)
+	for x = 205, 295, 11 do
+		part(m, ORIGIN, "Row", Vector3.new(3, 0.6, 84), Vector3.new(x, 0.3, -70), C.soil, "Sand", { collide = false })
+		bit(m, ORIGIN, "Vine", Vector3.new(1.4, 0.3, 82), Vector3.new(x, 0.7, -70), { 92, 118, 50 }, "Fabric")
+		for z = -108, -32, 7 do
+			local far = math.abs(x - 250) > 4 or math.abs(z + 70) > 4 -- leave room for the scarecrow
+			if far and rng:NextNumber() < 0.75 then
+				local s = rng:NextNumber(1.8, 3.2)
+				local tone = { 232 + rng:NextInteger(-12, 12), 124 + rng:NextInteger(-20, 20), 36 }
+				local at = Vector3.new(x + rng:NextNumber(-0.6, 0.6), s * 0.45 + 0.4, z + rng:NextNumber(-1, 1))
+				part(m, ORIGIN, "Pumpkin", Vector3.new(s, s, s), at, tone, "SmoothPlastic", { shape = "Ball", collide = false })
+				bit(m, ORIGIN, "Stem", Vector3.new(0.3, 0.7, 0.3), at + Vector3.new(0, s / 2, 0), C.stem, "Wood")
+			end
+		end
+	end
+end
+
+local function corn(folder)
+	local m = Kit.model(folder, "CornRows")
+	local rng = Random.new(41)
+	for x = 200, 296, 8 do
+		part(m, ORIGIN, "Row", Vector3.new(2.4, 0.5, 96), Vector3.new(x, 0.25, 75), C.soil, "Sand", { collide = false })
+		for z = 30, 120, 4.5 do
+			local h = rng:NextNumber(6.5, 9)
+			local base = CFrame.new(x + rng:NextNumber(-0.4, 0.4), 0, z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0)
+			bit(m, base, "Stalk", Vector3.new(0.45, h, 0.45), Vector3.new(0, h / 2, 0), { 188, 168, 82 }, "Fabric")
+			bit(m, base, "CornLeaf", Vector3.new(3.4, 0.15, 0.7), CFrame.new(0, h * 0.55, 0) * CFrame.Angles(0, 0, math.rad(-25)), { 168, 160, 70 }, "Fabric")
+			if rng:NextNumber() < 0.5 then
+				bit(m, base, "Cob", Vector3.new(0.6, 1.4, 0.6), CFrame.new(0.4, h * 0.6, 0) * CFrame.Angles(0, 0, math.rad(-20)), { 240, 200, 90 }, "SmoothPlastic")
+			end
+		end
+	end
+end
+
+-- Reeds and cattails round the pond, lily pads, a little dock and some smooth stones.
+local function pondside(folder)
+	local m = Kit.model(folder, "Pond")
+	local rng = Random.new(17)
+	local pond, r = Nature.POND, Nature.POND_RADIUS
+	for _ = 1, 70 do
+		local a = rng:NextNumber(0, math.pi * 2)
+		if math.abs(math.cos(a)) > 0.2 or math.sin(a) > 0 then -- not on the dock (north side)
+			local d = rng:NextNumber(r - 3, r + 3)
+			local h = rng:NextNumber(3, 6)
+			local base = CFrame.new(pond.X + math.cos(a) * d, -1.5, pond.Z + math.sin(a) * d) * CFrame.Angles(rng:NextNumber(-0.15, 0.15), 0, rng:NextNumber(-0.15, 0.15))
+			bit(m, base, "Reed", Vector3.new(0.2, h, 0.2), Vector3.new(0, h / 2, 0), { 112, 132, 60 }, "Fabric")
+			if rng:NextNumber() < 0.4 then
+				bit(m, base, "Cattail", Vector3.new(0.45, 1.2, 0.45), Vector3.new(0, h - 0.4, 0), { 110, 70, 40 }, "Fabric")
+			end
+		end
+	end
+	for _ = 1, 14 do
+		local a, d = rng:NextNumber(0, math.pi * 2), rng:NextNumber(6, r - 6)
+		local at = CFrame.new(pond.X + math.cos(a) * d, Nature.WATER_Y + 0.05, pond.Z + math.sin(a) * d)
+		bit(m, at, "LilyPad", Vector3.new(0.15, 2.6, 2.6), CFrame.Angles(0, 0, math.rad(90)), { 96, 140, 70 }, "SmoothPlastic", "Cylinder")
+		if rng:NextNumber() < 0.35 then
+			bit(m, at, "LilyFlower", Vector3.new(0.7, 0.7, 0.7), Vector3.new(0.4, 0.3, 0), { 246, 190, 210 }, "SmoothPlastic", "Ball")
+		end
+	end
+	local dock = CFrame.new(pond.X, 0, pond.Z - r + 7)
+	part(m, dock, "Dock", Vector3.new(6, 0.6, 18), Vector3.new(0, 0.9, 0), C.plank, "WoodPlanks")
+	for _, x in ipairs({ -2.6, 2.6 }) do
+		for _, z in ipairs({ -8, 0, 8 }) do
+			part(m, dock, "DockPost", Vector3.new(0.7, 4, 0.7), Vector3.new(x, -0.6, z), C.darkWood, "Wood")
+		end
+	end
+	for i = 1, 10 do
+		local a = i / 10 * math.pi * 2 + 0.3
+		local s = rng:NextNumber(1.5, 3.5)
+		bit(m, CFrame.new(pond.X + math.cos(a) * (r + 5), s * 0.2, pond.Z + math.sin(a) * (r + 5)), "Stone", Vector3.new(s, s * 0.7, s), Vector3.zero, { 150, 144, 136 }, "Slate")
+	end
+end
+
+function Nature.build(folder)
+	local jobs = { wilds, orchard, pumpkins, corn, pondside }
+	for _, job in ipairs(jobs) do
+		local ok, err = pcall(job, folder)
+		if not ok then
+			warn("[Scenery] nature part failed: " .. tostring(err))
+		end
+	end
+end
+
+return Nature
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00026">
+				<Properties>
+					<string name="Name">SceneryProps</string>
+					<ProtectedString name="Source"><![CDATA[-- Farm props for the countryside (see Scenery): a tractor and trailer, carts, round hay bales,
+-- scarecrows, a mailbox, the gate arch, signs, lane lanterns and a wooden water tower.
+local Build = require(script.Parent.Build)
+local Kit = require(script.Parent.SceneryKit)
+
+local Props = {}
+local C = Kit.C
+local part, bit, beam = Kit.part, Kit.bit, Kit.beam
+local ORANGE = { 222, 128, 40 }
+local RUBBER = { 38, 34, 34 }
+local RIM = { 236, 190, 60 }
+
+local function facing(x, z, toX, toZ)
+	return CFrame.lookAt(Vector3.new(x, 0, z), Vector3.new(toX, 0, toZ))
+end
+
+local function wheel(m, base, at, width, dia)
+	part(m, base, "Tyre", Vector3.new(width, dia, dia), at, RUBBER, "SmoothPlastic", { shape = "Cylinder" })
+	bit(m, base, "Rim", Vector3.new(width + 0.1, dia * 0.48, dia * 0.48), at, RIM, "Metal", "Cylinder")
+end
+
+-- A little orange tractor, parked. Front is local -Z.
+function Props.tractor(parent, base)
+	local m = Kit.model(parent, "Tractor")
+	part(m, base, "Chassis", Vector3.new(4, 1.6, 10), Vector3.new(0, 3, 0), ORANGE, "Metal")
+	part(m, base, "Hood", Vector3.new(3.4, 2.6, 5), Vector3.new(0, 5, -2.6), ORANGE, "Metal")
+	bit(m, base, "Grille", Vector3.new(3, 2, 0.3), Vector3.new(0, 4.8, -5.2), C.black, "DiamondPlate")
+	for _, x in ipairs({ -1.1, 1.1 }) do
+		bit(m, base, "Headlight", Vector3.new(0.6, 0.6, 0.2), Vector3.new(x, 5.4, -5.4), { 255, 232, 180 }, "Neon")
+	end
+	Kit.post(m, base, "Exhaust", Vector3.new(1, 6.3, -3.4), 3.4, 0.5, C.black, "Metal", { collide = false })
+	part(m, base, "Seat", Vector3.new(2, 0.6, 2), Vector3.new(0, 5, 2.6), C.black, "Fabric")
+	part(m, base, "SeatBack", Vector3.new(2, 1.8, 0.4), Vector3.new(0, 6.1, 3.6), C.black, "Fabric")
+	beam(m, base, "Steering", Vector3.new(0, 5, 0.2), Vector3.new(0, 6.6, 1.2), 0.3, C.black, "Metal", { collide = false })
+	for _, x in ipairs({ -2.9, 2.9 }) do
+		wheel(m, base, Vector3.new(x, 3.2, 2.6), 1.8, 6.4)
+		part(m, base, "Fender", Vector3.new(1.9, 0.4, 6.6), Vector3.new(x, 6.6, 2.6), ORANGE, "Metal")
+		wheel(m, base, Vector3.new(x * 0.8, 1.8, -3.4), 1.2, 3.6)
+		for _, z in ipairs({ 0.8, 4.4 }) do
+			bit(m, base, "RoofPost", Vector3.new(0.3, 4.4, 0.3), Vector3.new(x * 0.66, 9, z), C.black, "Metal")
+		end
+	end
+	part(m, base, "CabRoof", Vector3.new(4.6, 0.4, 4.8), Vector3.new(0, 11.3, 2.6), ORANGE, "Metal")
+end
+
+-- A wooden trailer with its tongue toward local -Z, loaded with square bales.
+function Props.trailer(parent, base)
+	local m = Kit.model(parent, "Trailer")
+	part(m, base, "Bed", Vector3.new(6, 0.6, 10), Vector3.new(0, 3, 0), C.plank, "WoodPlanks")
+	for _, x in ipairs({ -2.8, 2.8 }) do
+		part(m, base, "Side", Vector3.new(0.4, 1.6, 10), Vector3.new(x, 4.1, 0), C.wood, "WoodPlanks")
+		wheel(m, base, Vector3.new(x * 1.18, 1.7, 0), 1, 3.4)
+	end
+	for _, z in ipairs({ -4.8, 4.8 }) do
+		part(m, base, "End", Vector3.new(6, 1.6, 0.4), Vector3.new(0, 4.1, z), C.wood, "WoodPlanks")
+	end
+	beam(m, base, "Tongue", Vector3.new(0, 2.7, -5), Vector3.new(0, 2.2, -8.5), 0.5, C.darkWood, "Wood", { collide = false })
+	for i, p in ipairs({ { -1.4, -2.6, 0 }, { 1.4, -2.6, 0 }, { -1.4, 1, 0 }, { 1.4, 1, 0 }, { 0, -0.8, 1 } }) do
+		part(m, base, "TrailerBale" .. i, Vector3.new(2.2, 2, 3.4), Vector3.new(p[1], 4.3 + p[3] * 2, p[2]), C.hay, "Fabric")
+	end
+end
+
+-- A two-wheeled wooden cart, handles resting on the ground toward local -Z, with a load.
+function Props.cart(parent, base, loadColor)
+	local m = Kit.model(parent, "Cart")
+	part(m, base, "CartBed", Vector3.new(4, 0.4, 6), Vector3.new(0, 2.4, 0.6), C.plank, "WoodPlanks")
+	for _, x in ipairs({ -1.9, 1.9 }) do
+		part(m, base, "CartSide", Vector3.new(0.3, 1.2, 6), Vector3.new(x, 3.2, 0.6), C.wood, "WoodPlanks")
+		part(m, base, "CartWheel", Vector3.new(0.4, 4, 4), Vector3.new(x * 1.3, 2, 1), C.darkWood, "Wood", { shape = "Cylinder" })
+		bit(m, base, "Spoke", Vector3.new(0.45, 3.6, 0.3), Vector3.new(x * 1.3, 2, 1), C.wood, "Wood")
+		bit(m, base, "Spoke", Vector3.new(0.45, 0.3, 3.6), Vector3.new(x * 1.3, 2, 1), C.wood, "Wood")
+		beam(m, base, "Handle", Vector3.new(x * 0.8, 2.4, -2.4), Vector3.new(x * 0.7, 0.4, -6), 0.35, C.darkWood, "Wood", { collide = false })
+	end
+	for _, z in ipairs({ -2.3, 3.5 }) do
+		part(m, base, "CartEnd", Vector3.new(4, 1.2, 0.3), Vector3.new(0, 3.2, z), C.wood, "WoodPlanks")
+	end
+	local rng = Random.new(math.floor(base.Position.X * 7 + base.Position.Z))
+	for i = 1, 7 do
+		local s = rng:NextNumber(1.3, 1.8)
+		bit(m, base, "Load" .. i, Vector3.new(s, s, s), Vector3.new(rng:NextNumber(-1, 1), 3.4 + rng:NextNumber(0, 0.6), 0.6 + rng:NextNumber(-2, 2)), loadColor, "SmoothPlastic", "Ball")
+	end
+end
+
+-- A pyramid of round hay bales lying on their sides (3, then 2, then 1).
+function Props.bales(parent, base)
+	local m = Kit.model(parent, "HayBales")
+	for row = 0, 2 do
+		for i = 0, 2 - row do
+			local at = Vector3.new(0, 3 + row * 5.2, (i - (2 - row) / 2) * 6.1)
+			part(m, base, "RoundBale", Vector3.new(5, 6, 6), at, C.hay, "Fabric", { shape = "Cylinder" })
+			bit(m, base, "BaleSwirl", Vector3.new(5.1, 3.6, 3.6), at, { 198, 158, 78 }, "Fabric", "Cylinder")
+		end
+	end
+end
+
+-- A friendly scarecrow on a post, facing local -Z.
+function Props.scarecrow(parent, base)
+	local m = Kit.model(parent, "Scarecrow")
+	part(m, base, "Pole", Vector3.new(0.6, 8, 0.6), Vector3.new(0, 4, 0.4), C.darkWood, "Wood")
+	bit(m, base, "Shirt", Vector3.new(2.4, 2.8, 1.2), Vector3.new(0, 5.6, 0), { 176, 62, 50 }, "Fabric")
+	bit(m, base, "Sleeves", Vector3.new(6.4, 0.9, 0.9), Vector3.new(0, 6.4, 0), { 70, 96, 140 }, "Fabric")
+	bit(m, base, "Trousers", Vector3.new(2.2, 1.6, 1.1), Vector3.new(0, 3.6, 0), { 92, 76, 58 }, "Fabric")
+	for _, x in ipairs({ -3.4, 3.4 }) do
+		bit(m, base, "StrawHand", Vector3.new(0.8, 0.6, 0.6), Vector3.new(x, 6.2, 0), C.hay, "Fabric")
+	end
+	bit(m, base, "SackHead", Vector3.new(2, 2, 2), Vector3.new(0, 8, 0), { 226, 200, 150 }, "Fabric", "Ball")
+	for _, x in ipairs({ -0.4, 0.4 }) do
+		bit(m, base, "Eye", Vector3.new(0.3, 0.3, 0.3), Vector3.new(x, 8.2, -0.95), C.black, "SmoothPlastic", "Ball")
+	end
+	bit(m, base, "HatBrim", Vector3.new(0.2, 3.6, 3.6), CFrame.new(0, 8.9, 0) * CFrame.Angles(0, 0, math.rad(90)), { 196, 160, 90 }, "Fabric", "Cylinder")
+	bit(m, base, "HatTop", Vector3.new(1.2, 1.8, 1.8), CFrame.new(0, 9.5, 0) * CFrame.Angles(0, 0, math.rad(90)), { 196, 160, 90 }, "Fabric", "Cylinder")
+end
+
+function Props.mailbox(parent, base)
+	local m = Kit.model(parent, "Mailbox")
+	part(m, base, "MailPost", Vector3.new(0.5, 4, 0.5), Vector3.new(0, 2, 0), C.darkWood, "Wood")
+	part(m, base, "MailBox", Vector3.new(1.4, 1.4, 2.6), Vector3.new(0, 4.6, 0), { 176, 62, 50 }, "Metal")
+	bit(m, base, "MailFlag", Vector3.new(0.1, 1.2, 0.4), Vector3.new(0.8, 5.2, 0.6), RIM, "Metal")
+end
+
+-- A wooden water tower on four braced legs, with a stepped roof.
+function Props.waterTower(parent, base)
+	local m = Kit.model(parent, "WaterTower")
+	local corners = { { -6, -6 }, { 6, -6 }, { 6, 6 }, { -6, 6 } }
+	for i, c in ipairs(corners) do
+		part(m, base, "Leg", Vector3.new(1.2, 22, 1.2), Vector3.new(c[1], 11, c[2]), C.darkWood, "Wood")
+		local n = corners[i % 4 + 1]
+		beam(m, base, "Brace", Vector3.new(c[1], 2, c[2]), Vector3.new(n[1], 20, n[2]), 0.5, C.wood, "Wood", { collide = false })
+		beam(m, base, "Brace", Vector3.new(n[1], 2, n[2]), Vector3.new(c[1], 20, c[2]), 0.5, C.wood, "Wood", { collide = false })
+	end
+	part(m, base, "Deck", Vector3.new(16, 0.8, 16), Vector3.new(0, 22.4, 0), C.plank, "WoodPlanks")
+	Kit.post(m, base, "Tank", Vector3.new(0, 22.8, 0), 12, 14, { 150, 106, 66 }, "WoodPlanks")
+	for _, y in ipairs({ 24.5, 28.5, 32.5 }) do
+		Kit.post(m, base, "Hoop", Vector3.new(0, y, 0), 0.5, 14.4, C.black, "Metal", { collide = false })
+	end
+	for i, d in ipairs({ 15.5, 11.5, 7.5, 3.5 }) do
+		Kit.post(m, base, "TankRoof", Vector3.new(0, 34.8 + (i - 1) * 1.2, 0), 1.2, d, { 116, 64, 52 }, "WoodPlanks")
+	end
+	beam(m, base, "Spout", Vector3.new(0, 25, -7), Vector3.new(0, 17, -11), 0.7, C.black, "Metal", { collide = false })
+	for y = 2, 22, 2 do
+		bit(m, base, "Rung", Vector3.new(1.4, 0.2, 0.2), Vector3.new(6, y, -6.8), C.darkWood, "Wood")
+	end
+end
+
+-- The gate arch where the north lane leaves the farm, and the farm's name over it.
+local function gate(parent)
+	local m = Kit.model(parent, "FarmGate")
+	local base = facing(0, -478, 0, 0) -- the sign faces into the farm
+	for _, x in ipairs({ -13, 13 }) do
+		part(m, base, "GatePost", Vector3.new(1.6, 15, 1.6), Vector3.new(x, 7.5, 0), C.darkWood, "Wood")
+		Kit.lantern(m, base * CFrame.new(x * 1.25, 0, -1), 6)
+	end
+	part(m, base, "GateBeam", Vector3.new(30, 1.2, 1.2), Vector3.new(0, 14.6, 0), C.darkWood, "Wood")
+	local board = part(m, base, "GateSign", Vector3.new(18, 3.4, 0.5), Vector3.new(0, 11.8, 0), { 214, 176, 118 }, "WoodPlanks", { collide = false })
+	Build.text(board, Enum.NormalId.Front, "Hollow Creek Farm", { pixels = 30 })
+end
+
+function Props.build(folder)
+	local m = Kit.model(folder, "Props")
+	Props.tractor(m, facing(-40, -242, 100, -242))
+	Props.trailer(m, facing(-54, -242, 100, -242))
+	Props.cart(m, facing(116, -230, 116, 0), C.pumpkin)
+	Props.cart(m, facing(186, -6, 0, -6), C.pumpkin)
+	Props.cart(m, facing(-44, 238, 0, 0), { 196, 54, 44 })
+	for _, p in ipairs({ { -35, -284 }, { -195, -140 }, { 320, -150 }, { 40, 215 } }) do
+		Props.bales(m, facing(p[1], p[2], 0, 0))
+	end
+	Props.scarecrow(m, facing(250, -70, 0, -70))
+	Props.scarecrow(m, facing(252, 76, 0, 76))
+	Props.mailbox(m, facing(-12, -196, 0, -196))
+	Props.waterTower(m, facing(-270, 258, 0, 0))
+	gate(m)
+	for i, z in ipairs({ -180, -245, -300, -350, -400, -450 }) do
+		Kit.lantern(m, CFrame.new(if i % 2 == 0 then 11 else -11, 0, z), 7)
+	end
+	for _, s in ipairs({
+		{ "Farmyard", 14, -200 },
+		{ "Pumpkin Patch", 188, -40 },
+		{ "Corn Rows", 188, 40 },
+		{ "Duck Pond", -50, 226 },
+		{ "Meadow Pens", -180, 14 },
+		{ "Orchard", 212, 204 },
+	}) do
+		Kit.sign(m, facing(s[2], s[3], 0, 0), s[1], 10)
+	end
+end
+
+return Props
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00027">
+				<Properties>
 					<string name="Name">Search</string>
 					<ProtectedString name="Source"><![CDATA[-- The loop: click the clump you're looking at to harvest it onto your tool, sell at the
 -- merchant, and let powered machines harvest the top of your pile into your silo.
@@ -2658,7 +3633,7 @@ return Search
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00023">
+			<Item class="ModuleScript" referent="RBX00028">
 				<Properties>
 					<string name="Name">Shop</string>
 					<ProtectedString name="Source"><![CDATA[-- Buying with coins: tools and silos (in order), perks for the tool you hold, and
@@ -2814,7 +3789,7 @@ return Shop
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00024">
+			<Item class="ModuleScript" referent="RBX00029">
 				<Properties>
 					<string name="Name">Structures</string>
 					<ProtectedString name="Source"><![CDATA[-- Free building on your own plot: place pieces, machines and generators you've bought, take
@@ -3000,7 +3975,7 @@ return Structures
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00025">
+			<Item class="ModuleScript" referent="RBX0002A">
 				<Properties>
 					<string name="Name">Tools</string>
 					<ProtectedString name="Source"><![CDATA[-- The search tools: a pitchfork-shaped Tool per level, coloured from Config.Tools.
@@ -3126,7 +4101,7 @@ return Tools
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00026">
+			<Item class="ModuleScript" referent="RBX0002B">
 				<Properties>
 					<string name="Name">Wheel</string>
 					<ProtectedString name="Source"><![CDATA[-- The Wheel of Fortune: one Robux spin (the WheelSpin product) = one prize, picked here on the
@@ -3200,11 +4175,12 @@ return Wheel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00027">
+			<Item class="ModuleScript" referent="RBX0002C">
 				<Properties>
 					<string name="Name">World</string>
-					<ProtectedString name="Source"><![CDATA[-- Hollow Creek Farm, smaller now: four plots around a hub with the merchant, the Wheel of
--- Fortune and the golden door to the secret Golden Loft. Sunset light, fence and trees.
+					<ProtectedString name="Source"><![CDATA[-- Hollow Creek Farm: four plots around a hub with the merchant, the Wheel of Fortune and the
+-- golden door to the secret Golden Loft. Sunset light, and a wide ring of countryside (see
+-- Scenery) inside the fence and tree line.
 local Lighting = game:GetService("Lighting")
 
 local Build = require(script.Parent.Build)
@@ -3213,6 +4189,8 @@ local World = {}
 local terrain = workspace.Terrain
 local AUTUMN = { { 214, 120, 40 }, { 196, 72, 44 }, { 232, 176, 54 }, { 150, 150, 58 } }
 local WOOD = { 122, 86, 52 }
+local GROUND = 1000 -- the ground is GROUND x GROUND studs
+local FENCE = 480 -- the boundary fence, this far from the hub on each axis
 
 World.MERCHANT = Vector3.new(0, 0, -36) -- on the north road
 World.WHEEL = Vector3.new(0, 0, 36) -- on the south road
@@ -3233,13 +4211,24 @@ local function prompt(parent, action, text, object, key)
 end
 
 function World.ground()
-	terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(118, 136, 58)) -- Grass is the straw heap
+	-- Terrain Grass is kept for the straw heaps, so the fields are LeafyGrass in an autumn green.
+	terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(118, 136, 58))
 	terrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(124, 94, 62))
 	terrain:SetMaterialColor(Enum.Material.Cobblestone, Color3.fromRGB(152, 138, 120))
-	terrain:FillBlock(CFrame.new(0, -8, 0), Vector3.new(420, 16, 420), Enum.Material.LeafyGrass)
+	terrain:FillBlock(CFrame.new(0, -8, 0), Vector3.new(GROUND, 16, GROUND), Enum.Material.LeafyGrass)
 	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(30, 4, 330), Enum.Material.Ground)
 	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(330, 4, 30), Enum.Material.Ground)
 	terrain:FillCylinder(CFrame.new(0, -2, 0), 4, 22, Enum.Material.Cobblestone)
+	-- soft hills just past the edge of the ground, so the world fades into countryside
+	local rng = Random.new(11)
+	for i = -4, 4 do
+		for _, side in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
+			local along = i * 150 + rng:NextNumber(-20, 20)
+			local out = GROUND / 2 + 90
+			local centre = if side[1] ~= 0 then Vector3.new(side[1] * out, -50, along) else Vector3.new(along, -50, side[2] * out)
+			terrain:FillBall(centre, rng:NextNumber(110, 130), Enum.Material.LeafyGrass)
+		end
+	end
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "Spawn"
 	spawn.Anchored = true
@@ -3287,32 +4276,47 @@ function World.lighting()
 end
 
 local function fence(folder)
-	local half = 165
+	local gate = 14 -- a gap where the north lane leaves the farm
 	for _, side in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
-		for i = -16, 16 do
+		local gated = side[2] == -1
+		local count = FENCE // 10
+		for i = -count, count do
 			local along = i * 10
-			local pos = if side[1] ~= 0 then Vector3.new(side[1] * half, 0, along) else Vector3.new(along, 0, side[2] * half)
-			Build.part({ name = "Post", size = Vector3.new(1.2, 5, 1.2), cframe = CFrame.new(pos + Vector3.new(0, 2.5, 0)), color = WOOD, material = "Wood", parent = folder })
+			if not (gated and math.abs(along) < gate) then
+				local pos = if side[1] ~= 0 then Vector3.new(side[1] * FENCE, 0, along) else Vector3.new(along, 0, side[2] * FENCE)
+				Build.part({ name = "Post", size = Vector3.new(1.2, 5, 1.2), cframe = CFrame.new(pos + Vector3.new(0, 2.5, 0)), color = WOOD, material = "Wood", parent = folder })
+			end
 		end
-		for _, h in ipairs({ 1.6, 3.4 }) do
-			local size = if side[1] ~= 0 then Vector3.new(0.5, 0.45, half * 2) else Vector3.new(half * 2, 0.45, 0.5)
-			Build.part({ name = "Rail", size = size, cframe = CFrame.new(side[1] * half, h, side[2] * half), color = WOOD, material = "Wood", parent = folder })
+		local spans = if gated then { { -FENCE, -gate }, { gate, FENCE } } else { { -FENCE, FENCE } }
+		for _, span in ipairs(spans) do
+			local mid, length = (span[1] + span[2]) / 2, span[2] - span[1]
+			for _, h in ipairs({ 1.6, 3.4 }) do
+				local size = if side[1] ~= 0 then Vector3.new(0.5, 0.45, length) else Vector3.new(length, 0.45, 0.5)
+				local at = if side[1] ~= 0 then Vector3.new(side[1] * FENCE, h, mid) else Vector3.new(mid, h, side[2] * FENCE)
+				Build.part({ name = "Rail", size = size, cframe = CFrame.new(at), color = WOOD, material = "Wood", parent = folder })
+			end
 		end
 	end
 end
 
+-- The tree line: a band of autumn trees just inside the fence and another just outside it.
 local function trees(folder)
 	local rng = Random.new(7)
-	for i = 1, 36 do
-		local a = i / 36 * math.pi * 2
-		local r = rng:NextNumber(185, 205)
-		local base = CFrame.new(math.cos(a) * r, 0, math.sin(a) * r)
-		local height = rng:NextNumber(10, 16)
-		Build.post({ name = "Trunk", color = { 96, 66, 44 }, material = "Wood", parent = folder }, base, height, 2.6)
-		for _ = 1, 3 do
-			local size = rng:NextNumber(10, 16)
-			local offset = Vector3.new(rng:NextNumber(-4, 4), height + rng:NextNumber(0, 5), rng:NextNumber(-4, 4))
-			Build.part({ name = "Leaves", shape = "Ball", size = Vector3.new(size, size, size), cframe = base * CFrame.new(offset), color = AUTUMN[rng:NextInteger(1, #AUTUMN)], material = "Grass", parent = folder })
+	local half = GROUND / 2
+	for i = 1, 150 do
+		local depth = if i % 2 == 0 then rng:NextNumber(FENCE - 28, FENCE - 8) else rng:NextNumber(FENCE + 8, half - 4)
+		local along = rng:NextNumber(-half + 4, half - 4)
+		local side = (i // 2) % 4
+		local x, z = if side < 2 then (side * 2 - 1) * depth else along, if side < 2 then along else (side * 2 - 5) * depth
+		if not (z < 0 and math.abs(x) < 24) then -- keep the north lane clear
+			local base = CFrame.new(x, 0, z)
+			local height = rng:NextNumber(10, 18)
+			Build.post({ name = "Trunk", color = { 96, 66, 44 }, material = "Wood", parent = folder }, base, height, rng:NextNumber(2.2, 3.2))
+			for _ = 1, 3 do
+				local size = rng:NextNumber(10, 17)
+				local offset = Vector3.new(rng:NextNumber(-4, 4), height + rng:NextNumber(0, 5), rng:NextNumber(-4, 4))
+				Build.part({ name = "Leaves", shape = "Ball", size = Vector3.new(size, size, size), cframe = base * CFrame.new(offset), color = AUTUMN[rng:NextInteger(1, #AUTUMN)], material = "Fabric", parent = folder })
+			end
 		end
 	end
 end
@@ -3386,19 +4390,199 @@ return World
 			</Item>
 		</Item>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX00028">
+	<Item class="StarterPlayer" referent="RBX0002D">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX00029">
+		<Item class="StarterPlayerScripts" referent="RBX0002E">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX0002A">
+			<Item class="Folder" referent="RBX0002F">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX0002B">
+				<Item class="ModuleScript" referent="RBX00030">
+					<Properties>
+						<string name="Name">Animals</string>
+						<ProtectedString name="Source"><![CDATA[-- Brings the farm's animals to life on this screen only: each one ambles to a new spot in its
+-- pen every few seconds with slow eased tweens, chickens and ducks peck, cows and sheep graze,
+-- tails swish, and the windmill's sails turn. The server's copies never move. Gentle and calm.
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local Animals = {}
+local rng = Random.new()
+
+-- speed (studs/s), pause between walks, how far one walk goes, the head motion and its angle
+local KINDS = {
+	Cow = { speed = 2.2, pause = { 5, 12 }, walk = { 5, 14 }, nod = 0.5 },
+	Sheep = { speed = 2, pause = { 4, 10 }, walk = { 4, 10 }, nod = 0.45 },
+	Pig = { speed = 2.4, pause = { 4, 9 }, walk = { 4, 10 }, nod = 0.3 },
+	Chicken = { speed = 3, pause = { 2, 6 }, walk = { 2, 7 }, nod = 0.8, pecks = 3 },
+	Duck = { speed = 1.5, pause = { 3, 8 }, walk = { 3, 9 }, nod = 0.7, pecks = 1 },
+}
+local SAIL_SPEED = 0.45 -- radians per second
+
+local function bits(model, name)
+	local found = {}
+	for _, child in ipairs(model:GetChildren()) do
+		if child:IsA("BasePart") and child.Name == name then
+			table.insert(found, child)
+		end
+	end
+	return found
+end
+
+-- Eases the whole model to `goal` (its pivot) over `time` seconds, then returns.
+local function glide(model, goal, time)
+	local value = Instance.new("CFrameValue")
+	value.Value = model:GetPivot()
+	local changed = value.Changed:Connect(function(cf)
+		if model.Parent then
+			model:PivotTo(cf)
+		end
+	end)
+	local tween = TweenService:Create(value, TweenInfo.new(time, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Value = goal })
+	tween:Play()
+	tween.Completed:Wait()
+	changed:Disconnect()
+	value:Destroy()
+end
+
+-- Turns the parts called `name` about the model's hinge point `hingeAttr`: `turn(a)` gives the
+-- rotation for a going 0..1, and it runs `times` times, back to exactly where it started.
+local function swing(model, name, hingeAttr, turn, time, times)
+	local hingeAt = model:GetAttribute(hingeAttr)
+	local parts = bits(model, name)
+	if typeof(hingeAt) ~= "Vector3" or #parts == 0 then
+		return
+	end
+	local hinge = model:GetPivot() * CFrame.new(hingeAt)
+	local rest = {}
+	for i, p in ipairs(parts) do
+		rest[i] = hinge:ToObjectSpace(p.CFrame)
+	end
+	local alpha = Instance.new("NumberValue")
+	local changed = alpha.Changed:Connect(function(a)
+		local moved = hinge * turn(a)
+		for i, p in ipairs(parts) do
+			p.CFrame = moved * rest[i]
+		end
+	end)
+	local tween = TweenService:Create(alpha, TweenInfo.new(time, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, times - 1), { Value = 1 })
+	tween:Play()
+	tween.Completed:Wait()
+	changed:Disconnect()
+	alpha:Destroy()
+	for i, p in ipairs(parts) do
+		p.CFrame = hinge * rest[i]
+	end
+end
+
+local function nod(model, kind)
+	local angle = kind.nod
+	local pecks = kind.pecks or 1
+	local time = if pecks > 1 then 0.45 else rng:NextNumber(2.5, 4)
+	swing(model, "Head", "HeadHinge", function(a)
+		return CFrame.Angles(-math.sin(a * math.pi) * angle, 0, 0)
+	end, time, pecks)
+end
+
+local function swish(model)
+	swing(model, "Tail", "TailHinge", function(a)
+		return CFrame.Angles(0, 0, math.sin(a * math.pi * 2) * 0.35)
+	end, 1.4, rng:NextInteger(1, 3))
+end
+
+-- One animal's quiet life: rest (graze, peck or swish), then amble somewhere in its pen.
+local function live(model)
+	local kind = KINDS[model:GetAttribute("Kind")]
+	local min, max = model:GetAttribute("PenMin"), model:GetAttribute("PenMax")
+	if not kind or typeof(min) ~= "Vector3" or typeof(max) ~= "Vector3" then
+		return
+	end
+	task.wait(rng:NextNumber(0, 6))
+	while model.Parent do
+		local roll = rng:NextNumber()
+		if roll < 0.55 then
+			nod(model, kind)
+		elseif roll < 0.85 then
+			swish(model)
+		end
+		task.wait(rng:NextNumber(kind.pause[1], kind.pause[2]))
+		local here = model:GetPivot().Position
+		local a = rng:NextNumber(0, math.pi * 2)
+		local d = rng:NextNumber(kind.walk[1], kind.walk[2])
+		local target = Vector3.new(math.clamp(here.X + math.cos(a) * d, min.X, max.X), here.Y, math.clamp(here.Z + math.sin(a) * d, min.Z, max.Z))
+		local step = target - here
+		if step.Magnitude > 1 then
+			local face = CFrame.lookAt(here, target)
+			glide(model, face, 1.2)
+			glide(model, face + step, step.Magnitude / kind.speed)
+		end
+	end
+end
+
+-- The windmill's sails turn slowly about their hub's own Z axis.
+local function turnSails(scenery)
+	local mill = scenery:WaitForChild("Windmill", 30)
+	local sails = mill and mill:WaitForChild("Sails", 30)
+	if sails then
+		sails:WaitForChild("Hub", 10)
+	end
+	if not sails or not sails.PrimaryPart then
+		return
+	end
+	local start = sails:GetPivot()
+	local angle, since = 0, 0
+	RunService.RenderStepped:Connect(function(dt)
+		since += dt
+		if since < 1 / 30 then
+			return
+		end
+		angle = (angle + since * SAIL_SPEED) % (math.pi * 2)
+		since = 0
+		if sails.Parent then
+			sails:PivotTo(start * CFrame.Angles(0, 0, angle))
+		end
+	end)
+end
+
+function Animals.start()
+	task.spawn(function()
+		local scenery = workspace:WaitForChild("Scenery", 60)
+		if not scenery then
+			return
+		end
+		task.spawn(turnSails, scenery)
+		local herd = scenery:WaitForChild("Animals", 30)
+		if not herd then
+			return
+		end
+		local started = {}
+		local function begin(model)
+			if model:IsA("Model") and not started[model] then
+				started[model] = true
+				task.spawn(live, model)
+			end
+		end
+		task.wait(1) -- let the animals finish arriving
+		for _, model in ipairs(herd:GetChildren()) do
+			begin(model)
+		end
+		herd.ChildAdded:Connect(function(model)
+			task.wait(0.5)
+			begin(model)
+		end)
+	end)
+end
+
+return Animals
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX00031">
 					<Properties>
 						<string name="Name">BuildMode</string>
 						<ProtectedString name="Source"><![CDATA[-- Free building in first person. Z and C pick from your inventory bar (or press M and click
@@ -3625,7 +4809,7 @@ return BuildMode
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002C">
+				<Item class="ModuleScript" referent="RBX00032">
 					<Properties>
 						<string name="Name">Cursor</string>
 						<ProtectedString name="Source"><![CDATA[-- First person locks the mouse to the centre of the screen. Menus need a pointer, so a
@@ -3674,7 +4858,7 @@ return Cursor
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002D">
+				<Item class="ModuleScript" referent="RBX00033">
 					<Properties>
 						<string name="Name">Harvest</string>
 						<ProtectedString name="Source"><![CDATA[-- Aiming in first person: the clump under the crosshair (within reach, on your own pile or the
@@ -3916,7 +5100,7 @@ return Harvest
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002E">
+				<Item class="ModuleScript" referent="RBX00034">
 					<Properties>
 						<string name="Name">HayFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The hay you can see moving: every harvest lifts a lump off the heap onto your tool, and
@@ -4009,7 +5193,7 @@ return HayFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002F">
+				<Item class="ModuleScript" referent="RBX00035">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: a crosshair, your pile's progress at the top, and on the left your
@@ -4148,7 +5332,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00030">
+				<Item class="ModuleScript" referent="RBX00036">
 					<Properties>
 						<string name="Name">Jetpack</string>
 						<ProtectedString name="Source"><![CDATA[-- The Jetpack (a Robux game pass; the server sets the "PassJetpack" attribute when you own it).
@@ -4334,7 +5518,7 @@ return Jetpack
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00031">
+				<Item class="ModuleScript" referent="RBX00037">
 					<Properties>
 						<string name="Name">Juice</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback that makes harvesting feel good: straw bursts, floating numbers, a soft camera
@@ -4522,7 +5706,7 @@ return Juice
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX00032">
+				<Item class="LocalScript" referent="RBX00038">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- The player's side of the game: first-person harvesting, building, the menus, and all the
@@ -4551,6 +5735,7 @@ local Teleport = require(script.Parent:WaitForChild("Teleport"))
 local Music = require(script.Parent:WaitForChild("Music"))
 local Jetpack = require(script.Parent:WaitForChild("Jetpack"))
 local Offer = require(script.Parent:WaitForChild("Offer"))
+local Animals = require(script.Parent:WaitForChild("Animals"))
 
 local player = Players.LocalPlayer
 local gui = Ui.make("ScreenGui", { Name = "HaystackUi", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
@@ -4622,6 +5807,9 @@ step("jetpack", function()
 end)
 step("offers", function()
 	Offer.start(gui)
+end)
+step("animals", function()
+	Animals.start()
 end)
 if not hud then
 	hud = { refresh = function() end }
@@ -4777,7 +5965,7 @@ end)
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00033">
+				<Item class="ModuleScript" referent="RBX00039">
 					<Properties>
 						<string name="Name">Music</string>
 						<ProtectedString name="Source"><![CDATA[-- Soft background music: the Config.Music playlist in a loop, low and relaxing, fading gently
@@ -4920,7 +6108,7 @@ return Music
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00034">
+				<Item class="ModuleScript" referent="RBX0003A">
 					<Properties>
 						<string name="Name">Notify</string>
 						<ProtectedString name="Source"><![CDATA[-- Messages: small toasts under the haystack counter, and a big banner for case news.
@@ -5023,7 +6211,7 @@ return Notify
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00035">
+				<Item class="ModuleScript" referent="RBX0003B">
 					<Properties>
 						<string name="Name">Offer</string>
 						<ProtectedString name="Source"><![CDATA[-- One gentle Robux suggestion per session: after Config.OfferAfterClumps clumps harvested since
@@ -5129,7 +6317,7 @@ return Offer
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00036">
+				<Item class="ModuleScript" referent="RBX0003C">
 					<Properties>
 						<string name="Name">Panels</string>
 						<ProtectedString name="Source"><![CDATA[-- The windows: Shop, secret Achievements, Finds & Skins, and the Wheel of Fortune (odds first).
@@ -5318,7 +6506,7 @@ return Panels
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00037">
+				<Item class="ModuleScript" referent="RBX0003D">
 					<Properties>
 						<string name="Name">Shop</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop window: Tools, Perks, Storage (buckets and silos), Build (stairs, lifts...), Machines, Power and Robux.
@@ -5549,7 +6737,7 @@ return Shop
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00038">
+				<Item class="ModuleScript" referent="RBX0003E">
 					<Properties>
 						<string name="Name">Teleport</string>
 						<ProtectedString name="Source"><![CDATA[-- The teleporter menu: standing on one of your pads, pick any of your other pads (listed by
@@ -5620,7 +6808,7 @@ return Teleport
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00039">
+				<Item class="ModuleScript" referent="RBX0003F">
 					<Properties>
 						<string name="Name">Ui</string>
 						<ProtectedString name="Source"><![CDATA[-- A small UI kit: the farm colours, rounded wooden buttons and windows that scale with
@@ -5795,7 +6983,7 @@ return Ui
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0003A">
+				<Item class="ModuleScript" referent="RBX00040">
 					<Properties>
 						<string name="Name">WorldFx</string>
 						<ProtectedString name="Source"><![CDATA[-- World effects on your screen: the glowing needle clump (Wheel jackpot), the wheel turning
@@ -5916,7 +7104,7 @@ return WorldFx
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX0003B">
+	<Item class="Workspace" referent="RBX00041">
 		<Properties>
 			<string name="Name">Workspace</string>
 			<bool name="StreamingEnabled">false</bool>

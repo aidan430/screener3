@@ -98,3 +98,9 @@ commit 7d2617e). Both in git history.
   `BasketDrainSeconds` 4 is just the cart-away animation; dumping pays at once.
 - **Teleporter Pad:** 25,000 coins; E on a pad lists your other pads by height.
 - `LoadSize` 2.4: how big the hay on a full tool is.
+- **The countryside (`Scenery*.luau`, client `Animals.luau`):** the ground is now 1000 x 1000
+  studs with the fence at +/-480 (gate on the north lane) and hills beyond. North: barn, two
+  silos, farmhouse, tractor. West: pens with cows, sheep, pigs and chickens that wander on each
+  player's screen. East: pumpkin and corn fields. South: duck pond, windmill, water tower,
+  orchard. Nothing is built within 172 studs of the centre on either axis (plots and roads).
+  Scenery is built inside a pcall: if it fails it only warns in Output.

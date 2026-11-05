@@ -24,6 +24,7 @@ local Teleport = require(script.Parent:WaitForChild("Teleport"))
 local Music = require(script.Parent:WaitForChild("Music"))
 local Jetpack = require(script.Parent:WaitForChild("Jetpack"))
 local Offer = require(script.Parent:WaitForChild("Offer"))
+local Animals = require(script.Parent:WaitForChild("Animals"))
 
 local player = Players.LocalPlayer
 local gui = Ui.make("ScreenGui", { Name = "HaystackUi", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
@@ -95,6 +96,9 @@ step("jetpack", function()
 end)
 step("offers", function()
 	Offer.start(gui)
+end)
+step("animals", function()
+	Animals.start()
 end)
 if not hud then
 	hud = { refresh = function() end }
