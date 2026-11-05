@@ -1,5 +1,6 @@
--- Hollow Creek Farm, smaller now: four plots around a hub with the merchant, the Wheel of
--- Fortune and the golden door to the secret Golden Loft. Sunset light, fence and trees.
+-- Hollow Creek Farm: four plots around a hub with the merchant, the Wheel of Fortune and the
+-- golden door to the secret Golden Loft. Sunset light, and a wide ring of countryside (see
+-- Scenery) inside the fence and tree line.
 local Lighting = game:GetService("Lighting")
 
 local Build = require(script.Parent.Build)
@@ -8,6 +9,8 @@ local World = {}
 local terrain = workspace.Terrain
 local AUTUMN = { { 214, 120, 40 }, { 196, 72, 44 }, { 232, 176, 54 }, { 150, 150, 58 } }
 local WOOD = { 122, 86, 52 }
+local GROUND = 1000 -- the ground is GROUND x GROUND studs
+local FENCE = 480 -- the boundary fence, this far from the hub on each axis
 
 World.MERCHANT = Vector3.new(0, 0, -36) -- on the north road
 World.WHEEL = Vector3.new(0, 0, 36) -- on the south road
@@ -28,13 +31,24 @@ local function prompt(parent, action, text, object, key)
 end
 
 function World.ground()
-	terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(118, 136, 58))
+	-- Terrain Grass is kept for the straw heaps, so the fields are LeafyGrass in an autumn green.
+	terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(118, 136, 58))
 	terrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(124, 94, 62))
 	terrain:SetMaterialColor(Enum.Material.Cobblestone, Color3.fromRGB(152, 138, 120))
-	terrain:FillBlock(CFrame.new(0, -8, 0), Vector3.new(420, 16, 420), Enum.Material.Grass)
+	terrain:FillBlock(CFrame.new(0, -8, 0), Vector3.new(GROUND, 16, GROUND), Enum.Material.LeafyGrass)
 	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(30, 4, 330), Enum.Material.Ground)
 	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(330, 4, 30), Enum.Material.Ground)
 	terrain:FillCylinder(CFrame.new(0, -2, 0), 4, 22, Enum.Material.Cobblestone)
+	-- soft hills just past the edge of the ground, so the world fades into countryside
+	local rng = Random.new(11)
+	for i = -4, 4 do
+		for _, side in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
+			local along = i * 150 + rng:NextNumber(-20, 20)
+			local out = GROUND / 2 + 90
+			local centre = if side[1] ~= 0 then Vector3.new(side[1] * out, -50, along) else Vector3.new(along, -50, side[2] * out)
+			terrain:FillBall(centre, rng:NextNumber(110, 130), Enum.Material.LeafyGrass)
+		end
+	end
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "Spawn"
 	spawn.Anchored = true
@@ -82,32 +96,47 @@ function World.lighting()
 end
 
 local function fence(folder)
-	local half = 165
+	local gate = 14 -- a gap where the north lane leaves the farm
 	for _, side in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
-		for i = -16, 16 do
+		local gated = side[2] == -1
+		local count = FENCE // 10
+		for i = -count, count do
 			local along = i * 10
-			local pos = if side[1] ~= 0 then Vector3.new(side[1] * half, 0, along) else Vector3.new(along, 0, side[2] * half)
-			Build.part({ name = "Post", size = Vector3.new(1.2, 5, 1.2), cframe = CFrame.new(pos + Vector3.new(0, 2.5, 0)), color = WOOD, material = "Wood", parent = folder })
+			if not (gated and math.abs(along) < gate) then
+				local pos = if side[1] ~= 0 then Vector3.new(side[1] * FENCE, 0, along) else Vector3.new(along, 0, side[2] * FENCE)
+				Build.part({ name = "Post", size = Vector3.new(1.2, 5, 1.2), cframe = CFrame.new(pos + Vector3.new(0, 2.5, 0)), color = WOOD, material = "Wood", parent = folder })
+			end
 		end
-		for _, h in ipairs({ 1.6, 3.4 }) do
-			local size = if side[1] ~= 0 then Vector3.new(0.5, 0.45, half * 2) else Vector3.new(half * 2, 0.45, 0.5)
-			Build.part({ name = "Rail", size = size, cframe = CFrame.new(side[1] * half, h, side[2] * half), color = WOOD, material = "Wood", parent = folder })
+		local spans = if gated then { { -FENCE, -gate }, { gate, FENCE } } else { { -FENCE, FENCE } }
+		for _, span in ipairs(spans) do
+			local mid, length = (span[1] + span[2]) / 2, span[2] - span[1]
+			for _, h in ipairs({ 1.6, 3.4 }) do
+				local size = if side[1] ~= 0 then Vector3.new(0.5, 0.45, length) else Vector3.new(length, 0.45, 0.5)
+				local at = if side[1] ~= 0 then Vector3.new(side[1] * FENCE, h, mid) else Vector3.new(mid, h, side[2] * FENCE)
+				Build.part({ name = "Rail", size = size, cframe = CFrame.new(at), color = WOOD, material = "Wood", parent = folder })
+			end
 		end
 	end
 end
 
+-- The tree line: a band of autumn trees just inside the fence and another just outside it.
 local function trees(folder)
 	local rng = Random.new(7)
-	for i = 1, 36 do
-		local a = i / 36 * math.pi * 2
-		local r = rng:NextNumber(185, 205)
-		local base = CFrame.new(math.cos(a) * r, 0, math.sin(a) * r)
-		local height = rng:NextNumber(10, 16)
-		Build.post({ name = "Trunk", color = { 96, 66, 44 }, material = "Wood", parent = folder }, base, height, 2.6)
-		for _ = 1, 3 do
-			local size = rng:NextNumber(10, 16)
-			local offset = Vector3.new(rng:NextNumber(-4, 4), height + rng:NextNumber(0, 5), rng:NextNumber(-4, 4))
-			Build.part({ name = "Leaves", shape = "Ball", size = Vector3.new(size, size, size), cframe = base * CFrame.new(offset), color = AUTUMN[rng:NextInteger(1, #AUTUMN)], material = "Grass", parent = folder })
+	local half = GROUND / 2
+	for i = 1, 150 do
+		local depth = if i % 2 == 0 then rng:NextNumber(FENCE - 28, FENCE - 8) else rng:NextNumber(FENCE + 8, half - 4)
+		local along = rng:NextNumber(-half + 4, half - 4)
+		local side = (i // 2) % 4
+		local x, z = if side < 2 then (side * 2 - 1) * depth else along, if side < 2 then along else (side * 2 - 5) * depth
+		if not (z < 0 and math.abs(x) < 24) then -- keep the north lane clear
+			local base = CFrame.new(x, 0, z)
+			local height = rng:NextNumber(10, 18)
+			Build.post({ name = "Trunk", color = { 96, 66, 44 }, material = "Wood", parent = folder }, base, height, rng:NextNumber(2.2, 3.2))
+			for _ = 1, 3 do
+				local size = rng:NextNumber(10, 17)
+				local offset = Vector3.new(rng:NextNumber(-4, 4), height + rng:NextNumber(0, 5), rng:NextNumber(-4, 4))
+				Build.part({ name = "Leaves", shape = "Ball", size = Vector3.new(size, size, size), cframe = base * CFrame.new(offset), color = AUTUMN[rng:NextInteger(1, #AUTUMN)], material = "Fabric", parent = folder })
+			end
 		end
 	end
 end

@@ -31,10 +31,12 @@ local Shop = require(script.Parent.Shop)
 local Loft = require(script.Parent.Loft)
 local Wheel = require(script.Parent.Wheel)
 local Monetization = require(script.Parent.Monetization)
+local Scenery = require(script.Parent.Scenery)
 
 World.build()
 Plots.build()
 Haystack.build()
+Scenery.build()
 
 local function toPlot(player)
 	local plotIndex = Plots.of(player)

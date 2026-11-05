@@ -19,6 +19,7 @@ local Panels = require(script.Parent:WaitForChild("Panels"))
 local Harvest = require(script.Parent:WaitForChild("Harvest"))
 local BuildMode = require(script.Parent:WaitForChild("BuildMode"))
 local WorldFx = require(script.Parent:WaitForChild("WorldFx"))
+local Animals = require(script.Parent:WaitForChild("Animals"))
 
 local player = Players.LocalPlayer
 local gui = Ui.make("ScreenGui", { Name = "HaystackUi", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
@@ -78,6 +79,9 @@ step("menus", function()
 end)
 step("world effects", function()
 	WorldFx.start()
+end)
+step("animals", function()
+	Animals.start()
 end)
 if not hud then
 	hud = { refresh = function() end }
