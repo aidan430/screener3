@@ -4,20 +4,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
-local Ui = require(script.Parent.Ui)
+local HayLook = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("HayLook"))(Config)
 local Juice = require(script.Parent.Juice)
 
 local HayFx = {}
-local HAY = Color3.fromRGB(Config.HeapColour[1], Config.HeapColour[2], Config.HeapColour[3])
-local GOLD = Color3.fromRGB(255, 214, 90)
 
 local function lump(position, size, golden)
-	local folder = workspace:FindFirstChild("MyEffects") or workspace
-	return Ui.make("Part", {
-		Anchored = true, CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false,
-		Shape = Enum.PartType.Ball, Material = Enum.Material.Grass, Color = if golden then GOLD else HAY,
-		Size = Vector3.new(size, size * 0.75, size), CFrame = CFrame.new(position), Parent = folder,
-	})
+	local part = HayLook.lump(size, golden)
+	part.Anchored = true
+	part.CFrame = CFrame.new(position) * CFrame.Angles(0, math.random() * 6.28, 0)
+	part.Parent = workspace:FindFirstChild("MyEffects") or workspace
+	return part
 end
 
 -- Where your tool's hay sits on screen: low and to the right, in front of you.
@@ -34,20 +31,20 @@ function HayFx.lift(from, golden)
 	end
 	local ball = lump(from, 1.6, golden)
 	local mid = (from + to) / 2 + Vector3.new(0, 1.5, 0)
-	Juice.ease(ball, 0.14, { CFrame = CFrame.new(mid), Size = Vector3.new(1.2, 0.9, 1.2) }, Enum.EasingStyle.Sine)
+	Juice.ease(ball, 0.14, { CFrame = CFrame.new(mid) }, Enum.EasingStyle.Sine)
 	task.delay(0.14, function()
 		local target = toolPoint() or to
-		Juice.ease(ball, 0.14, { CFrame = CFrame.new(target), Size = Vector3.new(0.5, 0.4, 0.5) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		Juice.ease(ball, 0.14, { CFrame = CFrame.new(target) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 	end)
 	Debris:AddItem(ball, 0.3)
 end
 
 -- Dumping: lumps fly from you into the basket, the hay in it rises, then the trader carts it off.
-function HayFx.dump(basket, straws)
+function HayFx.dump(basket, straws, fromYou)
 	if typeof(basket) ~= "Instance" or not basket:IsA("BasePart") then
 		return
 	end
-	local from = toolPoint()
+	local from = if fromYou == false then nil else toolPoint() -- belts and bales just fill the basket
 	local top = basket.Position + Vector3.new(0, basket.Size.X / 2, 0)
 	local count = math.clamp(math.floor(math.log10(math.max(straws, 1)) * 2), 3, 10)
 	for i = 1, count do
@@ -59,7 +56,7 @@ function HayFx.dump(basket, straws)
 			local arc = (from + top) / 2 + Vector3.new(math.random(-10, 10) / 10, 3, math.random(-10, 10) / 10)
 			Juice.ease(ball, 0.2, { CFrame = CFrame.new(arc) }, Enum.EasingStyle.Sine)
 			task.delay(0.2, function()
-				Juice.ease(ball, 0.2, { CFrame = CFrame.new(top), Size = Vector3.new(0.6, 0.45, 0.6) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+				Juice.ease(ball, 0.2, { CFrame = CFrame.new(top) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 			end)
 			Debris:AddItem(ball, 0.42)
 		end)

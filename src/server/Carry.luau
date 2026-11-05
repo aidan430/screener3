@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Economy = require(Shared:WaitForChild("Economy"))(Config)
+local HayLook = require(Shared:WaitForChild("HayLook"))(Config)
 
 local PlayerData = require(script.Parent.PlayerData)
 local Build = require(script.Parent.Build)
@@ -34,8 +35,12 @@ local function makeBucket(player, root, level)
 		Build.part({ name = "Pail", size = Vector3.new(size, size * 0.9, size * 0.9), cframe = base * CFrame.Angles(0, 0, math.rad(90)), color = { 150, 104, 58 }, material = "Fabric", shape = "Cylinder", collide = false, parent = model }),
 		Build.part({ size = Vector3.new(0.15, size * 1.0, size * 1.0), cframe = base * CFrame.new(0, size / 2, 0) * CFrame.Angles(0, 0, math.rad(90)), color = { 110, 76, 46 }, material = "Wood", shape = "Cylinder", collide = false, parent = model }),
 		Build.part({ size = Vector3.new(0.12, size * 0.9, 0.12), cframe = base * CFrame.new(0, size * 0.7, 0) * CFrame.Angles(0, 0, math.rad(90)), color = { 120, 120, 128 }, material = "Metal", collide = false, parent = model }),
-		Build.part({ name = "Hay", size = Vector3.new(0.1, 0.1, 0.1), cframe = base * CFrame.new(0, size / 2, 0), color = HAY, material = "Grass", shape = "Ball", collide = false, transparency = 1, parent = model }),
 	}
+	local hay = HayLook.lump(0.1, false)
+	hay.CFrame = base * CFrame.new(0, size / 2, 0)
+	hay.Transparency = 1
+	hay.Parent = model
+	table.insert(parts, hay)
 	for _, part in ipairs(parts) do
 		part.Anchored = false
 		part.Massless = true
@@ -57,8 +62,7 @@ local function mound(part, share, width, golden)
 	end
 	part.Transparency = 0
 	part.Color = Build.rgb(if golden then GOLD else HAY)
-	local w = width * (0.45 + 0.55 * math.sqrt(math.min(share, 1)))
-	part.Size = Vector3.new(w, w * 0.7, w)
+	HayLook.resize(part, width * (0.45 + 0.55 * math.sqrt(math.min(share, 1))))
 end
 
 -- Shows the player's load on their tool and bucket. Cheap: call it whenever the load changes.

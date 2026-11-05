@@ -10,6 +10,7 @@ ModuleScript returning the data. With Rojo installed, `rojo build` gives the sam
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 from xml.sax.saxutils import escape
@@ -175,6 +176,12 @@ def xml(node: Node, ids: dict, depth: int = 1) -> str:
             props.append(f'{pad}\t\t<bool name="{key}">{"true" if value else "false"}</bool>')
         elif isinstance(value, str):
             props.append(f'{pad}\t\t<string name="{key}">{escape(value)}</string>')
+        elif isinstance(value, dict) and "content" in value:
+            props.append(f'{pad}\t\t<Content name="{key}"><url>{escape(value["content"])}</url></Content>')
+        elif isinstance(value, dict) and "token" in value:
+            props.append(f'{pad}\t\t<token name="{key}">{int(value["token"])}</token>')
+        elif isinstance(value, dict) and "float" in value:
+            props.append(f'{pad}\t\t<float name="{key}">{float(value["float"])}</float>')
         else:
             raise SystemExit(f"{node.name}.{key}: only true/false and text properties are supported")
     if node.source is not None:
@@ -185,12 +192,40 @@ def xml(node: Node, ids: dict, depth: int = 1) -> str:
             + "\n".join(props) + f"\n{pad}\t</Properties>\n" + (body + "\n" if body else "") + f"{pad}</Item>")
 
 
+def hay_texture(tree: Node) -> None:
+    """The heap's hay texture. Scripts can't set a MaterialVariant's images, so when
+    Config.HayTexture holds an uploaded image ID, the place file gets a MaterialVariant
+    called Hay that replaces the Grass material (the heap, and the hay on tools)."""
+    config = (ROOT / "src" / "shared" / "Config.luau").read_text()
+    def text(name: str) -> str:
+        m = re.search(rf'^Config\.{name} = "([^"]*)"', config, re.M)
+        return m.group(1) if m else ""
+    colour = text("HayTexture")
+    if not colour:
+        return
+    studs = re.search(r"^Config\.HayTextureStuds = ([\d.]+)", config, re.M)
+    service = Node("MaterialService", "MaterialService")
+    service.props.update({"GrassName": "Hay", "Use2022Materials": True})
+    variant = Node("Hay", "MaterialVariant")
+    variant.props.update({
+        "BaseMaterial": {"token": 1280},  # Enum.Material.Grass
+        "MaterialPattern": {"token": 1},  # Organic: less visible tiling
+        "StudsPerTile": {"float": float(studs.group(1)) if studs else 10.0},
+        "ColorMap": {"content": colour},
+    })
+    if text("HayNormal"):
+        variant.props["NormalMap"] = {"content": text("HayNormal")}
+    service.children.append(variant)
+    tree.children.append(service)
+
+
 def main() -> int:
     spec = json.loads(PROJECT.read_text())
     tree = Node("game", "DataModel")
     for key, child in spec["tree"].items():
         if not key.startswith("$"):
             tree.children.append(from_project(key, child, True))
+    hay_texture(tree)
     errors = check(tree)
     for e in errors:
         print("x", e)

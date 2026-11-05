@@ -25,8 +25,9 @@ earnings. Nothing is published, sold or priced without them.
   onto the tool (`carried`, up to capacity). `server/Carry.luau` shows the load on tool and bucket.
 - **Machines** (`server/Machines.luau`): every second, power share x machine rate straws from
   the outside of the heap inwards (`Layout.machineOrder`) into the silo. Also Straw Blast, VIP offline time, height records.
-- **Selling**: your own Trader's Stall (a placeable piece every player gets) has a basket with an
-  Action "sell" prompt; the hub merchant too; a Whistle sells anywhere.
+- **Selling** (`server/Hauling.luau`): dumping (your Trader's Stall basket, the hub merchant, a
+  Whistle) fills your basket; the trader and your trucks sell from it every second. G drops
+  hay as a bundle (`server/LooseHay.luau`); conveyors carry bundles to the basket or a bale maker.
 - **Building**: Remotes.Place(id, position, rotation) / Remove(model); the server checks
   inventory and plot bounds. Elevators teleport via their prompts.
 - **Wheel** (`server/Wheel.luau`): the WheelSpin product picks a weighted prize on the server.
@@ -37,14 +38,16 @@ earnings. Nothing is published, sold or priced without them.
 
 ## Layout (Rojo project: `default.project.json`)
 ```
-src/shared/  -> ReplicatedStorage.Shared: Config, Economy, Layout, Format, Finds.json
+src/shared/  -> ReplicatedStorage.Shared: Config, Economy, Layout, Format, HayLook, Finds.json
 src/server/  -> ServerScriptService.Server: Main (Script), World, Scenery, Build, Plots, Piles,
                 Pieces, Structures, Profile, PlayerData, Search, Machines, Shop, Achievements,
-                Loft, Haystack (the loft), Wheel, Tools, Carry, Monetization
+                Loft, Haystack (the loft), Wheel, Tools, Carry, Hauling, LooseHay, PiecesBelts,
+                Monetization
 src/client/  -> StarterPlayerScripts.Client: Main (LocalScript), Ui, Cursor, Juice, Hud, Shop,
                 Panels, Harvest, HayFx, Teleport, BuildMode, Notify, WorldFx, Music, Jetpack,
                 Offer, Animals
 dev/         -> build.py, luau.py (checker), test_rules.py, pacing.py (keep in step with Economy)
+assets/hay/  the hay texture and the simplified hay model, for the owner to import in Studio
 NeedleInTheHaystack.rbxlx   the built place file (committed)
 ```
 

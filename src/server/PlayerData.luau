@@ -69,6 +69,12 @@ local function publish(player, profile)
 	player:SetAttribute("Tool", d.tool)
 	player:SetAttribute("Silo", d.silo)
 	player:SetAttribute("Bucket", d.bucket)
+	player:SetAttribute("BasketStraw", math.floor(d.basket))
+	player:SetAttribute("BaledStraw", math.floor(d.baled))
+	player:SetAttribute("HaulRate", Economy.haulRate(d))
+	for id, count in pairs(d.trucks) do
+		player:SetAttribute("Truck_" .. id, count)
+	end
 	player:SetAttribute("Carried", d.carried + d.carriedGolden)
 	player:SetAttribute("Capacity", Economy.capacity(d))
 	player:SetAttribute("SiloStraw", d.siloStraw)

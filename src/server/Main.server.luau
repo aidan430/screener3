@@ -33,6 +33,8 @@ local Loft = require(script.Parent.Loft)
 local Wheel = require(script.Parent.Wheel)
 local Monetization = require(script.Parent.Monetization)
 local Carry = require(script.Parent.Carry)
+local Hauling = require(script.Parent.Hauling)
+local LooseHay = require(script.Parent.LooseHay)
 
 StarterPlayer.CharacterMaxSlopeAngle = Config.MaxSlopeAngle -- the steep heap needs building to climb
 local Scenery = require(script.Parent.Scenery)
@@ -64,6 +66,7 @@ end
 
 PlayerData.onLoaded(function(player, saveable)
 	local data = PlayerData.get(player)
+	PlayerData.update(player, LooseHay.restore) -- hay left lying last time waits in the basket
 	local plotIndex = Plots.claim(player)
 	if not plotIndex then
 		player:Kick("This farm is full (four plots). Please join another server.")
@@ -103,6 +106,8 @@ local parts = {
 	{ "Shop", Shop.init },
 	{ "Loft", Loft.init },
 	{ "Carry", Carry.init },
+	{ "Hauling", Hauling.init },
+	{ "LooseHay", LooseHay.init },
 }
 for _, part in ipairs(parts) do
 	local ok, err = pcall(part[2])

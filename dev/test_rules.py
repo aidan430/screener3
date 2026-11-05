@@ -117,6 +117,14 @@ class Pacing(unittest.TestCase):
         robux = pacing.needle_hours(pacing.simulate(True))
         self.assertTrue(0.15 <= robux / free <= 0.5, f"robux {robux:.1f} h vs free {free:.1f} h")
 
+    def test_trucks_matter_but_never_strand_hay(self):
+        p = pacing.Player(False)
+        self.assertLess(pacing.number("TraderRate"), 20, "the trader alone can't keep up for long")
+        rates = [t["rate"] for t in pacing.rows("Trucks")]
+        self.assertEqual(rates, sorted(rates), "each truck hauls more than the last")
+        self.assertEqual(len(rates), 4)
+        self.assertGreater(p.haul([t["max"] for t in pacing.rows("Trucks")]), 300, "room for factories later")
+
     def test_the_first_upgrade_comes_within_minutes(self):
         tools = pacing.rows("Tools")
         seconds = tools[1]["price"] / (tools[0]["power"] * pacing.CLICKS_PER_SECOND)

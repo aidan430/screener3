@@ -107,6 +107,8 @@ end
 UserInputService.InputBegan:Connect(function(input, processed)
 	if not processed and input.KeyCode == Enum.KeyCode.Q and panels then
 		panels.open("Shop")
+	elseif not processed and input.KeyCode == Enum.KeyCode[Config.DropKey] then
+		Remotes.DropHay:FireServer() -- drop your load as a bundle (or put down a bale)
 	end
 end)
 
@@ -200,8 +202,16 @@ Remotes.SearchFx.OnClientEvent:Connect(function(message)
 		Notify.toast("Your tool is full! Sell at the merchant (or buy a bigger tool).", Ui.colors.red)
 	elseif message.kind == "sold" then
 		Juice.coins(message.coins)
-		HayFx.dump(message.basket, message.straws)
-		Notify.toast((if message.reason == "trader" then "Dumped " else "Sold ") .. Format.commas(message.straws) .. " straw for " .. Format.short(message.coins) .. " coins" .. (if message.reason == "auto" then " (Auto Sell)" else ""), Ui.colors.green)
+		Notify.toast("Sold " .. Format.commas(message.straws) .. " straw for " .. Format.short(message.coins) .. " coins", Ui.colors.green)
+	elseif message.kind == "dumped" then
+		HayFx.dump(message.basket, message.straws, message.reason ~= "bale" and message.reason ~= "belt")
+		if message.coins > 0 then
+			Juice.coins(message.coins) -- golden straw is paid for at once
+		end
+		local what = if message.reason == "bale" then "A bale of " elseif message.reason == "belt" then "The belt brought " else "Dumped "
+		Notify.toast(what .. Format.commas(message.straws) .. " straw" .. (if message.reason == "auto" then " (Auto Sell)" else "") .. " into your basket. Your trader sells it as you go.", Ui.colors.green)
+	elseif message.kind == "paid" then
+		Juice.coins(message.coins)
 	elseif message.kind == "find" then
 		Juice.burst(message.position, 30, true)
 		Juice.confetti()

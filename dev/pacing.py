@@ -94,6 +94,10 @@ class Player:
         self.gens = [0] * len(self.generators)
         self.coins, self.robux = 0.0, robux
         self.cooldown = number("SearchCooldown")
+        self.trucks_def = rows("Trucks")
+        self.trucks = [0] * len(self.trucks_def)
+        self.buckets = rows("Buckets")
+        self.bucket = 0
         self.build_left = BUILD_COINS
 
     def power_made(self, gens=None):
@@ -113,11 +117,21 @@ class Player:
         made = self.power_made(gens)
         return rate * (min(1.0, made / draw) if draw > 0 else 0)
 
+    def haul(self, trucks=None):
+        """Straws a second the trader and the trucks sell from the basket."""
+        trucks = self.trucks if trucks is None else trucks
+        return number("TraderRate") + sum(n * t["rate"] for n, t in zip(trucks, self.trucks_def))
+
+    def income(self, **kw):
+        """Straws a second that turn into coins: what you make, up to what is hauled."""
+        return min(self.rate(**kw), self.haul(kw.get("trucks")))
+
     def rate(self, **kw):
         """Average straws a second, counting the time lost walking to the merchant."""
         click = self.click_rate(kw.get("tool"), kw.get("perk"))
         tool = self.tool if kw.get("tool") is None else kw["tool"]
-        fill = self.tools[tool]["capacity"] / click
+        bucket = self.bucket if kw.get("bucket") is None else kw["bucket"]
+        fill = (self.tools[tool]["capacity"] + self.buckets[bucket]["capacity"]) / click
         trips = 0 if self.robux else TRIP_SECONDS / (fill + TRIP_SECONDS)
         machines = self.machine_rate(kw.get("owned"), kw.get("gens"))
         silo = self.silos[self.silo]["size"]
@@ -145,6 +159,13 @@ class Player:
                 new = list(self.gens)
                 new[i] += 1
                 out.append((g["price"], {"gens": new}, lambda i=i: self.gens.__setitem__(i, self.gens[i] + 1)))
+        for i, t in enumerate(self.trucks_def):
+            if self.trucks[i] < t["max"]:
+                new = list(self.trucks)
+                new[i] += 1
+                out.append((t["price"], {"trucks": new}, lambda i=i: self.trucks.__setitem__(i, self.trucks[i] + 1)))
+        if self.bucket + 1 < len(self.buckets):
+            out.append((self.buckets[self.bucket + 1]["price"], {"bucket": self.bucket + 1}, lambda: setattr(self, "bucket", self.bucket + 1)))
         if self.silo + 1 < len(self.silos):
             out.append((self.silos[self.silo + 1]["price"], {"silo": True}, lambda: setattr(self, "silo", self.silo + 1)))
         return out
@@ -156,19 +177,20 @@ class Player:
     def gain(self, change):
         if change.get("silo"):
             self.silo += 1
-            new = self.rate()
+            new = self.income()
             self.silo -= 1
             return new
         if "owned" in change:  # a machine with no power is worth what it would make powered
-            return self.rate(owned=change["owned"], gens=[g + 10 for g in self.gens]) - self.rate(gens=[g + 10 for g in self.gens]) + self.rate()
-        return self.rate(**change)
+            powered = [g + 10 for g in self.gens]
+            return min(self.rate(owned=change["owned"], gens=powered) - self.rate(gens=powered) + self.rate(), self.haul())
+        return self.income(**change)
 
     def shop(self):
         if self.build_left > 0:  # some coins always go on stairs and lifts
             spend = min(self.build_left, self.coins * 0.3)
             self.coins -= spend
             self.build_left -= spend
-        base = self.rate()
+        base = self.income()
         while True:
             best = None
             for cost, change, apply in self.options():
@@ -180,7 +202,7 @@ class Player:
                 return
             best[1]()
             self.coins -= best[2]
-            base = self.rate()
+            base = self.income()
 
 
 def simulate(robux: bool) -> list[tuple[float, float]]:
@@ -188,11 +210,14 @@ def simulate(robux: bool) -> list[tuple[float, float]]:
     total = number("TotalStraws")
     p = Player(robux)
     coin_mult = 2 if robux else 1
-    searched, t, marks, next_mark = 0.0, 0.0, [], 0.05
+    searched, basket, t, marks, next_mark = 0.0, 0.0, 0.0, [], 0.05
     while searched < total and t < 400 * 3600:
         straws = min(p.rate() * 60, total - searched)  # one minute at a time
         searched += straws
-        p.coins += straws * number("CoinsPerStraw") * coin_mult
+        basket += straws  # it all waits in the basket, sold as fast as it's hauled
+        sold = min(basket, p.haul() * 60)
+        basket -= sold
+        p.coins += sold * number("CoinsPerStraw") * coin_mult
         p.shop()
         t += 60
         while searched >= next_mark * total - 1e-6 and next_mark <= 1.0001:

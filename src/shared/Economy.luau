@@ -43,6 +43,15 @@ return function(Config)
 		return Economy.tool(data.tool).capacity + Economy.bucket(data.bucket or 1).capacity
 	end
 
+	-- straws a second leaving your basket: the trader plus every truck you own
+	function Economy.haulRate(data)
+		local rate = Config.TraderRate
+		for _, truck in ipairs(Config.Trucks) do
+			rate += truck.rate * ((data.trucks and data.trucks[truck.id]) or 0)
+		end
+		return rate
+	end
+
 	function Economy.bucket(level)
 		return Config.Buckets[math.clamp(level, 1, #Config.Buckets)]
 	end

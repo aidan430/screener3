@@ -16,6 +16,7 @@ local PlayerData = require(script.Parent.PlayerData)
 local Plots = require(script.Parent.Plots)
 local Piles = require(script.Parent.Piles)
 local Achievements = require(script.Parent.Achievements)
+local Hauling = require(script.Parent.Hauling)
 local Tools = require(script.Parent.Tools)
 
 local Search = {}
@@ -54,23 +55,10 @@ local function room(d)
 	return Economy.capacity(d) - d.carried - d.carriedGolden
 end
 
--- Sells what the player carries and their silo. Returns coins paid.
+-- Dumps what the player carries and their silo into their trader's basket (see Hauling).
+-- Returns the straws dumped.
 function Search.sell(player, reason, basket)
-	local d = PlayerData.get(player)
-	if not d or (d.carried + d.carriedGolden + d.siloStraw) <= 0 then
-		return 0
-	end
-	local mult = Economy.coinMultiplier(PlayerData.flags(player), d.needles)
-	local straws = d.carried + d.carriedGolden + d.siloStraw
-	local coins = Economy.coinsFor(d.carried + d.siloStraw, false, mult) + Economy.coinsFor(d.carriedGolden, true, mult)
-	PlayerData.update(player, function(data)
-		data.coins += coins
-		data.stats.straws_sold += straws
-		data.carried, data.carriedGolden, data.siloStraw = 0, 0, 0
-	end)
-	Remotes.SearchFx:FireClient(player, { kind = "sold", coins = coins, straws = straws, reason = reason, basket = basket })
-	Achievements.check(player)
-	return coins
+	return (Hauling.dump(player, reason, basket))
 end
 
 local function luckyFind(player, d, flags, position)
@@ -244,7 +232,7 @@ function Search.init()
 		PlayerData.update(player, function(data)
 			data.whistles -= 1
 		end)
-		return true, "The merchant comes running! Sold for " .. Format.short(Search.sell(player, "whistle")) .. " coins."
+		return true, "The merchant comes running and takes " .. Format.commas(Search.sell(player, "whistle")) .. " straws to your trader's basket."
 	end
 	ProximityPromptService.PromptTriggered:Connect(function(prompt, player)
 		if prompt:GetAttribute("Action") ~= "sell" then

@@ -53,7 +53,7 @@ function Plots.build()
 		folder.Parent = root
 		local centre = Plots.centre(index)
 		local half = Config.PlotSize / 2
-		Build.part({ name = "Ground", size = Vector3.new(Config.PlotSize, 1, Config.PlotSize), cframe = CFrame.new(centre + Vector3.new(0, -0.45, 0)), color = { 124, 140, 66 }, material = "Grass", parent = folder })
+		Build.part({ name = "Ground", size = Vector3.new(Config.PlotSize, 1, Config.PlotSize), cframe = CFrame.new(centre + Vector3.new(0, -0.45, 0)), color = { 124, 140, 66 }, material = "LeafyGrass", parent = folder })
 		for _, side in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
 			local edge = centre + Vector3.new(side[1] * half, 0.3, side[2] * half)
 			local size = if side[1] ~= 0 then Vector3.new(1, 0.6, Config.PlotSize) else Vector3.new(Config.PlotSize, 0.6, 1)

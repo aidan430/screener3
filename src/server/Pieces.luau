@@ -85,6 +85,8 @@ local function standing(model, cf, height, diameter, color, material, name)
 	return c
 end
 
+local sensor = require(script.Parent.PiecesBelts)(builders, p)
+
 -- Your trader: a market stall with a striped awning, the trader behind the counter, and a
 -- big woven basket in front where you dump your hay (the basket's prompt sells it).
 function builders.trader(model, cf)
@@ -119,6 +121,7 @@ function builders.trader(model, cf)
 	fill.Transparency = 1
 	fill.CanCollide = false
 	prompt(basket, "sell", "Dump hay", "Your trader")
+	sensor(model, cf * CFrame.new(0, 3.2, -3.6), Vector3.new(4.6, 2.4, 4.6), "BasketSensor") -- hay off a belt or a carried bale
 end
 
 -- A teleporter pad: step on, press E and pick another of your pads.

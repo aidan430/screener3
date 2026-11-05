@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Format = require(Shared:WaitForChild("Format"))
+local HayLook = require(Shared:WaitForChild("HayLook"))(Config)
 local Build = require(script.Parent.Build)
 
 local Tools = {}
@@ -63,10 +64,15 @@ function Tools.make(level, skinId)
 		attach(tool, handle, Vector3.new(0.16, 1.5, 0.16), CFrame.new(x * 0.7, 3.75, 0), colour, material)
 	end
 	-- the hay you've harvested sits on the tines and grows as you harvest (see Carry.luau)
-	local load = attach(tool, handle, Vector3.new(0.2, 0.2, 0.2), CFrame.new(0, 4, 0), Build.rgb({ 222, 186, 92 }), Enum.Material.Grass)
+	local load = HayLook.lump(0.2, false)
 	load.Name = "Load"
-	load.Shape = Enum.PartType.Ball
+	load.Massless = true
 	load.Transparency = 1
+	load.CFrame = handle.CFrame * CFrame.new(0, 4, 0)
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0, weld.Part1 = handle, load
+	weld.Parent = load
+	load.Parent = tool
 	return tool
 end
 

@@ -104,3 +104,30 @@ commit 7d2617e). Both in git history.
   player's screen. East: pumpkin and corn fields. South: duck pond, windmill, water tower,
   orchard. Nothing is built within 172 studs of the centre on either axis (plots and roads).
   Scenery is built inside a pcall: if it fails it only warns in Output.
+
+## v5: hay texture and model, hauling, trucks, conveyors, bale maker (2026-11-05)
+- **Hay texture (`Config.HayTexture`, `HayNormal`, `HayTextureStuds` 8, `HayTint`):** scripts
+  can't set a MaterialVariant's images, so `dev/build.py` writes a MaterialVariant "Hay" into
+  MaterialService (overriding Grass, Organic pattern) when `HayTexture` has an ID. Grass is now
+  only hay: the heap, the hay on tools, bundles, bales, the basket. Plot floors moved to
+  LeafyGrass. To switch it on: upload `assets/hay/garden-hay.jpg` in Studio (Asset Manager >
+  Import), copy its ID into `HayTexture`, rebuild.
+- **Hay model (`Config.HayMesh`, `HayMeshTexture`):** `assets/hay/garden-hay-roblox.obj` is the
+  supplied FBX (489,622 triangles, too many for Roblox's 20,000 limit) simplified to 7,583
+  triangles and scaled to 1 stud, made by `dev/tools/decimate.py` (needs numpy; only for
+  re-making the OBJ, never at build time). Import it in Studio, paste the MeshId and the
+  texture's ID: lumps on tools, flying hay, bundles and the `HeapMounds` (16) round each heap
+  use it (as a SpecialMesh, which scripts can set). The FBX's normal maps weren't in the file.
+- **Hauling:** dumping (basket, hub merchant, Whistle, Auto Sell) fills your basket; nothing
+  pays at once except golden straw. `TraderRate` 8 straws/s plus trucks (Farm Van 15/s 8K,
+  Mini Truck 35/s 60K, Semi 90/s 500K, Large 220/s 3M, two of each) sell it continuously;
+  each truck visibly calls every `TruckTripSeconds` (40). Bales count `BaleCompaction` (3)
+  times as easily. A free player buys two vans by 9 h and mini trucks at 14 h and 32 h; the
+  needle still comes at about 34 h (12 h with Robux). Semis and large trucks are headroom for
+  factories.
+- **Loose hay:** G (`DropKey`) drops your load as a bundle on your own plot (at most
+  `MaxLooseHay` 40 loose things per plot). Conveyor Belt (800) and Conveyor Down (1,500, 10
+  studs) move bundles at `ConveyorSpeed` 10. The basket's sensor takes bundles and bales.
+  Bale Maker (60K, max 3): bundles in at the back, a 2,000-straw bale (`BaleStraws`) out the
+  front; E picks a bale up, G puts it down. Loose hay left `LooseHayMinutes` (10) goes to the
+  basket by itself; on leaving it's saved as `loose` and waits in the basket next time.

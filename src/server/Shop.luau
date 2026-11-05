@@ -59,6 +59,25 @@ function buyers.bucket(player, d, level)
 	return true, "Your " .. bucket.name .. " carries " .. Format.commas(bucket.capacity) .. " more straws."
 end
 
+function buyers.truck(player, d, index)
+	local truck = Config.Trucks[index]
+	if not truck then
+		return false, "There's no such truck."
+	end
+	if (d.trucks[truck.id] or 0) >= truck.max then
+		return false, "You have the most " .. truck.name .. "s allowed (" .. truck.max .. ")."
+	end
+	local missing = short(d, truck.price)
+	if missing then
+		return false, missing
+	end
+	PlayerData.update(player, function(data)
+		data.coins -= truck.price
+		data.trucks[truck.id] = (data.trucks[truck.id] or 0) + 1
+	end)
+	return true, "Your " .. truck.name .. " will call at your trader and haul " .. Format.commas(truck.rate) .. " straws a second."
+end
+
 function buyers.silo(player, d, level)
 	local silo = Config.Silos[level]
 	if level ~= d.silo + 1 or not silo then

@@ -7,6 +7,7 @@ local Config = require(Shared:WaitForChild("Config"))
 local Economy = require(Shared:WaitForChild("Economy"))(Config)
 local Layout = require(Shared:WaitForChild("Layout"))(Config)
 
+local HayLook = require(Shared:WaitForChild("HayLook"))(Config)
 local Plots = require(script.Parent.Plots)
 local Profile = require(script.Parent.Profile)
 
@@ -18,7 +19,8 @@ local HEAP = Enum.Material.Grass -- recoloured to straw; its grass blades read a
 local STEPS = 8 -- a clump shrinks in this many visible steps as you harvest it
 
 local function setup()
-	terrain:SetMaterialColor(HEAP, Color3.fromRGB(Config.HeapColour[1], Config.HeapColour[2], Config.HeapColour[3]))
+	local c = if Config.HayTexture ~= "" then Config.HayTint else Config.HeapColour
+	terrain:SetMaterialColor(HEAP, Color3.fromRGB(c[1], c[2], c[3]))
 	pcall(function()
 		terrain.Decoration = true -- the grass blades: individual straws on the heap
 	end)
@@ -106,6 +108,16 @@ function Piles.build(plotIndex, d)
 	end
 	local corner = o - Vector3.new(n * s + s / 2, 0, n * s + s / 2)
 	terrain:WriteVoxels(Region3.new(corner, corner + Vector3.new((2 * n + 1) * s, Config.PileLayers * s, (2 * n + 1) * s)), s, materials, amounts)
+	-- loose hay mounds spilled round the foot of the heap, so it sits in its own straw
+	local rng = Random.new(plotIndex)
+	for i = 1, Config.HeapMounds do
+		local angle = (i / Config.HeapMounds + rng:NextNumber() * 0.05) * math.pi * 2
+		local reach = Config.PileRadiusBottom + rng:NextNumber(1, 6)
+		local mound = HayLook.lump(rng:NextNumber(5, 9), false)
+		mound.Anchored = true
+		mound.CFrame = CFrame.new(o + Vector3.new(math.cos(angle) * reach, 0.6, math.sin(angle) * reach)) * CFrame.Angles(0, rng:NextNumber() * 6.28, 0)
+		mound.Parent = folder
+	end
 	return piles[plotIndex]
 end
 

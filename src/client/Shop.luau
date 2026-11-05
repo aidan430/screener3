@@ -80,7 +80,7 @@ function Shop.mount(gui, notify)
 		order += 1
 		local list = Ui.make("Frame", { Name = name, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Visible = false, Parent = body }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
 		pages[name], refreshers[name] = list, build(list)
-		Ui.button(name, colour, { LayoutOrder = order, Size = UDim2.new(1 / 7, -4, 1, 0), Parent = tabs }).Activated:Connect(function()
+		Ui.button(name, colour, { LayoutOrder = order, Size = UDim2.new(1 / 8, -4, 1, 0), Parent = tabs }).Activated:Connect(function()
 			for key, p in pairs(pages) do
 				p.Visible = key == name
 			end
@@ -179,6 +179,25 @@ function Shop.mount(gui, notify)
 	end)
 	itemPage("Power", Color3.fromRGB(200, 160, 40), Config.Generators, function(def)
 		return "Makes " .. def.power .. " power."
+	end)
+
+	-- trucks call at your trader and haul from the basket
+	page("Trucks", Color3.fromRGB(120, 90, 60), function(list)
+		local rows, subs = {}, {}
+		for i, truck in ipairs(Config.Trucks) do
+			rows[i], subs[i] = row(list, i, truck.name, "")
+			rows[i].Activated:Connect(function()
+				buy("truck", i, rows[i])
+			end)
+		end
+		Ui.paragraph("Your trader sells " .. Config.TraderRate .. " straws a second from the basket by himself. Trucks add to that. Bales count " .. Config.BaleCompaction .. "x.", { LayoutOrder = 99, TextSize = 16, TextColor3 = Ui.colors.grey, Parent = list })
+		return function()
+			for i, truck in ipairs(Config.Trucks) do
+				local own = player:GetAttribute("Truck_" .. truck.id) or 0
+				subs[i].Text = "Hauls " .. Format.commas(truck.rate) .. " straws a second. You have " .. own .. "/" .. truck.max .. "."
+				price(rows[i], truck.price, own >= truck.max, true, "MAXED")
+			end
+		end
 	end)
 
 	page("Robux", Color3.fromRGB(80, 160, 90), function(list)

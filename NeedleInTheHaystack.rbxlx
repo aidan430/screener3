@@ -31,6 +31,19 @@ Config.PileRadiusBottom = 38
 Config.PileRadiusTop = 4
 Config.PileCurve = 1.6 -- above 1: a wide, sloping base and a steep, narrow top
 Config.HeapColour = { 222, 186, 92 } -- straw gold (the terrain Grass material is the heap)
+-- Your hay texture: upload garden-hay.jpg (and its normal map) in Studio (Asset Manager > Import),
+-- paste the IDs here ("rbxassetid://123"), rebuild. The heap, the hay on tools and the bundles
+-- then wear it. Empty = plain straw-gold Grass.
+Config.HayTexture = ""
+Config.HayNormal = ""
+Config.HayTextureStuds = 8 -- how many studs one copy of the texture covers
+-- The hay model (assets/hay/garden-hay-roblox.obj, about 7,600 triangles): import it in
+-- Studio, paste its MeshId and the texture's ID here. Lumps on tools, flying hay, bundles and
+-- the mounds around the heap then use it. Empty = rounded hay balls.
+Config.HayMesh = ""
+Config.HayMeshTexture = ""
+Config.HayTint = { 255, 246, 225 }
+Config.HeapMounds = 16 -- loose hay mounds round the foot of each heap (just for looks) -- the heap's colour with the texture on (white = the image as is)
 Config.MaxSlopeAngle = 46 -- players can't walk up anything steeper: they build to climb
 -- The needle hides deep inside the upper heap: between these shares of the height, and no
 -- further from the middle than this share of the heap's width there. Machines peel the heap
@@ -105,10 +118,36 @@ Config.Pieces = {
 	{ id = "escalator", name = "Escalator", price = 4000, size = { 8, 10, 10 }, text = "Stairs that carry you up 10 studs." },
 	{ id = "elevator", name = "Elevator", price = 30000, size = { 10, 51, 10 }, text = "A 50-stud lift. Press E at the bottom or top." },
 	{ id = "teleporter", name = "Teleporter Pad", price = 25000, size = { 8, 1, 8 }, text = "Step on, press E, pick any of your other pads." },
+	{ id = "conveyor", name = "Conveyor Belt", price = 800, size = { 6, 1, 12 }, text = "Carries dropped hay (G) along, towards its arrow." },
+	{ id = "chute", name = "Conveyor Down", price = 1500, size = { 6, 10, 12 }, text = "A belt that carries hay down 10 studs, off a platform." },
+	{ id = "baler", name = "Bale Maker", price = 60000, max = 3, size = { 8, 7, 10 }, text = "Feed it hay at the back; it pushes out bales. Trucks carry bales 3x as easily." },
 	{ id = "trader", name = "Trader's Stall", price = 0, max = 1, size = { 12, 12, 8 }, text = "Your trader. Dump your hay in the basket. Move it anywhere, even up a platform." },
 }
 Config.TraderDistance = 50 -- your trader's stall starts this far from your plot's centre, towards the hub
-Config.BasketDrainSeconds = 4 -- the trader carts the basket away this fast (just for show)
+Config.BasketDrainSeconds = 4 -- how fast the basket's hay level eases down after a dump (just for show)
+
+-- Hauling: what you dump waits in your trader's basket. The trader himself buys TraderRate
+-- straws a second; trucks fetch more (rate = straws a second each, as one load a trip).
+-- Baled hay packs tighter: a truck or the trader moves BaleCompaction times as much of it.
+Config.TraderRate = 8
+Config.TruckTripSeconds = 40
+Config.Trucks = {
+	{ id = "van", name = "Farm Van", rate = 15, price = 8000, max = 2, size = { 6, 6, 11 }, color = { 236, 236, 228 } },
+	{ id = "mini", name = "Mini Truck", rate = 35, price = 60000, max = 2, size = { 6, 6, 13 }, color = { 70, 130, 200 } },
+	{ id = "semi", name = "Semi Truck", rate = 90, price = 500000, max = 2, size = { 8, 9, 24 }, color = { 196, 72, 56 } },
+	{ id = "big", name = "Large Truck", rate = 220, price = 3000000, max = 2, size = { 9, 10, 30 }, color = { 60, 120, 70 } },
+}
+Config.BasketShowFull = 5000 -- straws waiting at which the basket looks full
+
+-- Loose hay: press DropKey to drop what you carry as a bundle. Conveyors carry bundles; your
+-- trader's basket and bale makers take them in. Bundles and bales left lying for
+-- LooseHayMinutes go to your basket by themselves, and so does everything when you leave.
+Config.DropKey = "G"
+Config.MaxLooseHay = 40 -- bundles and bales on one plot at once
+Config.LooseHayMinutes = 10
+Config.ConveyorSpeed = 10 -- studs a second
+Config.BaleStraws = 2000 -- straws in one bale
+Config.BaleCompaction = 3
 Config.BuildGrid = 1 -- placement snaps to this many studs
 Config.MaxPlaced = 400 -- pieces, machines and generators on one plot
 
@@ -275,6 +314,15 @@ return function(Config)
 	-- what you can carry: the tool fills first, then the bucket at your hip
 	function Economy.capacity(data)
 		return Economy.tool(data.tool).capacity + Economy.bucket(data.bucket or 1).capacity
+	end
+
+	-- straws a second leaving your basket: the trader plus every truck you own
+	function Economy.haulRate(data)
+		local rate = Config.TraderRate
+		for _, truck in ipairs(Config.Trucks) do
+			rate += truck.rate * ((data.trucks and data.trucks[truck.id]) or 0)
+		end
+		return rate
 	end
 
 	function Economy.bucket(level)
@@ -518,6 +566,55 @@ return Format
 			</Item>
 			<Item class="ModuleScript" referent="RBX00006">
 				<Properties>
+					<string name="Name">HayLook</string>
+					<ProtectedString name="Source"><![CDATA[-- One look for every loose bit of hay (on tools, in buckets and baskets, flying, dropped
+-- bundles, the mounds round the heap): the imported hay model when Config.HayMesh is set,
+-- otherwise a rounded ball of the Grass material (which wears the hay texture if one is set).
+-- Plain module: works on the server and the client.
+return function(Config)
+	local HayLook = {}
+	local HAY = Color3.fromRGB(Config.HeapColour[1], Config.HeapColour[2], Config.HeapColour[3])
+	local GOLD = Color3.fromRGB(255, 214, 90)
+
+	-- A hay lump `size` studs across, `golden` for the Golden Loft's straw.
+	function HayLook.lump(size, golden)
+		local part = Instance.new("Part")
+		part.Name = "Hay"
+		part.CanCollide, part.CanQuery, part.CanTouch, part.CastShadow = false, false, false, false
+		part.Material = Enum.Material.Grass
+		part.Color = if golden then GOLD else HAY
+		part.TopSurface, part.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
+		if Config.HayMesh ~= "" then
+			local mesh = Instance.new("SpecialMesh")
+			mesh.MeshType = Enum.MeshType.FileMesh
+			mesh.MeshId = Config.HayMesh
+			mesh.TextureId = Config.HayMeshTexture
+			mesh.VertexColor = if golden then Vector3.new(1.3, 1.1, 0.4) else Vector3.new(1, 1, 1)
+			mesh.Parent = part
+		else
+			part.Shape = Enum.PartType.Ball
+		end
+		HayLook.resize(part, size)
+		return part
+	end
+
+	-- Sets a lump's size (the model is 1 stud across, so its mesh scales with the part).
+	function HayLook.resize(part, size)
+		local s = Vector3.new(size, size * 0.72, size)
+		part.Size = Vector3.new(math.max(s.X, 0.05), math.max(s.Y, 0.05), math.max(s.Z, 0.05))
+		local mesh = part:FindFirstChildOfClass("SpecialMesh")
+		if mesh then
+			mesh.Scale = Vector3.new(size, size, size) -- the model is 1 x 0.69 x 1 studs
+		end
+	end
+
+	return HayLook
+end
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00007">
+				<Properties>
 					<string name="Name">Layout</string>
 					<ProtectedString name="Source"><![CDATA[-- Where each clump sits in the heap: one cell of the 4-stud terrain grid each, in
 -- Config.PileLayers layers that taper from PileRadiusBottom to a peak (curved by PileCurve), trimmed
@@ -624,76 +721,81 @@ end
 				</Properties>
 			</Item>
 		</Item>
-		<Item class="Folder" referent="RBX00007">
+		<Item class="Folder" referent="RBX00008">
 			<Properties>
 				<string name="Name">Remotes</string>
 			</Properties>
-			<Item class="RemoteEvent" referent="RBX00008">
+			<Item class="RemoteEvent" referent="RBX00009">
 				<Properties>
 					<string name="Name">Harvest</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00009">
+			<Item class="RemoteEvent" referent="RBX0000A">
 				<Properties>
 					<string name="Name">SearchFx</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0000A">
+			<Item class="RemoteEvent" referent="RBX0000B">
 				<Properties>
 					<string name="Name">Announce</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0000B">
+			<Item class="RemoteEvent" referent="RBX0000C">
 				<Properties>
 					<string name="Name">Achievement</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0000C">
+			<Item class="RemoteEvent" referent="RBX0000D">
+				<Properties>
+					<string name="Name">DropHay</string>
+				</Properties>
+			</Item>
+			<Item class="RemoteEvent" referent="RBX0000E">
 				<Properties>
 					<string name="Name">Teleport</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX0000D">
+			<Item class="RemoteFunction" referent="RBX0000F">
 				<Properties>
 					<string name="Name">Whistle</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX0000E">
+			<Item class="RemoteFunction" referent="RBX00010">
 				<Properties>
 					<string name="Name">Buy</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX0000F">
+			<Item class="RemoteFunction" referent="RBX00011">
 				<Properties>
 					<string name="Name">Place</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00010">
+			<Item class="RemoteFunction" referent="RBX00012">
 				<Properties>
 					<string name="Name">TakeBack</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00011">
+			<Item class="RemoteFunction" referent="RBX00013">
 				<Properties>
 					<string name="Name">EquipSkin</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00012">
+			<Item class="RemoteFunction" referent="RBX00014">
 				<Properties>
 					<string name="Name">GetAchievements</string>
 				</Properties>
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerScriptService" referent="RBX00013">
+	<Item class="ServerScriptService" referent="RBX00015">
 		<Properties>
 			<string name="Name">ServerScriptService</string>
 		</Properties>
-		<Item class="Folder" referent="RBX00014">
+		<Item class="Folder" referent="RBX00016">
 			<Properties>
 				<string name="Name">Server</string>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX00015">
+			<Item class="ModuleScript" referent="RBX00017">
 				<Properties>
 					<string name="Name">Achievements</string>
 					<ProtectedString name="Source"><![CDATA[-- The ten achievements, secret until earned. Each watches one number; all ten open the Golden Loft.
@@ -781,7 +883,7 @@ return Achievements
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00016">
+			<Item class="ModuleScript" referent="RBX00018">
 				<Properties>
 					<string name="Name">Build</string>
 					<ProtectedString name="Source"><![CDATA[-- Helpers for building the world out of simple anchored parts.
@@ -863,7 +965,7 @@ return Build
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00017">
+			<Item class="ModuleScript" referent="RBX00019">
 				<Properties>
 					<string name="Name">Carry</string>
 					<ProtectedString name="Source"><![CDATA[-- What you carry, where everyone can see it: the hay on your tool grows with every harvest,
@@ -874,6 +976,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Economy = require(Shared:WaitForChild("Economy"))(Config)
+local HayLook = require(Shared:WaitForChild("HayLook"))(Config)
 
 local PlayerData = require(script.Parent.PlayerData)
 local Build = require(script.Parent.Build)
@@ -902,8 +1005,12 @@ local function makeBucket(player, root, level)
 		Build.part({ name = "Pail", size = Vector3.new(size, size * 0.9, size * 0.9), cframe = base * CFrame.Angles(0, 0, math.rad(90)), color = { 150, 104, 58 }, material = "Fabric", shape = "Cylinder", collide = false, parent = model }),
 		Build.part({ size = Vector3.new(0.15, size * 1.0, size * 1.0), cframe = base * CFrame.new(0, size / 2, 0) * CFrame.Angles(0, 0, math.rad(90)), color = { 110, 76, 46 }, material = "Wood", shape = "Cylinder", collide = false, parent = model }),
 		Build.part({ size = Vector3.new(0.12, size * 0.9, 0.12), cframe = base * CFrame.new(0, size * 0.7, 0) * CFrame.Angles(0, 0, math.rad(90)), color = { 120, 120, 128 }, material = "Metal", collide = false, parent = model }),
-		Build.part({ name = "Hay", size = Vector3.new(0.1, 0.1, 0.1), cframe = base * CFrame.new(0, size / 2, 0), color = HAY, material = "Grass", shape = "Ball", collide = false, transparency = 1, parent = model }),
 	}
+	local hay = HayLook.lump(0.1, false)
+	hay.CFrame = base * CFrame.new(0, size / 2, 0)
+	hay.Transparency = 1
+	hay.Parent = model
+	table.insert(parts, hay)
 	for _, part in ipairs(parts) do
 		part.Anchored = false
 		part.Massless = true
@@ -925,8 +1032,7 @@ local function mound(part, share, width, golden)
 	end
 	part.Transparency = 0
 	part.Color = Build.rgb(if golden then GOLD else HAY)
-	local w = width * (0.45 + 0.55 * math.sqrt(math.min(share, 1)))
-	part.Size = Vector3.new(w, w * 0.7, w)
+	HayLook.resize(part, width * (0.45 + 0.55 * math.sqrt(math.min(share, 1))))
 end
 
 -- Shows the player's load on their tool and bucket. Cheap: call it whenever the load changes.
@@ -1011,7 +1117,181 @@ return Carry
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00018">
+			<Item class="ModuleScript" referent="RBX0001A">
+				<Properties>
+					<string name="Name">Hauling</string>
+					<ProtectedString name="Source"><![CDATA[-- Hauling: everything you dump waits in your trader's basket. Every second the trader buys
+-- Config.TraderRate straws and each truck you own takes its rate too (baled hay packs
+-- BaleCompaction times tighter), paying you as it goes. Trucks visibly drive up to your stall.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Economy = require(Shared:WaitForChild("Economy"))(Config)
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local PlayerData = require(script.Parent.PlayerData)
+local Plots = require(script.Parent.Plots)
+local Achievements = require(script.Parent.Achievements)
+local Build = require(script.Parent.Build)
+
+local Hauling = {}
+local earned = {} -- [player] = coins paid since the last coin shower on their screen
+local trucks = Instance.new("Folder")
+trucks.Name = "Trucks"
+trucks.Parent = workspace
+
+-- Puts what the player carries (and their silo) in their basket. Golden straw from the loft
+-- is paid for at once. Returns straws moved and golden coins paid.
+function Hauling.dump(player, reason, basket)
+	local d = PlayerData.get(player)
+	if not d or (d.carried + d.carriedGolden + d.siloStraw) <= 0 then
+		return 0, 0
+	end
+	local mult = Economy.coinMultiplier(PlayerData.flags(player), d.needles)
+	local straws = d.carried + d.siloStraw
+	local golden = Economy.coinsFor(d.carriedGolden, true, mult)
+	local total = straws + d.carriedGolden
+	PlayerData.update(player, function(data)
+		data.basket += straws
+		data.coins += golden
+		data.stats.straws_sold += data.carriedGolden
+		data.carried, data.carriedGolden, data.siloStraw = 0, 0, 0
+	end)
+	Remotes.SearchFx:FireClient(player, { kind = "dumped", straws = total, coins = golden, reason = reason, basket = basket })
+	return total, golden
+end
+
+-- Loose hay or a bale that reached the basket by itself (conveyor, carried bale, timeout).
+function Hauling.add(player, straws, baled)
+	PlayerData.update(player, function(data)
+		if baled then
+			data.baled += straws
+		else
+			data.basket += straws
+		end
+	end)
+end
+
+local function sell(player)
+	local d = PlayerData.get(player)
+	if not d or (d.basket <= 0 and d.baled <= 0) then
+		return
+	end
+	local room = Economy.haulRate(d) -- loose straws' worth this second
+	local bales = math.min(d.baled, room * Config.BaleCompaction)
+	room -= bales / Config.BaleCompaction
+	local loose = math.min(d.basket, room)
+	local coins = Economy.coinsFor(bales + loose, false, Economy.coinMultiplier(PlayerData.flags(player), d.needles))
+	PlayerData.update(player, function(data)
+		data.baled -= bales
+		data.basket -= loose
+		data.coins += coins
+		data.stats.straws_sold += bales + loose
+	end)
+	earned[player] = (earned[player] or 0) + coins
+end
+
+-- A truck model: cab, box and wheels, welded to an anchored base so one tween moves it.
+local function makeTruck(def)
+	local model = Instance.new("Model")
+	model.Name = def.name
+	local w, h, l = def.size[1], def.size[2], def.size[3]
+	local base = Build.part({ name = "Base", size = Vector3.new(w, 1, l), cframe = CFrame.new(), color = { 50, 50, 54 }, material = "Metal", collide = false, parent = model })
+	local function add(size, offset, color, material, shape)
+		local part = Build.part({ size = size, cframe = offset, color = color, material = material, shape = shape, collide = false, parent = model })
+		part.Anchored = false
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0, weld.Part1 = base, part
+		weld.Parent = part
+		return part
+	end
+	local cab = math.min(5, l * 0.3)
+	add(Vector3.new(w, h * 0.7, cab), CFrame.new(0, h * 0.35 + 0.5, -l / 2 + cab / 2), def.color, "SmoothPlastic")
+	add(Vector3.new(w * 0.9, h * 0.25, 0.2), CFrame.new(0, h * 0.5 + 0.5, -l / 2 - 0.05), { 150, 200, 230 }, "Glass")
+	add(Vector3.new(w, h - 1, l - cab - 0.5), CFrame.new(0, h / 2, cab / 2 + 0.25), { 150, 104, 58 }, "WoodPlanks")
+	for _, z in ipairs({ -l / 2 + 1.6, l / 2 - 1.6 }) do
+		for _, x in ipairs({ -w / 2, w / 2 }) do
+			add(Vector3.new(0.8, 2.2, 2.2), CFrame.new(x, 0.6, z), { 30, 30, 32 }, "SmoothPlastic", "Cylinder")
+		end
+	end
+	model.PrimaryPart = base
+	return model
+end
+
+-- A truck comes from the road to the ground in front of the player's stall, waits, and goes.
+local function visit(player, def)
+	local plotIndex = Plots.of(player)
+	local built = plotIndex and Plots.folder(plotIndex):FindFirstChild("Built")
+	local stall = nil
+	for _, model in ipairs(built and built:GetChildren() or {}) do
+		if model:GetAttribute("Item") == "trader" then
+			stall = model
+		end
+	end
+	if not stall then
+		return
+	end
+	local pivot = stall:GetPivot()
+	local stop = Vector3.new(pivot.Position.X, 1.2, pivot.Position.Z) + pivot.LookVector * Vector3.new(1, 0, 1) * 14
+	local outward = Plots.centre(plotIndex).Unit
+	local entrance = Plots.entrance(plotIndex)
+	local road = Vector3.new(entrance.X, 1.2, entrance.Z) - outward * 26
+	local truck = makeTruck(def)
+	truck.PrimaryPart.CFrame = CFrame.lookAt(road, stop)
+	truck.Parent = trucks
+	local seconds = math.clamp((stop - road).Magnitude / 16, 2, 8)
+	local arrive = TweenService:Create(truck.PrimaryPart, TweenInfo.new(seconds, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), { CFrame = CFrame.lookAt(stop, stop + (stop - road)) })
+	arrive:Play()
+	task.delay(seconds + 4, function()
+		if truck.Parent then
+			TweenService:Create(truck.PrimaryPart, TweenInfo.new(seconds, Enum.EasingStyle.Sine, Enum.EasingDirection.In), { CFrame = CFrame.lookAt(road, road - (stop - road)) }):Play()
+			task.delay(seconds + 0.2, function()
+				truck:Destroy()
+			end)
+		end
+	end)
+end
+
+function Hauling.init()
+	task.spawn(function()
+		local beat = 0
+		while true do
+			task.wait(1)
+			beat += 1
+			for _, player in ipairs(Players:GetPlayers()) do
+				sell(player)
+				local d = PlayerData.get(player)
+				if d and (d.basket > 0 or d.baled > 0) then -- each truck you own calls in turn
+					for i, def in ipairs(Config.Trucks) do
+						local count = d.trucks[def.id] or 0
+						for n = 1, count do
+							if (beat + i * 7 + n * 13) % Config.TruckTripSeconds == 0 then
+								task.spawn(visit, player, def)
+							end
+						end
+					end
+				end
+				if beat % 8 == 0 and (earned[player] or 0) > 0 then
+					Remotes.SearchFx:FireClient(player, { kind = "paid", coins = earned[player] })
+					earned[player] = 0
+					Achievements.check(player)
+				end
+			end
+		end
+	end)
+	Players.PlayerRemoving:Connect(function(player)
+		earned[player] = nil
+	end)
+end
+
+return Hauling
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX0001B">
 				<Properties>
 					<string name="Name">Haystack</string>
 					<ProtectedString name="Source"><![CDATA[-- The Golden Loft: the secret level in the clouds above the hub, with its golden haystack.
@@ -1072,7 +1352,7 @@ return Haystack
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00019">
+			<Item class="ModuleScript" referent="RBX0001C">
 				<Properties>
 					<string name="Name">Loft</string>
 					<ProtectedString name="Source"><![CDATA[-- The Golden Loft: the secret level above the hub, open only to players with all ten
@@ -1113,7 +1393,233 @@ return Loft
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001A">
+			<Item class="ModuleScript" referent="RBX0001D">
+				<Properties>
+					<string name="Name">LooseHay</string>
+					<ProtectedString name="Source"><![CDATA[-- Loose hay you can push around: press G to drop what you carry as a bundle; conveyors move
+-- bundles; your trader's basket takes bundles and bales; bale makers turn bundles into bales
+-- you can pick up (E), carry and drop (G). Straws lying loose are saved as `d.loose`, so
+-- leaving never loses them: they go to your basket.
+local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local HayLook = require(Shared:WaitForChild("HayLook"))(Config)
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local PlayerData = require(script.Parent.PlayerData)
+local Plots = require(script.Parent.Plots)
+local Hauling = require(script.Parent.Hauling)
+local Build = require(script.Parent.Build)
+
+local LooseHay = {}
+local carrying = {} -- [player] = the bale they hold
+
+local function looseFolder(plotIndex)
+	local plot = Plots.folder(plotIndex)
+	local folder = plot:FindFirstChild("Loose")
+	if not folder then
+		folder = Instance.new("Folder")
+		folder.Name = "Loose"
+		folder.Parent = plot
+	end
+	return folder
+end
+
+local function ownerOf(item)
+	return Players:GetPlayerByUserId(item:GetAttribute("Owner") or 0)
+end
+
+-- The item's straws leave the loose count and go wherever `to` says ("basket" or "baler").
+local function resolve(item, player)
+	local straws = item:GetAttribute("Straws") or 0
+	item:SetAttribute("Straws", 0) -- so a second touch in the same moment counts nothing
+	item:Destroy()
+	if player and straws > 0 then
+		PlayerData.update(player, function(data)
+			data.loose = math.max(0, data.loose - straws)
+		end)
+	end
+	return straws
+end
+
+local function spawnBale(player, baler)
+	local out = baler:FindFirstChild("BaleOut")
+	local plotIndex = Plots.of(player)
+	if not out or not plotIndex then
+		return
+	end
+	local bale = Build.part({ name = "Bale", size = Vector3.new(6, 3, 4), cframe = out.CFrame, color = Config.HeapColour, material = "Grass", parent = nil })
+	for _, x in ipairs({ -1.6, 1.6 }) do -- the two strings round the bale
+		local twine = Build.part({ size = Vector3.new(0.15, 3.05, 4.05), cframe = out.CFrame * CFrame.new(x, 0, 0), color = { 120, 60, 40 }, material = "Fabric", collide = false })
+		twine.Anchored = false
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0, weld.Part1 = bale, twine
+		weld.Parent = twine
+		twine.Parent = bale
+	end
+	bale.Anchored = false
+	bale:SetAttribute("Kind", "bale")
+	bale:SetAttribute("Owner", player.UserId)
+	bale:SetAttribute("Straws", Config.BaleStraws)
+	bale:SetAttribute("Born", os.time())
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = "Pick up"
+	prompt.ObjectText = "Hay bale"
+	prompt.HoldDuration = 0.2
+	prompt.MaxActivationDistance = 9
+	prompt:SetAttribute("Action", "pickup")
+	prompt.Parent = bale
+	bale.Parent = looseFolder(plotIndex)
+	bale:SetNetworkOwner(nil)
+	bale.AssemblyLinearVelocity = out.CFrame.LookVector * 8
+	LooseHay.watch(bale)
+	PlayerData.update(player, function(data)
+		data.loose += Config.BaleStraws
+	end)
+end
+
+-- What happens when a bundle or bale touches something.
+function LooseHay.watch(item)
+	item.Touched:Connect(function(hit)
+		local player = ownerOf(item)
+		local plotIndex = player and Plots.of(player)
+		if not plotIndex or (item:GetAttribute("Straws") or 0) <= 0 or not hit:IsDescendantOf(Plots.folder(plotIndex)) then
+			return
+		end
+		if hit.Name == "BasketSensor" then
+			local baled = item:GetAttribute("Kind") == "bale"
+			if carrying[player] == item then
+				carrying[player] = nil
+			end
+			local straws = resolve(item, player)
+			Hauling.add(player, straws, baled)
+			Remotes.SearchFx:FireClient(player, { kind = "dumped", straws = straws, coins = 0, reason = if baled then "bale" else "belt", basket = hit.Parent:FindFirstChild("Basket") })
+		elseif hit.Name == "BalerIntake" and item:GetAttribute("Kind") == "bundle" then
+			local straws = resolve(item, player)
+			local d = PlayerData.get(player)
+			PlayerData.update(player, function(data)
+				data.baleStore += straws
+			end)
+			while d and d.baleStore >= Config.BaleStraws do
+				PlayerData.update(player, function(data)
+					data.baleStore -= Config.BaleStraws
+				end)
+				spawnBale(player, hit.Parent)
+				task.wait(0.6)
+			end
+		end
+	end)
+end
+
+local function dropBale(player, bale)
+	carrying[player] = nil
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	for _, w in ipairs(bale:GetChildren()) do
+		if w:IsA("WeldConstraint") and w.Name == "Hold" then
+			w:Destroy()
+		end
+	end
+	if root then
+		bale.CFrame = root.CFrame * CFrame.new(0, 0, -5)
+	end
+	bale.CanCollide, bale.Massless = true, false
+	bale:SetNetworkOwner(nil)
+end
+
+local function drop(player)
+	local bale = carrying[player]
+	if bale and bale.Parent then
+		return dropBale(player, bale)
+	end
+	local d, plotIndex = PlayerData.get(player), Plots.of(player)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not d or not plotIndex or not root or d.carried <= 0 then
+		return
+	end
+	if not Plots.contains(plotIndex, root.Position, 0) then
+		return Remotes.Announce:FireClient(player, { kind = "notice", text = "Drop hay on your own farm." })
+	end
+	if #looseFolder(plotIndex):GetChildren() >= Config.MaxLooseHay then
+		return Remotes.Announce:FireClient(player, { kind = "notice", text = "Lots of loose hay lying about already. Get some to your basket first." })
+	end
+	local straws = d.carried
+	local bundle = HayLook.lump(math.clamp(1.6 + straws / 1500, 1.6, 4), false)
+	bundle.Name = "Bundle"
+	bundle.CanCollide, bundle.CanTouch, bundle.CanQuery = true, true, true
+	bundle.CFrame = root.CFrame * CFrame.new(0, 0.5, -3.5)
+	bundle:SetAttribute("Kind", "bundle")
+	bundle:SetAttribute("Owner", player.UserId)
+	bundle:SetAttribute("Straws", straws)
+	bundle:SetAttribute("Born", os.time())
+	bundle.Parent = looseFolder(plotIndex)
+	bundle:SetNetworkOwner(nil)
+	PlayerData.update(player, function(data)
+		data.carried -= straws
+		data.loose += straws
+	end)
+	LooseHay.watch(bundle)
+end
+
+local function pickUp(player, bale)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not root or bale:GetAttribute("Owner") ~= player.UserId or (carrying[player] and carrying[player].Parent) then
+		return
+	end
+	carrying[player] = bale
+	bale.CanCollide, bale.Massless = false, true
+	bale.CFrame = root.CFrame * CFrame.new(0, 1.5, -3.5)
+	local hold = Instance.new("WeldConstraint")
+	hold.Name = "Hold"
+	hold.Part0, hold.Part1 = root, bale
+	hold.Parent = bale
+end
+
+function LooseHay.init()
+	Remotes.DropHay.OnServerEvent:Connect(drop)
+	ProximityPromptService.PromptTriggered:Connect(function(prompt, player)
+		if prompt:GetAttribute("Action") == "pickup" and prompt.Parent and prompt.Parent:GetAttribute("Kind") == "bale" then
+			pickUp(player, prompt.Parent)
+		end
+	end)
+	-- hay left lying (or fallen off the world) goes to its owner's basket by itself
+	task.spawn(function()
+		while true do
+			task.wait(20)
+			for _, player in ipairs(Players:GetPlayers()) do
+				local plotIndex = Plots.of(player)
+				for _, item in ipairs(plotIndex and looseFolder(plotIndex):GetChildren() or {}) do
+					local old = os.time() - (item:GetAttribute("Born") or 0) > Config.LooseHayMinutes * 60
+					if (old and carrying[player] ~= item) or item.Position.Y < -20 then
+						local baled = item:GetAttribute("Kind") == "bale"
+						Hauling.add(player, resolve(item, player), baled)
+					end
+				end
+			end
+		end
+	end)
+	Players.PlayerRemoving:Connect(function(player)
+		carrying[player] = nil
+		local plotIndex = Plots.of(player)
+		if plotIndex then
+			looseFolder(plotIndex):ClearAllChildren() -- their straws are saved in d.loose
+		end
+	end)
+end
+
+-- On joining: hay that was lying loose last time is waiting in the basket.
+function LooseHay.restore(d)
+	d.basket += d.loose
+	d.loose = 0
+end
+
+return LooseHay
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX0001E">
 				<Properties>
 					<string name="Name">Machines</string>
 					<ProtectedString name="Source"><![CDATA[-- Machines harvest the top of your pile into your silo every second, if your generators make
@@ -1267,7 +1773,7 @@ return Machines
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Script" referent="RBX0001B">
+			<Item class="Script" referent="RBX0001F">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Starts the game. The ground and spawn point are built first, so nobody spawns into the void.
@@ -1305,6 +1811,8 @@ local Loft = require(script.Parent.Loft)
 local Wheel = require(script.Parent.Wheel)
 local Monetization = require(script.Parent.Monetization)
 local Carry = require(script.Parent.Carry)
+local Hauling = require(script.Parent.Hauling)
+local LooseHay = require(script.Parent.LooseHay)
 
 StarterPlayer.CharacterMaxSlopeAngle = Config.MaxSlopeAngle -- the steep heap needs building to climb
 local Scenery = require(script.Parent.Scenery)
@@ -1336,6 +1844,7 @@ end
 
 PlayerData.onLoaded(function(player, saveable)
 	local data = PlayerData.get(player)
+	PlayerData.update(player, LooseHay.restore) -- hay left lying last time waits in the basket
 	local plotIndex = Plots.claim(player)
 	if not plotIndex then
 		player:Kick("This farm is full (four plots). Please join another server.")
@@ -1375,6 +1884,8 @@ local parts = {
 	{ "Shop", Shop.init },
 	{ "Loft", Loft.init },
 	{ "Carry", Carry.init },
+	{ "Hauling", Hauling.init },
+	{ "LooseHay", LooseHay.init },
 }
 for _, part in ipairs(parts) do
 	local ok, err = pcall(part[2])
@@ -1385,7 +1896,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001C">
+			<Item class="ModuleScript" referent="RBX00020">
 				<Properties>
 					<string name="Name">Monetization</string>
 					<ProtectedString name="Source"><![CDATA[-- Robux items. Every ID in Config.GamePasses and Config.Products starts at 0 (switched off);
@@ -1499,7 +2010,7 @@ return Monetization
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001D">
+			<Item class="ModuleScript" referent="RBX00021">
 				<Properties>
 					<string name="Name">Pieces</string>
 					<ProtectedString name="Source"><![CDATA[-- What each buildable item looks like, built from parts around `cf`: the base centre on the
@@ -1589,6 +2100,8 @@ local function standing(model, cf, height, diameter, color, material, name)
 	return c
 end
 
+local sensor = require(script.Parent.PiecesBelts)(builders, p)
+
 -- Your trader: a market stall with a striped awning, the trader behind the counter, and a
 -- big woven basket in front where you dump your hay (the basket's prompt sells it).
 function builders.trader(model, cf)
@@ -1623,6 +2136,7 @@ function builders.trader(model, cf)
 	fill.Transparency = 1
 	fill.CanCollide = false
 	prompt(basket, "sell", "Dump hay", "Your trader")
+	sensor(model, cf * CFrame.new(0, 3.2, -3.6), Vector3.new(4.6, 2.4, 4.6), "BasketSensor") -- hay off a belt or a carried bale
 end
 
 -- A teleporter pad: step on, press E and pick another of your pads.
@@ -1690,7 +2204,79 @@ return Pieces
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001E">
+			<Item class="ModuleScript" referent="RBX00022">
+				<Properties>
+					<string name="Name">PiecesBelts</string>
+					<ProtectedString name="Source"><![CDATA[-- Conveyor belts, the conveyor down off a platform, and the bale maker. Belts move anything
+-- on them (dropped hay, bales, players) towards their arrows (-Z), Config.ConveyorSpeed.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local BELT, RAIL, ARROW = { 64, 66, 72 }, { 150, 154, 160 }, { 245, 200, 66 }
+
+return function(builders, p)
+	local function sensor(model, cf, size, name)
+		local part = p(model, cf, size, { 255, 255, 255 }, "SmoothPlastic")
+		part.Name = name
+		part.Transparency = 1
+		part.CanCollide, part.CanQuery, part.CanTouch = false, false, true
+		return part
+	end
+
+	local function belt(model, slope, length)
+		local part = p(model, slope, Vector3.new(5.6, 0.6, length), BELT, "Fabric")
+		part.Name = "Belt"
+		part.AssemblyLinearVelocity = slope.LookVector * Config.ConveyorSpeed
+		part:SetAttribute("Conveyor", true)
+		for _, x in ipairs({ -3, 3 }) do
+			p(model, slope * CFrame.new(x, 0.6, 0), Vector3.new(0.4, 1.8, length), RAIL, "Metal")
+		end
+		for z = -length / 2 + 2, length / 2 - 2, 4 do -- arrows pointing the way it runs
+			local a = p(model, slope * CFrame.new(0, 0.31, z), Vector3.new(1.6, 0.05, 0.5), ARROW, "Neon")
+			a.CanCollide = false
+		end
+		return part
+	end
+
+	function builders.conveyor(model, cf)
+		belt(model, cf * CFrame.new(0, 0.5, 0), 12)
+	end
+
+	function builders.chute(model, cf)
+		local angle = math.atan2(10, 12)
+		local length = math.sqrt(10 ^ 2 + 12 ^ 2)
+		belt(model, cf * CFrame.new(0, 5.3, 0) * CFrame.Angles(-angle, 0, 0), length)
+		for _, x in ipairs({ -2.6, 2.6 }) do -- legs under the high end
+			p(model, cf * CFrame.new(x, 5, 5.4), Vector3.new(0.6, 10, 0.6), RAIL, "Metal")
+			p(model, cf * CFrame.new(x, 2.5, 0), Vector3.new(0.6, 5, 0.6), RAIL, "Metal")
+		end
+	end
+
+	-- Hay goes in the hopper at the back (+Z); bales come out of the front (-Z).
+	function builders.baler(model, cf)
+		local body = p(model, cf * CFrame.new(0, 3, 0), Vector3.new(8, 6, 7), { 200, 70, 50 }, "Metal")
+		body.Name = "Body"
+		p(model, cf * CFrame.new(0, 6.3, 0), Vector3.new(8.4, 0.6, 7.4), { 60, 62, 70 }, "Metal")
+		p(model, cf * CFrame.new(0, 2.4, 4.4), Vector3.new(6, 0.4, 2), { 60, 62, 70 }, "Metal") -- the hopper lip
+		p(model, cf * CFrame.new(0, 1.2, -4.3), Vector3.new(6.4, 0.4, 2.6), { 60, 62, 70 }, "DiamondPlate") -- the chute out
+		sensor(model, cf * CFrame.new(0, 2.2, 4.6), Vector3.new(6.4, 4.4, 2.6), "BalerIntake")
+		local out = sensor(model, cf * CFrame.new(0, 2.2, -7.5) * CFrame.Angles(0, 0, 0), Vector3.new(1, 1, 1), "BaleOut")
+		out.CanTouch = false
+		for _, x in ipairs({ -2.5, 2.5 }) do
+			local wheel = p(model, cf * CFrame.new(x * 1.7, 1.2, 2), Vector3.new(0.8, 2.4, 2.4), { 30, 30, 32 }, "SmoothPlastic", "Cylinder")
+			wheel.CanCollide = false
+		end
+		local lamp = p(model, cf * CFrame.new(2.8, 7, -2.6), Vector3.new(0.8, 0.8, 0.8), { 90, 255, 120 }, "Neon")
+		lamp.Name = "Light"
+	end
+
+	return sensor
+end
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00023">
 				<Properties>
 					<string name="Name">Piles</string>
 					<ProtectedString name="Source"><![CDATA[-- Each player's 70 m pile: 5,000 clumps of 1,000 straws on their plot, built from their save
@@ -1702,6 +2288,7 @@ local Config = require(Shared:WaitForChild("Config"))
 local Economy = require(Shared:WaitForChild("Economy"))(Config)
 local Layout = require(Shared:WaitForChild("Layout"))(Config)
 
+local HayLook = require(Shared:WaitForChild("HayLook"))(Config)
 local Plots = require(script.Parent.Plots)
 local Profile = require(script.Parent.Profile)
 
@@ -1713,7 +2300,8 @@ local HEAP = Enum.Material.Grass -- recoloured to straw; its grass blades read a
 local STEPS = 8 -- a clump shrinks in this many visible steps as you harvest it
 
 local function setup()
-	terrain:SetMaterialColor(HEAP, Color3.fromRGB(Config.HeapColour[1], Config.HeapColour[2], Config.HeapColour[3]))
+	local c = if Config.HayTexture ~= "" then Config.HayTint else Config.HeapColour
+	terrain:SetMaterialColor(HEAP, Color3.fromRGB(c[1], c[2], c[3]))
 	pcall(function()
 		terrain.Decoration = true -- the grass blades: individual straws on the heap
 	end)
@@ -1801,6 +2389,16 @@ function Piles.build(plotIndex, d)
 	end
 	local corner = o - Vector3.new(n * s + s / 2, 0, n * s + s / 2)
 	terrain:WriteVoxels(Region3.new(corner, corner + Vector3.new((2 * n + 1) * s, Config.PileLayers * s, (2 * n + 1) * s)), s, materials, amounts)
+	-- loose hay mounds spilled round the foot of the heap, so it sits in its own straw
+	local rng = Random.new(plotIndex)
+	for i = 1, Config.HeapMounds do
+		local angle = (i / Config.HeapMounds + rng:NextNumber() * 0.05) * math.pi * 2
+		local reach = Config.PileRadiusBottom + rng:NextNumber(1, 6)
+		local mound = HayLook.lump(rng:NextNumber(5, 9), false)
+		mound.Anchored = true
+		mound.CFrame = CFrame.new(o + Vector3.new(math.cos(angle) * reach, 0.6, math.sin(angle) * reach)) * CFrame.Angles(0, rng:NextNumber() * 6.28, 0)
+		mound.Parent = folder
+	end
 	return piles[plotIndex]
 end
 
@@ -1860,7 +2458,7 @@ return Piles
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001F">
+			<Item class="ModuleScript" referent="RBX00024">
 				<Properties>
 					<string name="Name">PlayerData</string>
 					<ProtectedString name="Source"><![CDATA[-- Each player's saved progress and the leaderboard. If the DataStore can't be read (Studio
@@ -1934,6 +2532,12 @@ local function publish(player, profile)
 	player:SetAttribute("Tool", d.tool)
 	player:SetAttribute("Silo", d.silo)
 	player:SetAttribute("Bucket", d.bucket)
+	player:SetAttribute("BasketStraw", math.floor(d.basket))
+	player:SetAttribute("BaledStraw", math.floor(d.baled))
+	player:SetAttribute("HaulRate", Economy.haulRate(d))
+	for id, count in pairs(d.trucks) do
+		player:SetAttribute("Truck_" .. id, count)
+	end
 	player:SetAttribute("Carried", d.carried + d.carriedGolden)
 	player:SetAttribute("Capacity", Economy.capacity(d))
 	player:SetAttribute("SiloStraw", d.siloStraw)
@@ -2134,7 +2738,7 @@ return PlayerData
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00020">
+			<Item class="ModuleScript" referent="RBX00025">
 				<Properties>
 					<string name="Name">Plots</string>
 					<ProtectedString name="Source"><![CDATA[-- The four plots around the hub. A player gets a free plot when they join and gives it
@@ -2192,7 +2796,7 @@ function Plots.build()
 		folder.Parent = root
 		local centre = Plots.centre(index)
 		local half = Config.PlotSize / 2
-		Build.part({ name = "Ground", size = Vector3.new(Config.PlotSize, 1, Config.PlotSize), cframe = CFrame.new(centre + Vector3.new(0, -0.45, 0)), color = { 124, 140, 66 }, material = "Grass", parent = folder })
+		Build.part({ name = "Ground", size = Vector3.new(Config.PlotSize, 1, Config.PlotSize), cframe = CFrame.new(centre + Vector3.new(0, -0.45, 0)), color = { 124, 140, 66 }, material = "LeafyGrass", parent = folder })
 		for _, side in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
 			local edge = centre + Vector3.new(side[1] * half, 0.3, side[2] * half)
 			local size = if side[1] ~= 0 then Vector3.new(1, 0.6, Config.PlotSize) else Vector3.new(Config.PlotSize, 0.6, 1)
@@ -2245,7 +2849,7 @@ return Plots
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00021">
+			<Item class="ModuleScript" referent="RBX00026">
 				<Properties>
 					<string name="Name">Profile</string>
 					<ProtectedString name="Source"><![CDATA[-- A player's data model: what is saved, with its defaults. Anything missing or of the
@@ -2283,6 +2887,10 @@ function Profile.fresh(saved)
 		carried = number(saved, "carried", 0),
 		carriedGolden = number(saved, "carriedGolden", 0),
 		siloStraw = number(saved, "siloStraw", 0),
+		basket = number(saved, "basket", 0), -- loose straws waiting in the trader's basket
+		baled = number(saved, "baled", 0), -- baled straws waiting there
+		baleStore = number(saved, "baleStore", 0), -- straws inside your bale makers, not yet a bale
+		loose = number(saved, "loose", 0), -- straws lying about as bundles and bales
 		needleClump = math.floor(number(saved, "needleClump", 0)),
 		revealed = saved.revealed == true,
 		needles = number(saved, "needles", 0),
@@ -2295,6 +2903,7 @@ function Profile.fresh(saved)
 		inventory = {},
 		placed = {},
 		skins = {},
+		trucks = {},
 		stats = {},
 		achievements = {},
 		boosts = {},
@@ -2336,6 +2945,9 @@ function Profile.fresh(saved)
 				table.insert(d.placed, { k = p.k, x = p.x, y = p.y, z = p.z, r = if type(p.r) == "number" then p.r else 0 })
 			end
 		end
+	end
+	for _, truck in ipairs(Config.Trucks) do
+		d.trucks[truck.id] = math.clamp(math.floor(number(saved.trucks, truck.id, 0)), 0, truck.max)
 	end
 	for _, prize in ipairs(Config.Wheel) do
 		if not prize.reveal and type(saved.skins) == "table" and saved.skins[prize.id] == true then
@@ -2390,7 +3002,7 @@ return Profile
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00022">
+			<Item class="ModuleScript" referent="RBX00027">
 				<Properties>
 					<string name="Name">Scenery</string>
 					<ProtectedString name="Source"><![CDATA[-- The countryside of Hollow Creek Farm, in the wide ring between the plots and the fence:
@@ -2625,7 +3237,7 @@ return Scenery
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00023">
+			<Item class="ModuleScript" referent="RBX00028">
 				<Properties>
 					<string name="Name">SceneryAnimals</string>
 					<ProtectedString name="Source"><![CDATA[-- Animal pens to the west of the plots and the cute blocky animals in them: cows, sheep, pigs,
@@ -2846,7 +3458,7 @@ return Pens
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00024">
+			<Item class="ModuleScript" referent="RBX00029">
 				<Properties>
 					<string name="Name">SceneryKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Shared helpers for the countryside around the plots (see Scenery): a part maker that works
@@ -2975,7 +3587,7 @@ return Kit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00025">
+			<Item class="ModuleScript" referent="RBX0002A">
 				<Properties>
 					<string name="Name">SceneryNature</string>
 					<ProtectedString name="Source"><![CDATA[-- The living countryside (see Scenery): dirt lanes, the duck pond, the pumpkin and corn
@@ -3165,7 +3777,7 @@ return Nature
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00026">
+			<Item class="ModuleScript" referent="RBX0002B">
 				<Properties>
 					<string name="Name">SceneryProps</string>
 					<ProtectedString name="Source"><![CDATA[-- Farm props for the countryside (see Scenery): a tractor and trailer, carts, round hay bales,
@@ -3359,7 +3971,7 @@ return Props
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00027">
+			<Item class="ModuleScript" referent="RBX0002C">
 				<Properties>
 					<string name="Name">Search</string>
 					<ProtectedString name="Source"><![CDATA[-- The loop: click the clump you're looking at to harvest it onto your tool, sell at the
@@ -3380,6 +3992,7 @@ local PlayerData = require(script.Parent.PlayerData)
 local Plots = require(script.Parent.Plots)
 local Piles = require(script.Parent.Piles)
 local Achievements = require(script.Parent.Achievements)
+local Hauling = require(script.Parent.Hauling)
 local Tools = require(script.Parent.Tools)
 
 local Search = {}
@@ -3418,23 +4031,10 @@ local function room(d)
 	return Economy.capacity(d) - d.carried - d.carriedGolden
 end
 
--- Sells what the player carries and their silo. Returns coins paid.
+-- Dumps what the player carries and their silo into their trader's basket (see Hauling).
+-- Returns the straws dumped.
 function Search.sell(player, reason, basket)
-	local d = PlayerData.get(player)
-	if not d or (d.carried + d.carriedGolden + d.siloStraw) <= 0 then
-		return 0
-	end
-	local mult = Economy.coinMultiplier(PlayerData.flags(player), d.needles)
-	local straws = d.carried + d.carriedGolden + d.siloStraw
-	local coins = Economy.coinsFor(d.carried + d.siloStraw, false, mult) + Economy.coinsFor(d.carriedGolden, true, mult)
-	PlayerData.update(player, function(data)
-		data.coins += coins
-		data.stats.straws_sold += straws
-		data.carried, data.carriedGolden, data.siloStraw = 0, 0, 0
-	end)
-	Remotes.SearchFx:FireClient(player, { kind = "sold", coins = coins, straws = straws, reason = reason, basket = basket })
-	Achievements.check(player)
-	return coins
+	return (Hauling.dump(player, reason, basket))
 end
 
 local function luckyFind(player, d, flags, position)
@@ -3608,7 +4208,7 @@ function Search.init()
 		PlayerData.update(player, function(data)
 			data.whistles -= 1
 		end)
-		return true, "The merchant comes running! Sold for " .. Format.short(Search.sell(player, "whistle")) .. " coins."
+		return true, "The merchant comes running and takes " .. Format.commas(Search.sell(player, "whistle")) .. " straws to your trader's basket."
 	end
 	ProximityPromptService.PromptTriggered:Connect(function(prompt, player)
 		if prompt:GetAttribute("Action") ~= "sell" then
@@ -3633,7 +4233,7 @@ return Search
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00028">
+			<Item class="ModuleScript" referent="RBX0002D">
 				<Properties>
 					<string name="Name">Shop</string>
 					<ProtectedString name="Source"><![CDATA[-- Buying with coins: tools and silos (in order), perks for the tool you hold, and
@@ -3695,6 +4295,25 @@ function buyers.bucket(player, d, level)
 		data.bucket = level
 	end)
 	return true, "Your " .. bucket.name .. " carries " .. Format.commas(bucket.capacity) .. " more straws."
+end
+
+function buyers.truck(player, d, index)
+	local truck = Config.Trucks[index]
+	if not truck then
+		return false, "There's no such truck."
+	end
+	if (d.trucks[truck.id] or 0) >= truck.max then
+		return false, "You have the most " .. truck.name .. "s allowed (" .. truck.max .. ")."
+	end
+	local missing = short(d, truck.price)
+	if missing then
+		return false, missing
+	end
+	PlayerData.update(player, function(data)
+		data.coins -= truck.price
+		data.trucks[truck.id] = (data.trucks[truck.id] or 0) + 1
+	end)
+	return true, "Your " .. truck.name .. " will call at your trader and haul " .. Format.commas(truck.rate) .. " straws a second."
 end
 
 function buyers.silo(player, d, level)
@@ -3789,7 +4408,7 @@ return Shop
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00029">
+			<Item class="ModuleScript" referent="RBX0002E">
 				<Properties>
 					<string name="Name">Structures</string>
 					<ProtectedString name="Source"><![CDATA[-- Free building on your own plot: place pieces, machines and generators you've bought, take
@@ -3975,7 +4594,7 @@ return Structures
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002A">
+			<Item class="ModuleScript" referent="RBX0002F">
 				<Properties>
 					<string name="Name">Tools</string>
 					<ProtectedString name="Source"><![CDATA[-- The search tools: a pitchfork-shaped Tool per level, coloured from Config.Tools.
@@ -3985,6 +4604,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Format = require(Shared:WaitForChild("Format"))
+local HayLook = require(Shared:WaitForChild("HayLook"))(Config)
 local Build = require(script.Parent.Build)
 
 local Tools = {}
@@ -4043,10 +4663,15 @@ function Tools.make(level, skinId)
 		attach(tool, handle, Vector3.new(0.16, 1.5, 0.16), CFrame.new(x * 0.7, 3.75, 0), colour, material)
 	end
 	-- the hay you've harvested sits on the tines and grows as you harvest (see Carry.luau)
-	local load = attach(tool, handle, Vector3.new(0.2, 0.2, 0.2), CFrame.new(0, 4, 0), Build.rgb({ 222, 186, 92 }), Enum.Material.Grass)
+	local load = HayLook.lump(0.2, false)
 	load.Name = "Load"
-	load.Shape = Enum.PartType.Ball
+	load.Massless = true
 	load.Transparency = 1
+	load.CFrame = handle.CFrame * CFrame.new(0, 4, 0)
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0, weld.Part1 = handle, load
+	weld.Parent = load
+	load.Parent = tool
 	return tool
 end
 
@@ -4101,7 +4726,7 @@ return Tools
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002B">
+			<Item class="ModuleScript" referent="RBX00030">
 				<Properties>
 					<string name="Name">Wheel</string>
 					<ProtectedString name="Source"><![CDATA[-- The Wheel of Fortune: one Robux spin (the WheelSpin product) = one prize, picked here on the
@@ -4175,7 +4800,7 @@ return Wheel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002C">
+			<Item class="ModuleScript" referent="RBX00031">
 				<Properties>
 					<string name="Name">World</string>
 					<ProtectedString name="Source"><![CDATA[-- Hollow Creek Farm: four plots around a hub with the merchant, the Wheel of Fortune and the
@@ -4390,19 +5015,19 @@ return World
 			</Item>
 		</Item>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX0002D">
+	<Item class="StarterPlayer" referent="RBX00032">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX0002E">
+		<Item class="StarterPlayerScripts" referent="RBX00033">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX0002F">
+			<Item class="Folder" referent="RBX00034">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX00030">
+				<Item class="ModuleScript" referent="RBX00035">
 					<Properties>
 						<string name="Name">Animals</string>
 						<ProtectedString name="Source"><![CDATA[-- Brings the farm's animals to life on this screen only: each one ambles to a new spot in its
@@ -4582,7 +5207,7 @@ return Animals
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00031">
+				<Item class="ModuleScript" referent="RBX00036">
 					<Properties>
 						<string name="Name">BuildMode</string>
 						<ProtectedString name="Source"><![CDATA[-- Free building in first person. Z and C pick from your inventory bar (or press M and click
@@ -4809,7 +5434,7 @@ return BuildMode
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00032">
+				<Item class="ModuleScript" referent="RBX00037">
 					<Properties>
 						<string name="Name">Cursor</string>
 						<ProtectedString name="Source"><![CDATA[-- First person locks the mouse to the centre of the screen. Menus need a pointer, so a
@@ -4858,7 +5483,7 @@ return Cursor
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00033">
+				<Item class="ModuleScript" referent="RBX00038">
 					<Properties>
 						<string name="Name">Harvest</string>
 						<ProtectedString name="Source"><![CDATA[-- Aiming in first person: the clump under the crosshair (within reach, on your own pile or the
@@ -5100,7 +5725,7 @@ return Harvest
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00034">
+				<Item class="ModuleScript" referent="RBX00039">
 					<Properties>
 						<string name="Name">HayFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The hay you can see moving: every harvest lifts a lump off the heap onto your tool, and
@@ -5109,20 +5734,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
-local Ui = require(script.Parent.Ui)
+local HayLook = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("HayLook"))(Config)
 local Juice = require(script.Parent.Juice)
 
 local HayFx = {}
-local HAY = Color3.fromRGB(Config.HeapColour[1], Config.HeapColour[2], Config.HeapColour[3])
-local GOLD = Color3.fromRGB(255, 214, 90)
 
 local function lump(position, size, golden)
-	local folder = workspace:FindFirstChild("MyEffects") or workspace
-	return Ui.make("Part", {
-		Anchored = true, CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false,
-		Shape = Enum.PartType.Ball, Material = Enum.Material.Grass, Color = if golden then GOLD else HAY,
-		Size = Vector3.new(size, size * 0.75, size), CFrame = CFrame.new(position), Parent = folder,
-	})
+	local part = HayLook.lump(size, golden)
+	part.Anchored = true
+	part.CFrame = CFrame.new(position) * CFrame.Angles(0, math.random() * 6.28, 0)
+	part.Parent = workspace:FindFirstChild("MyEffects") or workspace
+	return part
 end
 
 -- Where your tool's hay sits on screen: low and to the right, in front of you.
@@ -5139,20 +5761,20 @@ function HayFx.lift(from, golden)
 	end
 	local ball = lump(from, 1.6, golden)
 	local mid = (from + to) / 2 + Vector3.new(0, 1.5, 0)
-	Juice.ease(ball, 0.14, { CFrame = CFrame.new(mid), Size = Vector3.new(1.2, 0.9, 1.2) }, Enum.EasingStyle.Sine)
+	Juice.ease(ball, 0.14, { CFrame = CFrame.new(mid) }, Enum.EasingStyle.Sine)
 	task.delay(0.14, function()
 		local target = toolPoint() or to
-		Juice.ease(ball, 0.14, { CFrame = CFrame.new(target), Size = Vector3.new(0.5, 0.4, 0.5) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		Juice.ease(ball, 0.14, { CFrame = CFrame.new(target) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 	end)
 	Debris:AddItem(ball, 0.3)
 end
 
 -- Dumping: lumps fly from you into the basket, the hay in it rises, then the trader carts it off.
-function HayFx.dump(basket, straws)
+function HayFx.dump(basket, straws, fromYou)
 	if typeof(basket) ~= "Instance" or not basket:IsA("BasePart") then
 		return
 	end
-	local from = toolPoint()
+	local from = if fromYou == false then nil else toolPoint() -- belts and bales just fill the basket
 	local top = basket.Position + Vector3.new(0, basket.Size.X / 2, 0)
 	local count = math.clamp(math.floor(math.log10(math.max(straws, 1)) * 2), 3, 10)
 	for i = 1, count do
@@ -5164,7 +5786,7 @@ function HayFx.dump(basket, straws)
 			local arc = (from + top) / 2 + Vector3.new(math.random(-10, 10) / 10, 3, math.random(-10, 10) / 10)
 			Juice.ease(ball, 0.2, { CFrame = CFrame.new(arc) }, Enum.EasingStyle.Sine)
 			task.delay(0.2, function()
-				Juice.ease(ball, 0.2, { CFrame = CFrame.new(top), Size = Vector3.new(0.6, 0.45, 0.6) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+				Juice.ease(ball, 0.2, { CFrame = CFrame.new(top) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 			end)
 			Debris:AddItem(ball, 0.42)
 		end)
@@ -5193,7 +5815,7 @@ return HayFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00035">
+				<Item class="ModuleScript" referent="RBX0003A">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: a crosshair, your pile's progress at the top, and on the left your
@@ -5266,7 +5888,7 @@ function Hud.mount(gui, open)
 		open("Whistle")
 	end)
 	local boosts = Ui.label({ LayoutOrder = 7, Size = UDim2.fromOffset(220, 50), TextColor3 = Ui.colors.hay, TextYAlignment = Enum.TextYAlignment.Top, Parent = left }, 14)
-	Ui.label({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.fromOffset(560, 18), Text = "M: mouse & menus   Q: shop   B: build   E: use", TextTransparency = 0.3, Parent = gui }, 15)
+	Ui.label({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.fromOffset(560, 18), Text = "M: mouse & menus   Q: shop   B: build   E: use   " .. Config.DropKey .. ": drop hay", TextTransparency = 0.3, Parent = gui }, 15)
 
 	local function refresh()
 		local needles = player:GetAttribute("Needles") or 0
@@ -5298,7 +5920,10 @@ function Hud.mount(gui, open)
 		powerLabel.Text = "Power " .. made .. " made / " .. draw .. " used" .. (if draw > made then "  LOW!" else "")
 		powerLabel.TextColor3 = if draw > made then Color3.fromRGB(255, 130, 110) else Ui.colors.white
 		rateLabel.Text = (player:GetAttribute("Power") or 1) .. " a click, machines " .. string.format("%.1f", player:GetAttribute("MachineRate") or 0) .. "/s"
-		bonusLabel.Text = "Coin bonus x" .. string.format("%.2f", player:GetAttribute("Multiplier") or 1)
+		-- what waits in your trader's basket, and how fast the trader and your trucks sell it
+		local waiting = (player:GetAttribute("BasketStraw") or 0) + (player:GetAttribute("BaledStraw") or 0)
+		bonusLabel.Text = "Basket " .. Format.short(waiting) .. ", sells " .. Format.short(player:GetAttribute("HaulRate") or Config.TraderRate) .. "/s"
+		rateLabel.Text ..= "  x" .. string.format("%.2f", player:GetAttribute("Multiplier") or 1)
 		achievementsButton.Text = "ACHIEVEMENTS " .. (player:GetAttribute("Achievements") or 0) .. "/" .. #Config.Achievements
 		whistle.Visible = (player:GetAttribute("Whistles") or 0) > 0
 		local lines, now = {}, os.time()
@@ -5332,7 +5957,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00036">
+				<Item class="ModuleScript" referent="RBX0003B">
 					<Properties>
 						<string name="Name">Jetpack</string>
 						<ProtectedString name="Source"><![CDATA[-- The Jetpack (a Robux game pass; the server sets the "PassJetpack" attribute when you own it).
@@ -5518,7 +6143,7 @@ return Jetpack
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00037">
+				<Item class="ModuleScript" referent="RBX0003C">
 					<Properties>
 						<string name="Name">Juice</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback that makes harvesting feel good: straw bursts, floating numbers, a soft camera
@@ -5706,7 +6331,7 @@ return Juice
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX00038">
+				<Item class="LocalScript" referent="RBX0003D">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- The player's side of the game: first-person harvesting, building, the menus, and all the
@@ -5818,6 +6443,8 @@ end
 UserInputService.InputBegan:Connect(function(input, processed)
 	if not processed and input.KeyCode == Enum.KeyCode.Q and panels then
 		panels.open("Shop")
+	elseif not processed and input.KeyCode == Enum.KeyCode[Config.DropKey] then
+		Remotes.DropHay:FireServer() -- drop your load as a bundle (or put down a bale)
 	end
 end)
 
@@ -5911,8 +6538,16 @@ Remotes.SearchFx.OnClientEvent:Connect(function(message)
 		Notify.toast("Your tool is full! Sell at the merchant (or buy a bigger tool).", Ui.colors.red)
 	elseif message.kind == "sold" then
 		Juice.coins(message.coins)
-		HayFx.dump(message.basket, message.straws)
-		Notify.toast((if message.reason == "trader" then "Dumped " else "Sold ") .. Format.commas(message.straws) .. " straw for " .. Format.short(message.coins) .. " coins" .. (if message.reason == "auto" then " (Auto Sell)" else ""), Ui.colors.green)
+		Notify.toast("Sold " .. Format.commas(message.straws) .. " straw for " .. Format.short(message.coins) .. " coins", Ui.colors.green)
+	elseif message.kind == "dumped" then
+		HayFx.dump(message.basket, message.straws, message.reason ~= "bale" and message.reason ~= "belt")
+		if message.coins > 0 then
+			Juice.coins(message.coins) -- golden straw is paid for at once
+		end
+		local what = if message.reason == "bale" then "A bale of " elseif message.reason == "belt" then "The belt brought " else "Dumped "
+		Notify.toast(what .. Format.commas(message.straws) .. " straw" .. (if message.reason == "auto" then " (Auto Sell)" else "") .. " into your basket. Your trader sells it as you go.", Ui.colors.green)
+	elseif message.kind == "paid" then
+		Juice.coins(message.coins)
 	elseif message.kind == "find" then
 		Juice.burst(message.position, 30, true)
 		Juice.confetti()
@@ -5965,7 +6600,7 @@ end)
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00039">
+				<Item class="ModuleScript" referent="RBX0003E">
 					<Properties>
 						<string name="Name">Music</string>
 						<ProtectedString name="Source"><![CDATA[-- Soft background music: the Config.Music playlist in a loop, low and relaxing, fading gently
@@ -6108,7 +6743,7 @@ return Music
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0003A">
+				<Item class="ModuleScript" referent="RBX0003F">
 					<Properties>
 						<string name="Name">Notify</string>
 						<ProtectedString name="Source"><![CDATA[-- Messages: small toasts under the haystack counter, and a big banner for case news.
@@ -6211,7 +6846,7 @@ return Notify
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0003B">
+				<Item class="ModuleScript" referent="RBX00040">
 					<Properties>
 						<string name="Name">Offer</string>
 						<ProtectedString name="Source"><![CDATA[-- One gentle Robux suggestion per session: after Config.OfferAfterClumps clumps harvested since
@@ -6317,7 +6952,7 @@ return Offer
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0003C">
+				<Item class="ModuleScript" referent="RBX00041">
 					<Properties>
 						<string name="Name">Panels</string>
 						<ProtectedString name="Source"><![CDATA[-- The windows: Shop, secret Achievements, Finds & Skins, and the Wheel of Fortune (odds first).
@@ -6506,7 +7141,7 @@ return Panels
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0003D">
+				<Item class="ModuleScript" referent="RBX00042">
 					<Properties>
 						<string name="Name">Shop</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop window: Tools, Perks, Storage (buckets and silos), Build (stairs, lifts...), Machines, Power and Robux.
@@ -6591,7 +7226,7 @@ function Shop.mount(gui, notify)
 		order += 1
 		local list = Ui.make("Frame", { Name = name, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Visible = false, Parent = body }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
 		pages[name], refreshers[name] = list, build(list)
-		Ui.button(name, colour, { LayoutOrder = order, Size = UDim2.new(1 / 7, -4, 1, 0), Parent = tabs }).Activated:Connect(function()
+		Ui.button(name, colour, { LayoutOrder = order, Size = UDim2.new(1 / 8, -4, 1, 0), Parent = tabs }).Activated:Connect(function()
 			for key, p in pairs(pages) do
 				p.Visible = key == name
 			end
@@ -6692,6 +7327,25 @@ function Shop.mount(gui, notify)
 		return "Makes " .. def.power .. " power."
 	end)
 
+	-- trucks call at your trader and haul from the basket
+	page("Trucks", Color3.fromRGB(120, 90, 60), function(list)
+		local rows, subs = {}, {}
+		for i, truck in ipairs(Config.Trucks) do
+			rows[i], subs[i] = row(list, i, truck.name, "")
+			rows[i].Activated:Connect(function()
+				buy("truck", i, rows[i])
+			end)
+		end
+		Ui.paragraph("Your trader sells " .. Config.TraderRate .. " straws a second from the basket by himself. Trucks add to that. Bales count " .. Config.BaleCompaction .. "x.", { LayoutOrder = 99, TextSize = 16, TextColor3 = Ui.colors.grey, Parent = list })
+		return function()
+			for i, truck in ipairs(Config.Trucks) do
+				local own = player:GetAttribute("Truck_" .. truck.id) or 0
+				subs[i].Text = "Hauls " .. Format.commas(truck.rate) .. " straws a second. You have " .. own .. "/" .. truck.max .. "."
+				price(rows[i], truck.price, own >= truck.max, true, "MAXED")
+			end
+		end
+	end)
+
 	page("Robux", Color3.fromRGB(80, 160, 90), function(list)
 		local any = false
 		for i, item in ipairs(ROBUX) do
@@ -6737,7 +7391,7 @@ return Shop
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0003E">
+				<Item class="ModuleScript" referent="RBX00043">
 					<Properties>
 						<string name="Name">Teleport</string>
 						<ProtectedString name="Source"><![CDATA[-- The teleporter menu: standing on one of your pads, pick any of your other pads (listed by
@@ -6808,7 +7462,7 @@ return Teleport
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0003F">
+				<Item class="ModuleScript" referent="RBX00044">
 					<Properties>
 						<string name="Name">Ui</string>
 						<ProtectedString name="Source"><![CDATA[-- A small UI kit: the farm colours, rounded wooden buttons and windows that scale with
@@ -6983,7 +7637,7 @@ return Ui
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00040">
+				<Item class="ModuleScript" referent="RBX00045">
 					<Properties>
 						<string name="Name">WorldFx</string>
 						<ProtectedString name="Source"><![CDATA[-- World effects on your screen: the glowing needle clump (Wheel jackpot), the wheel turning
@@ -7104,7 +7758,7 @@ return WorldFx
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX00041">
+	<Item class="Workspace" referent="RBX00046">
 		<Properties>
 			<string name="Name">Workspace</string>
 			<bool name="StreamingEnabled">false</bool>

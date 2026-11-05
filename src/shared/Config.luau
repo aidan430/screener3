@@ -19,6 +19,19 @@ Config.PileRadiusBottom = 38
 Config.PileRadiusTop = 4
 Config.PileCurve = 1.6 -- above 1: a wide, sloping base and a steep, narrow top
 Config.HeapColour = { 222, 186, 92 } -- straw gold (the terrain Grass material is the heap)
+-- Your hay texture: upload garden-hay.jpg (and its normal map) in Studio (Asset Manager > Import),
+-- paste the IDs here ("rbxassetid://123"), rebuild. The heap, the hay on tools and the bundles
+-- then wear it. Empty = plain straw-gold Grass.
+Config.HayTexture = ""
+Config.HayNormal = ""
+Config.HayTextureStuds = 8 -- how many studs one copy of the texture covers
+-- The hay model (assets/hay/garden-hay-roblox.obj, about 7,600 triangles): import it in
+-- Studio, paste its MeshId and the texture's ID here. Lumps on tools, flying hay, bundles and
+-- the mounds around the heap then use it. Empty = rounded hay balls.
+Config.HayMesh = ""
+Config.HayMeshTexture = ""
+Config.HayTint = { 255, 246, 225 }
+Config.HeapMounds = 16 -- loose hay mounds round the foot of each heap (just for looks) -- the heap's colour with the texture on (white = the image as is)
 Config.MaxSlopeAngle = 46 -- players can't walk up anything steeper: they build to climb
 -- The needle hides deep inside the upper heap: between these shares of the height, and no
 -- further from the middle than this share of the heap's width there. Machines peel the heap
@@ -93,10 +106,36 @@ Config.Pieces = {
 	{ id = "escalator", name = "Escalator", price = 4000, size = { 8, 10, 10 }, text = "Stairs that carry you up 10 studs." },
 	{ id = "elevator", name = "Elevator", price = 30000, size = { 10, 51, 10 }, text = "A 50-stud lift. Press E at the bottom or top." },
 	{ id = "teleporter", name = "Teleporter Pad", price = 25000, size = { 8, 1, 8 }, text = "Step on, press E, pick any of your other pads." },
+	{ id = "conveyor", name = "Conveyor Belt", price = 800, size = { 6, 1, 12 }, text = "Carries dropped hay (G) along, towards its arrow." },
+	{ id = "chute", name = "Conveyor Down", price = 1500, size = { 6, 10, 12 }, text = "A belt that carries hay down 10 studs, off a platform." },
+	{ id = "baler", name = "Bale Maker", price = 60000, max = 3, size = { 8, 7, 10 }, text = "Feed it hay at the back; it pushes out bales. Trucks carry bales 3x as easily." },
 	{ id = "trader", name = "Trader's Stall", price = 0, max = 1, size = { 12, 12, 8 }, text = "Your trader. Dump your hay in the basket. Move it anywhere, even up a platform." },
 }
 Config.TraderDistance = 50 -- your trader's stall starts this far from your plot's centre, towards the hub
-Config.BasketDrainSeconds = 4 -- the trader carts the basket away this fast (just for show)
+Config.BasketDrainSeconds = 4 -- how fast the basket's hay level eases down after a dump (just for show)
+
+-- Hauling: what you dump waits in your trader's basket. The trader himself buys TraderRate
+-- straws a second; trucks fetch more (rate = straws a second each, as one load a trip).
+-- Baled hay packs tighter: a truck or the trader moves BaleCompaction times as much of it.
+Config.TraderRate = 8
+Config.TruckTripSeconds = 40
+Config.Trucks = {
+	{ id = "van", name = "Farm Van", rate = 15, price = 8000, max = 2, size = { 6, 6, 11 }, color = { 236, 236, 228 } },
+	{ id = "mini", name = "Mini Truck", rate = 35, price = 60000, max = 2, size = { 6, 6, 13 }, color = { 70, 130, 200 } },
+	{ id = "semi", name = "Semi Truck", rate = 90, price = 500000, max = 2, size = { 8, 9, 24 }, color = { 196, 72, 56 } },
+	{ id = "big", name = "Large Truck", rate = 220, price = 3000000, max = 2, size = { 9, 10, 30 }, color = { 60, 120, 70 } },
+}
+Config.BasketShowFull = 5000 -- straws waiting at which the basket looks full
+
+-- Loose hay: press DropKey to drop what you carry as a bundle. Conveyors carry bundles; your
+-- trader's basket and bale makers take them in. Bundles and bales left lying for
+-- LooseHayMinutes go to your basket by themselves, and so does everything when you leave.
+Config.DropKey = "G"
+Config.MaxLooseHay = 40 -- bundles and bales on one plot at once
+Config.LooseHayMinutes = 10
+Config.ConveyorSpeed = 10 -- studs a second
+Config.BaleStraws = 2000 -- straws in one bale
+Config.BaleCompaction = 3
 Config.BuildGrid = 1 -- placement snaps to this many studs
 Config.MaxPlaced = 400 -- pieces, machines and generators on one plot
 

@@ -33,6 +33,10 @@ function Profile.fresh(saved)
 		carried = number(saved, "carried", 0),
 		carriedGolden = number(saved, "carriedGolden", 0),
 		siloStraw = number(saved, "siloStraw", 0),
+		basket = number(saved, "basket", 0), -- loose straws waiting in the trader's basket
+		baled = number(saved, "baled", 0), -- baled straws waiting there
+		baleStore = number(saved, "baleStore", 0), -- straws inside your bale makers, not yet a bale
+		loose = number(saved, "loose", 0), -- straws lying about as bundles and bales
 		needleClump = math.floor(number(saved, "needleClump", 0)),
 		revealed = saved.revealed == true,
 		needles = number(saved, "needles", 0),
@@ -45,6 +49,7 @@ function Profile.fresh(saved)
 		inventory = {},
 		placed = {},
 		skins = {},
+		trucks = {},
 		stats = {},
 		achievements = {},
 		boosts = {},
@@ -86,6 +91,9 @@ function Profile.fresh(saved)
 				table.insert(d.placed, { k = p.k, x = p.x, y = p.y, z = p.z, r = if type(p.r) == "number" then p.r else 0 })
 			end
 		end
+	end
+	for _, truck in ipairs(Config.Trucks) do
+		d.trucks[truck.id] = math.clamp(math.floor(number(saved.trucks, truck.id, 0)), 0, truck.max)
 	end
 	for _, prize in ipairs(Config.Wheel) do
 		if not prize.reveal and type(saved.skins) == "table" and saved.skins[prize.id] == true then

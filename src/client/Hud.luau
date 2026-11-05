@@ -68,7 +68,7 @@ function Hud.mount(gui, open)
 		open("Whistle")
 	end)
 	local boosts = Ui.label({ LayoutOrder = 7, Size = UDim2.fromOffset(220, 50), TextColor3 = Ui.colors.hay, TextYAlignment = Enum.TextYAlignment.Top, Parent = left }, 14)
-	Ui.label({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.fromOffset(560, 18), Text = "M: mouse & menus   Q: shop   B: build   E: use", TextTransparency = 0.3, Parent = gui }, 15)
+	Ui.label({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.fromOffset(560, 18), Text = "M: mouse & menus   Q: shop   B: build   E: use   " .. Config.DropKey .. ": drop hay", TextTransparency = 0.3, Parent = gui }, 15)
 
 	local function refresh()
 		local needles = player:GetAttribute("Needles") or 0
@@ -100,7 +100,10 @@ function Hud.mount(gui, open)
 		powerLabel.Text = "Power " .. made .. " made / " .. draw .. " used" .. (if draw > made then "  LOW!" else "")
 		powerLabel.TextColor3 = if draw > made then Color3.fromRGB(255, 130, 110) else Ui.colors.white
 		rateLabel.Text = (player:GetAttribute("Power") or 1) .. " a click, machines " .. string.format("%.1f", player:GetAttribute("MachineRate") or 0) .. "/s"
-		bonusLabel.Text = "Coin bonus x" .. string.format("%.2f", player:GetAttribute("Multiplier") or 1)
+		-- what waits in your trader's basket, and how fast the trader and your trucks sell it
+		local waiting = (player:GetAttribute("BasketStraw") or 0) + (player:GetAttribute("BaledStraw") or 0)
+		bonusLabel.Text = "Basket " .. Format.short(waiting) .. ", sells " .. Format.short(player:GetAttribute("HaulRate") or Config.TraderRate) .. "/s"
+		rateLabel.Text ..= "  x" .. string.format("%.2f", player:GetAttribute("Multiplier") or 1)
 		achievementsButton.Text = "ACHIEVEMENTS " .. (player:GetAttribute("Achievements") or 0) .. "/" .. #Config.Achievements
 		whistle.Visible = (player:GetAttribute("Whistles") or 0) > 0
 		local lines, now = {}, os.time()
