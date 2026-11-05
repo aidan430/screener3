@@ -72,8 +72,11 @@ function Haystack.build()
 		light.Brightness = 1.2
 		light.Parent = lamp
 	end
-	local cloud = Build.part({ name = "Cloud", shape = "Ball", size = Vector3.new(130, 30, 130), cframe = CFrame.new(World.LOFT - Vector3.new(0, 16, 0)), color = { 255, 240, 220 }, material = "Sand", collide = false, transparency = 0.15, parent = loft })
-	cloud.CastShadow = false
+	for i = 0, 7 do -- a cloud under the floor, from overlapping round puffs
+		local a = i / 8 * math.pi * 2
+		Build.part({ name = "Cloud", shape = "Ball", size = Vector3.new(44, 44, 44), cframe = CFrame.new(World.LOFT + Vector3.new(math.cos(a) * 34, -22, math.sin(a) * 34)), color = { 255, 240, 220 }, material = "Sand", collide = false, shadow = false, transparency = 0.15, parent = loft })
+	end
+	Build.part({ name = "Cloud", shape = "Ball", size = Vector3.new(60, 60, 60), cframe = CFrame.new(World.LOFT + Vector3.new(0, -30, 0)), color = { 255, 240, 220 }, material = "Sand", collide = false, shadow = false, transparency = 0.15, parent = loft })
 	local sign = Build.part({ name = "LoftSign", size = Vector3.new(16, 3, 0.4), cframe = CFrame.new(World.LOFT + Vector3.new(0, 8, 42)), color = { 60, 44, 30 }, material = "Wood", parent = loft })
 	Build.text(sign, Enum.NormalId.Back, "THE GOLDEN LOFT: golden straw pays 20x", { color = Color3.fromRGB(245, 200, 66) })
 	local pad = Build.part({ name = "LoftPad", size = Vector3.new(8, 0.4, 8), cframe = CFrame.new(World.LOFT + Vector3.new(0, 0.2, 36)), color = { 245, 200, 66 }, material = "Neon", parent = loft })

@@ -63,7 +63,10 @@ task.spawn(function()
 		local kind, text, colour = nil, "", Ui.colors.green
 		if root then
 			local inLoft = root.Position.Y > 100
-			player:SetAttribute("InLoft", inLoft)
+			if Hud.state.inLoft ~= inLoft then
+				Hud.state.inLoft = inLoft
+				Hud.refresh()
+			end
 			local carried = (player:GetAttribute("BagStraw") or 0) + (player:GetAttribute("BagGolden") or 0)
 			if not inLoft and flat(root.Position, MERCHANT) <= Config.MerchantRange then
 				kind, text = "sell", "SELL " .. Format.commas(carried) .. " STRAW"
@@ -85,7 +88,8 @@ Remotes.SearchFx.OnClientEvent:Connect(function(message)
 	if message.kind == "search" then
 		WorldFx.searched(message)
 		if message.warmth then
-			player:SetAttribute("Warmth", message.warmth)
+			Hud.state.warmth = message.warmth
+			Hud.refresh()
 		end
 		if message.full then
 			Notify.toast("Your bag is full! Sell it to the merchant.", Ui.colors.red)

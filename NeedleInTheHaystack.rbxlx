@@ -658,8 +658,11 @@ function Haystack.build()
 		light.Brightness = 1.2
 		light.Parent = lamp
 	end
-	local cloud = Build.part({ name = "Cloud", shape = "Ball", size = Vector3.new(130, 30, 130), cframe = CFrame.new(World.LOFT - Vector3.new(0, 16, 0)), color = { 255, 240, 220 }, material = "Sand", collide = false, transparency = 0.15, parent = loft })
-	cloud.CastShadow = false
+	for i = 0, 7 do -- a cloud under the floor, from overlapping round puffs
+		local a = i / 8 * math.pi * 2
+		Build.part({ name = "Cloud", shape = "Ball", size = Vector3.new(44, 44, 44), cframe = CFrame.new(World.LOFT + Vector3.new(math.cos(a) * 34, -22, math.sin(a) * 34)), color = { 255, 240, 220 }, material = "Sand", collide = false, shadow = false, transparency = 0.15, parent = loft })
+	end
+	Build.part({ name = "Cloud", shape = "Ball", size = Vector3.new(60, 60, 60), cframe = CFrame.new(World.LOFT + Vector3.new(0, -30, 0)), color = { 255, 240, 220 }, material = "Sand", collide = false, shadow = false, transparency = 0.15, parent = loft })
 	local sign = Build.part({ name = "LoftSign", size = Vector3.new(16, 3, 0.4), cframe = CFrame.new(World.LOFT + Vector3.new(0, 8, 42)), color = { 60, 44, 30 }, material = "Wood", parent = loft })
 	Build.text(sign, Enum.NormalId.Back, "THE GOLDEN LOFT: golden straw pays 20x", { color = Color3.fromRGB(245, 200, 66) })
 	local pad = Build.part({ name = "LoftPad", size = Vector3.new(8, 0.4, 8), cframe = CFrame.new(World.LOFT + Vector3.new(0, 0.2, 36)), color = { 245, 200, 66 }, material = "Neon", parent = loft })
@@ -762,6 +765,7 @@ PlayerData.onLoaded(function(player, saveable)
 		end
 	end)
 	if not saveable and not RunService:IsStudio() then
+		task.wait(6) -- give the player's screen time to start listening
 		Remotes.Announce:FireClient(player, {
 			kind = "notice",
 			text = "Saving isn't working right now, so progress in this server won't be kept.",
@@ -842,12 +846,8 @@ function grants.MerchantWhistle(player)
 end
 
 function grants.StrawBlast(player)
-	local before = PlayerData.get(player).searched
-	for _ = 1, 50 do -- searched in handfuls so the bag, the needle and the finds all count
-		Search.blast(player, Config.StrawBlastAmount / 50)
-	end
-	local after = PlayerData.get(player).searched
-	return "Straw Blast! " .. Format.commas(math.max(0, after - before)) .. " straws blown through your haystack."
+	local blasted = Search.blast(player, Config.StrawBlastAmount) or 0
+	return "Straw Blast! " .. Format.commas(blasted) .. " straws blown through your haystack and sold."
 end
 
 -- Roblox calls this for every developer product purchase, retrying until we say granted.
@@ -1250,6 +1250,7 @@ local World = require(script.Parent.World)
 
 local Search = {}
 local lastSearch = {}
+local carry = {} -- [player] = machine straws not yet whole
 local rng = Random.new()
 
 local function root(player)
@@ -1326,7 +1327,7 @@ local function dig(player, d, where, amount)
 	local golden = where == "gold"
 	local progress = if golden then d.loft else d
 	local total = if golden then Config.Loft.straws else Config.TotalStraws
-	amount = math.min(amount, bagRoom(d), total - progress.searched)
+	amount = math.floor(math.min(amount, bagRoom(d), total - progress.searched))
 	if amount <= 0 then
 		return 0, false
 	end
@@ -1400,8 +1401,9 @@ local function tickMachines()
 		local d = PlayerData.get(player)
 		if d then
 			local flags = PlayerData.flags(player)
-			local rate = Economy.machineRate(d, flags.doubleMachines)
-			if rate > 0 and bagRoom(d) > 0 then
+			local rate = Economy.machineRate(d, flags.doubleMachines) + (carry[player] or 0)
+			carry[player] = rate - math.floor(rate)
+			if rate >= 1 and bagRoom(d) > 0 then
 				local amount, hit = dig(player, d, "hay", rate)
 				if hit then
 					needleFound(player, false)
@@ -1420,18 +1422,27 @@ function Search.blast(player, amount)
 		return
 	end
 	local flags = PlayerData.flags(player)
-	if bagRoom(d) <= 0 then
-		Search.sell(player, "auto") -- a blast always sells on the spot
+	local total = 0
+	while amount > 0 do -- a blast sells the bag on the spot as often as it fills
+		if bagRoom(d) <= 0 then
+			Search.sell(player, "auto")
+		end
+		local taken, hit = dig(player, d, "hay", amount)
+		if taken <= 0 then
+			break
+		end
+		amount -= taken
+		total += taken
+		if hit then
+			Search.sell(player, "auto")
+			needleFound(player, false)
+		end
 	end
-	local taken, hit = dig(player, d, "hay", amount)
-	if taken > 0 then
-		Search.sell(player, "auto")
-	end
-	if hit then
-		needleFound(player, false)
-	elseif taken > 0 and rng:NextNumber() < Economy.luckyChance(d, flags.luckyCharm) * 10 then
+	Search.sell(player, "auto")
+	if total > 0 and rng:NextNumber() < Economy.luckyChance(d, flags.luckyCharm) * 10 then
 		luckyFind(player, d, flags)
 	end
+	return total
 end
 
 -- VIP: machines kept working for up to an hour after the player left.
@@ -1443,7 +1454,9 @@ function Search.offline(player)
 	local seconds = math.clamp(os.time() - d.lastSeen, 0, Config.VipOfflineSeconds)
 	local amount = dig(player, d, "hay", math.floor(Economy.machineRate(d, PlayerData.flags(player).doubleMachines) * seconds))
 	if amount > 0 then
-		Remotes.Announce:FireClient(player, { kind = "notice", text = "Your machines gathered " .. Format.commas(amount) .. " straws while you were away (VIP)." })
+		task.delay(6, function()
+			Remotes.Announce:FireClient(player, { kind = "notice", text = "Your machines gathered " .. Format.commas(amount) .. " straws while you were away (VIP)." })
+		end)
 	end
 end
 
@@ -1477,6 +1490,7 @@ function Search.init()
 	end
 	Players.PlayerRemoving:Connect(function(player)
 		lastSearch[player] = nil
+		carry[player] = nil
 	end)
 	task.spawn(function()
 		while true do
@@ -1884,7 +1898,7 @@ local function merchant(folder)
 		Build.part({ name = "MerchantLeg", size = Vector3.new(0.9, 2, 0.9), cframe = body * CFrame.new(x * 0.4, 1, 0), color = { 60, 50, 44 }, material = "Fabric", parent = folder })
 	end
 	Build.part({ name = "Scales", size = Vector3.new(2, 0.3, 1.2), cframe = cf * CFrame.new(-3, 3.75, -3), color = { 200, 170, 80 }, material = "Metal", parent = folder })
-	local coins = Build.part({ name = "CoinPile", shape = "Ball", size = Vector3.new(1.6, 1, 1.6), cframe = cf * CFrame.new(3, 3.9, -3), color = { 245, 200, 66 }, material = "Metal", parent = folder })
+	local coins = Build.part({ name = "CoinPile", shape = "Ball", size = Vector3.new(1.4, 1.4, 1.4), cframe = cf * CFrame.new(3, 4.1, -3), color = { 245, 200, 66 }, material = "Metal", parent = folder })
 	coins.Reflectance = 0.3
 end
 
@@ -1967,6 +1981,7 @@ local Ui = require(script.Parent.Ui)
 local player = Players.LocalPlayer
 
 local Hud = {}
+Hud.state = { inLoft = false, warmth = nil } -- set by Main.client; never Player attributes
 
 function Hud.mount(gui, open)
 	local top = Ui.make("Frame", {
@@ -2020,7 +2035,7 @@ function Hud.mount(gui, open)
 
 	local function refresh()
 		local searched, total = player:GetAttribute("Searched") or 0, Config.TotalStraws
-		local inLoft = player:GetAttribute("InLoft") == true
+		local inLoft = Hud.state.inLoft
 		if inLoft then
 			searched, total = player:GetAttribute("LoftSearched") or 0, Config.Loft.straws
 			title.Text = "THE GOLDEN LOFT: " .. (player:GetAttribute("GoldenNeedles") or 0) .. " golden needle(s) found"
@@ -2029,7 +2044,7 @@ function Hud.mount(gui, open)
 		end
 		countLabel.Text = Format.commas(total - searched) .. " straws left. 1 needle."
 		fill.Size = UDim2.fromScale(math.clamp(searched / total, 0, 1), 1)
-		local w = player:GetAttribute("Warmth")
+		local w = Hud.state.warmth
 		warmth.Text = if (player:GetAttribute("Tool") or 1) >= Config.DetectorLevel and w then
 			"Needle Detector: " .. (if w >= 0.99 then "IT'S IN THE NEXT HANDFUL!" elseif w > 0.7 then "HOT" elseif w > 0.3 then "warm" else "cold")
 		else ""
@@ -2064,6 +2079,7 @@ function Hud.mount(gui, open)
 			task.wait(5) -- the boost timers count down
 		end
 	end)
+	Hud.refresh = refresh
 	return { refresh = refresh }
 end
 
@@ -2139,7 +2155,10 @@ task.spawn(function()
 		local kind, text, colour = nil, "", Ui.colors.green
 		if root then
 			local inLoft = root.Position.Y > 100
-			player:SetAttribute("InLoft", inLoft)
+			if Hud.state.inLoft ~= inLoft then
+				Hud.state.inLoft = inLoft
+				Hud.refresh()
+			end
 			local carried = (player:GetAttribute("BagStraw") or 0) + (player:GetAttribute("BagGolden") or 0)
 			if not inLoft and flat(root.Position, MERCHANT) <= Config.MerchantRange then
 				kind, text = "sell", "SELL " .. Format.commas(carried) .. " STRAW"
@@ -2161,7 +2180,8 @@ Remotes.SearchFx.OnClientEvent:Connect(function(message)
 	if message.kind == "search" then
 		WorldFx.searched(message)
 		if message.warmth then
-			player:SetAttribute("Warmth", message.warmth)
+			Hud.state.warmth = message.warmth
+			Hud.refresh()
 		end
 		if message.full then
 			Notify.toast("Your bag is full! Sell it to the merchant.", Ui.colors.red)

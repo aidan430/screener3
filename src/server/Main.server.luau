@@ -33,6 +33,7 @@ PlayerData.onLoaded(function(player, saveable)
 		end
 	end)
 	if not saveable and not RunService:IsStudio() then
+		task.wait(6) -- give the player's screen time to start listening
 		Remotes.Announce:FireClient(player, {
 			kind = "notice",
 			text = "Saving isn't working right now, so progress in this server won't be kept.",

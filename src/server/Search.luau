@@ -17,6 +17,7 @@ local World = require(script.Parent.World)
 
 local Search = {}
 local lastSearch = {}
+local carry = {} -- [player] = machine straws not yet whole
 local rng = Random.new()
 
 local function root(player)
@@ -93,7 +94,7 @@ local function dig(player, d, where, amount)
 	local golden = where == "gold"
 	local progress = if golden then d.loft else d
 	local total = if golden then Config.Loft.straws else Config.TotalStraws
-	amount = math.min(amount, bagRoom(d), total - progress.searched)
+	amount = math.floor(math.min(amount, bagRoom(d), total - progress.searched))
 	if amount <= 0 then
 		return 0, false
 	end
@@ -167,8 +168,9 @@ local function tickMachines()
 		local d = PlayerData.get(player)
 		if d then
 			local flags = PlayerData.flags(player)
-			local rate = Economy.machineRate(d, flags.doubleMachines)
-			if rate > 0 and bagRoom(d) > 0 then
+			local rate = Economy.machineRate(d, flags.doubleMachines) + (carry[player] or 0)
+			carry[player] = rate - math.floor(rate)
+			if rate >= 1 and bagRoom(d) > 0 then
 				local amount, hit = dig(player, d, "hay", rate)
 				if hit then
 					needleFound(player, false)
@@ -187,18 +189,27 @@ function Search.blast(player, amount)
 		return
 	end
 	local flags = PlayerData.flags(player)
-	if bagRoom(d) <= 0 then
-		Search.sell(player, "auto") -- a blast always sells on the spot
+	local total = 0
+	while amount > 0 do -- a blast sells the bag on the spot as often as it fills
+		if bagRoom(d) <= 0 then
+			Search.sell(player, "auto")
+		end
+		local taken, hit = dig(player, d, "hay", amount)
+		if taken <= 0 then
+			break
+		end
+		amount -= taken
+		total += taken
+		if hit then
+			Search.sell(player, "auto")
+			needleFound(player, false)
+		end
 	end
-	local taken, hit = dig(player, d, "hay", amount)
-	if taken > 0 then
-		Search.sell(player, "auto")
-	end
-	if hit then
-		needleFound(player, false)
-	elseif taken > 0 and rng:NextNumber() < Economy.luckyChance(d, flags.luckyCharm) * 10 then
+	Search.sell(player, "auto")
+	if total > 0 and rng:NextNumber() < Economy.luckyChance(d, flags.luckyCharm) * 10 then
 		luckyFind(player, d, flags)
 	end
+	return total
 end
 
 -- VIP: machines kept working for up to an hour after the player left.
@@ -210,7 +221,9 @@ function Search.offline(player)
 	local seconds = math.clamp(os.time() - d.lastSeen, 0, Config.VipOfflineSeconds)
 	local amount = dig(player, d, "hay", math.floor(Economy.machineRate(d, PlayerData.flags(player).doubleMachines) * seconds))
 	if amount > 0 then
-		Remotes.Announce:FireClient(player, { kind = "notice", text = "Your machines gathered " .. Format.commas(amount) .. " straws while you were away (VIP)." })
+		task.delay(6, function()
+			Remotes.Announce:FireClient(player, { kind = "notice", text = "Your machines gathered " .. Format.commas(amount) .. " straws while you were away (VIP)." })
+		end)
 	end
 end
 
@@ -244,6 +257,7 @@ function Search.init()
 	end
 	Players.PlayerRemoving:Connect(function(player)
 		lastSearch[player] = nil
+		carry[player] = nil
 	end)
 	task.spawn(function()
 		while true do

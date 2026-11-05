@@ -59,12 +59,8 @@ function grants.MerchantWhistle(player)
 end
 
 function grants.StrawBlast(player)
-	local before = PlayerData.get(player).searched
-	for _ = 1, 50 do -- searched in handfuls so the bag, the needle and the finds all count
-		Search.blast(player, Config.StrawBlastAmount / 50)
-	end
-	local after = PlayerData.get(player).searched
-	return "Straw Blast! " .. Format.commas(math.max(0, after - before)) .. " straws blown through your haystack."
+	local blasted = Search.blast(player, Config.StrawBlastAmount) or 0
+	return "Straw Blast! " .. Format.commas(blasted) .. " straws blown through your haystack and sold."
 end
 
 -- Roblox calls this for every developer product purchase, retrying until we say granted.

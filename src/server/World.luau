@@ -146,7 +146,7 @@ local function merchant(folder)
 		Build.part({ name = "MerchantLeg", size = Vector3.new(0.9, 2, 0.9), cframe = body * CFrame.new(x * 0.4, 1, 0), color = { 60, 50, 44 }, material = "Fabric", parent = folder })
 	end
 	Build.part({ name = "Scales", size = Vector3.new(2, 0.3, 1.2), cframe = cf * CFrame.new(-3, 3.75, -3), color = { 200, 170, 80 }, material = "Metal", parent = folder })
-	local coins = Build.part({ name = "CoinPile", shape = "Ball", size = Vector3.new(1.6, 1, 1.6), cframe = cf * CFrame.new(3, 3.9, -3), color = { 245, 200, 66 }, material = "Metal", parent = folder })
+	local coins = Build.part({ name = "CoinPile", shape = "Ball", size = Vector3.new(1.4, 1.4, 1.4), cframe = cf * CFrame.new(3, 4.1, -3), color = { 245, 200, 66 }, material = "Metal", parent = folder })
 	coins.Reflectance = 0.3
 end
 

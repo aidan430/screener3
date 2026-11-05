@@ -12,6 +12,7 @@ local Ui = require(script.Parent.Ui)
 local player = Players.LocalPlayer
 
 local Hud = {}
+Hud.state = { inLoft = false, warmth = nil } -- set by Main.client; never Player attributes
 
 function Hud.mount(gui, open)
 	local top = Ui.make("Frame", {
@@ -65,7 +66,7 @@ function Hud.mount(gui, open)
 
 	local function refresh()
 		local searched, total = player:GetAttribute("Searched") or 0, Config.TotalStraws
-		local inLoft = player:GetAttribute("InLoft") == true
+		local inLoft = Hud.state.inLoft
 		if inLoft then
 			searched, total = player:GetAttribute("LoftSearched") or 0, Config.Loft.straws
 			title.Text = "THE GOLDEN LOFT: " .. (player:GetAttribute("GoldenNeedles") or 0) .. " golden needle(s) found"
@@ -74,7 +75,7 @@ function Hud.mount(gui, open)
 		end
 		countLabel.Text = Format.commas(total - searched) .. " straws left. 1 needle."
 		fill.Size = UDim2.fromScale(math.clamp(searched / total, 0, 1), 1)
-		local w = player:GetAttribute("Warmth")
+		local w = Hud.state.warmth
 		warmth.Text = if (player:GetAttribute("Tool") or 1) >= Config.DetectorLevel and w then
 			"Needle Detector: " .. (if w >= 0.99 then "IT'S IN THE NEXT HANDFUL!" elseif w > 0.7 then "HOT" elseif w > 0.3 then "warm" else "cold")
 		else ""
@@ -109,6 +110,7 @@ function Hud.mount(gui, open)
 			task.wait(5) -- the boost timers count down
 		end
 	end)
+	Hud.refresh = refresh
 	return { refresh = refresh }
 end
 
