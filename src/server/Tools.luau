@@ -7,6 +7,7 @@ local Config = require(Shared:WaitForChild("Config"))
 local Format = require(Shared:WaitForChild("Format"))
 local HayLook = require(Shared:WaitForChild("HayLook"))(Config)
 local Build = require(script.Parent.Build)
+local ToolLook = require(script.Parent.ToolLook)
 
 local Tools = {}
 
@@ -57,18 +58,34 @@ function Tools.make(level, skinId)
 	handle.Massless = true
 	handle.CFrame = CFrame.new()
 	handle.Parent = tool
-	local colour = Build.rgb(if skin then skin.head else def.head)
-	local material = Enum.Material[if skin then skin.material else def.material]
-	attach(tool, handle, Vector3.new(1.7, 0.3, 0.3), CFrame.new(0, 2.9, 0), colour, material)
-	for x = -1, 1 do
-		attach(tool, handle, Vector3.new(0.16, 1.5, 0.16), CFrame.new(x * 0.7, 3.75, 0), colour, material)
+	local look, length = ToolLook.make(def)
+	local top = 4 -- where the hay sits: on the tines, or on the end of an imported tool
+	if look then
+		-- an imported model: the handle becomes an invisible grip inside it
+		handle.Size = Vector3.new(0.3, length, 0.3)
+		handle.Transparency = 1
+		tool.Grip = CFrame.new(0, -length * 0.2, 0)
+		local flip = if def.flip == false then CFrame.new() else CFrame.Angles(math.rad(180), 0, 0)
+		look.CFrame = handle.CFrame * flip * look:GetAttribute("Turn")
+		local w = Instance.new("WeldConstraint")
+		w.Part0, w.Part1 = handle, look
+		w.Parent = look
+		look.Parent = tool
+		top = length / 2
+	else
+		local colour = Build.rgb(if skin then skin.head else def.head)
+		local material = Enum.Material[if skin then skin.material else def.material]
+		attach(tool, handle, Vector3.new(1.7, 0.3, 0.3), CFrame.new(0, 2.9, 0), colour, material)
+		for x = -1, 1 do
+			attach(tool, handle, Vector3.new(0.16, 1.5, 0.16), CFrame.new(x * 0.7, 3.75, 0), colour, material)
+		end
 	end
 	-- the hay you've harvested sits on the tines and grows as you harvest (see Carry.luau)
 	local load = HayLook.lump(0.2, false)
 	load.Name = "Load"
 	load.Massless = true
 	load.Transparency = 1
-	load.CFrame = handle.CFrame * CFrame.new(0, 4, 0)
+	load.CFrame = handle.CFrame * CFrame.new(0, top, 0)
 	local weld = Instance.new("WeldConstraint")
 	weld.Part0, weld.Part1 = handle, load
 	weld.Parent = load

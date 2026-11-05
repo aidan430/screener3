@@ -40,9 +40,10 @@ Config.HeapColour = { 222, 186, 92 } -- straw gold (the terrain Grass material i
 Config.HayTexture = ""
 Config.HayNormal = ""
 Config.HayTextureStuds = 8 -- how many studs one copy of the texture covers
--- The hay model (assets/hay/garden-hay-roblox.obj, about 7,600 triangles): import it in
--- Studio, paste its MeshId and the texture's ID here. Lumps on tools, flying hay, bundles and
--- the mounds around the heap then use it. Empty = rounded hay balls.
+-- The hay model you imported and uploaded (a Model or a mesh ID): lumps on tools, flying hay,
+-- bundles, bales' neighbours and the mounds round the heap use it. 0 = rounded hay balls.
+Config.HayModel = 92326825877863
+-- Or a bare mesh ID and its texture (used only if HayModel is 0 or doesn't load).
 Config.HayMesh = ""
 Config.HayMeshTexture = ""
 Config.HayTint = { 255, 246, 225 }
@@ -60,8 +61,11 @@ Config.MerchantRange = 16
 Config.CoinsPerStraw = 1
 
 -- Tools: power = straws per click, capacity = straws you can carry before selling.
+-- Any tool can wear a model imported in Studio: model = its asset ID, length = studs long,
+-- flip = false if it comes out upside down (the working end should point up). Without a
+-- model a tool is built as a pitchfork from the colours below.
 Config.Tools = {
-	{ name = "Rusty Fork", power = 1, capacity = 300, price = 0, shaft = { 112, 82, 58 }, head = { 128, 98, 78 }, material = "CorrodedMetal" },
+	{ name = "Garden Trowel", model = 89866055047467, length = 3, power = 1, capacity = 300, price = 0, shaft = { 112, 82, 58 }, head = { 128, 98, 78 }, material = "CorrodedMetal" },
 	{ name = "Wooden Pitchfork", power = 2, capacity = 1000, price = 400, shaft = { 160, 116, 72 }, head = { 176, 128, 82 }, material = "Wood" },
 	{ name = "Iron Pitchfork", power = 3, capacity = 2500, price = 2400, shaft = { 150, 108, 66 }, head = { 165, 170, 178 }, material = "Metal" },
 	{ name = "Steel Rake", power = 5, capacity = 5000, price = 10000, shaft = { 120, 84, 50 }, head = { 190, 196, 204 }, material = "Metal" },
@@ -571,8 +575,9 @@ return Format
 				<Properties>
 					<string name="Name">HayLook</string>
 					<ProtectedString name="Source"><![CDATA[-- One look for every loose bit of hay (on tools, in buckets and baskets, flying, dropped
--- bundles, the mounds round the heap): the imported hay model when Config.HayMesh is set,
--- otherwise a rounded ball of the Grass material (which wears the hay texture if one is set).
+-- bundles, the mounds round the heap): the imported hay model (Config.HayModel, which the
+-- server shares as ReplicatedStorage.HayTemplate), else a mesh from Config.HayMesh, else a
+-- rounded ball of the Grass material (which wears the hay texture if one is set).
 -- Plain module: works on the server and the client.
 return function(Config)
 	local HayLook = {}
@@ -581,6 +586,15 @@ return function(Config)
 
 	-- A hay lump `size` studs across, `golden` for the Golden Loft's straw.
 	function HayLook.lump(size, golden)
+		local template = game:GetService("ReplicatedStorage"):FindFirstChild("HayTemplate")
+		if template then
+			local hay = template:Clone()
+			hay.Name = "Hay"
+			hay.Anchored, hay.CanCollide, hay.CanQuery, hay.CanTouch, hay.CastShadow = false, false, false, false, false
+			hay:SetAttribute("BaseSize", template.Size)
+			HayLook.resize(hay, size)
+			return hay
+		end
 		local part = Instance.new("Part")
 		part.Name = "Hay"
 		part.CanCollide, part.CanQuery, part.CanTouch, part.CastShadow = false, false, false, false
@@ -603,6 +617,11 @@ return function(Config)
 
 	-- Sets a lump's size (the model is 1 stud across, so its mesh scales with the part).
 	function HayLook.resize(part, size)
+		local base = part:GetAttribute("BaseSize")
+		if base then -- the imported model, 1 stud across at its widest
+			part.Size = base * math.max(size, 0.05)
+			return
+		end
 		local s = Vector3.new(size, size * 0.72, size)
 		part.Size = Vector3.new(math.max(s.X, 0.05), math.max(s.Y, 0.05), math.max(s.Z, 0.05))
 		local mesh = part:FindFirstChildOfClass("SpecialMesh")
@@ -888,6 +907,76 @@ return Achievements
 			</Item>
 			<Item class="ModuleScript" referent="RBX00018">
 				<Properties>
+					<string name="Name">Assets</string>
+					<ProtectedString name="Source"><![CDATA[-- Things the owner imported in Studio and uploaded, loaded by asset ID: a saved Model (via
+-- InsertService, textures and all) or a mesh (via AssetService, at its real size). Loaded once
+-- and cached; nil if it can't be loaded (the game then uses its built-in look).
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local Assets = {}
+local AssetService = game:GetService("AssetService")
+local InsertService = game:GetService("InsertService")
+
+local loaded = {} -- [asset id] = a template part, or false if it couldn't be loaded as a model
+
+function Assets.template(id)
+	if loaded[id] ~= nil then
+		return loaded[id]
+	end
+	loaded[id] = false
+	local ok, asset = pcall(function()
+		return InsertService:LoadAsset(id)
+	end)
+	if ok and asset then
+		local part = if asset:IsA("BasePart") then asset else asset:FindFirstChildWhichIsA("BasePart", true)
+		if part then
+			part = part:Clone()
+			for _, child in ipairs(part:GetChildren()) do
+				if child:IsA("JointInstance") or child:IsA("Constraint") or child:IsA("Attachment") then
+					child:Destroy()
+				end
+			end
+			loaded[id] = part
+		end
+		asset:Destroy()
+	end
+	if not loaded[id] then -- not a model: try it as a mesh ID, which keeps the mesh's real size
+		local made, meshPart = pcall(function()
+			return AssetService:CreateMeshPartAsync("rbxassetid://" .. id)
+		end)
+		if made and meshPart then
+			loaded[id] = meshPart
+		else
+			warn("[Assets] Couldn't load " .. tostring(id) .. " as a model or a mesh: " .. tostring(asset) .. " / " .. tostring(meshPart))
+		end
+	end
+	return loaded[id]
+end
+
+-- The imported hay model, shrunk to 1 stud across and shared with every client as
+-- ReplicatedStorage.HayTemplate, which HayLook clones for every loose bit of hay.
+function Assets.shareHay()
+	local id = tonumber(Config.HayModel)
+	local part = id and id ~= 0 and Assets.template(id)
+	if not part then
+		return
+	end
+	local hay = part:Clone()
+	local size = hay.Size
+	hay.Size = size / math.max(size.X, size.Y, size.Z)
+	hay.Name = "HayTemplate"
+	hay.Anchored, hay.CanCollide, hay.CanQuery, hay.CanTouch = true, false, false, false
+	hay.Parent = ReplicatedStorage
+end
+
+return Assets
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00019">
+				<Properties>
 					<string name="Name">Build</string>
 					<ProtectedString name="Source"><![CDATA[-- Helpers for building the world out of simple anchored parts.
 local Build = {}
@@ -968,7 +1057,7 @@ return Build
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00019">
+			<Item class="ModuleScript" referent="RBX0001A">
 				<Properties>
 					<string name="Name">Carry</string>
 					<ProtectedString name="Source"><![CDATA[-- What you carry, where everyone can see it: the hay on your tool grows with every harvest,
@@ -1120,7 +1209,7 @@ return Carry
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001A">
+			<Item class="ModuleScript" referent="RBX0001B">
 				<Properties>
 					<string name="Name">Hauling</string>
 					<ProtectedString name="Source"><![CDATA[-- Hauling: everything you dump waits in your trader's basket. Every second the trader buys
@@ -1294,7 +1383,7 @@ return Hauling
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001B">
+			<Item class="ModuleScript" referent="RBX0001C">
 				<Properties>
 					<string name="Name">Haystack</string>
 					<ProtectedString name="Source"><![CDATA[-- The Golden Loft: the secret level in the clouds above the hub, with its golden haystack.
@@ -1355,7 +1444,7 @@ return Haystack
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001C">
+			<Item class="ModuleScript" referent="RBX0001D">
 				<Properties>
 					<string name="Name">Loft</string>
 					<ProtectedString name="Source"><![CDATA[-- The Golden Loft: the secret level above the hub, open only to players with all ten
@@ -1396,7 +1485,7 @@ return Loft
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001D">
+			<Item class="ModuleScript" referent="RBX0001E">
 				<Properties>
 					<string name="Name">LooseHay</string>
 					<ProtectedString name="Source"><![CDATA[-- Loose hay you can push around: press G to drop what you carry as a bundle; conveyors move
@@ -1622,7 +1711,7 @@ return LooseHay
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001E">
+			<Item class="ModuleScript" referent="RBX0001F">
 				<Properties>
 					<string name="Name">Machines</string>
 					<ProtectedString name="Source"><![CDATA[-- Machines harvest the top of your pile into your silo every second, if your generators make
@@ -1776,7 +1865,7 @@ return Machines
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Script" referent="RBX0001F">
+			<Item class="Script" referent="RBX00020">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Starts the game. The ground and spawn point are built first, so nobody spawns into the void.
@@ -1819,6 +1908,13 @@ local LooseHay = require(script.Parent.LooseHay)
 
 StarterPlayer.CharacterMaxSlopeAngle = Config.MaxSlopeAngle -- the steep heap needs building to climb
 local Scenery = require(script.Parent.Scenery)
+
+-- the owner's imported hay model, shared with every client before anything uses it
+local Assets = require(script.Parent.Assets)
+local assetsOk, assetsError = pcall(Assets.shareHay)
+if not assetsOk then
+	warn("[Start] The hay model failed to load: " .. tostring(assetsError))
+end
 
 World.build()
 Plots.build()
@@ -1899,7 +1995,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00020">
+			<Item class="ModuleScript" referent="RBX00021">
 				<Properties>
 					<string name="Name">Monetization</string>
 					<ProtectedString name="Source"><![CDATA[-- Robux items. Every ID in Config.GamePasses and Config.Products starts at 0 (switched off);
@@ -2013,7 +2109,7 @@ return Monetization
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00021">
+			<Item class="ModuleScript" referent="RBX00022">
 				<Properties>
 					<string name="Name">Pieces</string>
 					<ProtectedString name="Source"><![CDATA[-- What each buildable item looks like, built from parts around `cf`: the base centre on the
@@ -2207,7 +2303,7 @@ return Pieces
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00022">
+			<Item class="ModuleScript" referent="RBX00023">
 				<Properties>
 					<string name="Name">PiecesBelts</string>
 					<ProtectedString name="Source"><![CDATA[-- Conveyor belts, the conveyor down off a platform, and the bale maker. Belts move anything
@@ -2279,7 +2375,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00023">
+			<Item class="ModuleScript" referent="RBX00024">
 				<Properties>
 					<string name="Name">Piles</string>
 					<ProtectedString name="Source"><![CDATA[-- Each player's 70 m pile: 5,000 clumps of 1,000 straws on their plot, built from their save
@@ -2461,7 +2557,7 @@ return Piles
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00024">
+			<Item class="ModuleScript" referent="RBX00025">
 				<Properties>
 					<string name="Name">PlayerData</string>
 					<ProtectedString name="Source"><![CDATA[-- Each player's saved progress and the leaderboard. If the DataStore can't be read (Studio
@@ -2741,7 +2837,7 @@ return PlayerData
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00025">
+			<Item class="ModuleScript" referent="RBX00026">
 				<Properties>
 					<string name="Name">Plots</string>
 					<ProtectedString name="Source"><![CDATA[-- The four plots around the hub. A player gets a free plot when they join and gives it
@@ -2852,7 +2948,7 @@ return Plots
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00026">
+			<Item class="ModuleScript" referent="RBX00027">
 				<Properties>
 					<string name="Name">Profile</string>
 					<ProtectedString name="Source"><![CDATA[-- A player's data model: what is saved, with its defaults. Anything missing or of the
@@ -3005,7 +3101,7 @@ return Profile
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00027">
+			<Item class="ModuleScript" referent="RBX00028">
 				<Properties>
 					<string name="Name">Scenery</string>
 					<ProtectedString name="Source"><![CDATA[-- The countryside of Hollow Creek Farm, in the wide ring between the plots and the fence:
@@ -3240,7 +3336,7 @@ return Scenery
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00028">
+			<Item class="ModuleScript" referent="RBX00029">
 				<Properties>
 					<string name="Name">SceneryAnimals</string>
 					<ProtectedString name="Source"><![CDATA[-- Animal pens to the west of the plots and the cute blocky animals in them: cows, sheep, pigs,
@@ -3461,7 +3557,7 @@ return Pens
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00029">
+			<Item class="ModuleScript" referent="RBX0002A">
 				<Properties>
 					<string name="Name">SceneryKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Shared helpers for the countryside around the plots (see Scenery): a part maker that works
@@ -3590,7 +3686,7 @@ return Kit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002A">
+			<Item class="ModuleScript" referent="RBX0002B">
 				<Properties>
 					<string name="Name">SceneryNature</string>
 					<ProtectedString name="Source"><![CDATA[-- The living countryside (see Scenery): dirt lanes, the duck pond, the pumpkin and corn
@@ -3780,7 +3876,7 @@ return Nature
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002B">
+			<Item class="ModuleScript" referent="RBX0002C">
 				<Properties>
 					<string name="Name">SceneryProps</string>
 					<ProtectedString name="Source"><![CDATA[-- Farm props for the countryside (see Scenery): a tractor and trailer, carts, round hay bales,
@@ -3974,7 +4070,7 @@ return Props
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002C">
+			<Item class="ModuleScript" referent="RBX0002D">
 				<Properties>
 					<string name="Name">Search</string>
 					<ProtectedString name="Source"><![CDATA[-- The loop: click the clump you're looking at to harvest it onto your tool, sell at the
@@ -4236,7 +4332,7 @@ return Search
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002D">
+			<Item class="ModuleScript" referent="RBX0002E">
 				<Properties>
 					<string name="Name">Shop</string>
 					<ProtectedString name="Source"><![CDATA[-- Buying with coins: tools and silos (in order), perks for the tool you hold, and
@@ -4411,7 +4507,7 @@ return Shop
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002E">
+			<Item class="ModuleScript" referent="RBX0002F">
 				<Properties>
 					<string name="Name">Structures</string>
 					<ProtectedString name="Source"><![CDATA[-- Free building on your own plot: place pieces, machines and generators you've bought, take
@@ -4597,7 +4693,65 @@ return Structures
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002F">
+			<Item class="ModuleScript" referent="RBX00030">
+				<Properties>
+					<string name="Name">ToolLook</string>
+					<ProtectedString name="Source"><![CDATA[-- Tools that wear a model you imported in Studio (Config.Tools[n].model = its asset ID).
+-- The ID can be a Model you saved to Roblox (loaded once with InsertService, keeping its
+-- textures) or a mesh's ID (made into a MeshPart; add `texture` = "rbxassetid://..." for its
+-- image). If neither loads, it's tried as a plain SpecialMesh. The model is
+-- turned so its longest side runs along the handle, scaled to `length` studs, and flipped
+-- (`flip`) so the working end points up, where the harvested hay sits.
+local Assets = require(script.Parent.Assets)
+
+local ToolLook = {}
+
+-- The look for a tool definition, as a part centred on the handle, plus its length.
+-- Returns nil when the definition has no model.
+function ToolLook.make(def)
+	local id = tonumber(def.model)
+	if not id or id == 0 then
+		return nil
+	end
+	local length = def.length or 3
+	local part = Assets.template(id)
+	local look
+	if part then
+		look = part:Clone()
+		local size = look.Size
+		local turn = CFrame.new() -- longest side along Y
+		if size.X >= size.Y and size.X >= size.Z then
+			turn = CFrame.Angles(0, 0, math.rad(90))
+		elseif size.Z >= size.Y and size.Z >= size.X then
+			turn = CFrame.Angles(math.rad(90), 0, 0)
+		end
+		look.Size = size * (length / math.max(size.X, size.Y, size.Z))
+		look:SetAttribute("Turn", turn)
+		if def.texture and look:IsA("MeshPart") then
+			look.TextureID = def.texture
+		end
+	else
+		look = Instance.new("Part")
+		look.Size = Vector3.new(0.4, length, 0.4)
+		look.Transparency = 0
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.FileMesh
+		mesh.MeshId = "rbxassetid://" .. id
+		mesh.TextureId = def.texture or ""
+		mesh.Scale = Vector3.new(1, 1, 1) * (def.meshScale or 1)
+		mesh.Parent = look
+		look:SetAttribute("Turn", CFrame.new())
+	end
+	look.Name = "Look"
+	look.Anchored, look.CanCollide, look.CanQuery, look.CanTouch, look.Massless = false, false, false, false, true
+	return look, length
+end
+
+return ToolLook
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00031">
 				<Properties>
 					<string name="Name">Tools</string>
 					<ProtectedString name="Source"><![CDATA[-- The search tools: a pitchfork-shaped Tool per level, coloured from Config.Tools.
@@ -4609,6 +4763,7 @@ local Config = require(Shared:WaitForChild("Config"))
 local Format = require(Shared:WaitForChild("Format"))
 local HayLook = require(Shared:WaitForChild("HayLook"))(Config)
 local Build = require(script.Parent.Build)
+local ToolLook = require(script.Parent.ToolLook)
 
 local Tools = {}
 
@@ -4659,18 +4814,34 @@ function Tools.make(level, skinId)
 	handle.Massless = true
 	handle.CFrame = CFrame.new()
 	handle.Parent = tool
-	local colour = Build.rgb(if skin then skin.head else def.head)
-	local material = Enum.Material[if skin then skin.material else def.material]
-	attach(tool, handle, Vector3.new(1.7, 0.3, 0.3), CFrame.new(0, 2.9, 0), colour, material)
-	for x = -1, 1 do
-		attach(tool, handle, Vector3.new(0.16, 1.5, 0.16), CFrame.new(x * 0.7, 3.75, 0), colour, material)
+	local look, length = ToolLook.make(def)
+	local top = 4 -- where the hay sits: on the tines, or on the end of an imported tool
+	if look then
+		-- an imported model: the handle becomes an invisible grip inside it
+		handle.Size = Vector3.new(0.3, length, 0.3)
+		handle.Transparency = 1
+		tool.Grip = CFrame.new(0, -length * 0.2, 0)
+		local flip = if def.flip == false then CFrame.new() else CFrame.Angles(math.rad(180), 0, 0)
+		look.CFrame = handle.CFrame * flip * look:GetAttribute("Turn")
+		local w = Instance.new("WeldConstraint")
+		w.Part0, w.Part1 = handle, look
+		w.Parent = look
+		look.Parent = tool
+		top = length / 2
+	else
+		local colour = Build.rgb(if skin then skin.head else def.head)
+		local material = Enum.Material[if skin then skin.material else def.material]
+		attach(tool, handle, Vector3.new(1.7, 0.3, 0.3), CFrame.new(0, 2.9, 0), colour, material)
+		for x = -1, 1 do
+			attach(tool, handle, Vector3.new(0.16, 1.5, 0.16), CFrame.new(x * 0.7, 3.75, 0), colour, material)
+		end
 	end
 	-- the hay you've harvested sits on the tines and grows as you harvest (see Carry.luau)
 	local load = HayLook.lump(0.2, false)
 	load.Name = "Load"
 	load.Massless = true
 	load.Transparency = 1
-	load.CFrame = handle.CFrame * CFrame.new(0, 4, 0)
+	load.CFrame = handle.CFrame * CFrame.new(0, top, 0)
 	local weld = Instance.new("WeldConstraint")
 	weld.Part0, weld.Part1 = handle, load
 	weld.Parent = load
@@ -4729,7 +4900,7 @@ return Tools
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00030">
+			<Item class="ModuleScript" referent="RBX00032">
 				<Properties>
 					<string name="Name">Wheel</string>
 					<ProtectedString name="Source"><![CDATA[-- The Wheel of Fortune: one Robux spin (the WheelSpin product) = one prize, picked here on the
@@ -4803,7 +4974,7 @@ return Wheel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00031">
+			<Item class="ModuleScript" referent="RBX00033">
 				<Properties>
 					<string name="Name">World</string>
 					<ProtectedString name="Source"><![CDATA[-- Hollow Creek Farm: four plots around a hub with the merchant, the Wheel of Fortune and the
@@ -5018,19 +5189,19 @@ return World
 			</Item>
 		</Item>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX00032">
+	<Item class="StarterPlayer" referent="RBX00034">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX00033">
+		<Item class="StarterPlayerScripts" referent="RBX00035">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX00034">
+			<Item class="Folder" referent="RBX00036">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX00035">
+				<Item class="ModuleScript" referent="RBX00037">
 					<Properties>
 						<string name="Name">Animals</string>
 						<ProtectedString name="Source"><![CDATA[-- Brings the farm's animals to life on this screen only: each one ambles to a new spot in its
@@ -5210,7 +5381,7 @@ return Animals
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00036">
+				<Item class="ModuleScript" referent="RBX00038">
 					<Properties>
 						<string name="Name">BuildMode</string>
 						<ProtectedString name="Source"><![CDATA[-- Free building in first person. Z and C pick from your inventory bar (or press M and click
@@ -5437,7 +5608,7 @@ return BuildMode
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00037">
+				<Item class="ModuleScript" referent="RBX00039">
 					<Properties>
 						<string name="Name">Cursor</string>
 						<ProtectedString name="Source"><![CDATA[-- First person locks the mouse to the centre of the screen. Menus need a pointer, so a
@@ -5486,7 +5657,7 @@ return Cursor
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00038">
+				<Item class="ModuleScript" referent="RBX0003A">
 					<Properties>
 						<string name="Name">Harvest</string>
 						<ProtectedString name="Source"><![CDATA[-- Aiming in first person: the clump under the crosshair (within reach, on your own pile or the
@@ -5728,7 +5899,7 @@ return Harvest
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00039">
+				<Item class="ModuleScript" referent="RBX0003B">
 					<Properties>
 						<string name="Name">HayFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The hay you can see moving: every harvest lifts a lump off the heap onto your tool, and
@@ -5818,7 +5989,7 @@ return HayFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0003A">
+				<Item class="ModuleScript" referent="RBX0003C">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: a crosshair, your pile's progress at the top, and on the left your
@@ -5960,7 +6131,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0003B">
+				<Item class="ModuleScript" referent="RBX0003D">
 					<Properties>
 						<string name="Name">Jetpack</string>
 						<ProtectedString name="Source"><![CDATA[-- The Jetpack (a Robux game pass; the server sets the "PassJetpack" attribute when you own it).
@@ -6146,7 +6317,7 @@ return Jetpack
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0003C">
+				<Item class="ModuleScript" referent="RBX0003E">
 					<Properties>
 						<string name="Name">Juice</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback that makes harvesting feel good: straw bursts, floating numbers, a soft camera
@@ -6334,7 +6505,7 @@ return Juice
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX0003D">
+				<Item class="LocalScript" referent="RBX0003F">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- The player's side of the game: first-person harvesting, building, the menus, and all the
@@ -6603,7 +6774,7 @@ end)
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0003E">
+				<Item class="ModuleScript" referent="RBX00040">
 					<Properties>
 						<string name="Name">Music</string>
 						<ProtectedString name="Source"><![CDATA[-- Soft background music: the Config.Music playlist in a loop, low and relaxing, fading gently
@@ -6746,7 +6917,7 @@ return Music
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0003F">
+				<Item class="ModuleScript" referent="RBX00041">
 					<Properties>
 						<string name="Name">Notify</string>
 						<ProtectedString name="Source"><![CDATA[-- Messages: small toasts under the haystack counter, and a big banner for case news.
@@ -6849,7 +7020,7 @@ return Notify
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00040">
+				<Item class="ModuleScript" referent="RBX00042">
 					<Properties>
 						<string name="Name">Offer</string>
 						<ProtectedString name="Source"><![CDATA[-- One gentle Robux suggestion per session: after Config.OfferAfterClumps clumps harvested since
@@ -6955,7 +7126,7 @@ return Offer
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00041">
+				<Item class="ModuleScript" referent="RBX00043">
 					<Properties>
 						<string name="Name">Panels</string>
 						<ProtectedString name="Source"><![CDATA[-- The windows: Shop, secret Achievements, Finds & Skins, and the Wheel of Fortune (odds first).
@@ -7144,7 +7315,7 @@ return Panels
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00042">
+				<Item class="ModuleScript" referent="RBX00044">
 					<Properties>
 						<string name="Name">Shop</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop window: Tools, Perks, Storage (buckets and silos), Build (stairs, lifts...), Machines, Power and Robux.
@@ -7394,7 +7565,7 @@ return Shop
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00043">
+				<Item class="ModuleScript" referent="RBX00045">
 					<Properties>
 						<string name="Name">Teleport</string>
 						<ProtectedString name="Source"><![CDATA[-- The teleporter menu: standing on one of your pads, pick any of your other pads (listed by
@@ -7465,7 +7636,7 @@ return Teleport
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00044">
+				<Item class="ModuleScript" referent="RBX00046">
 					<Properties>
 						<string name="Name">Ui</string>
 						<ProtectedString name="Source"><![CDATA[-- A small UI kit: the farm colours, rounded wooden buttons and windows that scale with
@@ -7640,7 +7811,7 @@ return Ui
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00045">
+				<Item class="ModuleScript" referent="RBX00047">
 					<Properties>
 						<string name="Name">WorldFx</string>
 						<ProtectedString name="Source"><![CDATA[-- World effects on your screen: the glowing needle clump (Wheel jackpot), the wheel turning
@@ -7761,7 +7932,7 @@ return WorldFx
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX00046">
+	<Item class="Workspace" referent="RBX00048">
 		<Properties>
 			<string name="Name">Workspace</string>
 			<bool name="StreamingEnabled">false</bool>

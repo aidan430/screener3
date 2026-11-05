@@ -28,9 +28,10 @@ Config.HeapColour = { 222, 186, 92 } -- straw gold (the terrain Grass material i
 Config.HayTexture = ""
 Config.HayNormal = ""
 Config.HayTextureStuds = 8 -- how many studs one copy of the texture covers
--- The hay model (assets/hay/garden-hay-roblox.obj, about 7,600 triangles): import it in
--- Studio, paste its MeshId and the texture's ID here. Lumps on tools, flying hay, bundles and
--- the mounds around the heap then use it. Empty = rounded hay balls.
+-- The hay model you imported and uploaded (a Model or a mesh ID): lumps on tools, flying hay,
+-- bundles, bales' neighbours and the mounds round the heap use it. 0 = rounded hay balls.
+Config.HayModel = 92326825877863
+-- Or a bare mesh ID and its texture (used only if HayModel is 0 or doesn't load).
 Config.HayMesh = ""
 Config.HayMeshTexture = ""
 Config.HayTint = { 255, 246, 225 }
@@ -48,8 +49,11 @@ Config.MerchantRange = 16
 Config.CoinsPerStraw = 1
 
 -- Tools: power = straws per click, capacity = straws you can carry before selling.
+-- Any tool can wear a model imported in Studio: model = its asset ID, length = studs long,
+-- flip = false if it comes out upside down (the working end should point up). Without a
+-- model a tool is built as a pitchfork from the colours below.
 Config.Tools = {
-	{ name = "Rusty Fork", power = 1, capacity = 300, price = 0, shaft = { 112, 82, 58 }, head = { 128, 98, 78 }, material = "CorrodedMetal" },
+	{ name = "Garden Trowel", model = 89866055047467, length = 3, power = 1, capacity = 300, price = 0, shaft = { 112, 82, 58 }, head = { 128, 98, 78 }, material = "CorrodedMetal" },
 	{ name = "Wooden Pitchfork", power = 2, capacity = 1000, price = 400, shaft = { 160, 116, 72 }, head = { 176, 128, 82 }, material = "Wood" },
 	{ name = "Iron Pitchfork", power = 3, capacity = 2500, price = 2400, shaft = { 150, 108, 66 }, head = { 165, 170, 178 }, material = "Metal" },
 	{ name = "Steel Rake", power = 5, capacity = 5000, price = 10000, shaft = { 120, 84, 50 }, head = { 190, 196, 204 }, material = "Metal" },

@@ -39,6 +39,13 @@ local LooseHay = require(script.Parent.LooseHay)
 StarterPlayer.CharacterMaxSlopeAngle = Config.MaxSlopeAngle -- the steep heap needs building to climb
 local Scenery = require(script.Parent.Scenery)
 
+-- the owner's imported hay model, shared with every client before anything uses it
+local Assets = require(script.Parent.Assets)
+local assetsOk, assetsError = pcall(Assets.shareHay)
+if not assetsOk then
+	warn("[Start] The hay model failed to load: " .. tostring(assetsError))
+end
+
 World.build()
 Plots.build()
 Plots.onRelease = Piles.clear

@@ -137,3 +137,10 @@ commit 7d2617e). Both in git history.
   pacing unchanged (about 34 h). `TraderDistance` 57 and the arrival point moved out to clear
   the wider heap. "Sky High" is now "stand on top of your haystack, 75 studs up".
   `DataStoreName` is `NeedleHaystack_v5`.
+- **Imported models (`server/Assets.luau`):** any tool in `Config.Tools` can wear a model you
+  uploaded (`model` = asset ID, `length` studs, `flip` = false if upside down). The starter
+  tool is now the owner's Garden Trowel (89866055047467). `Config.HayModel` (92326825877863) is
+  the owner's hay; the server loads it once and shares it as `ReplicatedStorage.HayTemplate`
+  for every loose bit of hay. An ID loads as a saved Model (InsertService, keeps textures) or
+  else as a mesh (AssetService:CreateMeshPartAsync); if neither works the built-in look stays
+  and Output says why. Both need the assets to be owned by the game's owner.
