@@ -64,11 +64,12 @@ local function publish(player, profile)
 		stats.Needles.Value = d.needles
 	end
 	local flags = PlayerData.flags(player)
-	local plot = Economy.plot(d.placed, flags.doubleMachines)
+	local plot = Economy.plot(d.placed, flags.doubleMachines, player:GetAttribute("BurnersFueled"))
 	player:SetAttribute("Coins", d.coins)
 	player:SetAttribute("Tool", d.tool)
 	player:SetAttribute("Silo", d.silo)
 	player:SetAttribute("Bucket", d.bucket)
+	player:SetAttribute("BeltLevel", d.beltLevel)
 	player:SetAttribute("BasketStraw", math.floor(d.basket))
 	player:SetAttribute("BaledStraw", math.floor(d.baled))
 	player:SetAttribute("HaulRate", Economy.haulRate(d))

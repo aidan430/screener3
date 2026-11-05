@@ -18,7 +18,7 @@ local Structures = {}
 local function relight(player)
 	local d = PlayerData.get(player)
 	if d then
-		local plot = Economy.plot(d.placed, PlayerData.flags(player).doubleMachines)
+		local plot = Economy.plot(d.placed, PlayerData.flags(player).doubleMachines, player:GetAttribute("BurnersFueled"))
 		Structures.light(player, plot.machines > 0 and plot.share >= 1)
 	end
 end

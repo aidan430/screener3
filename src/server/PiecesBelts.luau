@@ -20,6 +20,7 @@ return function(builders, p)
 		part.Name = "Belt"
 		part.AssemblyLinearVelocity = slope.LookVector * Config.ConveyorSpeed
 		part:SetAttribute("Conveyor", true)
+		part:SetAttribute("Dir", slope.LookVector) -- Factory.luau sets the speed from your belt level
 		for _, x in ipairs({ -3, 3 }) do
 			p(model, slope * CFrame.new(x, 0.6, 0), Vector3.new(0.4, 1.8, length), RAIL, "Metal")
 		end
@@ -62,5 +63,5 @@ return function(builders, p)
 		lamp.Name = "Light"
 	end
 
-	return sensor
+	return { sensor = sensor, belt = belt }
 end

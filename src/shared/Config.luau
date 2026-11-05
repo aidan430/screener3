@@ -1,5 +1,5 @@
 -- Every number you might want to tune lives here. Change it, rebuild, play-test.
--- This module requires nothing, so the server, the client and the checks can all read it.
+-- It requires only ConfigFactory (more of the same numbers), so the server, the client and the checks can all read it.
 local Config = {}
 
 Config.Title = "Needle in the Haystack"
@@ -112,6 +112,7 @@ Config.Generators = {
 	{ id = "diesel", name = "Diesel Generator", power = 15, price = 15000, max = 10, size = { 5, 5, 6 }, color = { 90, 120, 70 } },
 	{ id = "wind", name = "Wind Turbine", power = 40, price = 110000, max = 8, size = { 4, 20, 4 }, color = { 236, 236, 230 } },
 	{ id = "steam", name = "Steam Engine", power = 100, price = 700000, max = 6, size = { 7, 8, 9 }, color = { 120, 80, 60 } },
+	{ id = "burner", name = "Hay Burner", power = 30, price = 8000, max = 6, burner = true, size = { 5, 6, 5 }, color = { 150, 80, 50 } },
 	{ id = "lightning", name = "Lightning Rod Array", power = 260, price = 4000000, max = 4, size = { 6, 24, 6 }, color = { 120, 170, 255 } },
 }
 
@@ -272,5 +273,16 @@ Config.BadgeIds = {} -- optional: { first_straw = 123456 } awards a Roblox badge
 
 -- The Golden Loft: a secret golden haystack above the hub where straw pays 20x.
 Config.Loft = { straws = 250000, coinMultiplier = 20, needleEarliest = 0.5 }
+
+-- The factory line and processing chain (ConfigFactory.luau): its lists add to the ones above.
+for name, value in pairs(require(script.Parent:WaitForChild("ConfigFactory"))) do
+	if type(value) == "table" and type(Config[name]) == "table" and #value > 0 then
+		for _, entry in ipairs(value) do
+			table.insert(Config[name], entry)
+		end
+	else
+		Config[name] = value
+	end
+end
 
 return Config

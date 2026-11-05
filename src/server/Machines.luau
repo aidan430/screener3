@@ -53,6 +53,8 @@ local function fromTop(player, d, amount)
 	return taken
 end
 
+Machines.take = fromTop -- feeders take from the heap the same way, needle and all
+
 function Machines.blast(player, amount)
 	local d = PlayerData.get(player)
 	if not d then
@@ -71,7 +73,7 @@ local function tickMachines()
 		local d = PlayerData.get(player)
 		if d and Plots.of(player) then
 			local flags = PlayerData.flags(player)
-			local plot = Economy.plot(d.placed, flags.doubleMachines)
+			local plot = Economy.plot(d.placed, flags.doubleMachines, player:GetAttribute("BurnersFueled"))
 			local powered = plot.machines > 0 and plot.share >= 1
 			if running[player] ~= powered then
 				running[player] = powered

@@ -174,20 +174,35 @@ function Shop.mount(gui, notify)
 	itemPage("Build", Ui.colors.wood, Config.Pieces, function(def)
 		return def.text
 	end)
-	itemPage("Machines", Ui.colors.red, Config.Machines, function(def)
+	-- machines fill your silo; feeders (arms, throwers) put bundles on your belts
+	local machines = table.clone(Config.Machines)
+	for _, feeder in ipairs(Config.Feeders) do
+		table.insert(machines, feeder)
+	end
+	itemPage("Machines", Ui.colors.red, machines, function(def)
+		if def.amount then
+			return Format.commas(def.amount) .. " straws onto a belt every " .. def.every .. " s, uses " .. def.draw .. " power."
+		end
 		return def.rate .. " straws/s, uses " .. def.draw .. " power."
 	end)
 	itemPage("Power", Color3.fromRGB(200, 160, 40), Config.Generators, function(def)
-		return "Makes " .. def.power .. " power."
+		return "Makes " .. def.power .. " power" .. (if def.burner then " while it has hay to burn (feed it bundles)." else ".")
 	end)
 
-	-- trucks call at your trader and haul from the basket
-	page("Trucks", Color3.fromRGB(120, 90, 60), function(list)
+	-- trucks call at your trader and haul from the basket; belt motors speed up every belt
+	page("Logistics", Color3.fromRGB(120, 90, 60), function(list)
 		local rows, subs = {}, {}
 		for i, truck in ipairs(Config.Trucks) do
 			rows[i], subs[i] = row(list, i, truck.name, "")
 			rows[i].Activated:Connect(function()
 				buy("truck", i, rows[i])
+			end)
+		end
+		local belts = {}
+		for level = 2, #Config.BeltSpeeds do
+			belts[level] = row(list, 50 + level, "Belt Motors " .. level, "every belt you own runs at " .. Config.BeltSpeeds[level].speed .. " studs a second")
+			belts[level].Activated:Connect(function()
+				buy("belt", level, belts[level])
 			end)
 		end
 		Ui.paragraph("Your trader sells " .. Config.TraderRate .. " straws a second from the basket by himself. Trucks add to that. Bales count " .. Config.BaleCompaction .. "x.", { LayoutOrder = 99, TextSize = 16, TextColor3 = Ui.colors.grey, Parent = list })
@@ -196,6 +211,10 @@ function Shop.mount(gui, notify)
 				local own = player:GetAttribute("Truck_" .. truck.id) or 0
 				subs[i].Text = "Hauls " .. Format.commas(truck.rate) .. " straws a second. You have " .. own .. "/" .. truck.max .. "."
 				price(rows[i], truck.price, own >= truck.max, true, "MAXED")
+			end
+			local belt = player:GetAttribute("BeltLevel") or 1
+			for level, button in pairs(belts) do
+				price(button, Config.BeltSpeeds[level].price, level <= belt, level == belt + 1)
 			end
 		end
 	end)

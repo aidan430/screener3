@@ -37,6 +37,10 @@ function Profile.fresh(saved)
 		baled = number(saved, "baled", 0), -- baled straws waiting there
 		baleStore = number(saved, "baleStore", 0), -- straws inside your bale makers, not yet a bale
 		loose = number(saved, "loose", 0), -- straws lying about as bundles and bales
+		pressStore = number(saved, "pressStore", 0), -- straws inside your pellet presses
+		beltLevel = math.clamp(math.floor(number(saved, "beltLevel", 1)), 1, #Config.BeltSpeeds),
+		order = math.max(1, math.floor(number(saved, "order", 1))), -- which delivery order (counts up forever)
+		orderDone = math.max(0, math.floor(number(saved, "orderDone", 0))), -- delivered towards it
 		needleClump = math.floor(number(saved, "needleClump", 0)),
 		revealed = saved.revealed == true,
 		needles = number(saved, "needles", 0),

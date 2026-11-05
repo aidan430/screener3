@@ -78,6 +78,22 @@ function buyers.truck(player, d, index)
 	return true, "Your " .. truck.name .. " will call at your trader and haul " .. Format.commas(truck.rate) .. " straws a second."
 end
 
+function buyers.belt(player, d, level)
+	local belt = Config.BeltSpeeds[level]
+	if level ~= d.beltLevel + 1 or not belt then
+		return false, if belt then "Upgrade the belt motors in order." else "Your belts are as fast as they go!"
+	end
+	local missing = short(d, belt.price)
+	if missing then
+		return false, missing
+	end
+	PlayerData.update(player, function(data)
+		data.coins -= belt.price
+		data.beltLevel = level
+	end)
+	return true, "Every belt you own now runs at " .. belt.speed .. " studs a second."
+end
+
 function buyers.silo(player, d, level)
 	local silo = Config.Silos[level]
 	if level ~= d.silo + 1 or not silo then

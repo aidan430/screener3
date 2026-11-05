@@ -35,6 +35,9 @@ local Monetization = require(script.Parent.Monetization)
 local Carry = require(script.Parent.Carry)
 local Hauling = require(script.Parent.Hauling)
 local LooseHay = require(script.Parent.LooseHay)
+local Processing = require(script.Parent.Processing)
+local Factory = require(script.Parent.Factory)
+local Orders = require(script.Parent.Orders)
 
 StarterPlayer.CharacterMaxSlopeAngle = Config.MaxSlopeAngle -- the steep heap needs building to climb
 local Scenery = require(script.Parent.Scenery)
@@ -96,6 +99,7 @@ PlayerData.onLoaded(function(player, saveable)
 	Structures.build(plotIndex, data)
 	Tools.give(player, data.tool, data.skin)
 	Carry.show(player)
+	Orders.publish(player)
 	Wheel.remind(player)
 	toPlot(player)
 	-- after every spawn: back to your plot, and make sure the tool arrived (it comes from StarterGear)
@@ -127,6 +131,8 @@ local parts = {
 	{ "Carry", Carry.init },
 	{ "Hauling", Hauling.init },
 	{ "LooseHay", LooseHay.init },
+	{ "Processing", Processing.init },
+	{ "Factory", Factory.init },
 }
 for _, part in ipairs(parts) do
 	local ok, err = pcall(part[2])

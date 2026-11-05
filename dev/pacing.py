@@ -19,7 +19,8 @@ import re
 import sys
 from pathlib import Path
 
-CONFIG = (Path(__file__).resolve().parent.parent / "src" / "shared" / "Config.luau").read_text()
+SHARED = Path(__file__).resolve().parent.parent / "src" / "shared"
+CONFIG = (SHARED / "Config.luau").read_text() + "\n" + (SHARED / "ConfigFactory.luau").read_text()
 CLICKS_PER_SECOND = 3.0
 TRIP_SECONDS = 45.0
 BUILD_COINS = 60000  # stairs, landings and elevators bought along the way
@@ -88,8 +89,13 @@ def needle_share() -> float:
 
 class Player:
     def __init__(self, robux: bool):
-        self.tools, self.silos, self.machines = rows("Tools"), rows("Silos"), rows("Machines")
-        self.generators, self.perks = rows("Generators"), rows("Perks")
+        self.tools, self.silos = rows("Tools"), rows("Silos")
+        # feeders (arms, throwers) count like machines: straws a second for power
+        feeders = [{"rate": f["amount"] / f["every"], "draw": f["draw"], "price": f["price"], "max": f["max"]} for f in rows("Feeders")]
+        self.machines = rows("Machines") + feeders
+        # Hay Burners burn your own hay, so they aren't free power: left out
+        self.generators = [g for g in rows("Generators") if g.get("id") != "burner"]
+        self.perks = rows("Perks")
         self.tool, self.silo, self.perk = 0, 0, [0] * len(self.perks)
         self.owned = [0] * len(self.machines)
         self.gens = [0] * len(self.generators)

@@ -42,15 +42,22 @@ function Hauling.dump(player, reason, basket)
 	return total, golden
 end
 
--- Loose hay or a bale that reached the basket by itself (conveyor, carried bale, timeout).
-function Hauling.add(player, straws, baled)
+-- Hay that reached the basket by itself (belt, carried bale, timeout). `kind` is "bundle",
+-- "bale", "wrapped" or "pellet": anything but a bundle packs tight like a bale, and wrapped
+-- bales and pellets are worth more, paid at once as a bonus when they arrive.
+function Hauling.add(player, straws, kind)
+	local d = PlayerData.get(player)
+	local product = Config.Processing[kind]
+	local bonus = if d and product then Economy.coinsFor(straws * (product.value - 1), false, Economy.coinMultiplier(PlayerData.flags(player), d.needles)) else 0
 	PlayerData.update(player, function(data)
-		if baled then
-			data.baled += straws
-		else
+		if kind == "bundle" or kind == nil then
 			data.basket += straws
+		else
+			data.baled += straws
 		end
+		data.coins += bonus
 	end)
+	earned[player] = (earned[player] or 0) + bonus
 end
 
 local function sell(player)

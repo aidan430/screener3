@@ -7,7 +7,7 @@ return function(Config)
 
 	-- every buildable item by id: { def = ..., kind = "piece" | "machine" | "generator" }
 	local items = {}
-	for kind, list in pairs({ piece = Config.Pieces, machine = Config.Machines, generator = Config.Generators }) do
+	for kind, list in pairs({ piece = Config.Pieces, machine = Config.Machines, generator = Config.Generators, feeder = Config.Feeders or {} }) do
 		for _, def in ipairs(list) do
 			items[def.id] = { def = def, kind = kind }
 		end
@@ -66,11 +66,20 @@ return function(Config)
 	end
 
 	-- Power made, power drawn, machines placed and straws a second, from the placed list.
-	function Economy.plot(placed, doubleMachines)
+	-- `fueled` = how many Hay Burners have hay to burn right now (they make power only then)
+	function Economy.plot(placed, doubleMachines, fueled)
 		local made, draw, rate, machines = 0, 0, 0, 0
+		local burning = fueled or 0
 		for _, p in ipairs(placed or {}) do
 			local item = items[p.k]
-			if item and item.kind == "generator" then
+			if item and item.kind == "generator" and item.def.burner then
+				if burning > 0 then
+					burning -= 1
+					made += item.def.power
+				end
+			elseif item and item.kind == "feeder" then
+				draw += item.def.draw
+			elseif item and item.kind == "generator" then
 				made += item.def.power
 			elseif item and item.kind == "machine" then
 				draw += item.def.draw

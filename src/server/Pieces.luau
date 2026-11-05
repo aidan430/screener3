@@ -123,7 +123,9 @@ local function standing(model, cf, height, diameter, color, material, name)
 	return c
 end
 
-local sensor = require(script.Parent.PiecesBelts)(builders, p)
+local belts = require(script.Parent.PiecesBelts)(builders, p)
+local sensor = belts.sensor
+require(script.Parent.PiecesFactory)(builders, p, belts)
 
 -- Your trader: a market stall with a striped awning, the trader behind the counter, and a
 -- big woven basket in front where you dump your hay (the basket's prompt sells it).
