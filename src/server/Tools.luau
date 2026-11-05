@@ -65,9 +65,22 @@ local function clear(container, character)
 	return equipped
 end
 
--- Replace whatever search tool the player has with the one for `level`.
+-- True if the player holds or carries a search tool.
+function Tools.has(player)
+	local function holds(container)
+		for _, item in ipairs(container and container:GetChildren() or {}) do
+			if item:IsA("Tool") and item:GetAttribute("Level") ~= nil then
+				return true
+			end
+		end
+		return false
+	end
+	return holds(player:FindFirstChildOfClass("Backpack")) or holds(player.Character)
+end
+
+-- Replace whatever search tool the player has with the one for `level`. May wait briefly.
 function Tools.give(player, level)
-	local gear = player:FindFirstChild("StarterGear")
+	local gear = player:FindFirstChild("StarterGear") or player:WaitForChild("StarterGear", 10)
 	local backpack = player:FindFirstChildOfClass("Backpack")
 	local character = player.Character
 	clear(gear, nil)

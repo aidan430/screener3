@@ -16,6 +16,15 @@ end
 
 local SUFFIXES = { "", "K", "M", "B", "T", "Qa", "Qi" }
 
+local function fixed(value)
+	if value >= 100 then
+		return string.format("%.0f", value)
+	elseif value >= 10 then
+		return string.format("%.1f", value)
+	end
+	return string.format("%.2f", value)
+end
+
 -- 1234 -> "1.23K", 5000000 -> "5M", 950 -> "950"
 function Format.short(n)
 	local value = math.abs(n)
@@ -27,13 +36,11 @@ function Format.short(n)
 		value /= 1000
 		index += 1
 	end
-	local text
-	if value >= 100 then
-		text = string.format("%.0f", value)
-	elseif value >= 10 then
-		text = string.format("%.1f", value)
-	else
-		text = string.format("%.2f", value)
+	local text = fixed(value)
+	if tonumber(text) >= 1000 and index < #SUFFIXES then -- 999.96K rounds up: show 1M
+		value /= 1000
+		index += 1
+		text = fixed(value)
 	end
 	if string.find(text, ".", 1, true) then
 		text = string.gsub(text, "0+$", "")

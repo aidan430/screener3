@@ -25,6 +25,14 @@ PlayerData.onLoaded(function(player, saveable)
 	if data then
 		Tools.give(player, data.tool)
 	end
+	-- a backstop: after every spawn, make sure the fork arrived (it comes from StarterGear)
+	player.CharacterAdded:Connect(function()
+		task.wait(1)
+		local current = PlayerData.get(player)
+		if current and player.Parent and not Tools.has(player) then
+			Tools.give(player, current.tool)
+		end
+	end)
 	if not saveable and not RunService:IsStudio() then
 		Remotes.Announce:FireClient(player, {
 			kind = "notice",

@@ -24,7 +24,7 @@ local state = { case = 0, clues = {} }
 Notify.mount(gui)
 local panels = Panels.mount(gui, state, Notify)
 local hud = Hud.mount(gui, panels.open)
-WorldFx.start()
+WorldFx.start(gui)
 
 local function cluesChanged()
 	hud.setClues(#state.clues, gameState:GetAttribute("ClueCount") or 0)

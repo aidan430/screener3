@@ -36,6 +36,15 @@ simulator, with 5,000,000 straws; the theme was left to me.
   sandbox, so `dev/build.py` builds the place file and `dev/luau.py` checks the code instead.
   Neither runs the game: the first real test is pressing Play in Studio.
 
+## Version 1.1 (2026-11-05): after the first Studio test and a code review
+- The fork is checked after every spawn and given again if it didn't arrive (a fast first
+  load could leave a player empty-handed and unable to search).
+- Coins just under a million read "1M", not "1000K".
+- Haystacks grow back over 2.5 seconds at a new case, so nobody standing close gets flung.
+- Standing at a haystack hides its floating label (it sat behind the top bar) and shows the
+  same facts in a panel above the hotbar. Labels now also say "COULD BE HERE" once you have
+  clues.
+
 ## Not done yet (ideas for version 2)
 - Sounds and music (pick them from the Studio Toolbox, or send me asset IDs).
 - Bigger zones after rebirth (a barn of 50 million straws), pets that search with you, a

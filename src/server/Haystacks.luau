@@ -14,6 +14,7 @@ local byId = {}
 local gameState = ReplicatedStorage:WaitForChild("GameState")
 
 local HAY = { { 226, 190, 92 }, { 212, 172, 76 }, { 236, 204, 112 } }
+local GROW_SECONDS = 2.5
 
 local function mound(pile, parent)
 	local model = Instance.new("Model")
@@ -62,7 +63,7 @@ local function refresh(dt)
 	local total = 0
 	for _, state in ipairs(states) do
 		total += state.remaining
-		if state.dirty then
+		if state.dirty and not state.growing then
 			state.dirty = false
 			state.model:SetAttribute("Remaining", state.remaining)
 			local scale = Economy.pileScale(state.remaining, state.total)
@@ -99,18 +100,36 @@ function Haystacks.build(piles)
 	RunService.Heartbeat:Connect(refresh)
 end
 
--- Every haystack back to full, for a new case.
+-- Every haystack back to full, for a new case. They grow back over a couple of seconds,
+-- so anyone standing next to a small one is nudged aside rather than flung.
 function Haystacks.refill()
+	local from = {}
 	for _, state in ipairs(states) do
 		state.remaining = state.total
-		state.dirty = true
+		state.growing = true
+		from[state] = state.scale
 		state.model:SetAttribute("Remaining", state.total)
-		if state.scale ~= 1 then
-			state.scale = 1
-			state.model:ScaleTo(1)
-		end
 	end
 	gameState:SetAttribute("Remaining", Config.TotalStraws)
+	task.spawn(function()
+		local started = os.clock()
+		local progress = 0
+		while progress < 1 do
+			RunService.Heartbeat:Wait()
+			progress = math.min(1, (os.clock() - started) / GROW_SECONDS)
+			for _, state in ipairs(states) do
+				local scale = from[state] + (1 - from[state]) * progress
+				if math.abs(scale - state.scale) > 0.002 then
+					state.scale = scale
+					state.model:ScaleTo(scale)
+				end
+			end
+		end
+		for _, state in ipairs(states) do
+			state.growing = false
+			state.dirty = true -- catch up with searches made while growing
+		end
+	end)
 end
 
 -- The haystack a player standing at `position` can search, if any.

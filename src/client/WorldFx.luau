@@ -7,6 +7,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
 local Format = require(Shared:WaitForChild("Format"))
 local Ui = require(script.Parent.Ui)
 
@@ -17,6 +18,7 @@ local WorldFx = {}
 local tags = {} -- [pile id] = { model, core, count, fill, status, attachment, emitter }
 local possible = nil -- pile ids your latest clue still allows (nil before your first clue)
 local solved = false
+local here = nil -- the panel for the haystack you're standing at
 
 local function refreshTag(tag)
 	local remaining = tag.model:GetAttribute("Remaining") or 0
@@ -30,6 +32,8 @@ local function refreshTag(tag)
 		tag.status.Text, tag.status.TextColor3 = "RULED OUT", Color3.fromRGB(255, 120, 100)
 	elseif possible and possible.count == 1 and not solved then
 		tag.status.Text, tag.status.TextColor3 = "THE NEEDLE IS HERE!", Color3.fromRGB(140, 255, 140)
+	elseif possible then
+		tag.status.Text, tag.status.TextColor3 = "COULD BE HERE", Ui.colors.hay
 	else
 		tag.status.Text = ""
 	end
@@ -67,7 +71,7 @@ local function makeTag(model)
 		EmissionDirection = Enum.NormalId.Top,
 		Parent = attachment,
 	})
-	local tag = { model = model, core = core, count = count, fill = fill, status = status, attachment = attachment, emitter = emitter }
+	local tag = { model = model, core = core, gui = gui, count = count, fill = fill, status = status, attachment = attachment, emitter = emitter }
 	tags[model.Name] = tag
 	model:GetAttributeChangedSignal("Remaining"):Connect(function()
 		refreshTag(tag)
@@ -146,7 +150,60 @@ local function spinWindmill()
 	end)
 end
 
-function WorldFx.start()
+-- Close to a haystack its floating label sits behind the top bar, so it hides and the
+-- same facts show in a panel above the hotbar instead.
+local function buildHerePanel(gui)
+	local frame = Ui.make("Frame", {
+		Name = "Here",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -96),
+		Size = UDim2.fromOffset(380, 76),
+		BackgroundColor3 = Ui.colors.wood,
+		Visible = false,
+		Parent = gui,
+	}, { Ui.corner(14), Ui.stroke(Ui.colors.woodDark, 3) })
+	Ui.autoScale(frame)
+	here = {
+		frame = frame,
+		name = Ui.label({ Size = UDim2.new(1, -20, 0, 26), Position = UDim2.fromOffset(10, 4), Parent = frame }, 26),
+		count = Ui.label({ Size = UDim2.new(1, -20, 0, 20), Position = UDim2.fromOffset(10, 31), TextColor3 = Ui.colors.hay, Parent = frame }, 20),
+		status = Ui.label({ Size = UDim2.new(1, -20, 0, 20), Position = UDim2.fromOffset(10, 52), Parent = frame }, 20),
+	}
+end
+
+local function watchNearby()
+	while true do
+		task.wait(0.2)
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		local nearest, best = nil, Config.SearchRange + 4
+		if root then
+			for _, tag in pairs(tags) do
+				local centre = tag.model:GetPivot().Position
+				local flat = Vector3.new(root.Position.X - centre.X, 0, root.Position.Z - centre.Z).Magnitude
+				if flat < best then
+					nearest, best = tag, flat
+				end
+			end
+		end
+		for _, tag in pairs(tags) do
+			tag.gui.Enabled = tag ~= nearest
+		end
+		if here then
+			here.frame.Visible = nearest ~= nil
+			if nearest then
+				here.name.Text = (nearest.model:GetAttribute("DisplayName") or "") .. " haystack (" .. (nearest.model:GetAttribute("Side") or "") .. ")"
+				here.count.Text = nearest.count.Text .. " left. Click to search!"
+				here.status.Text = if nearest.status.Text ~= "" then nearest.status.Text else "Find clues to rule haystacks out"
+				here.status.TextColor3 = if nearest.status.Text ~= "" then nearest.status.TextColor3 else Ui.colors.white
+			end
+		end
+	end
+end
+
+function WorldFx.start(gui)
+	buildHerePanel(gui)
+	task.spawn(watchNearby)
 	task.spawn(function()
 		local folder = workspace:WaitForChild("Haystacks", 60)
 		if not folder then
