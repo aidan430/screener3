@@ -18,6 +18,7 @@ local Piles = require(script.Parent.Piles)
 local Achievements = require(script.Parent.Achievements)
 local Hauling = require(script.Parent.Hauling)
 local Tools = require(script.Parent.Tools)
+local Stamina = require(script.Parent.Stamina)
 
 local Search = {}
 local lastHarvest = {}
@@ -165,6 +166,9 @@ local function harvest(player, target)
 			Remotes.SearchFx:FireClient(player, { kind = "full" })
 			return
 		end
+	end
+	if not Stamina.spend(player, Config.Stamina.perHarvest) then
+		return status(player, "Catching your breath...") -- a short rest, then carry on
 	end
 	local power = math.min(Economy.power(d, flags.speedBoost), room(d))
 	local taken, hit, golden, gone = 0, false, false, false

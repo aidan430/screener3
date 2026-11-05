@@ -43,6 +43,12 @@ def rows(table: str) -> list[dict]:
     return out
 
 
+def table(name: str) -> dict:
+    """A one-line Config table such as Config.Stamina = { max = 60, ... }."""
+    line = re.search(rf"^Config\.{name} = \{{(.*)\}}", CONFIG, re.M).group(1)
+    return {k: float(v) for k, v in re.findall(r"(\w+) = ([\d.]+)", line)}
+
+
 def layout() -> dict:
     """Mirror of src/shared/Layout.luau: clump cells bottom to top, the machines' order and
     the needle's hiding places."""
@@ -100,16 +106,37 @@ class Player:
         self.buckets = rows("Buckets")
         self.bucket = 0
         self.build_left = BUILD_COINS
+        self.stamina, self.fitness = table("Stamina"), rows("Fitness")
+        self.fit = [0] * len(self.fitness)
 
     def power_made(self, gens=None):
         gens = self.gens if gens is None else gens
         return sum(n * g["power"] for n, g in zip(gens, self.generators))
 
-    def click_rate(self, tool=None, perk=None):
+    def click_rate(self, tool=None, perk=None, fit=None, load=None):
+        """Straws a second while harvesting. With a load (straws to fill up), stamina caps it."""
         tool, perk = self.tool if tool is None else tool, self.perk if perk is None else perk
-        power = self.tools[tool]["power"] * (1 + self.perks[0]["per_level"] * perk[0])
+        power = self.tools[tool]["power"] * (1 + self.perks[0]["per_level"] * perk[0]) * (2 if self.robux else 1)
         cooldown = self.cooldown * (1 - self.perks[1]["per_level"] * perk[1])
-        return power * min(CLICKS_PER_SECOND, 1 / cooldown) * (2 if self.robux else 1)
+        clicks = min(CLICKS_PER_SECOND, 1 / cooldown)
+        return power * (clicks if load is None else self.stamina_clicks(clicks, load / power, fit))
+
+    def stamina_clicks(self, clicks: float, n: float, fit=None) -> float:
+        """Average clicks a second over n clicks, starting rested (Config.Stamina, Fitness):
+        the bar drains by clicks x perHarvest - regen a second; out of breath, you rest
+        regenDelay, refill to `recover`, and go again."""
+        fit, st = self.fit if fit is None else fit, self.stamina
+        bonus = {f["stat"]: f["per_level"] * lvl for f, lvl in zip(self.fitness, fit)}
+        regen = st["regenPerSecond"] + bonus.get("regen", 0)
+        drain = clicks * st["perHarvest"] - regen
+        if drain <= 0:
+            return clicks
+        first = (st["max"] + bonus.get("max", 0)) / drain * clicks  # clicks before the first rest
+        burst = st["recover"] / drain
+        sustained = clicks * burst / (burst + st["regenDelay"] + st["recover"] / regen)
+        if self.robux:  # Auto Sell: no walk to the trader, so no rest between loads
+            return sustained
+        return clicks if n <= first else n / (first / clicks + (n - first) / sustained)
 
     def machine_rate(self, owned=None, gens=None):
         owned = self.owned if owned is None else owned
@@ -129,10 +156,11 @@ class Player:
 
     def rate(self, **kw):
         """Average straws a second, counting the time lost walking to the merchant."""
-        click = self.click_rate(kw.get("tool"), kw.get("perk"))
         tool = self.tool if kw.get("tool") is None else kw["tool"]
         bucket = self.bucket if kw.get("bucket") is None else kw["bucket"]
-        fill = (self.tools[tool]["capacity"] + self.buckets[bucket]["capacity"]) / click
+        load = self.tools[tool]["capacity"] + self.buckets[bucket]["capacity"]
+        click = self.click_rate(kw.get("tool"), kw.get("perk"), kw.get("fit"), load)
+        fill = load / click
         trips = 0 if self.robux else TRIP_SECONDS / (fill + TRIP_SECONDS)
         machines = self.machine_rate(kw.get("owned"), kw.get("gens"))
         silo = self.silos[self.silo]["size"]
@@ -165,6 +193,11 @@ class Player:
                 new = list(self.trucks)
                 new[i] += 1
                 out.append((t["price"], {"trucks": new}, lambda i=i: self.trucks.__setitem__(i, self.trucks[i] + 1)))
+        for i, f in enumerate(self.fitness):
+            if self.fit[i] < f["levels"] and f["stat"] != "walk":  # walking speed isn't modelled
+                new = list(self.fit)
+                new[i] += 1
+                out.append((f["price"] * f["growth"] ** self.fit[i], {"fit": new}, lambda i=i: self.fit.__setitem__(i, self.fit[i] + 1)))
         if self.bucket + 1 < len(self.buckets):
             out.append((self.buckets[self.bucket + 1]["price"], {"bucket": self.bucket + 1}, lambda: setattr(self, "bucket", self.bucket + 1)))
         if self.silo + 1 < len(self.silos):

@@ -179,3 +179,24 @@ to the clump); infinite rotations in Place; two players loading a tool model at 
 broken tool; the new needle wasn't saved straight away and the heap rebuilt 6 s late (now at
 once); golden straw didn't auto-dump; stale Config comments.
 Not done yet: session locking for saves (a very quick server hop could lose that session).
+
+## Stamina, fitness and the metal detector (2026-11-05)
+- **Stamina (`Config.Stamina`):** max 100, 1 per harvest click, refills 2.5 a second all the
+  time (so clicking 3 a second drains only 0.5 a second: about 200 s of steady harvesting from
+  full). At 0 you "catch your breath": a 1 s rest, then it refills to 15 and you carry on. The
+  server owns it (`server/Stamina.luau`; attributes Stamina, StaminaMax, Winded); a slim bar
+  under the crosshair shows only when it isn't full. Walking speed base 16 (Roblox's default).
+- **Fitness (`Config.Fitness`, saved as `d.fitness`, shop tab "Fitness"):** Stronger Arms +50
+  max stamina a level (5 levels, 300 coins x3 each level), Second Wind +0.25 refill a second (4
+  levels, 500 x3: at level 2 a steady 3 clicks a second never runs out), Light Boots +1.5
+  walking speed (4 levels, 600 x3; set on the Humanoid by the server on spawn and purchase).
+- **Pacing:** `dev/pacing.py` caps the click rate by stamina (rested at the start of each load,
+  since the walk to the trader refills it; no rest with Auto Sell) and buys Stronger Arms and
+  Second Wind. Free player's needle: about 34 h (unchanged); Robux: about 12 h.
+- **Metal detector (`Config.MetalDetector`, saved as `d.detector`):** 900 coins, bought once
+  (Fitness tab). Hold V: the client asks `Remotes.Detect` about 4 times a second (the server
+  answers at most every 0.2 s) and gets only a signal 0-5: 0 beyond 30 studs from your head to
+  your needle's clump, then 1-5 in 6-stud bands. It beeps (the built-in short ping, quiet,
+  pitch rising with the signal) every 1.2 / 0.9 / 0.65 / 0.45 / 0.28 s, lights 1-5 meter bars
+  and pulses gently. The needle's position never leaves the server. Separate from the Needle
+  Detector tool (tool 10), whose warmth on each click still works as before.

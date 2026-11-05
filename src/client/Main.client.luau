@@ -26,6 +26,8 @@ local Music = require(script.Parent:WaitForChild("Music"))
 local Jetpack = require(script.Parent:WaitForChild("Jetpack"))
 local Offer = require(script.Parent:WaitForChild("Offer"))
 local Animals = require(script.Parent:WaitForChild("Animals"))
+local StaminaBar = require(script.Parent:WaitForChild("Stamina"))
+local Detector = require(script.Parent:WaitForChild("Detector"))
 
 local player = Players.LocalPlayer
 local gui = Ui.make("ScreenGui", { Name = "HaystackUi", ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
@@ -104,6 +106,12 @@ step("offers", function()
 end)
 step("animals", function()
 	Animals.start()
+end)
+step("stamina", function()
+	StaminaBar.mount(gui)
+end)
+step("metal detector", function()
+	Detector.start(gui, Notify)
 end)
 if not hud then
 	hud = { refresh = function() end }

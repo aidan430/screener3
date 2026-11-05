@@ -46,6 +46,9 @@
         },
         "GetAchievements": {
           "$className": "RemoteFunction"
+        },
+        "Detect": {
+          "$className": "RemoteFunction"
         }
       }
     },

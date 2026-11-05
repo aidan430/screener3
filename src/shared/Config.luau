@@ -87,6 +87,19 @@ Config.Buckets = {
 	{ name = "Giant Basket", capacity = 60000, price = 2500000, size = 2.8 },
 }
 
+-- Stamina: each harvest click spends perHarvest; it refills regenPerSecond all the time. Out of
+-- breath (0), you rest regenDelay seconds, then until it's back to `recover`. Fitness upgrades
+-- it (coins; level n costs price x growth^(n-1); stat: max, regen or walk = Humanoid.WalkSpeed).
+Config.Stamina = { max = 100, perHarvest = 1, regenPerSecond = 2.5, regenDelay = 1, recover = 15, walkSpeed = 16 }
+Config.Fitness = {
+	{ id = "arms", name = "Stronger Arms", stat = "max", per_level = 50, levels = 5, price = 300, growth = 3, text = "+50 stamina per level" },
+	{ id = "breath", name = "Second Wind", stat = "regen", per_level = 0.25, levels = 4, price = 500, growth = 3, text = "+0.25 stamina a second per level" },
+	{ id = "boots", name = "Light Boots", stat = "walk", per_level = 1.5, levels = 4, price = 600, growth = 3, text = "+1.5 walking speed per level" },
+}
+-- Metal detector (bought once): hold `key` to sweep. Within `range` studs of your needle's clump
+-- it beeps, faster and higher the closer your head is (signal 1-5; beep = seconds per signal).
+Config.MetalDetector = { price = 900, range = 30, levels = 5, pollSeconds = 0.25, key = "V", beep = { 1.2, 0.9, 0.65, 0.45, 0.28 } }
+
 -- The silo on your plot holds what your machines harvest until you next sell.
 Config.Silos = {
 	{ name = "Hay Shed", size = 2000, price = 0 },
@@ -179,6 +192,7 @@ Config.Sounds = {
 	coins = "rbxasset://sounds/electronicpingshort.wav", -- a short, gentle chime
 	cheer = "rbxasset://sounds/electronicpingshort.wav", -- the same chime, lower and fuller
 	spin = "",
+	detector = "rbxasset://sounds/electronicpingshort.wav", -- the metal detector's beep
 }
 -- Per sound: volume (0-1), pitch multiplier, wobble = random pitch +/- so clicks don't tire.
 Config.SoundSettings = {
@@ -186,6 +200,7 @@ Config.SoundSettings = {
 	pop = { volume = 0.4, pitch = 0.85 },
 	coins = { volume = 0.3, pitch = 1 },
 	cheer = { volume = 0.35, pitch = 0.7 },
+	detector = { volume = 0.18, pitch = 0.8 },
 }
 
 -- Background music: soft acoustic / country instrumentals, looping on each player's side
