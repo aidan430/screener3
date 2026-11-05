@@ -2589,7 +2589,6 @@ local function harvest(player, target)
 		if not clump then
 			return nope(player, "That's not your heap. Yours is on the farm marked YOUR FARM.")
 		end
-		point = Piles.position(plotIndex, clump)
 		taken, gone = Piles.take(plotIndex, d, clump, power)
 		hit = gone and clump == d.needleClump
 		PlayerData.update(player, function(data)

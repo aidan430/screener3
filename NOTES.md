@@ -78,3 +78,23 @@ commit 7d2617e). Both in git history.
 - **Offer (`Config.OfferAfterClumps` 25):** once per session, after 25 clumps harvested since
   joining, one card "Enjoying the harvest?" lists Speed Boost and Jetpack if their IDs are set
   (Jetpack not if owned), with a "No thanks" button as big as the others. Nothing set: no card.
+
+## v4: one smooth heap, visible hay, your own trader (2026-11-05)
+- **The heap is terrain now.** Terrain Grass is the heap (recoloured `Config.HeapColour`, its
+  grass blades read as loose straw); the ground is LeafyGrass. One clump = one 4-stud terrain
+  cell: `ClumpSize` 4 (must stay 4, the terrain grid), `PileLayers` 64 (256 studs),
+  `PileRadiusBottom` 38, `PileRadiusTop` 4, `PileCurve` 1.6: exactly 5,000 clumps. A clump
+  shrinks in 8 visible steps as you harvest it. `DataStoreName` is now `NeedleHaystack_v4`
+  (old saves number clumps differently; nobody had live saves yet).
+- **Needle:** `NeedleHeight` {0.5, 0.8} of the height, `NeedleCore` 0.4 of the radius there:
+  68 hiding places. Machines and Straw Blast peel from the outside in (`Layout.machineOrder`),
+  reaching it after about 94% of the heap: about 34 h for a free player who never climbs
+  (was 24 h), 10.5 h with Robux. Climbing and digging into the core is the shortcut.
+- **Slopes:** `MaxSlopeAngle` 46: the steep heap can't be walked up; build or fly.
+- **Buckets (`Config.Buckets`):** 600 / 2,000 / 6,000 / 20,000 / 60,000 extra straws for
+  1.5K / 9K / 60K / 400K / 2.5M coins, in the shop's Storage tab. The tool fills first.
+- **Trader's Stall:** every player gets one, `TraderDistance` 50 studs from the plot centre
+  towards the hub; take it back (X) and place it anywhere, even on a platform.
+  `BasketDrainSeconds` 4 is just the cart-away animation; dumping pays at once.
+- **Teleporter Pad:** 25,000 coins; E on a pad lists your other pads by height.
+- `LoadSize` 2.4: how big the hay on a full tool is.
