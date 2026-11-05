@@ -604,47 +604,52 @@ end
 					<string name="Name">Achievement</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX0000C">
+			<Item class="RemoteEvent" referent="RBX0000C">
 				<Properties>
-					<string name="Name">Whistle</string>
+					<string name="Name">Teleport</string>
 				</Properties>
 			</Item>
 			<Item class="RemoteFunction" referent="RBX0000D">
 				<Properties>
-					<string name="Name">Buy</string>
+					<string name="Name">Whistle</string>
 				</Properties>
 			</Item>
 			<Item class="RemoteFunction" referent="RBX0000E">
 				<Properties>
-					<string name="Name">Place</string>
+					<string name="Name">Buy</string>
 				</Properties>
 			</Item>
 			<Item class="RemoteFunction" referent="RBX0000F">
 				<Properties>
-					<string name="Name">TakeBack</string>
+					<string name="Name">Place</string>
 				</Properties>
 			</Item>
 			<Item class="RemoteFunction" referent="RBX00010">
 				<Properties>
-					<string name="Name">EquipSkin</string>
+					<string name="Name">TakeBack</string>
 				</Properties>
 			</Item>
 			<Item class="RemoteFunction" referent="RBX00011">
+				<Properties>
+					<string name="Name">EquipSkin</string>
+				</Properties>
+			</Item>
+			<Item class="RemoteFunction" referent="RBX00012">
 				<Properties>
 					<string name="Name">GetAchievements</string>
 				</Properties>
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerScriptService" referent="RBX00012">
+	<Item class="ServerScriptService" referent="RBX00013">
 		<Properties>
 			<string name="Name">ServerScriptService</string>
 		</Properties>
-		<Item class="Folder" referent="RBX00013">
+		<Item class="Folder" referent="RBX00014">
 			<Properties>
 				<string name="Name">Server</string>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX00014">
+			<Item class="ModuleScript" referent="RBX00015">
 				<Properties>
 					<string name="Name">Achievements</string>
 					<ProtectedString name="Source"><![CDATA[-- The ten achievements, secret until earned. Each watches one number; all ten open the Golden Loft.
@@ -732,7 +737,7 @@ return Achievements
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00015">
+			<Item class="ModuleScript" referent="RBX00016">
 				<Properties>
 					<string name="Name">Build</string>
 					<ProtectedString name="Source"><![CDATA[-- Helpers for building the world out of simple anchored parts.
@@ -814,7 +819,155 @@ return Build
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00016">
+			<Item class="ModuleScript" referent="RBX00017">
+				<Properties>
+					<string name="Name">Carry</string>
+					<ProtectedString name="Source"><![CDATA[-- What you carry, where everyone can see it: the hay on your tool grows with every harvest,
+-- and once the tool is full your bucket (at your hip) fills up too. Dumping empties both.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Economy = require(Shared:WaitForChild("Economy"))(Config)
+
+local PlayerData = require(script.Parent.PlayerData)
+local Build = require(script.Parent.Build)
+
+local Carry = {}
+local HAY, GOLD = { 222, 186, 92 }, { 255, 214, 90 }
+local gear = Instance.new("Folder") -- outside the character, so first person doesn't hide it
+gear.Name = "Gear"
+gear.Parent = workspace
+
+local function weld(a, b)
+	local w = Instance.new("WeldConstraint")
+	w.Part0, w.Part1 = a, b
+	w.Parent = b
+end
+
+-- A bucket at the hip: the pail, its rim and handle, and a mound of hay that grows inside.
+local function makeBucket(player, root, level)
+	local def = Economy.bucket(level)
+	local model = Instance.new("Model")
+	model.Name = player.Name
+	model:SetAttribute("Level", level)
+	local size = def.size
+	local base = root.CFrame * CFrame.new(1.4, -0.9, 0.2)
+	local parts = {
+		Build.part({ name = "Pail", size = Vector3.new(size, size * 0.9, size * 0.9), cframe = base * CFrame.Angles(0, 0, math.rad(90)), color = { 150, 104, 58 }, material = "Fabric", shape = "Cylinder", collide = false, parent = model }),
+		Build.part({ size = Vector3.new(0.15, size * 1.0, size * 1.0), cframe = base * CFrame.new(0, size / 2, 0) * CFrame.Angles(0, 0, math.rad(90)), color = { 110, 76, 46 }, material = "Wood", shape = "Cylinder", collide = false, parent = model }),
+		Build.part({ size = Vector3.new(0.12, size * 0.9, 0.12), cframe = base * CFrame.new(0, size * 0.7, 0) * CFrame.Angles(0, 0, math.rad(90)), color = { 120, 120, 128 }, material = "Metal", collide = false, parent = model }),
+		Build.part({ name = "Hay", size = Vector3.new(0.1, 0.1, 0.1), cframe = base * CFrame.new(0, size / 2, 0), color = HAY, material = "Grass", shape = "Ball", collide = false, transparency = 1, parent = model }),
+	}
+	for _, part in ipairs(parts) do
+		part.Anchored = false
+		part.Massless = true
+		weld(root, part)
+	end
+	model.Parent = gear
+	return model
+end
+
+local function bucketOf(player)
+	return gear:FindFirstChild(player.Name)
+end
+
+-- Grows a hay mound to show how full something is (0..1), keeping its bottom where it sits.
+local function mound(part, share, width, golden)
+	if share <= 0 then
+		part.Transparency = 1
+		return
+	end
+	part.Transparency = 0
+	part.Color = Build.rgb(if golden then GOLD else HAY)
+	local w = width * (0.45 + 0.55 * math.sqrt(math.min(share, 1)))
+	part.Size = Vector3.new(w, w * 0.7, w)
+end
+
+-- Shows the player's load on their tool and bucket. Cheap: call it whenever the load changes.
+function Carry.show(player)
+	local d = PlayerData.get(player)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not d or not root then
+		return
+	end
+	local load = d.carried + d.carriedGolden
+	local golden = d.carriedGolden > d.carried
+	local toolCap = Economy.tool(d.tool).capacity
+	local onTool = math.min(load, toolCap) / toolCap
+	for _, container in ipairs({ character, player:FindFirstChildOfClass("Backpack") }) do
+		for _, tool in ipairs(container and container:GetChildren() or {}) do
+			local hay = tool:IsA("Tool") and tool:FindFirstChild("Load")
+			if hay then
+				mound(hay, onTool, Config.LoadSize, golden)
+			end
+		end
+	end
+	local bucket = bucketOf(player)
+	if d.bucket <= 1 then
+		if bucket then
+			bucket:Destroy()
+		end
+		return
+	end
+	if bucket and bucket:GetAttribute("Level") ~= d.bucket then
+		bucket:Destroy()
+		bucket = nil
+	end
+	if bucket then -- still welded to this character?
+		local pail = bucket:FindFirstChild("Pail")
+		local w = pail and pail:FindFirstChildOfClass("WeldConstraint")
+		if not w or w.Part0 ~= root then
+			bucket:Destroy()
+			bucket = nil
+		end
+	end
+	bucket = bucket or makeBucket(player, root, d.bucket)
+	local def = Economy.bucket(d.bucket)
+	local hay = bucket:FindFirstChild("Hay")
+	if hay then
+		mound(hay, math.max(0, load - toolCap) / math.max(def.capacity, 1), def.size * 0.95, golden)
+	end
+end
+
+function Carry.init()
+	local function watch(player)
+		for _, name in ipairs({ "Carried", "Capacity", "Bucket", "Tool" }) do
+			player:GetAttributeChangedSignal(name):Connect(function()
+				Carry.show(player)
+			end)
+		end
+		player.CharacterAdded:Connect(function(character)
+			character:WaitForChild("HumanoidRootPart", 10)
+			task.wait(1.5) -- the tool arrives from StarterGear
+			Carry.show(player)
+		end)
+		local backpack = player:WaitForChild("Backpack", 10)
+		if backpack then
+			backpack.ChildAdded:Connect(function()
+				task.defer(Carry.show, player)
+			end)
+		end
+	end
+	Players.PlayerAdded:Connect(watch)
+	for _, player in ipairs(Players:GetPlayers()) do
+		task.spawn(watch, player)
+	end
+	Players.PlayerRemoving:Connect(function(player)
+		local bucket = bucketOf(player)
+		if bucket then
+			bucket:Destroy()
+		end
+	end)
+end
+
+return Carry
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00018">
 				<Properties>
 					<string name="Name">Haystack</string>
 					<ProtectedString name="Source"><![CDATA[-- The Golden Loft: the secret level in the clouds above the hub, with its golden haystack.
@@ -875,7 +1028,7 @@ return Haystack
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00017">
+			<Item class="ModuleScript" referent="RBX00019">
 				<Properties>
 					<string name="Name">Loft</string>
 					<ProtectedString name="Source"><![CDATA[-- The Golden Loft: the secret level above the hub, open only to players with all ten
@@ -916,7 +1069,7 @@ return Loft
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00018">
+			<Item class="ModuleScript" referent="RBX0001A">
 				<Properties>
 					<string name="Name">Machines</string>
 					<ProtectedString name="Source"><![CDATA[-- Machines harvest the top of your pile into your silo every second, if your generators make
@@ -1070,7 +1223,7 @@ return Machines
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Script" referent="RBX00019">
+			<Item class="Script" referent="RBX0001B">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Starts the game. The ground and spawn point are built first, so nobody spawns into the void.
@@ -1107,6 +1260,7 @@ local Shop = require(script.Parent.Shop)
 local Loft = require(script.Parent.Loft)
 local Wheel = require(script.Parent.Wheel)
 local Monetization = require(script.Parent.Monetization)
+local Carry = require(script.Parent.Carry)
 
 StarterPlayer.CharacterMaxSlopeAngle = Config.MaxSlopeAngle -- the steep heap needs building to climb
 
@@ -1141,6 +1295,7 @@ PlayerData.onLoaded(function(player, saveable)
 	Piles.build(plotIndex, data)
 	Structures.build(plotIndex, data)
 	Tools.give(player, data.tool, data.skin)
+	Carry.show(player)
 	Wheel.remind(player)
 	toPlot(player)
 	-- after every spawn: back to your plot, and make sure the tool arrived (it comes from StarterGear)
@@ -1169,6 +1324,7 @@ local parts = {
 	{ "Machines", Machines.init },
 	{ "Shop", Shop.init },
 	{ "Loft", Loft.init },
+	{ "Carry", Carry.init },
 }
 for _, part in ipairs(parts) do
 	local ok, err = pcall(part[2])
@@ -1179,7 +1335,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001A">
+			<Item class="ModuleScript" referent="RBX0001C">
 				<Properties>
 					<string name="Name">Monetization</string>
 					<ProtectedString name="Source"><![CDATA[-- Robux items. Every ID in Config.GamePasses and Config.Products starts at 0 (switched off);
@@ -1293,7 +1449,7 @@ return Monetization
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001B">
+			<Item class="ModuleScript" referent="RBX0001D">
 				<Properties>
 					<string name="Name">Pieces</string>
 					<ProtectedString name="Source"><![CDATA[-- What each buildable item looks like, built from parts around `cf`: the base centre on the
@@ -1365,6 +1521,68 @@ function builders.elevator(model, cf)
 	end
 end
 
+local function prompt(parent, action, text, object)
+	local pr = Instance.new("ProximityPrompt")
+	pr.ActionText = text
+	pr.ObjectText = object
+	pr.HoldDuration = 0
+	pr.MaxActivationDistance = 10
+	pr.RequiresLineOfSight = false
+	pr:SetAttribute("Action", action)
+	pr.Parent = parent
+	return pr
+end
+
+local function standing(model, cf, height, diameter, color, material, name)
+	local c = p(model, cf * CFrame.new(0, height / 2, 0) * CFrame.Angles(0, 0, math.rad(90)), Vector3.new(height, diameter, diameter), color, material, "Cylinder")
+	c.Name = name or c.Name
+	return c
+end
+
+-- Your trader: a market stall with a striped awning, the trader behind the counter, and a
+-- big woven basket in front where you dump your hay (the basket's prompt sells it).
+function builders.trader(model, cf)
+	p(model, cf * CFrame.new(0, 1.5, 1), Vector3.new(10, 3, 3), WOOD)
+	p(model, cf * CFrame.new(0, 3.1, 1), Vector3.new(10.4, 0.3, 3.4), DARK, "Wood")
+	for _, c in ipairs({ { -4.8, -0.2 }, { 4.8, -0.2 }, { -4.8, 3.6 }, { 4.8, 3.6 } }) do
+		p(model, cf * CFrame.new(c[1], 4.5, c[2]), Vector3.new(0.5, 9, 0.5), DARK, "Wood")
+	end
+	for i = 0, 5 do -- the striped awning, tipped towards the front
+		local colour = if i % 2 == 0 then { 196, 72, 56 } else { 246, 232, 200 }
+		p(model, cf * CFrame.new(-4.2 + i * 1.68, 9.3, 1.4) * CFrame.Angles(math.rad(-12), 0, 0), Vector3.new(1.68, 0.3, 5.6), colour, "Fabric")
+	end
+	local sign = p(model, cf * CFrame.new(0, 10.8, -0.6), Vector3.new(6, 1.6, 0.3), WOOD)
+	Build.text(sign, Enum.NormalId.Front, "TRADER")
+	-- the trader: boots, overalls, a checked shirt, a friendly face and a wide straw hat
+	local body = cf * CFrame.new(0, 0, 3.2) * CFrame.Angles(0, math.rad(180), 0)
+	for _, x in ipairs({ -0.5, 0.5 }) do
+		p(model, body * CFrame.new(x, 1, 0), Vector3.new(0.9, 2, 0.9), { 64, 82, 130 }, "Fabric")
+	end
+	p(model, body * CFrame.new(0, 3.1, 0), Vector3.new(2.2, 2.2, 1.1), { 196, 72, 56 }, "Fabric")
+	p(model, body * CFrame.new(0, 2.6, -0.05), Vector3.new(1.6, 1.4, 1.15), { 64, 82, 130 }, "Fabric")
+	p(model, body * CFrame.new(0, 4.8, 0), Vector3.new(1.3, 1.3, 1.3), { 232, 188, 150 }, "SmoothPlastic")
+	for _, x in ipairs({ -0.3, 0.3 }) do
+		p(model, body * CFrame.new(x, 4.95, -0.66), Vector3.new(0.18, 0.18, 0.05), { 40, 30, 24 }, "SmoothPlastic")
+	end
+	standing(model, body * CFrame.new(0, 5.45, 0), 0.15, 3.2, { 226, 196, 110 }, "Fabric")
+	standing(model, body * CFrame.new(0, 5.5, 0), 0.8, 1.5, { 226, 196, 110 }, "Fabric")
+	-- the basket: woven sides, a band, and the hay inside (shown on each player's screen)
+	local basket = standing(model, cf * CFrame.new(0, 0, -3.6), 2.6, 4.4, { 150, 104, 58 }, "Fabric", "Basket")
+	standing(model, cf * CFrame.new(0, 2.3, -3.6), 0.35, 4.6, DARK, "Wood")
+	local fill = standing(model, cf * CFrame.new(0, 2.5, -3.6), 0.3, 4, { 222, 186, 92 }, "Grass", "BasketFill")
+	fill.Transparency = 1
+	fill.CanCollide = false
+	prompt(basket, "sell", "Dump hay", "Your trader")
+end
+
+-- A teleporter pad: step on, press E and pick another of your pads.
+function builders.teleporter(model, cf)
+	standing(model, cf, 0.6, 8, { 70, 72, 84 }, "DiamondPlate", "Pad")
+	local ring = standing(model, cf * CFrame.new(0, 0.6, 0), 0.15, 6.4, { 120, 200, 255 }, "Neon", "Ring")
+	ring.CanCollide = false
+	prompt(ring, "teleport", "Teleport", "Teleporter Pad")
+end
+
 -- Machines and generators: a body, a roof light that glows when running, a name plate.
 local function engine(model, cf, def, kind)
 	local size = Vector3.new(def.size[1], def.size[2], def.size[3])
@@ -1422,7 +1640,7 @@ return Pieces
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001C">
+			<Item class="ModuleScript" referent="RBX0001E">
 				<Properties>
 					<string name="Name">Piles</string>
 					<ProtectedString name="Source"><![CDATA[-- Each player's 70 m pile: 5,000 clumps of 1,000 straws on their plot, built from their save
@@ -1592,7 +1810,7 @@ return Piles
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001D">
+			<Item class="ModuleScript" referent="RBX0001F">
 				<Properties>
 					<string name="Name">PlayerData</string>
 					<ProtectedString name="Source"><![CDATA[-- Each player's saved progress and the leaderboard. If the DataStore can't be read (Studio
@@ -1866,7 +2084,7 @@ return PlayerData
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001E">
+			<Item class="ModuleScript" referent="RBX00020">
 				<Properties>
 					<string name="Name">Plots</string>
 					<ProtectedString name="Source"><![CDATA[-- The four plots around the hub. A player gets a free plot when they join and gives it
@@ -1977,7 +2195,7 @@ return Plots
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001F">
+			<Item class="ModuleScript" referent="RBX00021">
 				<Properties>
 					<string name="Name">Profile</string>
 					<ProtectedString name="Source"><![CDATA[-- A player's data model: what is saved, with its defaults. Anything missing or of the
@@ -2122,7 +2340,7 @@ return Profile
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00020">
+			<Item class="ModuleScript" referent="RBX00022">
 				<Properties>
 					<string name="Name">Search</string>
 					<ProtectedString name="Source"><![CDATA[-- The loop: click the clump you're looking at to harvest it onto your tool, sell at the
@@ -2182,7 +2400,7 @@ local function room(d)
 end
 
 -- Sells what the player carries and their silo. Returns coins paid.
-function Search.sell(player, reason)
+function Search.sell(player, reason, basket)
 	local d = PlayerData.get(player)
 	if not d or (d.carried + d.carriedGolden + d.siloStraw) <= 0 then
 		return 0
@@ -2195,7 +2413,7 @@ function Search.sell(player, reason)
 		data.stats.straws_sold += straws
 		data.carried, data.carriedGolden, data.siloStraw = 0, 0, 0
 	end)
-	Remotes.SearchFx:FireClient(player, { kind = "sold", coins = coins, straws = straws, reason = reason })
+	Remotes.SearchFx:FireClient(player, { kind = "sold", coins = coins, straws = straws, reason = reason, basket = basket })
 	Achievements.check(player)
 	return coins
 end
@@ -2375,8 +2593,17 @@ function Search.init()
 		return true, "The merchant comes running! Sold for " .. Format.short(Search.sell(player, "whistle")) .. " coins."
 	end
 	ProximityPromptService.PromptTriggered:Connect(function(prompt, player)
-		if prompt:GetAttribute("Action") == "sell" and Search.sell(player, "merchant") <= 0 then
-			Remotes.Announce:FireClient(player, { kind = "notice", text = "You have nothing to sell yet. Harvest some straw!" })
+		if prompt:GetAttribute("Action") ~= "sell" then
+			return
+		end
+		-- a trader's basket on a plot only takes its owner's hay; the hub merchant takes anyone's
+		local plotIndex = Plots.of(player)
+		local stall = prompt:FindFirstAncestorOfClass("Model")
+		local isStall = stall ~= nil and stall:GetAttribute("Item") == "trader"
+		if isStall and not (plotIndex and stall:IsDescendantOf(Plots.folder(plotIndex))) then
+			Remotes.Announce:FireClient(player, { kind = "notice", text = "That's someone else's trader. Yours is on your own farm." })
+		elseif Search.sell(player, if isStall then "trader" else "merchant", prompt.Parent) <= 0 then
+			Remotes.Announce:FireClient(player, { kind = "notice", text = "You have nothing to dump yet. Harvest some hay!" })
 		end
 	end)
 	Players.PlayerRemoving:Connect(function(player)
@@ -2388,7 +2615,7 @@ return Search
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00021">
+			<Item class="ModuleScript" referent="RBX00023">
 				<Properties>
 					<string name="Name">Shop</string>
 					<ProtectedString name="Source"><![CDATA[-- Buying with coins: tools and silos (in order), perks for the tool you hold, and
@@ -2544,7 +2771,7 @@ return Shop
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00022">
+			<Item class="ModuleScript" referent="RBX00024">
 				<Properties>
 					<string name="Name">Structures</string>
 					<ProtectedString name="Source"><![CDATA[-- Free building on your own plot: place pieces, machines and generators you've bought, take
@@ -2593,12 +2820,30 @@ local function spawnPiece(plotIndex, entry, slot)
 	return model
 end
 
+-- Everyone has a trader: one stall, placed between the hub and the heap on the first visit.
+-- Players can take it back (X) and put it anywhere, even up on a platform.
+local function ensureTrader(plotIndex, d)
+	if Economy.owned(d, "trader") > 0 then
+		return
+	end
+	local centre = Plots.centre(plotIndex)
+	local toHub = -centre.Unit
+	local rel = toHub * Config.TraderDistance
+	local turn = math.deg(math.atan2(-toHub.X, -toHub.Z)) -- the stall's front faces the hub
+	table.insert(d.placed, { k = "trader", x = math.floor(rel.X * 10 + 0.5) / 10, y = 0, z = math.floor(rel.Z * 10 + 0.5) / 10, r = turn % 360 })
+end
+
 -- Rebuilds everything the player has placed (on joining).
 function Structures.build(plotIndex, d)
+	local owner = Plots.owner(plotIndex)
+	if owner then
+		PlayerData.update(owner, function(data)
+			ensureTrader(plotIndex, data)
+		end)
+	end
 	for slot, entry in ipairs(d.placed) do
 		spawnPiece(plotIndex, entry, slot)
 	end
-	local owner = Plots.owner(plotIndex)
 	if owner then
 		task.defer(relight, owner)
 	end
@@ -2671,7 +2916,27 @@ function Structures.light(player, running)
 	end
 end
 
+-- Teleporter pads: from a pad you stand on to any other pad on your own plot.
+local function teleport(player, destination)
+	local plotIndex = Plots.of(player)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not plotIndex or not root or typeof(destination) ~= "Instance" or destination.Parent ~= builtFolder(plotIndex) or destination:GetAttribute("Item") ~= "teleporter" then
+		return
+	end
+	local near = false
+	for _, model in ipairs(builtFolder(plotIndex):GetChildren()) do
+		if model ~= destination and model:GetAttribute("Item") == "teleporter" and (model:GetPivot().Position - root.Position).Magnitude <= 14 then
+			near = true
+		end
+	end
+	if near then
+		root.CFrame = destination:GetPivot() * CFrame.new(0, 4, 0)
+		root.AssemblyLinearVelocity = Vector3.zero
+	end
+end
+
 function Structures.init()
+	Remotes.Teleport.OnServerEvent:Connect(teleport)
 	Remotes.Place.OnServerInvoke = place
 	Remotes.TakeBack.OnServerInvoke = remove
 	ProximityPromptService.PromptTriggered:Connect(function(prompt, player)
@@ -2692,7 +2957,7 @@ return Structures
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00023">
+			<Item class="ModuleScript" referent="RBX00025">
 				<Properties>
 					<string name="Name">Tools</string>
 					<ProtectedString name="Source"><![CDATA[-- The search tools: a pitchfork-shaped Tool per level, coloured from Config.Tools.
@@ -2722,6 +2987,7 @@ local function attach(tool, handle, size, offset, colour, material)
 	weld.Part1 = part
 	weld.Parent = part
 	part.Parent = tool
+	return part
 end
 
 -- The skin (from the Wheel of Fortune) recolours the tool; "" is the plain tool.
@@ -2758,6 +3024,11 @@ function Tools.make(level, skinId)
 	for x = -1, 1 do
 		attach(tool, handle, Vector3.new(0.16, 1.5, 0.16), CFrame.new(x * 0.7, 3.75, 0), colour, material)
 	end
+	-- the hay you've harvested sits on the tines and grows as you harvest (see Carry.luau)
+	local load = attach(tool, handle, Vector3.new(0.2, 0.2, 0.2), CFrame.new(0, 4, 0), Build.rgb({ 222, 186, 92 }), Enum.Material.Grass)
+	load.Name = "Load"
+	load.Shape = Enum.PartType.Ball
+	load.Transparency = 1
 	return tool
 end
 
@@ -2812,7 +3083,7 @@ return Tools
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00024">
+			<Item class="ModuleScript" referent="RBX00026">
 				<Properties>
 					<string name="Name">Wheel</string>
 					<ProtectedString name="Source"><![CDATA[-- The Wheel of Fortune: one Robux spin (the WheelSpin product) = one prize, picked here on the
@@ -2886,7 +3157,7 @@ return Wheel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00025">
+			<Item class="ModuleScript" referent="RBX00027">
 				<Properties>
 					<string name="Name">World</string>
 					<ProtectedString name="Source"><![CDATA[-- Hollow Creek Farm, smaller now: four plots around a hub with the merchant, the Wheel of
@@ -3072,19 +3343,19 @@ return World
 			</Item>
 		</Item>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX00026">
+	<Item class="StarterPlayer" referent="RBX00028">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX00027">
+		<Item class="StarterPlayerScripts" referent="RBX00029">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX00028">
+			<Item class="Folder" referent="RBX0002A">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX00029">
+				<Item class="ModuleScript" referent="RBX0002B">
 					<Properties>
 						<string name="Name">BuildMode</string>
 						<ProtectedString name="Source"><![CDATA[-- Free building in first person. Z and C pick from your inventory bar (or press M and click
@@ -3311,7 +3582,7 @@ return BuildMode
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002A">
+				<Item class="ModuleScript" referent="RBX0002C">
 					<Properties>
 						<string name="Name">Cursor</string>
 						<ProtectedString name="Source"><![CDATA[-- First person locks the mouse to the centre of the screen. Menus need a pointer, so a
@@ -3360,7 +3631,7 @@ return Cursor
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002B">
+				<Item class="ModuleScript" referent="RBX0002D">
 					<Properties>
 						<string name="Name">Harvest</string>
 						<ProtectedString name="Source"><![CDATA[-- Aiming in first person: the clump under the crosshair (within reach, on your own pile or the
@@ -3602,7 +3873,100 @@ return Harvest
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002C">
+				<Item class="ModuleScript" referent="RBX0002E">
+					<Properties>
+						<string name="Name">HayFx</string>
+						<ProtectedString name="Source"><![CDATA[-- The hay you can see moving: every harvest lifts a lump off the heap onto your tool, and
+-- dumping sends your load flying into your trader's basket, which fills and is carted away.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Debris = game:GetService("Debris")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Ui = require(script.Parent.Ui)
+local Juice = require(script.Parent.Juice)
+
+local HayFx = {}
+local HAY = Color3.fromRGB(Config.HeapColour[1], Config.HeapColour[2], Config.HeapColour[3])
+local GOLD = Color3.fromRGB(255, 214, 90)
+
+local function lump(position, size, golden)
+	local folder = workspace:FindFirstChild("MyEffects") or workspace
+	return Ui.make("Part", {
+		Anchored = true, CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false,
+		Shape = Enum.PartType.Ball, Material = Enum.Material.Grass, Color = if golden then GOLD else HAY,
+		Size = Vector3.new(size, size * 0.75, size), CFrame = CFrame.new(position), Parent = folder,
+	})
+end
+
+-- Where your tool's hay sits on screen: low and to the right, in front of you.
+local function toolPoint()
+	local camera = workspace.CurrentCamera
+	return camera and (camera.CFrame * CFrame.new(1.3, -1.3, -2.6)).Position
+end
+
+-- A lump of hay pulled off the heap at `from`, flying onto your tool.
+function HayFx.lift(from, golden)
+	local to = toolPoint()
+	if not to then
+		return
+	end
+	local ball = lump(from, 1.6, golden)
+	local mid = (from + to) / 2 + Vector3.new(0, 1.5, 0)
+	Juice.ease(ball, 0.14, { CFrame = CFrame.new(mid), Size = Vector3.new(1.2, 0.9, 1.2) }, Enum.EasingStyle.Sine)
+	task.delay(0.14, function()
+		local target = toolPoint() or to
+		Juice.ease(ball, 0.14, { CFrame = CFrame.new(target), Size = Vector3.new(0.5, 0.4, 0.5) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	end)
+	Debris:AddItem(ball, 0.3)
+end
+
+-- Dumping: lumps fly from you into the basket, the hay in it rises, then the trader carts it off.
+function HayFx.dump(basket, straws)
+	if typeof(basket) ~= "Instance" or not basket:IsA("BasePart") then
+		return
+	end
+	local from = toolPoint()
+	local top = basket.Position + Vector3.new(0, basket.Size.X / 2, 0)
+	local count = math.clamp(math.floor(math.log10(math.max(straws, 1)) * 2), 3, 10)
+	for i = 1, count do
+		task.delay((i - 1) * 0.06, function()
+			if not from then
+				return
+			end
+			local ball = lump(from, 1.1, false)
+			local arc = (from + top) / 2 + Vector3.new(math.random(-10, 10) / 10, 3, math.random(-10, 10) / 10)
+			Juice.ease(ball, 0.2, { CFrame = CFrame.new(arc) }, Enum.EasingStyle.Sine)
+			task.delay(0.2, function()
+				Juice.ease(ball, 0.2, { CFrame = CFrame.new(top), Size = Vector3.new(0.6, 0.45, 0.6) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+			end)
+			Debris:AddItem(ball, 0.42)
+		end)
+	end
+	local fill = basket.Parent and basket.Parent:FindFirstChild("BasketFill")
+	if not fill then
+		return
+	end
+	local bottom = basket.CFrame * CFrame.new(-basket.Size.X / 2 + 0.3, 0, 0) -- the cylinder's axis is X
+	local rim = basket.CFrame * CFrame.new(basket.Size.X / 2 - 0.1, 0, 0)
+	fill.CFrame = bottom
+	fill.Transparency = 0
+	task.delay(count * 0.06 + 0.3, function()
+		Juice.ease(fill, 0.5, { CFrame = rim }, Enum.EasingStyle.Back)
+		Juice.burst(top, 18, false)
+		task.delay(0.6 + Config.BasketDrainSeconds * 0.25, function()
+			Juice.ease(fill, Config.BasketDrainSeconds, { CFrame = bottom }, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+			task.delay(Config.BasketDrainSeconds, function()
+				fill.Transparency = 1
+			end)
+		end)
+	end)
+end
+
+return HayFx
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX0002F">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: a crosshair, your pile's progress at the top, and on the left your
@@ -3741,7 +4105,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002D">
+				<Item class="ModuleScript" referent="RBX00030">
 					<Properties>
 						<string name="Name">Juice</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback that makes harvesting feel good: straw bursts, floating numbers, a soft camera
@@ -3924,7 +4288,7 @@ return Juice
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX0002E">
+				<Item class="LocalScript" referent="RBX00031">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- The player's side of the game: first-person harvesting, building, the menus, and all the
@@ -3948,6 +4312,8 @@ local Panels = require(script.Parent:WaitForChild("Panels"))
 local Harvest = require(script.Parent:WaitForChild("Harvest"))
 local BuildMode = require(script.Parent:WaitForChild("BuildMode"))
 local WorldFx = require(script.Parent:WaitForChild("WorldFx"))
+local HayFx = require(script.Parent:WaitForChild("HayFx"))
+local Teleport = require(script.Parent:WaitForChild("Teleport"))
 
 local player = Players.LocalPlayer
 local gui = Ui.make("ScreenGui", { Name = "HaystackUi", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
@@ -4008,6 +4374,9 @@ end)
 step("world effects", function()
 	WorldFx.start()
 end)
+step("teleporters", function()
+	Teleport.mount(gui)
+end)
 if not hud then
 	hud = { refresh = function() end }
 end
@@ -4021,6 +4390,8 @@ end)
 ProximityPromptService.PromptTriggered:Connect(function(prompt)
 	if prompt:GetAttribute("Action") == "wheel" and panels then
 		panels.open("Wheel")
+	elseif prompt:GetAttribute("Action") == "teleport" then
+		Teleport.open(prompt:FindFirstAncestorOfClass("Model"))
 	end
 end)
 
@@ -4088,6 +4459,7 @@ end)
 Remotes.SearchFx.OnClientEvent:Connect(function(message)
 	if message.kind == "harvest" then
 		Juice.hit()
+		HayFx.lift(message.position, message.golden)
 		Juice.float(message.position + Vector3.new(0, 2, 0), "+" .. message.straws, if message.golden then Ui.colors.hay else Ui.colors.cream)
 		if message.gone then -- you cleared a clump: it pops
 			Juice.pop(message.position, message.golden)
@@ -4105,7 +4477,8 @@ Remotes.SearchFx.OnClientEvent:Connect(function(message)
 		Notify.toast("Your tool is full! Sell at the merchant (or buy a bigger tool).", Ui.colors.red)
 	elseif message.kind == "sold" then
 		Juice.coins(message.coins)
-		Notify.toast("Sold " .. Format.commas(message.straws) .. " straw for " .. Format.short(message.coins) .. " coins" .. (if message.reason == "auto" then " (Auto Sell)" else ""), Ui.colors.green)
+		HayFx.dump(message.basket, message.straws)
+		Notify.toast((if message.reason == "trader" then "Dumped " else "Sold ") .. Format.commas(message.straws) .. " straw for " .. Format.short(message.coins) .. " coins" .. (if message.reason == "auto" then " (Auto Sell)" else ""), Ui.colors.green)
 	elseif message.kind == "find" then
 		Juice.burst(message.position, 30, true)
 		Juice.confetti()
@@ -4150,15 +4523,15 @@ end)
 task.delay(3, function()
 	Notify.banner(
 		"Welcome to " .. Config.FarmName .. "!",
-		"This is your farm. Your pile holds " .. Format.commas(Config.TotalStraws) .. " straws and one needle. Look at a clump and click to harvest. "
-			.. "Sell at the merchant in the hub, buy tools, stairs, lifts, machines and generators (Q), and build them on your farm (B).",
+		"This is your farm. Your heap holds " .. Format.commas(Config.TotalStraws) .. " straws and one needle, hidden deep in the upper heap. "
+			.. "Aim at the heap and click to lift hay onto your fork, then dump it in your trader's basket (E). Buy tools, buckets, stairs, lifts and machines (Q) and build them (B).",
 		12
 	)
 end)
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002F">
+				<Item class="ModuleScript" referent="RBX00032">
 					<Properties>
 						<string name="Name">Notify</string>
 						<ProtectedString name="Source"><![CDATA[-- Messages: small toasts under the haystack counter, and a big banner for case news.
@@ -4261,7 +4634,7 @@ return Notify
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00030">
+				<Item class="ModuleScript" referent="RBX00033">
 					<Properties>
 						<string name="Name">Panels</string>
 						<ProtectedString name="Source"><![CDATA[-- The windows: Shop, secret Achievements, Finds & Skins, and the Wheel of Fortune (odds first).
@@ -4450,10 +4823,10 @@ return Panels
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00031">
+				<Item class="ModuleScript" referent="RBX00034">
 					<Properties>
 						<string name="Name">Shop</string>
-						<ProtectedString name="Source"><![CDATA[-- The Shop window: Tools, Perks, Silo, Build (stairs, lifts...), Machines, Power and Robux.
+						<ProtectedString name="Source"><![CDATA[-- The Shop window: Tools, Perks, Storage (buckets and silos), Build (stairs, lifts...), Machines, Power and Robux.
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -4579,15 +4952,27 @@ function Shop.mount(gui, notify)
 		end
 	end)
 
-	page("Silo", Ui.colors.blue, function(list)
-		local rows = {}
+	-- buckets (carry more on foot) and silos (hold what your machines harvest)
+	page("Storage", Ui.colors.blue, function(list)
+		local buckets, rows = {}, {}
+		for level = 2, #Config.Buckets do
+			local bucket = Config.Buckets[level]
+			buckets[level] = row(list, level, bucket.name, "hangs at your hip: carries " .. Format.commas(bucket.capacity) .. " more straws")
+			buckets[level].Activated:Connect(function()
+				buy("bucket", level, buckets[level])
+			end)
+		end
 		for level, silo in ipairs(Config.Silos) do
-			rows[level] = row(list, level, silo.name, "holds " .. Format.commas(silo.size) .. " straws from your machines")
+			rows[level] = row(list, 100 + level, silo.name, "holds " .. Format.commas(silo.size) .. " straws from your machines")
 			rows[level].Activated:Connect(function()
 				buy("silo", level, rows[level])
 			end)
 		end
 		return function()
+			local bucket = player:GetAttribute("Bucket") or 1
+			for level, button in pairs(buckets) do
+				price(button, Config.Buckets[level].price, level <= bucket, level == bucket + 1)
+			end
 			local owned = player:GetAttribute("Silo") or 1
 			for level, button in ipairs(rows) do
 				price(button, Config.Silos[level].price, level <= owned, level == owned + 1)
@@ -4668,7 +5053,78 @@ return Shop
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00032">
+				<Item class="ModuleScript" referent="RBX00035">
+					<Properties>
+						<string name="Name">Teleport</string>
+						<ProtectedString name="Source"><![CDATA[-- The teleporter menu: standing on one of your pads, pick any of your other pads (listed by
+-- how high up they are). The server checks you're on a pad and moves you.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local Ui = require(script.Parent.Ui)
+local Cursor = require(script.Parent.Cursor)
+
+local player = Players.LocalPlayer
+local Teleport = {}
+local window, body
+
+local function close()
+	if window then
+		window.Visible = false
+	end
+	Cursor.need("teleport", false)
+end
+
+function Teleport.mount(gui)
+	window, body = Ui.window(gui, "Teleport", function()
+		Cursor.need("teleport", false)
+	end)
+	window.Size = UDim2.fromOffset(420, 420)
+end
+
+-- Opens the menu for the pad `from` (a Model on your plot).
+function Teleport.open(from)
+	if not window then
+		return
+	end
+	for _, child in ipairs(body:GetChildren()) do
+		if child:IsA("GuiObject") then
+			child:Destroy()
+		end
+	end
+	local plot = player:GetAttribute("Plot")
+	local plots = workspace:FindFirstChild("Plots")
+	local built = plot and plots and plots:FindFirstChild("Plot" .. plot) and plots["Plot" .. plot]:FindFirstChild("Built")
+	local pads = {}
+	for _, model in ipairs(built and built:GetChildren() or {}) do
+		if model:IsA("Model") and model:GetAttribute("Item") == "teleporter" and model ~= from then
+			table.insert(pads, model)
+		end
+	end
+	table.sort(pads, function(a, b)
+		return a:GetPivot().Position.Y < b:GetPivot().Position.Y
+	end)
+	if #pads == 0 then
+		Ui.paragraph("This is your only pad. Buy another Teleporter Pad (Q, Build) and put it somewhere else, like high up on a platform.", { LayoutOrder = 1, Parent = body })
+	end
+	for i, pad in ipairs(pads) do
+		local height = math.floor(pad:GetPivot().Position.Y + 0.5)
+		local name = if height <= 3 then "On the ground" else height .. " studs up"
+		Ui.button("Pad " .. i .. ":  " .. name, Ui.colors.blue, { LayoutOrder = i, Size = UDim2.new(1, 0, 0, 48), Parent = body }).Activated:Connect(function()
+			Remotes.Teleport:FireServer(pad)
+			close()
+		end)
+	end
+	window.Visible = true
+	Cursor.need("teleport", true)
+end
+
+return Teleport
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX00036">
 					<Properties>
 						<string name="Name">Ui</string>
 						<ProtectedString name="Source"><![CDATA[-- A small UI kit: the farm colours, rounded wooden buttons and windows that scale with
@@ -4843,7 +5299,7 @@ return Ui
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00033">
+				<Item class="ModuleScript" referent="RBX00037">
 					<Properties>
 						<string name="Name">WorldFx</string>
 						<ProtectedString name="Source"><![CDATA[-- World effects on your screen: the glowing needle clump (Wheel jackpot), the wheel turning
@@ -4964,7 +5420,7 @@ return WorldFx
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX00034">
+	<Item class="Workspace" referent="RBX00038">
 		<Properties>
 			<string name="Name">Workspace</string>
 			<bool name="StreamingEnabled">false</bool>

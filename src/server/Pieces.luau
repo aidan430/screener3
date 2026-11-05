@@ -67,6 +67,68 @@ function builders.elevator(model, cf)
 	end
 end
 
+local function prompt(parent, action, text, object)
+	local pr = Instance.new("ProximityPrompt")
+	pr.ActionText = text
+	pr.ObjectText = object
+	pr.HoldDuration = 0
+	pr.MaxActivationDistance = 10
+	pr.RequiresLineOfSight = false
+	pr:SetAttribute("Action", action)
+	pr.Parent = parent
+	return pr
+end
+
+local function standing(model, cf, height, diameter, color, material, name)
+	local c = p(model, cf * CFrame.new(0, height / 2, 0) * CFrame.Angles(0, 0, math.rad(90)), Vector3.new(height, diameter, diameter), color, material, "Cylinder")
+	c.Name = name or c.Name
+	return c
+end
+
+-- Your trader: a market stall with a striped awning, the trader behind the counter, and a
+-- big woven basket in front where you dump your hay (the basket's prompt sells it).
+function builders.trader(model, cf)
+	p(model, cf * CFrame.new(0, 1.5, 1), Vector3.new(10, 3, 3), WOOD)
+	p(model, cf * CFrame.new(0, 3.1, 1), Vector3.new(10.4, 0.3, 3.4), DARK, "Wood")
+	for _, c in ipairs({ { -4.8, -0.2 }, { 4.8, -0.2 }, { -4.8, 3.6 }, { 4.8, 3.6 } }) do
+		p(model, cf * CFrame.new(c[1], 4.5, c[2]), Vector3.new(0.5, 9, 0.5), DARK, "Wood")
+	end
+	for i = 0, 5 do -- the striped awning, tipped towards the front
+		local colour = if i % 2 == 0 then { 196, 72, 56 } else { 246, 232, 200 }
+		p(model, cf * CFrame.new(-4.2 + i * 1.68, 9.3, 1.4) * CFrame.Angles(math.rad(-12), 0, 0), Vector3.new(1.68, 0.3, 5.6), colour, "Fabric")
+	end
+	local sign = p(model, cf * CFrame.new(0, 10.8, -0.6), Vector3.new(6, 1.6, 0.3), WOOD)
+	Build.text(sign, Enum.NormalId.Front, "TRADER")
+	-- the trader: boots, overalls, a checked shirt, a friendly face and a wide straw hat
+	local body = cf * CFrame.new(0, 0, 3.2) * CFrame.Angles(0, math.rad(180), 0)
+	for _, x in ipairs({ -0.5, 0.5 }) do
+		p(model, body * CFrame.new(x, 1, 0), Vector3.new(0.9, 2, 0.9), { 64, 82, 130 }, "Fabric")
+	end
+	p(model, body * CFrame.new(0, 3.1, 0), Vector3.new(2.2, 2.2, 1.1), { 196, 72, 56 }, "Fabric")
+	p(model, body * CFrame.new(0, 2.6, -0.05), Vector3.new(1.6, 1.4, 1.15), { 64, 82, 130 }, "Fabric")
+	p(model, body * CFrame.new(0, 4.8, 0), Vector3.new(1.3, 1.3, 1.3), { 232, 188, 150 }, "SmoothPlastic")
+	for _, x in ipairs({ -0.3, 0.3 }) do
+		p(model, body * CFrame.new(x, 4.95, -0.66), Vector3.new(0.18, 0.18, 0.05), { 40, 30, 24 }, "SmoothPlastic")
+	end
+	standing(model, body * CFrame.new(0, 5.45, 0), 0.15, 3.2, { 226, 196, 110 }, "Fabric")
+	standing(model, body * CFrame.new(0, 5.5, 0), 0.8, 1.5, { 226, 196, 110 }, "Fabric")
+	-- the basket: woven sides, a band, and the hay inside (shown on each player's screen)
+	local basket = standing(model, cf * CFrame.new(0, 0, -3.6), 2.6, 4.4, { 150, 104, 58 }, "Fabric", "Basket")
+	standing(model, cf * CFrame.new(0, 2.3, -3.6), 0.35, 4.6, DARK, "Wood")
+	local fill = standing(model, cf * CFrame.new(0, 2.5, -3.6), 0.3, 4, { 222, 186, 92 }, "Grass", "BasketFill")
+	fill.Transparency = 1
+	fill.CanCollide = false
+	prompt(basket, "sell", "Dump hay", "Your trader")
+end
+
+-- A teleporter pad: step on, press E and pick another of your pads.
+function builders.teleporter(model, cf)
+	standing(model, cf, 0.6, 8, { 70, 72, 84 }, "DiamondPlate", "Pad")
+	local ring = standing(model, cf * CFrame.new(0, 0.6, 0), 0.15, 6.4, { 120, 200, 255 }, "Neon", "Ring")
+	ring.CanCollide = false
+	prompt(ring, "teleport", "Teleport", "Teleporter Pad")
+end
+
 -- Machines and generators: a body, a roof light that glows when running, a name plate.
 local function engine(model, cf, def, kind)
 	local size = Vector3.new(def.size[1], def.size[2], def.size[3])

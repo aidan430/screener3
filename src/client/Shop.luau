@@ -1,4 +1,4 @@
--- The Shop window: Tools, Perks, Silo, Build (stairs, lifts...), Machines, Power and Robux.
+-- The Shop window: Tools, Perks, Storage (buckets and silos), Build (stairs, lifts...), Machines, Power and Robux.
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -124,15 +124,27 @@ function Shop.mount(gui, notify)
 		end
 	end)
 
-	page("Silo", Ui.colors.blue, function(list)
-		local rows = {}
+	-- buckets (carry more on foot) and silos (hold what your machines harvest)
+	page("Storage", Ui.colors.blue, function(list)
+		local buckets, rows = {}, {}
+		for level = 2, #Config.Buckets do
+			local bucket = Config.Buckets[level]
+			buckets[level] = row(list, level, bucket.name, "hangs at your hip: carries " .. Format.commas(bucket.capacity) .. " more straws")
+			buckets[level].Activated:Connect(function()
+				buy("bucket", level, buckets[level])
+			end)
+		end
 		for level, silo in ipairs(Config.Silos) do
-			rows[level] = row(list, level, silo.name, "holds " .. Format.commas(silo.size) .. " straws from your machines")
+			rows[level] = row(list, 100 + level, silo.name, "holds " .. Format.commas(silo.size) .. " straws from your machines")
 			rows[level].Activated:Connect(function()
 				buy("silo", level, rows[level])
 			end)
 		end
 		return function()
+			local bucket = player:GetAttribute("Bucket") or 1
+			for level, button in pairs(buckets) do
+				price(button, Config.Buckets[level].price, level <= bucket, level == bucket + 1)
+			end
 			local owned = player:GetAttribute("Silo") or 1
 			for level, button in ipairs(rows) do
 				price(button, Config.Silos[level].price, level <= owned, level == owned + 1)

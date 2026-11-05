@@ -25,6 +25,7 @@ local function attach(tool, handle, size, offset, colour, material)
 	weld.Part1 = part
 	weld.Parent = part
 	part.Parent = tool
+	return part
 end
 
 -- The skin (from the Wheel of Fortune) recolours the tool; "" is the plain tool.
@@ -61,6 +62,11 @@ function Tools.make(level, skinId)
 	for x = -1, 1 do
 		attach(tool, handle, Vector3.new(0.16, 1.5, 0.16), CFrame.new(x * 0.7, 3.75, 0), colour, material)
 	end
+	-- the hay you've harvested sits on the tines and grows as you harvest (see Carry.luau)
+	local load = attach(tool, handle, Vector3.new(0.2, 0.2, 0.2), CFrame.new(0, 4, 0), Build.rgb({ 222, 186, 92 }), Enum.Material.Grass)
+	load.Name = "Load"
+	load.Shape = Enum.PartType.Ball
+	load.Transparency = 1
 	return tool
 end
 

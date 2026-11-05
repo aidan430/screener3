@@ -19,6 +19,8 @@ local Panels = require(script.Parent:WaitForChild("Panels"))
 local Harvest = require(script.Parent:WaitForChild("Harvest"))
 local BuildMode = require(script.Parent:WaitForChild("BuildMode"))
 local WorldFx = require(script.Parent:WaitForChild("WorldFx"))
+local HayFx = require(script.Parent:WaitForChild("HayFx"))
+local Teleport = require(script.Parent:WaitForChild("Teleport"))
 
 local player = Players.LocalPlayer
 local gui = Ui.make("ScreenGui", { Name = "HaystackUi", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
@@ -79,6 +81,9 @@ end)
 step("world effects", function()
 	WorldFx.start()
 end)
+step("teleporters", function()
+	Teleport.mount(gui)
+end)
 if not hud then
 	hud = { refresh = function() end }
 end
@@ -92,6 +97,8 @@ end)
 ProximityPromptService.PromptTriggered:Connect(function(prompt)
 	if prompt:GetAttribute("Action") == "wheel" and panels then
 		panels.open("Wheel")
+	elseif prompt:GetAttribute("Action") == "teleport" then
+		Teleport.open(prompt:FindFirstAncestorOfClass("Model"))
 	end
 end)
 
@@ -159,6 +166,7 @@ end)
 Remotes.SearchFx.OnClientEvent:Connect(function(message)
 	if message.kind == "harvest" then
 		Juice.hit()
+		HayFx.lift(message.position, message.golden)
 		Juice.float(message.position + Vector3.new(0, 2, 0), "+" .. message.straws, if message.golden then Ui.colors.hay else Ui.colors.cream)
 		if message.gone then -- you cleared a clump: it pops
 			Juice.pop(message.position, message.golden)
@@ -176,7 +184,8 @@ Remotes.SearchFx.OnClientEvent:Connect(function(message)
 		Notify.toast("Your tool is full! Sell at the merchant (or buy a bigger tool).", Ui.colors.red)
 	elseif message.kind == "sold" then
 		Juice.coins(message.coins)
-		Notify.toast("Sold " .. Format.commas(message.straws) .. " straw for " .. Format.short(message.coins) .. " coins" .. (if message.reason == "auto" then " (Auto Sell)" else ""), Ui.colors.green)
+		HayFx.dump(message.basket, message.straws)
+		Notify.toast((if message.reason == "trader" then "Dumped " else "Sold ") .. Format.commas(message.straws) .. " straw for " .. Format.short(message.coins) .. " coins" .. (if message.reason == "auto" then " (Auto Sell)" else ""), Ui.colors.green)
 	elseif message.kind == "find" then
 		Juice.burst(message.position, 30, true)
 		Juice.confetti()
@@ -221,8 +230,8 @@ end)
 task.delay(3, function()
 	Notify.banner(
 		"Welcome to " .. Config.FarmName .. "!",
-		"This is your farm. Your pile holds " .. Format.commas(Config.TotalStraws) .. " straws and one needle. Look at a clump and click to harvest. "
-			.. "Sell at the merchant in the hub, buy tools, stairs, lifts, machines and generators (Q), and build them on your farm (B).",
+		"This is your farm. Your heap holds " .. Format.commas(Config.TotalStraws) .. " straws and one needle, hidden deep in the upper heap. "
+			.. "Aim at the heap and click to lift hay onto your fork, then dump it in your trader's basket (E). Buy tools, buckets, stairs, lifts and machines (Q) and build them (B).",
 		12
 	)
 end)

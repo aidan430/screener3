@@ -44,12 +44,30 @@ local function spawnPiece(plotIndex, entry, slot)
 	return model
 end
 
+-- Everyone has a trader: one stall, placed between the hub and the heap on the first visit.
+-- Players can take it back (X) and put it anywhere, even up on a platform.
+local function ensureTrader(plotIndex, d)
+	if Economy.owned(d, "trader") > 0 then
+		return
+	end
+	local centre = Plots.centre(plotIndex)
+	local toHub = -centre.Unit
+	local rel = toHub * Config.TraderDistance
+	local turn = math.deg(math.atan2(-toHub.X, -toHub.Z)) -- the stall's front faces the hub
+	table.insert(d.placed, { k = "trader", x = math.floor(rel.X * 10 + 0.5) / 10, y = 0, z = math.floor(rel.Z * 10 + 0.5) / 10, r = turn % 360 })
+end
+
 -- Rebuilds everything the player has placed (on joining).
 function Structures.build(plotIndex, d)
+	local owner = Plots.owner(plotIndex)
+	if owner then
+		PlayerData.update(owner, function(data)
+			ensureTrader(plotIndex, data)
+		end)
+	end
 	for slot, entry in ipairs(d.placed) do
 		spawnPiece(plotIndex, entry, slot)
 	end
-	local owner = Plots.owner(plotIndex)
 	if owner then
 		task.defer(relight, owner)
 	end
@@ -122,7 +140,27 @@ function Structures.light(player, running)
 	end
 end
 
+-- Teleporter pads: from a pad you stand on to any other pad on your own plot.
+local function teleport(player, destination)
+	local plotIndex = Plots.of(player)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not plotIndex or not root or typeof(destination) ~= "Instance" or destination.Parent ~= builtFolder(plotIndex) or destination:GetAttribute("Item") ~= "teleporter" then
+		return
+	end
+	local near = false
+	for _, model in ipairs(builtFolder(plotIndex):GetChildren()) do
+		if model ~= destination and model:GetAttribute("Item") == "teleporter" and (model:GetPivot().Position - root.Position).Magnitude <= 14 then
+			near = true
+		end
+	end
+	if near then
+		root.CFrame = destination:GetPivot() * CFrame.new(0, 4, 0)
+		root.AssemblyLinearVelocity = Vector3.zero
+	end
+end
+
 function Structures.init()
+	Remotes.Teleport.OnServerEvent:Connect(teleport)
 	Remotes.Place.OnServerInvoke = place
 	Remotes.TakeBack.OnServerInvoke = remove
 	ProximityPromptService.PromptTriggered:Connect(function(prompt, player)

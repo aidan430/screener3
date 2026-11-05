@@ -20,6 +20,9 @@
         "Achievement": {
           "$className": "RemoteEvent"
         },
+        "Teleport": {
+          "$className": "RemoteEvent"
+        },
         "Whistle": {
           "$className": "RemoteFunction"
         },

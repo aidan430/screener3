@@ -55,7 +55,7 @@ local function room(d)
 end
 
 -- Sells what the player carries and their silo. Returns coins paid.
-function Search.sell(player, reason)
+function Search.sell(player, reason, basket)
 	local d = PlayerData.get(player)
 	if not d or (d.carried + d.carriedGolden + d.siloStraw) <= 0 then
 		return 0
@@ -68,7 +68,7 @@ function Search.sell(player, reason)
 		data.stats.straws_sold += straws
 		data.carried, data.carriedGolden, data.siloStraw = 0, 0, 0
 	end)
-	Remotes.SearchFx:FireClient(player, { kind = "sold", coins = coins, straws = straws, reason = reason })
+	Remotes.SearchFx:FireClient(player, { kind = "sold", coins = coins, straws = straws, reason = reason, basket = basket })
 	Achievements.check(player)
 	return coins
 end
@@ -248,8 +248,17 @@ function Search.init()
 		return true, "The merchant comes running! Sold for " .. Format.short(Search.sell(player, "whistle")) .. " coins."
 	end
 	ProximityPromptService.PromptTriggered:Connect(function(prompt, player)
-		if prompt:GetAttribute("Action") == "sell" and Search.sell(player, "merchant") <= 0 then
-			Remotes.Announce:FireClient(player, { kind = "notice", text = "You have nothing to sell yet. Harvest some straw!" })
+		if prompt:GetAttribute("Action") ~= "sell" then
+			return
+		end
+		-- a trader's basket on a plot only takes its owner's hay; the hub merchant takes anyone's
+		local plotIndex = Plots.of(player)
+		local stall = prompt:FindFirstAncestorOfClass("Model")
+		local isStall = stall ~= nil and stall:GetAttribute("Item") == "trader"
+		if isStall and not (plotIndex and stall:IsDescendantOf(Plots.folder(plotIndex))) then
+			Remotes.Announce:FireClient(player, { kind = "notice", text = "That's someone else's trader. Yours is on your own farm." })
+		elseif Search.sell(player, if isStall then "trader" else "merchant", prompt.Parent) <= 0 then
+			Remotes.Announce:FireClient(player, { kind = "notice", text = "You have nothing to dump yet. Harvest some hay!" })
 		end
 	end)
 	Players.PlayerRemoving:Connect(function(player)
