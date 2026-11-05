@@ -225,16 +225,16 @@ Config.AutosaveSeconds = 120
 -- Robux. Nothing shows in the shop until you create the item on the Creator Dashboard
 -- (after publishing) and paste its ID here. 0 = switched off.
 Config.GamePasses = {
-	AutoSell = 0, -- what you carry sells itself when your tool is full
-	VIP = 0, -- +25% coins, a golden name tag, and machines keep running an hour after you leave
+	AutoSell = 0, -- when you're full, what you carry goes to your basket by itself
+	VIP = 0, -- +25% coins, and machines keep running up to an hour after you leave
 	DoubleMachines = 0, -- every machine works twice as fast (same power)
 	Jetpack = 0, -- hold Space in the air to fly up and hover over your pile (see Config.Jetpack)
 }
 Config.Products = {
 	SpeedBoost = 0, -- 2x straws a click for 1 hour
-	CoinBoost = 0, -- 2x coins from the merchant for 1 hour
-	MerchantWhistle = 0, -- sell anywhere, 10 times
-	StrawBlast = 0, -- harvest 100,000 straws from the top of your pile at once
+	CoinBoost = 0, -- 2x coins for all hay sold, for 1 hour
+	MerchantWhistle = 0, -- send your load to your basket from anywhere, 10 times
+	StrawBlast = 0, -- 100,000 straws off your haystack (outside first) into your basket
 	LuckyCharm = 0, -- 5x lucky finds for 1 hour
 	WheelSpin = 0, -- one spin of the Wheel of Fortune
 }

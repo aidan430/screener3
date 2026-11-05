@@ -15,14 +15,14 @@ local Juice = require(script.Parent.Juice)
 local player = Players.LocalPlayer
 
 local ROBUX = {
-	{ kind = "product", key = "SpeedBoost", title = "2x Speed (1 hour)", text = "Every click takes twice the straws." },
-	{ kind = "product", key = "CoinBoost", title = "2x Coins (1 hour)", text = "The merchant pays double." },
-	{ kind = "product", key = "LuckyCharm", title = "Lucky Charm (1 hour)", text = "5x the chance of a lucky find." },
-	{ kind = "product", key = "StrawBlast", title = "Straw Blast", text = "Blast 100,000 straws off the top of your pile." },
-	{ kind = "product", key = "MerchantWhistle", title = "Merchant's Whistle x10", text = "Sell anywhere, ten times." },
-	{ kind = "pass", key = "AutoSell", title = "Auto Sell", text = "Your load sells itself when your tool is full." },
-	{ kind = "pass", key = "DoubleMachines", title = "Double Machines", text = "Every machine works twice as fast." },
-	{ kind = "pass", key = "VIP", title = "VIP", text = "+25% coins; machines work an hour after you leave." },
+	{ kind = "product", key = "SpeedBoost", title = "2x Speed (1 hour)", text = "Every click lifts twice the hay, for 1 hour." },
+	{ kind = "product", key = "CoinBoost", title = "2x Coins (1 hour)", text = "All the hay you sell pays double, for 1 hour." },
+	{ kind = "product", key = "LuckyCharm", title = "Lucky Charm (1 hour)", text = "5x the chance of a lucky find, for 1 hour." },
+	{ kind = "product", key = "StrawBlast", title = "Straw Blast", text = "100,000 straws come off your haystack straight into your basket." },
+	{ kind = "product", key = "MerchantWhistle", title = "Merchant's Whistle x10", text = "Send your load to your basket from anywhere, 10 times." },
+	{ kind = "pass", key = "AutoSell", title = "Auto Sell", text = "When you're full, your load goes to your basket by itself." },
+	{ kind = "pass", key = "DoubleMachines", title = "Double Machines", text = "Every machine harvests twice as fast, on the same power." },
+	{ kind = "pass", key = "VIP", title = "VIP", text = "+25% coins, and machines keep working up to 1 hour while you're away." },
 	{ kind = "pass", key = "Jetpack", title = "Jetpack", text = "Hold Space in the air to fly up and hover over your pile." },
 }
 
