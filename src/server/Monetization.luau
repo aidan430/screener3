@@ -10,7 +10,8 @@ local Format = require(Shared:WaitForChild("Format"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local PlayerData = require(script.Parent.PlayerData)
-local Search = require(script.Parent.Search)
+local Machines = require(script.Parent.Machines)
+local Wheel = require(script.Parent.Wheel)
 
 local Monetization = {}
 
@@ -34,7 +35,7 @@ local function checkPasses(player)
 			end
 		end
 	end
-	Search.offline(player)
+	Machines.offline(player)
 end
 
 local grants = {}
@@ -59,8 +60,12 @@ function grants.MerchantWhistle(player)
 end
 
 function grants.StrawBlast(player)
-	local blasted = Search.blast(player, Config.StrawBlastAmount) or 0
-	return "Straw Blast! " .. Format.commas(blasted) .. " straws blown through your haystack and sold."
+	local blasted = Machines.blast(player, Config.StrawBlastAmount) or 0
+	return "Straw Blast! " .. Format.commas(blasted) .. " straws blasted off the top of your pile and sold."
+end
+
+function grants.WheelSpin(player)
+	return Wheel.spin(player)
 end
 
 -- Roblox calls this for every developer product purchase, retrying until we say granted.

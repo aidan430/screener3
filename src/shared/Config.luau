@@ -5,81 +5,107 @@ local Config = {}
 Config.Title = "Needle in the Haystack"
 Config.FarmName = "Hollow Creek Farm"
 
--- The haystack. Everyone sees the same giant haystack, but each player's progress is their
--- own and is saved: you dig through your 5,000,000 straws, and your needle is in there.
-Config.TotalStraws = 5000000
-Config.NeedleEarliest = 0.6 -- the needle is never in the first 60% of the straws
-Config.SearchRange = 34 -- studs from the haystack's centre (flat distance) to search it
-Config.SearchCooldown = 0.3 -- seconds between searches (the Swift perk shortens it)
-Config.MerchantRange = 16 -- studs from the merchant's stall to sell
+-- Plots: each player gets one, with their own pile. Four per server, around the hub.
+Config.PlotSize = 140
+Config.PlotCentres = { { 85, 85 }, { -85, 85 }, { -85, -85 }, { 85, -85 } }
 
--- Coins: the merchant pays this per straw. Everything coins buy is below.
+-- The pile: 5,000,000 straws in clumps stacked about 255 studs (70 m) high.
+Config.TotalStraws = 5000000
+Config.Clumps = 5000 -- each holds TotalStraws / Clumps = 1,000 straws
+Config.ClumpSize = 5
+Config.PileLayers = 51 -- 51 layers x 5 studs = 255 studs
+Config.PileRadiusBottom = 42
+Config.PileRadiusTop = 12
+Config.Reach = 18 -- studs from your head to a clump you can harvest
+Config.SearchCooldown = 0.3 -- seconds between harvests (the Swift perk shortens it)
+Config.MerchantRange = 16
+
 Config.CoinsPerStraw = 1
 
--- Tools, in the order players buy them. power = straws per search. Colours are {r, g, b}.
+-- Tools: power = straws per click, capacity = straws you can carry before selling.
 Config.Tools = {
-	{ name = "Rusty Fork", power = 1, price = 0, shaft = { 112, 82, 58 }, head = { 128, 98, 78 }, material = "CorrodedMetal" },
-	{ name = "Wooden Pitchfork", power = 2, price = 400, shaft = { 160, 116, 72 }, head = { 176, 128, 82 }, material = "Wood" },
-	{ name = "Iron Pitchfork", power = 3, price = 2400, shaft = { 150, 108, 66 }, head = { 165, 170, 178 }, material = "Metal" },
-	{ name = "Steel Rake", power = 5, price = 10000, shaft = { 120, 84, 50 }, head = { 190, 196, 204 }, material = "Metal" },
-	{ name = "Golden Rake", power = 7, price = 40000, shaft = { 120, 84, 50 }, head = { 245, 200, 66 }, material = "Metal" },
-	{ name = "Hay Blower", power = 9, price = 120000, shaft = { 70, 72, 84 }, head = { 232, 92, 60 }, material = "SmoothPlastic" },
-	{ name = "Super Sifter", power = 12, price = 320000, shaft = { 60, 64, 78 }, head = { 90, 200, 255 }, material = "Neon" },
-	{ name = "Magnet Gloves", power = 15, price = 800000, shaft = { 200, 200, 210 }, head = { 220, 40, 40 }, material = "SmoothPlastic" },
-	{ name = "Twin Turbines", power = 19, price = 1700000, shaft = { 40, 44, 52 }, head = { 255, 170, 40 }, material = "Metal" },
-	{ name = "Needle Detector", power = 22, price = 3400000, shaft = { 40, 44, 52 }, head = { 70, 255, 150 }, material = "Neon" },
+	{ name = "Rusty Fork", power = 1, capacity = 300, price = 0, shaft = { 112, 82, 58 }, head = { 128, 98, 78 }, material = "CorrodedMetal" },
+	{ name = "Wooden Pitchfork", power = 2, capacity = 1000, price = 400, shaft = { 160, 116, 72 }, head = { 176, 128, 82 }, material = "Wood" },
+	{ name = "Iron Pitchfork", power = 3, capacity = 2500, price = 2400, shaft = { 150, 108, 66 }, head = { 165, 170, 178 }, material = "Metal" },
+	{ name = "Steel Rake", power = 5, capacity = 5000, price = 10000, shaft = { 120, 84, 50 }, head = { 190, 196, 204 }, material = "Metal" },
+	{ name = "Golden Rake", power = 7, capacity = 9000, price = 40000, shaft = { 120, 84, 50 }, head = { 245, 200, 66 }, material = "Metal" },
+	{ name = "Hay Blower", power = 9, capacity = 18000, price = 120000, shaft = { 70, 72, 84 }, head = { 232, 92, 60 }, material = "SmoothPlastic" },
+	{ name = "Super Sifter", power = 12, capacity = 32000, price = 320000, shaft = { 60, 64, 78 }, head = { 90, 200, 255 }, material = "Neon" },
+	{ name = "Magnet Gloves", power = 15, capacity = 50000, price = 800000, shaft = { 200, 200, 210 }, head = { 220, 40, 40 }, material = "SmoothPlastic" },
+	{ name = "Twin Turbines", power = 19, capacity = 75000, price = 1700000, shaft = { 40, 44, 52 }, head = { 255, 170, 40 }, material = "Metal" },
+	{ name = "Needle Detector", power = 22, capacity = 100000, price = 3400000, shaft = { 40, 44, 52 }, head = { 70, 255, 150 }, material = "Neon" },
 }
-Config.DetectorLevel = 10 -- from this tool on, the HUD shows how warm the needle is
+Config.DetectorLevel = 10 -- from this tool on, the HUD shows how close the needle is
 
--- Bags: how much straw you can carry before selling to the merchant.
-Config.Bags = {
-	{ name = "Hay Pouch", size = 400, price = 0 },
-	{ name = "Sack", size = 1500, price = 900 },
-	{ name = "Big Sack", size = 5000, price = 6000 },
-	{ name = "Cart", size = 16000, price = 40000 },
-	{ name = "Wagon", size = 50000, price = 250000 },
-	{ name = "Hay Lorry", size = 160000, price = 1500000 },
+-- The silo on your plot holds what your machines harvest until you next sell.
+Config.Silos = {
+	{ name = "Hay Shed", size = 2000, price = 0 },
+	{ name = "Small Silo", size = 10000, price = 15000 },
+	{ name = "Big Silo", size = 40000, price = 150000 },
+	{ name = "Twin Silos", size = 150000, price = 1000000 },
+	{ name = "Grain Tower", size = 500000, price = 5000000 },
 }
 
--- Machines search by themselves while you play (and need no clicking). rate = straws a
--- second each; you can own `max` of each; each one you buy costs `growth` times more.
+-- Machines harvest the top of your pile into the silo, while you're in the game, if your
+-- generators make enough power. rate = straws a second, draw = power used.
 Config.Machines = {
-	{ name = "Clockwork Hen", rate = 0.15, price = 1600, growth = 1.3, max = 10, color = { 236, 180, 70 } },
-	{ name = "Sorting Sieve", rate = 0.6, price = 20000, growth = 1.3, max = 10, color = { 150, 150, 160 } },
-	{ name = "Steam Thresher", rate = 1.5, price = 160000, growth = 1.35, max = 8, color = { 90, 70, 60 } },
-	{ name = "Hay Vacuum", rate = 3.6, price = 900000, growth = 1.4, max = 6, color = { 200, 80, 60 } },
-	{ name = "Needle Magnetron", rate = 7.5, price = 4000000, growth = 1.5, max = 4, color = { 70, 255, 150 } },
+	{ id = "hen", name = "Clockwork Hen", rate = 0.15, draw = 2, price = 1600, max = 10, size = { 4, 4, 4 }, color = { 236, 180, 70 } },
+	{ id = "sieve", name = "Sorting Sieve", rate = 0.6, draw = 6, price = 20000, max = 10, size = { 5, 5, 5 }, color = { 150, 150, 160 } },
+	{ id = "thresher", name = "Steam Thresher", rate = 1.5, draw = 12, price = 160000, max = 8, size = { 6, 6, 6 }, color = { 90, 70, 60 } },
+	{ id = "vacuum", name = "Hay Vacuum", rate = 3.6, draw = 24, price = 900000, max = 6, size = { 7, 7, 7 }, color = { 200, 80, 60 } },
+	{ id = "magnetron", name = "Needle Magnetron", rate = 7.5, draw = 45, price = 4000000, max = 4, size = { 8, 8, 8 }, color = { 70, 255, 150 } },
 }
 
--- Perks are bought per tool (they reset when you buy a new tool). price is for the Wooden
--- Pitchfork; it scales with the tool's price. Each level costs `growth` times more.
+-- Generators power the machines. power = units made.
+Config.Generators = {
+	{ id = "crank", name = "Hand-Crank Dynamo", power = 4, price = 1200, max = 10, size = { 4, 4, 4 }, color = { 140, 110, 80 } },
+	{ id = "diesel", name = "Diesel Generator", power = 15, price = 15000, max = 10, size = { 5, 5, 6 }, color = { 90, 120, 70 } },
+	{ id = "wind", name = "Wind Turbine", power = 40, price = 110000, max = 8, size = { 4, 20, 4 }, color = { 236, 236, 230 } },
+	{ id = "steam", name = "Steam Engine", power = 100, price = 700000, max = 6, size = { 7, 8, 9 }, color = { 120, 80, 60 } },
+	{ id = "lightning", name = "Lightning Rod Array", power = 260, price = 4000000, max = 4, size = { 6, 24, 6 }, color = { 120, 170, 255 } },
+}
+
+-- Building pieces for climbing your pile, placed anywhere on your plot.
+Config.Pieces = {
+	{ id = "stairs", name = "Stairs", price = 300, size = { 8, 10, 10 }, text = "Climbs 10 studs over 10 studs." },
+	{ id = "landing", name = "Landing", price = 150, size = { 10, 1, 10 }, text = "A 10 by 10 floor to stand and turn on." },
+	{ id = "pillar", name = "Pillar", price = 100, size = { 2, 10, 2 }, text = "A 10-stud post to hold things up." },
+	{ id = "escalator", name = "Escalator", price = 4000, size = { 8, 10, 10 }, text = "Stairs that carry you up 10 studs." },
+	{ id = "elevator", name = "Elevator", price = 30000, size = { 10, 51, 10 }, text = "A 50-stud lift. Press E at the bottom or top." },
+}
+Config.BuildGrid = 1 -- placement snaps to this many studs
+Config.MaxPlaced = 400 -- pieces, machines and generators on one plot
+
+-- Perks are bought per tool (they reset when you buy a new tool).
 Config.Perks = {
-	{ id = "sharp", name = "Sharpened", per_level = 0.15, levels = 5, price = 120, growth = 1.6, text = "+15% straws a search per level" },
-	{ id = "swift", name = "Swift", per_level = 0.10, levels = 5, price = 120, growth = 1.6, text = "-10% search cooldown per level" },
+	{ id = "sharp", name = "Sharpened", per_level = 0.15, levels = 5, price = 120, growth = 1.6, text = "+15% straws a click per level" },
+	{ id = "swift", name = "Swift", per_level = 0.10, levels = 5, price = 120, growth = 1.6, text = "-10% cooldown per level" },
 	{ id = "lucky", name = "Lucky", per_level = 0.004, levels = 5, price = 150, growth = 1.6, text = "+0.4% chance of a lucky find per level" },
 }
 
--- Lucky finds: odd things in the hay that the merchant pays extra for (and bits of the story).
-Config.LuckyChance = 0.006 -- per search, before the Lucky perk
-Config.LuckyValueSearches = 60 -- a find is worth this many searches' worth of coins
+Config.LuckyChance = 0.006
+Config.LuckyValueSearches = 60
 
--- Saving
-Config.DataStoreName = "NeedleHaystack_v2"
+-- Sounds: paste asset IDs from the Studio Toolbox (e.g. "rbxassetid://12345"). "" = silent.
+Config.Sounds = { harvest = "", pop = "", coins = "", cheer = "", spin = "" }
+
+Config.DataStoreName = "NeedleHaystack_v3"
 Config.AutosaveSeconds = 120
 
--- Robux. Power-ups (timed boosts) are Robux only. Nothing shows in the shop until you create
--- the item on the Creator Dashboard (after publishing) and paste its ID here. 0 = switched off.
+-- Robux. Nothing shows in the shop until you create the item on the Creator Dashboard
+-- (after publishing) and paste its ID here. 0 = switched off.
 Config.GamePasses = {
-	AutoSell = 0, -- your bag sells itself to the merchant when it fills up
-	VIP = 0, -- +25% coins, a golden name tag, and machines keep running for an hour after you leave
-	DoubleMachines = 0, -- every machine works twice as fast
+	AutoSell = 0, -- what you carry sells itself when your tool is full
+	VIP = 0, -- +25% coins, a golden name tag, and machines keep running an hour after you leave
+	DoubleMachines = 0, -- every machine works twice as fast (same power)
 }
 Config.Products = {
-	SpeedBoost = 0, -- 2x straws a search for 1 hour
+	SpeedBoost = 0, -- 2x straws a click for 1 hour
 	CoinBoost = 0, -- 2x coins from the merchant for 1 hour
-	MerchantWhistle = 0, -- sell your bag anywhere, 10 times
-	StrawBlast = 0, -- search 100,000 straws at once
+	MerchantWhistle = 0, -- sell anywhere, 10 times
+	StrawBlast = 0, -- harvest 100,000 straws from the top of your pile at once
 	LuckyCharm = 0, -- 5x lucky finds for 1 hour
+	WheelSpin = 0, -- one spin of the Wheel of Fortune
 }
 Config.BoostSeconds = 3600
 Config.WhistleUses = 10
@@ -87,22 +113,36 @@ Config.StrawBlastAmount = 100000
 Config.VipCoinBonus = 0.25
 Config.VipOfflineSeconds = 3600
 
--- Achievements: all ten open the Golden Loft, a secret level above the barn.
+-- The Wheel of Fortune (Robux). Every spin wins something. The odds are shown on the wheel
+-- before buying, and the wheel is hidden where paid random items aren't allowed.
+-- weight / total weight = chance. A skin you already own pays `WheelDuplicateSearches` instead.
+Config.Wheel = {
+	{ id = "rose", name = "Rose Gold skin", weight = 3000, shaft = { 120, 70, 60 }, head = { 232, 160, 150 }, material = "Metal" },
+	{ id = "ice", name = "Ice skin", weight = 2500, shaft = { 180, 220, 240 }, head = { 210, 240, 255 }, material = "Ice" },
+	{ id = "lava", name = "Lava skin", weight = 2000, shaft = { 60, 30, 20 }, head = { 255, 90, 30 }, material = "Neon" },
+	{ id = "candy", name = "Candy Cane skin", weight = 1500, shaft = { 245, 245, 245 }, head = { 230, 40, 60 }, material = "SmoothPlastic" },
+	{ id = "galaxy", name = "Galaxy skin", weight = 700, shaft = { 30, 20, 60 }, head = { 140, 90, 255 }, material = "Neon" },
+	{ id = "diamond", name = "Diamond skin", weight = 299, shaft = { 200, 230, 255 }, head = { 160, 220, 255 }, material = "Glass" },
+	{ id = "needle", name = "NEEDLE REVEAL", weight = 1, reveal = true },
+}
+Config.WheelDuplicateSearches = 200
+
+-- Achievements stay hidden until you earn them. All ten open the Golden Loft above the hub.
 Config.Achievements = {
-	{ id = "first_straw", name = "First Straw", text = "Search the haystack for the first time.", stat = "searches", goal = 1 },
-	{ id = "bag_full", name = "Bag Full", text = "Fill your bag to the brim.", stat = "bags_filled", goal = 1 },
+	{ id = "first_straw", name = "First Straw", text = "Harvest your first straw.", stat = "searches", goal = 1 },
+	{ id = "full_load", name = "Full Load", text = "Fill your tool to the brim.", stat = "loads_filled", goal = 1 },
 	{ id = "merchant", name = "Merchant's Friend", text = "Sell 100,000 straws to the merchant.", stat = "straws_sold", goal = 100000 },
 	{ id = "collector", name = "Collector", text = "Own every tool, up to the Needle Detector.", stat = "tool", goal = 10 },
-	{ id = "industrialist", name = "Industrialist", text = "Own 10 machines at once.", stat = "machines", goal = 10 },
+	{ id = "engineer", name = "Engineer", text = "Have 10 machines working on your plot.", stat = "machines", goal = 10 },
+	{ id = "power_plant", name = "Power Plant", text = "Generate 500 power on your plot.", stat = "power", goal = 500 },
+	{ id = "sky_high", name = "Sky High", text = "Stand 250 studs up on your own plot.", stat = "best_height", goal = 250 },
 	{ id = "perfectionist", name = "Perfectionist", text = "Max out all three perks on one tool.", stat = "perks_maxed", goal = 1 },
-	{ id = "marathon", name = "Marathon", text = "Search for two hours in one visit.", stat = "session_seconds", goal = 7200 },
-	{ id = "halfway", name = "Halfway There", text = "Search 2,500,000 straws.", stat = "searched", goal = 2500000 },
 	{ id = "lucky", name = "Lucky Duck", text = "Make 25 lucky finds in the hay.", stat = "lucky_finds", goal = 25 },
 	{ id = "needle", name = "Needle Finder", text = "Find the needle.", stat = "needles", goal = 1 },
 }
 Config.BadgeIds = {} -- optional: { first_straw = 123456 } awards a Roblox badge too
 
--- The Golden Loft: a smaller golden haystack where straw pays 20x and a golden needle waits.
+-- The Golden Loft: a secret golden haystack above the hub where straw pays 20x.
 Config.Loft = { straws = 250000, coinMultiplier = 20, needleEarliest = 0.5 }
 
 return Config

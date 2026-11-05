@@ -1,53 +1,53 @@
 # Needle in the Haystack: operational brief
 
 ## What this is
-An original Roblox simulator. One giant haystack of 5,000,000 straws on Hollow Creek Farm hides
-a needle. Each player's progress through it (and their needle) is their own and saved. Players
-search with a tool (straw fills their bag), sell the bag to the merchant for coins, and spend
-coins on tools, bags, machines (which search by themselves) and tool perks. Timed power-ups are
-Robux only. Ten achievements open the Golden Loft, a secret level above the barn with a golden
-haystack. A free player reaches the needle after about 18-24 hours of play (dev/pacing.py).
+An original Roblox simulator, strictly first person. Four players a server, each with a plot
+around a hub. Each plot holds that player's own pile: 5,000 clumps of 1,000 straws (5,000,000)
+stacked 255 studs (70 m) high, saved clump by clump, with the needle in one clump. Players
+harvest the clump under the crosshair (the tool carries a set amount), sell at the hub's
+merchant, and buy tools, perks, a silo, building pieces (stairs, escalators, elevators),
+machines and the generators that power them, all placed freely on their plot. Robux buys
+power-ups and Wheel of Fortune spins (skins, or a 1-in-10,000 needle reveal). Ten secret
+achievements open the Golden Loft. A free player finds the needle in about 24 hours.
 
 The owner publishes from Roblox Studio and owns the Roblox account, the Robux items and the
 earnings. Nothing is published, sold or priced without them.
 
 ## How it plays
-- **Searching** (`server/Search.luau`): the client only asks (Remotes.Search); the server checks
-  the player holds their tool within `Config.SearchRange` of a haystack and honours the cooldown.
-  A search moves `Economy.power` straws from the player's haystack into their bag. The needle is
-  at a saved straw index (`needleAt`, never in the first `NeedleEarliest`); the search that
-  crosses it finds it: a prize, +20% coins for good, and a fresh haystack.
-- **Machines** tick every second into the bag while the player is in the game (VIP: an hour
-  after leaving too). A full bag stops everything until it is sold (Auto Sell pass sells it).
-- **Selling** (Remotes.Sell) needs the player within `MerchantRange` of the stall; a Merchant's
-  Whistle (Robux) sells anywhere.
-- **Shop** (Remotes.Buy kind,index): tools and bags in order, machines up to their max, perks
-  per tool (reset on a new tool). All prices from Config via `Economy`.
-- **Lucky finds**: `Finds.json`, a chance per search; coins plus a line of the mystery.
-- **Achievements** (`server/Achievements.luau`): ten numbers from the player's stats; all ten set
-  the `LoftOpen` attribute and `server/Loft.luau` teleports the player up or down.
-- **Saving** (`server/Profile.luau`, `server/PlayerData.luau`): DataStore `Config.DataStoreName`;
-  a failed load plays unsaved rather than overwrite good data.
-- **Robux** (`server/Monetization.luau`): all IDs 0 (off) until the owner creates the items.
+- **Plots** (`server/Plots.luau`): claimed on join, released on leave; `Piles.luau` builds the
+  pile from `Layout.luau` (index order is saved order: never reorder it), `Structures.luau` the
+  placed things (saved relative to the plot centre).
+- **Harvesting** (`server/Search.luau`): the client sends the clump part (Remotes.Harvest); the
+  server checks it is on the player's plot, within `Config.Reach` of their head, the tool is
+  held and the cooldown passed, then moves straws onto the tool (`carried`, up to capacity).
+- **Machines** (`server/Machines.luau`): every second, power share x machine rate straws from
+  the top of the pile into the silo. Also Straw Blast, VIP offline time, height records.
+- **Selling**: ProximityPrompt at the merchant (Action "sell"); a Whistle sells anywhere.
+- **Building**: Remotes.Place(id, position, rotation) / Remove(model); the server checks
+  inventory and plot bounds. Elevators teleport via their prompts.
+- **Wheel** (`server/Wheel.luau`): the WheelSpin product picks a weighted prize on the server.
+  Odds are shown before buying; PolicyService hides it where paid random items are restricted.
+- **Feel** (`client/Juice.luau`): every effect eases; keep it relaxing, no flashing, and no
+  pressure tactics around Robux.
+- **Saving** (`server/Profile.luau`, `server/PlayerData.luau`): a failed load plays unsaved.
 
 ## Layout (Rojo project: `default.project.json`)
 ```
-src/shared/   -> ReplicatedStorage.Shared: Config, Economy, Format, Finds.json
-src/server/   -> ServerScriptService.Server: Main (Script), World, Build, Haystack, Profile,
-                 PlayerData, Search, Shop, Achievements, Loft, Tools, Monetization
-src/client/   -> StarterPlayerScripts.Client: Main (LocalScript), Ui, Hud, Shop, Panels, Notify, WorldFx
-dev/          -> build.py (checks + writes the place file), luau.py (checker), test_rules.py,
-                 pacing.py (how long the haystack takes; keep in step with Economy.luau)
-NeedleInTheHaystack.rbxlx   the built place file the owner opens in Studio (committed)
+src/shared/  -> ReplicatedStorage.Shared: Config, Economy, Layout, Format, Finds.json
+src/server/  -> ServerScriptService.Server: Main (Script), World, Build, Plots, Piles, Pieces,
+                Structures, Profile, PlayerData, Search, Machines, Shop, Achievements, Loft,
+                Haystack (the loft), Wheel, Tools, Monetization
+src/client/  -> StarterPlayerScripts.Client: Main (LocalScript), Ui, Cursor, Juice, Hud, Shop,
+                Panels, Harvest, BuildMode, Notify, WorldFx
+dev/         -> build.py, luau.py (checker), test_rules.py, pacing.py (keep in step with Economy)
+NeedleInTheHaystack.rbxlx   the built place file (committed)
 ```
-The world (terrain, farm, merchant, yard, barn, loft, haystacks, lighting) is built by
-`server/World.luau` and `Haystack.luau` when the server starts, so it only appears in Play mode.
 
 ## Build and check
 - `python3 dev/build.py` checks every script (unclosed blocks, unknown names, global functions,
   requires and remotes that don't exist, scripts placed where they never run) and writes
   `NeedleInTheHaystack.rbxlx`. `python3 dev/build.py --check` only checks.
-- `python3 dev/test_rules.py` tests the data, the achievements and the 24-hour pacing.
+- `python3 dev/test_rules.py` tests the pile layout, items, wheel odds, achievements and the 24-hour pacing.
 - With Rojo installed, `rojo build -o NeedleInTheHaystack.rbxlx` gives the same tree, and
   `rojo serve` syncs into Studio. Rojo, Lune, luau-lsp and selene could not be downloaded in the
   cloud sandbox, so the Python checker stands in; it does not type-check Roblox APIs. Studio

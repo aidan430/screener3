@@ -64,24 +64,37 @@ local function publish(player, profile)
 		stats.Needles.Value = d.needles
 	end
 	local flags = PlayerData.flags(player)
+	local plot = Economy.plot(d.placed, flags.doubleMachines)
 	player:SetAttribute("Coins", d.coins)
 	player:SetAttribute("Tool", d.tool)
-	player:SetAttribute("Bag", d.bag)
-	player:SetAttribute("BagStraw", d.bagStraw)
-	player:SetAttribute("BagGolden", d.bagGolden)
-	player:SetAttribute("Searched", d.searched)
+	player:SetAttribute("Silo", d.silo)
+	player:SetAttribute("Carried", d.carried + d.carriedGolden)
+	player:SetAttribute("Capacity", Economy.capacity(d))
+	player:SetAttribute("SiloStraw", d.siloStraw)
+	player:SetAttribute("ClumpsLeft", Profile.clumpsLeft(d))
 	player:SetAttribute("LoftSearched", d.loft.searched)
 	player:SetAttribute("Needles", d.needles)
 	player:SetAttribute("GoldenNeedles", d.loft.needles)
 	player:SetAttribute("Power", Economy.power(d, flags.speedBoost))
-	player:SetAttribute("MachineRate", Economy.machineRate(d, flags.doubleMachines))
-	player:SetAttribute("Multiplier", Economy.coinMultiplier(flags) * (1 + 0.2 * d.needles))
+	player:SetAttribute("MachineRate", plot.rate)
+	player:SetAttribute("PowerMade", plot.made)
+	player:SetAttribute("PowerDraw", plot.draw)
+	player:SetAttribute("Multiplier", Economy.coinMultiplier(flags, d.needles))
 	player:SetAttribute("Whistles", d.whistles)
+	player:SetAttribute("Skin", d.skin)
+	for _, prize in ipairs(Config.Wheel) do
+		if not prize.reveal then
+			player:SetAttribute("Skin_" .. prize.id, d.skins[prize.id] == true)
+		end
+	end
 	for _, perk in ipairs(Config.Perks) do
 		player:SetAttribute("Perk_" .. perk.id, d.perks[perk.id])
 	end
-	for i in ipairs(Config.Machines) do
-		player:SetAttribute("Machine_" .. i, d.machines[i])
+	for _, list in ipairs({ Config.Pieces, Config.Machines, Config.Generators }) do
+		for _, def in ipairs(list) do
+			player:SetAttribute("Inv_" .. def.id, d.inventory[def.id] or 0)
+			player:SetAttribute("Own_" .. def.id, Economy.owned(d, def.id))
+		end
 	end
 	for name, until_ in pairs(d.boosts) do
 		player:SetAttribute("Boost_" .. name, until_)

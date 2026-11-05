@@ -1,4 +1,4 @@
--- The ten achievements. Each watches one number; all ten together open the Golden Loft.
+-- The ten achievements, secret until earned. Each watches one number; all ten open the Golden Loft.
 -- Optional Roblox badges: put badge IDs into Config.BadgeIds.
 local BadgeService = game:GetService("BadgeService")
 local Players = game:GetService("Players")
@@ -18,11 +18,9 @@ function Achievements.value(player, d, stat)
 	if stat == "tool" then
 		return d.tool
 	elseif stat == "machines" then
-		return Economy.machineCount(d)
-	elseif stat == "session_seconds" then
-		return PlayerData.sessionSeconds(player)
-	elseif stat == "searched" then
-		return d.stats.total_searched
+		return Economy.plot(d.placed, false).machines
+	elseif stat == "power" then
+		return Economy.plot(d.placed, false).made
 	elseif stat == "needles" then
 		return d.needles
 	end
@@ -62,16 +60,18 @@ function Achievements.progress(player)
 	local d = PlayerData.get(player)
 	local out = {}
 	for _, a in ipairs(Config.Achievements) do
-		table.insert(out, { id = a.id, name = a.name, text = a.text, goal = a.goal, value = d and Achievements.value(player, d, a.stat) or 0, done = d ~= nil and d.achievements[a.id] == true })
+		local done = d ~= nil and d.achievements[a.id] == true
+		-- secret until earned: the client only learns an achievement once it is done
+		table.insert(out, if done then { id = a.id, name = a.name, text = a.text, done = true } else { id = a.id, done = false })
 	end
 	return out
 end
 
 function Achievements.init()
 	Remotes.GetAchievements.OnServerInvoke = Achievements.progress
-	task.spawn(function() -- the Marathon achievement is about time, so check it on a timer
+	task.spawn(function() -- machines and power change by building, so check on a timer too
 		while true do
-			task.wait(30)
+			task.wait(15)
 			for _, player in ipairs(Players:GetPlayers()) do
 				Achievements.check(player)
 			end

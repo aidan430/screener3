@@ -1,33 +1,37 @@
--- The Achievements window and the Finds notebook (the story bits your lucky finds revealed).
+-- The windows: Shop, secret Achievements, Finds & Skins, and the Wheel of Fortune (odds first).
+-- Opening one frees the mouse; closing them all locks it again for first person.
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+local PolicyService = game:GetService("PolicyService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
-local Format = require(Shared:WaitForChild("Format"))
+local Economy = require(Shared:WaitForChild("Economy"))(Config)
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local Ui = require(script.Parent.Ui)
 local Shop = require(script.Parent.Shop)
+local Cursor = require(script.Parent.Cursor)
+local Juice = require(script.Parent.Juice)
 
+local player = Players.LocalPlayer
 local Panels = {}
 
-function Panels.mount(gui, notify)
+local function pct(chance)
+	local text = string.format("%.4f", chance * 100)
+	text = string.gsub(text, "0+$", "")
+	text = string.gsub(text, "%.$", "")
+	return text .. "%"
+end
+
+function Panels.mount(gui, notify, actions)
 	local windows, refreshers = {}, {}
 	windows.Shop = Shop.mount(gui, notify)
 	refreshers.Shop = Shop.refresh
 
-	-- Achievements
+	-- Achievements: secret until earned
 	local achievements, achievementsBody = Ui.window(gui, "Achievements")
 	windows.Achievements = achievements
-	local header = Ui.paragraph("", { LayoutOrder = 0, Font = Ui.font, TextSize = 22, Parent = achievementsBody })
-	local rows = {}
-	for i, a in ipairs(Config.Achievements) do
-		local frame = Ui.make("Frame", { LayoutOrder = i, Size = UDim2.new(1, 0, 0, 62), BackgroundColor3 = Ui.colors.paper, Parent = achievementsBody }, { Ui.corner(10) })
-		local name = Ui.label({ Text = a.name, Size = UDim2.new(0.68, -12, 0, 28), Position = UDim2.fromOffset(12, 4), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Ui.colors.ink, TextStrokeTransparency = 1, Parent = frame }, 22)
-		Ui.label({ Text = a.text, Size = UDim2.new(0.68, -12, 0, 24), Position = UDim2.fromOffset(12, 34), Font = Ui.body, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Ui.colors.grey, TextStrokeTransparency = 1, Parent = frame }, 15)
-		local state = Ui.label({ Size = UDim2.new(0.3, -12, 1, -12), Position = UDim2.new(0.7, 0, 0, 6), TextColor3 = Ui.colors.grey, TextStrokeTransparency = 1, Parent = frame }, 18)
-		rows[a.id] = { frame = frame, name = name, state = state }
-	end
-	Ui.paragraph("Complete all ten to open the Golden Loft above the barn.", { LayoutOrder = 99, TextColor3 = Ui.colors.purple, Font = Ui.font, TextSize = 20, Parent = achievementsBody })
 	refreshers.Achievements = function()
 		task.spawn(function()
 			local ok, list = pcall(function()
@@ -36,43 +40,132 @@ function Panels.mount(gui, notify)
 			if not ok or type(list) ~= "table" then
 				return
 			end
-			local done = 0
-			for _, a in ipairs(list) do
-				local r = rows[a.id]
-				if r then
-					if a.done then
-						done += 1
-						r.state.Text, r.state.TextColor3 = "DONE", Ui.colors.green
-						r.frame.BackgroundColor3 = Color3.fromRGB(226, 244, 220)
-					else
-						r.state.Text = Format.short(math.min(a.value, a.goal)) .. " / " .. Format.short(a.goal)
-						r.state.TextColor3 = Ui.colors.grey
-					end
+			for _, child in ipairs(achievementsBody:GetChildren()) do
+				if child:IsA("GuiObject") then
+					child:Destroy()
 				end
 			end
-			header.Text = done .. " of " .. #list .. " achievements done"
+			local done = 0
+			for i, a in ipairs(list) do
+				done += if a.done then 1 else 0
+				local f = Ui.make("Frame", { LayoutOrder = i, Size = UDim2.new(1, 0, 0, 56), BackgroundColor3 = if a.done then Color3.fromRGB(226, 244, 220) else Color3.fromRGB(220, 214, 204), Parent = achievementsBody }, { Ui.corner(10) })
+				Ui.label({ Text = if a.done then a.name else "???", Size = UDim2.new(1, -24, 0, 26), Position = UDim2.fromOffset(12, 4), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Ui.colors.ink, TextStrokeTransparency = 1, Parent = f }, 22)
+				Ui.label({ Text = if a.done then a.text else "A secret achievement. Keep playing to discover it.", Size = UDim2.new(1, -24, 0, 20), Position = UDim2.fromOffset(12, 31), Font = Ui.body, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Ui.colors.grey, TextStrokeTransparency = 1, Parent = f }, 14)
+			end
+			Ui.paragraph(done .. " of " .. #list .. " discovered. Some say all ten open a golden door...", { LayoutOrder = 0, Font = Ui.font, TextSize = 20, Parent = achievementsBody })
 		end)
 	end
 
-	-- Finds notebook
+	-- Finds & Skins
 	local finds, findsBody = Ui.window(gui, "Finds")
 	windows.Finds = finds
-	local found = {}
-	Ui.paragraph("Odd things turn up in the hay. The merchant pays for them, and each one tells a bit of the story.", { LayoutOrder = 0, TextColor3 = Ui.colors.grey, Parent = findsBody })
-	local empty = Ui.paragraph("Nothing found yet. Keep searching!", { LayoutOrder = 1, Parent = findsBody })
-	refreshers.Finds = function() end
+	local found, count = {}, 0
+	local skinsHeader = Ui.paragraph("Tool skins (win them on the Wheel of Fortune):", { LayoutOrder = 1, Font = Ui.font, TextSize = 20, Parent = findsBody })
+	local skinButtons = {}
+	local function wear(id)
+		local ok, message = pcall(Remotes.EquipSkin.InvokeServer, Remotes.EquipSkin, id)
+		notify.toast(if ok then message else "Try again.", Ui.colors.purple)
+	end
+	local plain = Ui.button("Plain tool", Ui.colors.wood, { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 40), Parent = findsBody })
+	plain.Activated:Connect(function()
+		wear("")
+	end)
+	for i, prize in ipairs(Config.Wheel) do
+		if not prize.reveal then
+			local b = Ui.button(prize.name, Ui.colors.grey, { LayoutOrder = 2 + i, Size = UDim2.new(1, 0, 0, 40), Parent = findsBody })
+			b.Activated:Connect(function()
+				wear(prize.id)
+			end)
+			skinButtons[prize.id] = b
+		end
+	end
+	local storyHeader = Ui.paragraph("Lucky finds: odd things in the hay, and what they tell you.", { LayoutOrder = 50, Font = Ui.font, TextSize = 20, Parent = findsBody })
+	refreshers.Finds = function()
+		for id, b in pairs(skinButtons) do
+			local owned = player:GetAttribute("Skin_" .. id) == true
+			b.Visible = owned
+			b.BackgroundColor3 = if player:GetAttribute("Skin") == id then Ui.colors.green else Ui.colors.purple
+		end
+		skinsHeader.Text = "Tool skins (win them on the Wheel of Fortune):"
+		storyHeader.Text = if count == 0 then "Lucky finds: nothing yet. Keep harvesting!" else "Lucky finds:"
+	end
+
+	-- Wheel of Fortune: the odds are always on screen before you can spin
+	local wheel, wheelBody = Ui.window(gui, "Wheel of Fortune")
+	windows.Wheel = wheel
+	local restricted = true
+	task.spawn(function()
+		local ok, info = pcall(function()
+			return PolicyService:GetPolicyInfoForPlayerAsync(player)
+		end)
+		restricted = not ok or info.ArePaidRandomItemsRestricted == true
+	end)
+	refreshers.Wheel = function()
+		for _, child in ipairs(wheelBody:GetChildren()) do
+			if child:IsA("GuiObject") then
+				child:Destroy()
+			end
+		end
+		if restricted then
+			Ui.paragraph("The Wheel of Fortune isn't available where you live.", { Parent = wheelBody })
+			return
+		end
+		Ui.paragraph("Every spin wins a prize. These are the exact odds of each:", { LayoutOrder = 1, Font = Ui.font, TextSize = 20, Parent = wheelBody })
+		local odds = Economy.wheelOdds()
+		for i, prize in ipairs(Config.Wheel) do
+			Ui.paragraph(prize.name .. ":  " .. pct(odds[i]) .. (if prize.reveal then "  (shows the clump the needle is in)" else ""), { LayoutOrder = 1 + i, TextColor3 = if prize.reveal then Ui.colors.red else Ui.colors.ink, Parent = wheelBody })
+		end
+		Ui.paragraph("A skin you already have pays coins instead.", { LayoutOrder = 50, TextColor3 = Ui.colors.grey, Parent = wheelBody })
+		local id = Config.Products.WheelSpin
+		if id and id ~= 0 then
+			Ui.button("SPIN (Robux)", Ui.colors.blue, { LayoutOrder = 60, Size = UDim2.new(1, 0, 0, 52), Parent = wheelBody }).Activated:Connect(function()
+				MarketplaceService:PromptProductPurchase(player, id)
+			end)
+		else
+			Ui.paragraph("Spins open once the game is published and the WheelSpin product is created.", { LayoutOrder = 60, TextColor3 = Ui.colors.grey, Parent = wheelBody })
+		end
+	end
+
+	local function anyOpen()
+		for _, frame in pairs(windows) do
+			if frame.Visible then
+				return true
+			end
+		end
+		return false
+	end
 
 	local function open(name)
+		if name == "Build" or name == "Whistle" then
+			for _, frame in pairs(windows) do
+				frame.Visible = false
+			end
+			Cursor.need("window", false)
+			actions[name]()
+			return
+		end
 		for key, frame in pairs(windows) do
 			if key == name then
 				frame.Visible = not frame.Visible
 				if frame.Visible then
+					local scale = frame:FindFirstChildOfClass("UIScale")
+					local full = scale and scale.Scale or 1
+					if scale then
+						scale.Scale = full * 0.9
+						Juice.ease(scale, 0.25, { Scale = full }, Enum.EasingStyle.Back)
+					end
 					refreshers[key]()
 				end
 			else
 				frame.Visible = false
 			end
 		end
+		Cursor.need("window", anyOpen())
+	end
+	for _, frame in pairs(windows) do
+		frame:GetPropertyChangedSignal("Visible"):Connect(function()
+			Cursor.need("window", anyOpen())
+		end)
 	end
 
 	local panels = { open = open }
@@ -80,13 +173,9 @@ function Panels.mount(gui, notify)
 		if found[name] then
 			return
 		end
-		found[name] = true
-		empty.Visible = false
-		local n = 0
-		for _ in pairs(found) do
-			n += 1
-		end
-		Ui.paragraph("You found " .. name .. ". " .. story, { LayoutOrder = n + 1, TextColor3 = Ui.colors.blue, Parent = findsBody })
+		found[name], count = true, count + 1
+		Ui.paragraph("You found " .. name .. ". " .. story, { LayoutOrder = 50 + count, TextColor3 = Ui.colors.blue, Parent = findsBody })
+		refreshers.Finds()
 	end
 	return panels
 end

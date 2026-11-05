@@ -1,9 +1,9 @@
 # Needle in the Haystack
 
-An original Roblox simulator. One giant haystack of 5,000,000 straws hides a needle. Search
-with your fork, sell your straw to the merchant, buy better tools, bags, machines and perks,
-and work through ten achievements to open the secret Golden Loft. Finding the needle takes
-about a day of play.
+An original Roblox simulator, in first person. Your farm has its own 70-metre pile of
+5,000,000 straws and one needle. Harvest clump by clump, sell to the merchant, build stairs,
+escalators and elevators to climb higher, power machines with generators, and uncover ten
+secret achievements to open the Golden Loft.
 
 ## Play it in Roblox Studio (about 15 minutes the first time)
 
@@ -13,9 +13,9 @@ about a day of play.
    open the file, then *Download raw file*).
 3. **Open it.** Double-click the file, or in Studio choose *File*, then *Open from File*.
    The world is empty until you press Play: the farm is built when the game starts.
-4. **Play-test.** Press *Play* (or F5). Walk north to the haystack (WASD), click with your
-   fork to search, then carry your straw to the merchant (east) and press SELL. Press *Stop*
-   (Shift+F5) to finish.
+4. **Play-test.** Press *Play* (or F5). You start on your farm. Look at a clump of the pile
+   and click to harvest. Walk to the merchant in the middle (press E there to sell). Q opens the
+   shop, B builds, M frees the mouse for menus. Press *Stop* (Shift+F5) to finish.
 5. **If something breaks**, open *View*, then *Output*. Red lines are errors: take a
    screenshot and send it to me, and I'll fix it.
 
@@ -25,7 +25,7 @@ Progress isn't saved while testing an unpublished game; that is normal.
 
 1. In Studio: *File*, then *Publish to Roblox*. Choose *New experience*, give it a name and a
    short description, and tap *Create*.
-2. *Home*, then *Game Settings*, then *Security*: switch on *Enable Studio Access to API
+2. *Home*, then *Game Settings*: under *Places* set *Max Players* to **4** (one per plot). Under *Security* switch on *Enable Studio Access to API
    Services* and *Save*. Now saving works when you test in Studio too.
 3. Your game starts private. To let everyone play, open create.roblox.com, *Creations*, your
    game, and set it to *Public* when you're happy with it.
@@ -37,7 +37,8 @@ Robux items are built in but switched off. To turn one on:
 1. On create.roblox.com open your game, then *Monetization*.
 2. *Passes*: create **Auto Sell**, **Double Machines** and **VIP**, and set their prices.
    *Developer Products*: create **2x Speed (1 hour)**, **2x Coins (1 hour)**, **Lucky Charm
-   (1 hour)**, **Straw Blast** and **Merchant's Whistle x10**, and set their prices.
+   (1 hour)**, **Straw Blast**, **Merchant's Whistle x10** and **Wheel Spin**, and set their
+   prices.
 3. Copy each item's ID (a long number) and send me the IDs. They aren't secret. I'll put
    them into the game and rebuild the file. Open the new file and publish again.
 

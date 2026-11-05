@@ -1,4 +1,6 @@
--- Buying with coins: tools (in order), bags, machines and perks. One remote: Buy(kind, index).
+-- Buying with coins: tools and silos (in order), perks for the tool you hold, and
+-- buildable items (pieces, machines, generators) that go into your inventory to place.
+-- One remote: Buy(kind, key).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -12,27 +14,23 @@ local Tools = require(script.Parent.Tools)
 local Achievements = require(script.Parent.Achievements)
 
 local Shop = {}
-
-local function pay(player, d, price)
-	if d.coins < price then
-		return false, "You need " .. Format.short(price - d.coins) .. " more coins."
-	end
-	return true
-end
-
 local buyers = {}
 
+local function short(d, price)
+	if d.coins < price then
+		return "You need " .. Format.short(price - d.coins) .. " more coins."
+	end
+	return nil
+end
+
 function buyers.tool(player, d, level)
-	if level ~= d.tool + 1 then
-		return false, "Buy the tools in order."
-	end
 	local tool = Config.Tools[level]
-	if not tool then
-		return false, "You already have the best tool!"
+	if level ~= d.tool + 1 or not tool then
+		return false, if tool then "Buy the tools in order." else "You already have the best tool!"
 	end
-	local ok, message = pay(player, d, tool.price)
-	if not ok then
-		return false, message
+	local missing = short(d, tool.price)
+	if missing then
+		return false, missing
 	end
 	PlayerData.update(player, function(data)
 		data.coins -= tool.price
@@ -41,48 +39,24 @@ function buyers.tool(player, d, level)
 			data.perks[perk.id] = 0 -- perks belong to the tool
 		end
 	end)
-	Tools.give(player, level)
-	return true, "You got the " .. tool.name .. ": " .. tool.power .. " straws a search. Perks start again on a new tool."
+	Tools.give(player, level, d.skin)
+	return true, "You got the " .. tool.name .. ": " .. tool.power .. " straws a click, carries " .. Format.commas(tool.capacity) .. "."
 end
 
-function buyers.bag(player, d, level)
-	if level ~= d.bag + 1 then
-		return false, "Buy the bags in order."
+function buyers.silo(player, d, level)
+	local silo = Config.Silos[level]
+	if level ~= d.silo + 1 or not silo then
+		return false, if silo then "Upgrade the silo in order." else "You already have the biggest silo!"
 	end
-	local bag = Config.Bags[level]
-	if not bag then
-		return false, "You already have the biggest bag!"
-	end
-	local ok, message = pay(player, d, bag.price)
-	if not ok then
-		return false, message
+	local missing = short(d, silo.price)
+	if missing then
+		return false, missing
 	end
 	PlayerData.update(player, function(data)
-		data.coins -= bag.price
-		data.bag = level
+		data.coins -= silo.price
+		data.silo = level
 	end)
-	return true, "You got the " .. bag.name .. ": it holds " .. Format.commas(bag.size) .. " straws."
-end
-
-function buyers.machine(player, d, index)
-	local m = Config.Machines[index]
-	if not m then
-		return false, "No such machine."
-	end
-	local owned = d.machines[index]
-	if owned >= m.max then
-		return false, "You own the most " .. m.name .. "s allowed (" .. m.max .. ")."
-	end
-	local price = Economy.machinePrice(index, owned)
-	local ok, message = pay(player, d, price)
-	if not ok then
-		return false, message
-	end
-	PlayerData.update(player, function(data)
-		data.coins -= price
-		data.machines[index] = owned + 1
-	end)
-	return true, "A " .. m.name .. " joins your yard: +" .. m.rate .. " straws a second, even while you're not clicking."
+	return true, "Your " .. silo.name .. " holds " .. Format.commas(silo.size) .. " straws from your machines."
 end
 
 function buyers.perk(player, d, index)
@@ -94,9 +68,9 @@ function buyers.perk(player, d, index)
 		return false, perk.name .. " is already maxed on this tool."
 	end
 	local price = Economy.perkPrice(d, index)
-	local ok, message = pay(player, d, price)
-	if not ok then
-		return false, message
+	local missing = short(d, price)
+	if missing then
+		return false, missing
 	end
 	PlayerData.update(player, function(data)
 		data.coins -= price
@@ -108,21 +82,52 @@ function buyers.perk(player, d, index)
 	return true, perk.name .. " " .. d.perks[perk.id] .. "/" .. perk.levels .. " on your " .. Economy.tool(d.tool).name .. "."
 end
 
+function buyers.item(player, d, id)
+	local item = Economy.item(id)
+	if not item then
+		return false, "No such thing to buy."
+	end
+	if item.def.max and Economy.owned(d, id) >= item.def.max then
+		return false, "You own the most " .. item.def.name .. "s allowed (" .. item.def.max .. ")."
+	end
+	local missing = short(d, item.def.price)
+	if missing then
+		return false, missing
+	end
+	PlayerData.update(player, function(data)
+		data.coins -= item.def.price
+		data.inventory[id] = (data.inventory[id] or 0) + 1
+	end)
+	return true, item.def.name .. " bought. Press B to build it on your plot."
+end
+
 function Shop.init()
-	Remotes.Buy.OnServerInvoke = function(player, kind, index)
+	Remotes.Buy.OnServerInvoke = function(player, kind, key)
 		local d = PlayerData.get(player)
 		if not d then
 			return false, "Still loading your progress..."
 		end
 		local buyer = type(kind) == "string" and buyers[kind]
-		if not buyer or type(index) ~= "number" or index ~= math.floor(index) then
+		local validKey = if kind == "item" then type(key) == "string" else type(key) == "number" and key == math.floor(key)
+		if not buyer or not validKey then
 			return false, "Nothing to buy there."
 		end
-		local ok, message = buyer(player, d, index)
+		local ok, message = buyer(player, d, key)
 		if ok then
 			Achievements.check(player)
 		end
 		return ok, message
+	end
+	Remotes.EquipSkin.OnServerInvoke = function(player, id)
+		local d = PlayerData.get(player)
+		if not d or type(id) ~= "string" or (id ~= "" and not d.skins[id]) then
+			return false, "You don't have that skin."
+		end
+		PlayerData.update(player, function(data)
+			data.skin = id
+		end)
+		Tools.give(player, d.tool, id)
+		return true, if id == "" then "Back to the plain tool." else "Skin on!"
 	end
 end
 

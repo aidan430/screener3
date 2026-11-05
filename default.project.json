@@ -3,31 +3,60 @@
   "tree": {
     "$className": "DataModel",
     "ReplicatedStorage": {
-      "Shared": { "$path": "src/shared" },
+      "Shared": {
+        "$path": "src/shared"
+      },
       "Remotes": {
         "$className": "Folder",
-        "Search": { "$className": "RemoteEvent" },
-        "SearchFx": { "$className": "RemoteEvent" },
-        "Announce": { "$className": "RemoteEvent" },
-        "Achievement": { "$className": "RemoteEvent" },
-        "Sell": { "$className": "RemoteFunction" },
-        "Whistle": { "$className": "RemoteFunction" },
-        "Buy": { "$className": "RemoteFunction" },
-        "Loft": { "$className": "RemoteFunction" },
-        "GetAchievements": { "$className": "RemoteFunction" }
+        "Harvest": {
+          "$className": "RemoteEvent"
+        },
+        "SearchFx": {
+          "$className": "RemoteEvent"
+        },
+        "Announce": {
+          "$className": "RemoteEvent"
+        },
+        "Achievement": {
+          "$className": "RemoteEvent"
+        },
+        "Whistle": {
+          "$className": "RemoteFunction"
+        },
+        "Buy": {
+          "$className": "RemoteFunction"
+        },
+        "Place": {
+          "$className": "RemoteFunction"
+        },
+        "Remove": {
+          "$className": "RemoteFunction"
+        },
+        "EquipSkin": {
+          "$className": "RemoteFunction"
+        },
+        "GetAchievements": {
+          "$className": "RemoteFunction"
+        }
       }
     },
     "ServerScriptService": {
-      "Server": { "$path": "src/server" }
+      "Server": {
+        "$path": "src/server"
+      }
     },
     "StarterPlayer": {
       "StarterPlayerScripts": {
         "$className": "StarterPlayerScripts",
-        "Client": { "$path": "src/client" }
+        "Client": {
+          "$path": "src/client"
+        }
       }
     },
     "Workspace": {
-      "$properties": { "StreamingEnabled": false }
+      "$properties": {
+        "StreamingEnabled": false
+      }
     }
   }
 }

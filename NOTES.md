@@ -1,47 +1,54 @@
 # NOTES: choices and defaults
 
 Every default below was chosen without asking. Change any of them in `src/shared/Config.luau`
-(numbers), `src/shared/Finds.json` (lucky finds and story) or `src/server/World.luau` (the map).
+(numbers), `src/shared/Finds.json` (lucky finds and story) or `src/server/World.luau` (the hub).
 
-## Version 2 (2026-11-05): one big haystack, a 24-hour grind
-Your brief: one big haystack; a slow process of about 24 hours to find the needle; straw sold to
-a merchant; machines, better tools and tool perks bought with coins; power-ups and speed-ups
-mainly with Robux; ten unique achievements; all ten open a secret level.
+## Version 3 (2026-11-05): your own 70 m pile, building, power, the wheel
+Your brief: a smaller map; a pile at least 70 m high stacked from the 5 million straws; tools
+that carry a set amount; stairs, escalators and elevators to climb; machines that need
+generators; strictly first person; secret achievements; a Robux wheel of fortune giving tool
+skins or the needle's location. Then: smooth, satisfying, relaxing animations.
 
-- **Your own haystack.** Everyone sees the same giant haystack, but each player's progress and
-  needle are their own and saved, because a shared haystack couldn't add up to 24 hours across
-  visits. 5,000,000 straws. The needle is never in the first 60%.
-- **Pacing (tested in `dev/pacing.py`):** a free player who clicks 3 times a second, sells
-  when the bag is full and always buys the best upgrade they can afford reaches the needle zone
-  after about 17.6 hours and clears the haystack in 24.0. With every Robux item it takes 8-11
-  hours. Early game is slow on purpose: the Rusty Fork takes 1 straw a search.
-- **Merchant:** 1 coin a straw. The bag (400 straws at first, up to 160,000) must be carried to
-  the stall east of the plaza. Merchant's Whistles (Robux) sell anywhere.
-- **Tools:** 10, from 1 to 22 straws a search, 400 to 3.4M coins. **Perks** (per tool, reset
-  on a new tool): Sharpened +15% straws a level, Swift -10% cooldown a level, Lucky +0.4%
-  find chance a level; 5 levels each, prices scale with the tool.
-- **Machines:** five kinds (0.15 to 7.5 straws a second each), up to 10/10/8/6/4 of each, each
-  copy costs 1.3-1.5x more. They work only while you're in the game (VIP: an hour after too).
-- **Lucky finds:** 0.6% a search; 12 items from the mystery (the tailor's thimble, Pip the
-  magpie's feather...), worth 60 searches of coins, honey and the gold coin 2-3x.
-- **Finding the needle:** a prize of 5,000 searches' worth of coins, +20% coins on everything
-  forever, and a fresh haystack with a new needle (so the game goes on).
-- **Robux:** passes Auto Sell, Double Machines, VIP (+25% coins, offline machines); products
-  2x Speed, 2x Coins, Lucky Charm (an hour each), Straw Blast (100,000 straws at once),
-  Merchant's Whistle x10. All switched off until the IDs are set. No paid random rewards.
-- **Achievements (10):** First Straw, Bag Full, Merchant's Friend (100k sold), Collector (all
-  tools), Industrialist (10 machines), Perfectionist (all perks maxed on one tool), Marathon
-  (2 hours in one visit), Halfway There (2.5M searched), Lucky Duck (25 finds), Needle Finder.
-  Optional Roblox badges via `Config.BadgeIds`.
-- **The Golden Loft:** a platform in the clouds above the barn, reached from the loft hatch on
-  the barn (the server teleports you, so it can't be reached by climbing). A golden haystack of
-  250,000 straws paying 20x, with a golden needle of its own.
-- **Anti-cheat:** the server checks position, tool and cooldown; bag room and haystack totals
-  are server-side; purchases are validated server-side.
+Your choices when asked: clumps of straw (5 million single parts would crash Roblox), a plot each,
+free placement, and a winnable needle reveal on the wheel.
 
-## Version 1 (2026-11-05), replaced
-Ten haystacks with shared, round-based cases and clues. Kept in git history (commit 7d2617e).
+- **Map:** four 140-stud plots around a hub (merchant north, wheel south, golden door east).
+  About 330 by 330 studs inside the fence, down from 400 by 400. Servers should be set to 4
+  players (Game Settings, Places, Max Players) since there are four plots.
+- **Your pile:** 5,000 clumps of 1,000 straws, 5-stud cubes in 51 layers tapering from a
+  42-stud to a 12-stud radius: 255 studs (about 71 m) high. Saved clump by clump. The needle
+  is in one random clump; harvest it to the last straw to find it.
+- **Pacing (dev/pacing.py, tested):** a free player who clicks 3 times a second, walks 45
+  seconds to sell and buys well finds the needle after about 24 hours on average (the whole
+  pile takes 35). With every Robux item: about 7 hours.
+- **Tools:** 10, 1-22 straws a click, carrying 300 to 100,000. The Needle Detector (last tool)
+  says how close the needle's clump is: cold, warm, hot, burning.
+- **Silo:** machines harvest the top of your pile into the silo (2,000 to 500,000); selling
+  empties it too. Machines need power: five generators (4-260 power), five machines (0.15-7.5
+  straws/s, 2-45 power each). Short of power, every machine slows to the share you make.
+- **Building:** stairs (10 up, 10 along), landings, pillars, escalators (a moving ramp),
+  elevators (50 studs; press E). Placed anywhere on your own plot, up to 400 things, with Z/C
+  to pick, R to turn (Shift+R for 15 degrees), click to place, X to take back.
+- **First person:** the mouse is locked to the crosshair; M frees it for menus, and opening a
+  menu frees it too. Q shop, B build, E use.
+- **Wheel of Fortune:** Robux spins. Every spin wins: six tool skins (30%, 25%, 20%, 15%, 7%,
+  2.99%) or the needle reveal (0.01%, 1 in 10,000) that makes your needle's clump glow. A skin
+  you have pays coins. The odds are on screen before you can spin; the wheel is hidden (and a
+  spin pays coins) where Roblox restricts paid random items.
+- **Feel:** straw puffs and a soft camera push on every click, floating numbers, a combo
+  counter, pop rings and a bigger push when a clump empties, coins flying into your counter,
+  counters that count up, confetti for finds, every 100 clumps and the needle. Smooth easing,
+  no flashing. No pressure tactics on Robux purchases. Sounds are off until you add Toolbox
+  sound IDs to `Config.Sounds`.
+- **Achievements (secret until earned):** First Straw, Full Load, Merchant's Friend, Collector,
+  Engineer (10 machines working), Power Plant (500 power), Sky High (stand 250 studs up on your
+  plot), Perfectionist, Lucky Duck, Needle Finder. All ten open the golden door to the Loft.
+- **Performance:** 5,000 parts per pile, up to 20,000 with four players. Fine on computers;
+  older phones may struggle. If they do, raise `ClumpSize` and lower `Clumps` together.
 
-## Not done yet (ideas for version 3)
-- Sounds and music, a global leaderboard, daily rewards, pets that search with you.
-- Real 3D models from the Toolbox in place of the simple shapes.
+## Version 2 and 1, replaced
+One giant shared-looking haystack (v2, commit cead0ee); ten haystacks with case rounds (v1,
+commit 7d2617e). Both in git history.
+
+## Not done yet
+- Sounds and music, a global leaderboard, daily rewards, 3D models from the Toolbox.
