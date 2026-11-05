@@ -20,6 +20,9 @@
         "Achievement": {
           "$className": "RemoteEvent"
         },
+        "GoHome": {
+          "$className": "RemoteEvent"
+        },
         "DropHay": {
           "$className": "RemoteEvent"
         },

@@ -21,6 +21,7 @@ local BuildMode = require(script.Parent:WaitForChild("BuildMode"))
 local WorldFx = require(script.Parent:WaitForChild("WorldFx"))
 local HayFx = require(script.Parent:WaitForChild("HayFx"))
 local Teleport = require(script.Parent:WaitForChild("Teleport"))
+local Guide = require(script.Parent:WaitForChild("Guide"))
 local Music = require(script.Parent:WaitForChild("Music"))
 local Jetpack = require(script.Parent:WaitForChild("Jetpack"))
 local Offer = require(script.Parent:WaitForChild("Offer"))
@@ -85,6 +86,9 @@ end)
 step("world effects", function()
 	WorldFx.start()
 end)
+step("guide", function()
+	Guide.start()
+end)
 step("teleporters", function()
 	Teleport.mount(gui)
 end)
@@ -107,6 +111,8 @@ end
 UserInputService.InputBegan:Connect(function(input, processed)
 	if not processed and input.KeyCode == Enum.KeyCode.Q and panels then
 		panels.open("Shop")
+	elseif not processed and input.KeyCode == Enum.KeyCode[Config.HomeKey] then
+		Remotes.GoHome:FireServer() -- back to the entrance of your own farm
 	elseif not processed and input.KeyCode == Enum.KeyCode[Config.DropKey] then
 		Remotes.DropHay:FireServer() -- drop your load as a bundle (or put down a bale)
 	end

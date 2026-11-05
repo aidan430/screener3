@@ -67,6 +67,18 @@ end
 Players.PlayerAdded:Connect(function(player)
 	player.CameraMode = Enum.CameraMode.LockFirstPerson
 end)
+
+-- T: back to your own farm, from anywhere (not more than once every few seconds)
+local lastHome = {}
+Remotes.GoHome.OnServerEvent:Connect(function(player)
+	if os.clock() - (lastHome[player] or 0) >= Config.HomeCooldown then
+		lastHome[player] = os.clock()
+		toPlot(player)
+	end
+end)
+Players.PlayerRemoving:Connect(function(player)
+	lastHome[player] = nil
+end)
 for _, player in ipairs(Players:GetPlayers()) do
 	player.CameraMode = Enum.CameraMode.LockFirstPerson
 end

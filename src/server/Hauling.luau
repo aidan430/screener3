@@ -99,16 +99,34 @@ local function makeTruck(def)
 	return model
 end
 
+-- The player's Trader's Stall model, if it's placed.
+local function stallOf(player)
+	local plotIndex = Plots.of(player)
+	local built = plotIndex and Plots.folder(plotIndex):FindFirstChild("Built")
+	for _, model in ipairs(built and built:GetChildren() or {}) do
+		if model:GetAttribute("Item") == "trader" then
+			return model
+		end
+	end
+	return nil
+end
+Hauling.stallOf = stallOf
+
+-- Walking up to your own basket with hay on you dumps it, no button needed.
+local function autoDump(player)
+	local d = PlayerData.get(player)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	local stall = d and root and (d.carried + d.siloStraw) > 0 and stallOf(player)
+	local basket = stall and stall:FindFirstChild("Basket")
+	if basket and (basket.Position - root.Position).Magnitude <= Config.AutoDumpRange then
+		Hauling.dump(player, "trader", basket)
+	end
+end
+
 -- A truck comes from the road to the ground in front of the player's stall, waits, and goes.
 local function visit(player, def)
 	local plotIndex = Plots.of(player)
-	local built = plotIndex and Plots.folder(plotIndex):FindFirstChild("Built")
-	local stall = nil
-	for _, model in ipairs(built and built:GetChildren() or {}) do
-		if model:GetAttribute("Item") == "trader" then
-			stall = model
-		end
-	end
+	local stall = stallOf(player)
 	if not stall then
 		return
 	end
@@ -140,6 +158,7 @@ function Hauling.init()
 			task.wait(1)
 			beat += 1
 			for _, player in ipairs(Players:GetPlayers()) do
+				autoDump(player)
 				sell(player)
 				local d = PlayerData.get(player)
 				if d and (d.basket > 0 or d.baled > 0) then -- each truck you own calls in turn

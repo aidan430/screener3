@@ -143,12 +143,15 @@ Config.Trucks = {
 	{ id = "semi", name = "Semi Truck", rate = 90, price = 500000, max = 2, size = { 8, 9, 24 }, color = { 196, 72, 56 } },
 	{ id = "big", name = "Large Truck", rate = 220, price = 3000000, max = 2, size = { 9, 10, 30 }, color = { 60, 120, 70 } },
 }
+Config.AutoDumpRange = 9 -- walk this close to your own basket and your load dumps itself
 Config.BasketShowFull = 5000 -- straws waiting at which the basket looks full
 
 -- Loose hay: press DropKey to drop what you carry as a bundle. Conveyors carry bundles; your
 -- trader's basket and bale makers take them in. Bundles and bales left lying for
 -- LooseHayMinutes go to your basket by themselves, and so does everything when you leave.
 Config.DropKey = "G"
+Config.HomeKey = "T" -- back to your own farm from anywhere
+Config.HomeCooldown = 5
 Config.MaxLooseHay = 40 -- bundles and bales on one plot at once
 Config.LooseHayMinutes = 10
 Config.ConveyorSpeed = 10 -- studs a second

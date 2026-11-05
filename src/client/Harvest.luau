@@ -191,6 +191,13 @@ function Harvest.start()
 	RunService.RenderStepped:Connect(function()
 		local part, _, cell = aim()
 		target = part
+		-- hold the button to keep harvesting (the swing waits for the tool's cooldown itself)
+		if part ~= nil and UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+			local tool = heldTool()
+			if tool then
+				swing(tool)
+			end
+		end
 		if cell then
 			marker.Position = cell
 			marker.Parent = workspace:FindFirstChild("MyEffects") or workspace
