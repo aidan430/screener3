@@ -49,11 +49,12 @@ def layout() -> dict:
     import math
     s, n_layers = number("ClumpSize"), int(number("PileLayers"))
     r0, r1, curve, clumps = number("PileRadiusBottom"), number("PileRadiusTop"), number("PileCurve"), int(number("Clumps"))
+    dome = number("PileDome")
     height = [float(v) for v in re.search(r"^Config\.NeedleHeight = \{ ([\d.]+), ([\d.]+) \}", CONFIG, re.M).groups()]
     core_max = number("NeedleCore")
     layers, radius, total = [], [], 0
     for i in range(n_layers):
-        r = r1 + (r0 - r1) * (1 - i / (n_layers - 1)) ** curve
+        r = r1 + (r0 - r1) * max(0.0, 1 - (i / (n_layers - 1)) ** dome) ** curve
         radius.append(r)
         n = math.floor(r / s)
         layer = [(gx, i, gz, gx * gx + gz * gz) for gx in range(-n, n + 1) for gz in range(-n, n + 1) if (gx * s) ** 2 + (gz * s) ** 2 <= r * r]

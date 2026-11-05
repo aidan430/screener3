@@ -112,8 +112,8 @@ function Piles.build(plotIndex, d)
 	local rng = Random.new(plotIndex)
 	for i = 1, Config.HeapMounds do
 		local angle = (i / Config.HeapMounds + rng:NextNumber() * 0.05) * math.pi * 2
-		local reach = Config.PileRadiusBottom + rng:NextNumber(1, 6)
-		local mound = HayLook.lump(rng:NextNumber(5, 9), false)
+		local reach = Config.PileRadiusBottom + rng:NextNumber(1, 3)
+		local mound = HayLook.lump(rng:NextNumber(4, 7), false)
 		mound.Anchored = true
 		mound.CFrame = CFrame.new(o + Vector3.new(math.cos(angle) * reach, 0.6, math.sin(angle) * reach)) * CFrame.Angles(0, rng:NextNumber() * 6.28, 0)
 		mound.Parent = folder

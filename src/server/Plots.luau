@@ -39,7 +39,7 @@ end
 -- Where a player arrives on their plot: the corner nearest the hub.
 function Plots.entrance(index)
 	local centre = Plots.centre(index)
-	return centre - centre.Unit * (Config.PlotSize / 2 - 6) + Vector3.new(0, 4, 0)
+	return centre - centre.Unit * (Config.PlotSize / 2 - 3) + Vector3.new(0, 4, 0)
 end
 
 function Plots.build()

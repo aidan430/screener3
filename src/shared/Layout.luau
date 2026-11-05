@@ -1,5 +1,5 @@
 -- Where each clump sits in the heap: one cell of the 4-stud terrain grid each, in
--- Config.PileLayers layers that taper from PileRadiusBottom to a peak (curved by PileCurve), trimmed
+-- Config.PileLayers layers that taper from PileRadiusBottom to a rounded top (PileDome, PileCurve), trimmed
 -- at the bottom edge to exactly Config.Clumps. Always the same order (bottom to top), so a clump's
 -- index means the same clump in every visit; saves refer to clumps by index.
 -- Plain Luau: no Roblox services. Returns a list of { x, y, z } offsets from the heap's base centre,
@@ -13,11 +13,11 @@
 return function(Config)
 	local s = Config.ClumpSize
 	local layerCount = Config.PileLayers
-	local r0, r1, curve = Config.PileRadiusBottom, Config.PileRadiusTop, Config.PileCurve
+	local r0, r1, curve, dome = Config.PileRadiusBottom, Config.PileRadiusTop, Config.PileCurve, Config.PileDome
 	local layers, radius = {}, {}
 	local total = 0
 	for i = 0, layerCount - 1 do
-		local r = r1 + (r0 - r1) * (1 - i / (layerCount - 1)) ^ curve
+		local r = r1 + (r0 - r1) * math.max(0, 1 - (i / (layerCount - 1)) ^ dome) ^ curve
 		radius[i] = r
 		local n = math.floor(r / s)
 		local layer = {}

@@ -21,15 +21,18 @@ Config.FarmName = "Hollow Creek Farm"
 Config.PlotSize = 140
 Config.PlotCentres = { { 85, 85 }, { -85, 85 }, { -85, -85 }, { 85, -85 } }
 
--- The heap: 5,000,000 straws in clumps, one smooth terrain heap 256 studs (70 m) high.
+-- The heap: 5,000,000 straws in clumps, one smooth terrain haystack 80 studs (22 m) high and
+-- 88 across: steep sides and a rounded top, like a beehive haystack.
 -- Each clump is one 4-stud terrain cell (the terrain grid size, so keep ClumpSize = 4).
 Config.TotalStraws = 5000000
 Config.Clumps = 5000 -- each holds TotalStraws / Clumps = 1,000 straws
 Config.ClumpSize = 4
-Config.PileLayers = 64 -- 64 layers x 4 studs = 256 studs
-Config.PileRadiusBottom = 38
+Config.PileLayers = 20 -- 20 layers x 4 studs = 80 studs
+Config.PileRadiusBottom = 44
 Config.PileRadiusTop = 4
-Config.PileCurve = 1.6 -- above 1: a wide, sloping base and a steep, narrow top
+-- radius at height share t: top + (bottom - top) x (1 - t ^ PileDome) ^ PileCurve
+Config.PileDome = 2.5 -- above 1: the sides stay wide for longer, then round over
+Config.PileCurve = 0.7 -- below 1: a fuller, rounder top
 Config.HeapColour = { 222, 186, 92 } -- straw gold (the terrain Grass material is the heap)
 -- Your hay texture: upload garden-hay.jpg (and its normal map) in Studio (Asset Manager > Import),
 -- paste the IDs here ("rbxassetid://123"), rebuild. The heap, the hay on tools and the bundles
@@ -123,7 +126,7 @@ Config.Pieces = {
 	{ id = "baler", name = "Bale Maker", price = 60000, max = 3, size = { 8, 7, 10 }, text = "Feed it hay at the back; it pushes out bales. Trucks carry bales 3x as easily." },
 	{ id = "trader", name = "Trader's Stall", price = 0, max = 1, size = { 12, 12, 8 }, text = "Your trader. Dump your hay in the basket. Move it anywhere, even up a platform." },
 }
-Config.TraderDistance = 50 -- your trader's stall starts this far from your plot's centre, towards the hub
+Config.TraderDistance = 57 -- your trader's stall starts this far from your plot's centre, towards the hub
 Config.BasketDrainSeconds = 4 -- how fast the basket's hay level eases down after a dump (just for show)
 
 -- Hauling: what you dump waits in your trader's basket. The trader himself buys TraderRate
@@ -207,7 +210,7 @@ Config.Jetpack = {
 -- items whose ID is set, has a "No thanks" button as big as the others, and never comes back.
 Config.OfferAfterClumps = 25
 
-Config.DataStoreName = "NeedleHaystack_v4" -- v4: the terrain heap numbers clumps differently
+Config.DataStoreName = "NeedleHaystack_v5" -- v5: the lower, wider haystack numbers clumps differently
 Config.AutosaveSeconds = 120
 
 -- Robux. Nothing shows in the shop until you create the item on the Creator Dashboard
@@ -254,7 +257,7 @@ Config.Achievements = {
 	{ id = "collector", name = "Collector", text = "Own every tool, up to the Needle Detector.", stat = "tool", goal = 10 },
 	{ id = "engineer", name = "Engineer", text = "Have 10 machines working on your plot.", stat = "machines", goal = 10 },
 	{ id = "power_plant", name = "Power Plant", text = "Generate 500 power on your plot.", stat = "power", goal = 500 },
-	{ id = "sky_high", name = "Sky High", text = "Stand 250 studs up on your own plot.", stat = "best_height", goal = 250 },
+	{ id = "sky_high", name = "Sky High", text = "Stand on top of your haystack, 75 studs up.", stat = "best_height", goal = 75 },
 	{ id = "perfectionist", name = "Perfectionist", text = "Max out all three perks on one tool.", stat = "perks_maxed", goal = 1 },
 	{ id = "lucky", name = "Lucky Duck", text = "Make 25 lucky finds in the hay.", stat = "lucky_finds", goal = 25 },
 	{ id = "needle", name = "Needle Finder", text = "Find the needle.", stat = "needles", goal = 1 },
@@ -617,7 +620,7 @@ end
 				<Properties>
 					<string name="Name">Layout</string>
 					<ProtectedString name="Source"><![CDATA[-- Where each clump sits in the heap: one cell of the 4-stud terrain grid each, in
--- Config.PileLayers layers that taper from PileRadiusBottom to a peak (curved by PileCurve), trimmed
+-- Config.PileLayers layers that taper from PileRadiusBottom to a rounded top (PileDome, PileCurve), trimmed
 -- at the bottom edge to exactly Config.Clumps. Always the same order (bottom to top), so a clump's
 -- index means the same clump in every visit; saves refer to clumps by index.
 -- Plain Luau: no Roblox services. Returns a list of { x, y, z } offsets from the heap's base centre,
@@ -631,11 +634,11 @@ end
 return function(Config)
 	local s = Config.ClumpSize
 	local layerCount = Config.PileLayers
-	local r0, r1, curve = Config.PileRadiusBottom, Config.PileRadiusTop, Config.PileCurve
+	local r0, r1, curve, dome = Config.PileRadiusBottom, Config.PileRadiusTop, Config.PileCurve, Config.PileDome
 	local layers, radius = {}, {}
 	local total = 0
 	for i = 0, layerCount - 1 do
-		local r = r1 + (r0 - r1) * (1 - i / (layerCount - 1)) ^ curve
+		local r = r1 + (r0 - r1) * math.max(0, 1 - (i / (layerCount - 1)) ^ dome) ^ curve
 		radius[i] = r
 		local n = math.floor(r / s)
 		local layer = {}
@@ -2393,8 +2396,8 @@ function Piles.build(plotIndex, d)
 	local rng = Random.new(plotIndex)
 	for i = 1, Config.HeapMounds do
 		local angle = (i / Config.HeapMounds + rng:NextNumber() * 0.05) * math.pi * 2
-		local reach = Config.PileRadiusBottom + rng:NextNumber(1, 6)
-		local mound = HayLook.lump(rng:NextNumber(5, 9), false)
+		local reach = Config.PileRadiusBottom + rng:NextNumber(1, 3)
+		local mound = HayLook.lump(rng:NextNumber(4, 7), false)
 		mound.Anchored = true
 		mound.CFrame = CFrame.new(o + Vector3.new(math.cos(angle) * reach, 0.6, math.sin(angle) * reach)) * CFrame.Angles(0, rng:NextNumber() * 6.28, 0)
 		mound.Parent = folder
@@ -2782,7 +2785,7 @@ end
 -- Where a player arrives on their plot: the corner nearest the hub.
 function Plots.entrance(index)
 	local centre = Plots.centre(index)
-	return centre - centre.Unit * (Config.PlotSize / 2 - 6) + Vector3.new(0, 4, 0)
+	return centre - centre.Unit * (Config.PlotSize / 2 - 3) + Vector3.new(0, 4, 0)
 end
 
 function Plots.build()

@@ -131,3 +131,9 @@ commit 7d2617e). Both in git history.
   Bale Maker (60K, max 3): bundles in at the back, a 2,000-straw bale (`BaleStraws`) out the
   front; E picks a bale up, G puts it down. Loose hay left `LooseHayMinutes` (10) goes to the
   basket by itself; on leaving it's saved as `loose` and waits in the basket next time.
+- **Lower, wider haystack (owner's request):** `PileLayers` 20 (80 studs, 22 m, was 256),
+  `PileRadiusBottom` 44 (88 across), new `PileDome` 2.5 with `PileCurve` 0.7: straight sides
+  that round over at the top. Still exactly 5,000 clumps; 231 hiding places for the needle;
+  pacing unchanged (about 34 h). `TraderDistance` 57 and the arrival point moved out to clear
+  the wider heap. "Sky High" is now "stand on top of your haystack, 75 studs up".
+  `DataStoreName` is `NeedleHaystack_v5`.

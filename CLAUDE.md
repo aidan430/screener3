@@ -2,8 +2,8 @@
 
 ## What this is
 An original Roblox simulator, strictly first person. Four players a server, each with a plot
-around a hub. Each plot holds that player's own heap: one smooth terrain heap of 5,000 clumps of
-1,000 straws (5,000,000), 256 studs (70 m) high, one clump per 4-stud terrain cell, saved clump by
+around a hub. Each plot holds that player's own heap: one smooth terrain haystack of 5,000 clumps
+of 1,000 straws (5,000,000), 80 studs (22 m) high and 88 across, one clump per 4-stud terrain cell, saved clump by
 clump, with the needle hidden deep in the upper heap. Players lift hay off the heap onto their
 fork (visible on the tines; buckets at the hip carry more), dump it in their own trader's basket,
 and buy tools, perks, buckets, a silo, building pieces (stairs, escalators, elevators, teleporters),

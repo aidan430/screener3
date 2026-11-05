@@ -9,15 +9,18 @@ Config.FarmName = "Hollow Creek Farm"
 Config.PlotSize = 140
 Config.PlotCentres = { { 85, 85 }, { -85, 85 }, { -85, -85 }, { 85, -85 } }
 
--- The heap: 5,000,000 straws in clumps, one smooth terrain heap 256 studs (70 m) high.
+-- The heap: 5,000,000 straws in clumps, one smooth terrain haystack 80 studs (22 m) high and
+-- 88 across: steep sides and a rounded top, like a beehive haystack.
 -- Each clump is one 4-stud terrain cell (the terrain grid size, so keep ClumpSize = 4).
 Config.TotalStraws = 5000000
 Config.Clumps = 5000 -- each holds TotalStraws / Clumps = 1,000 straws
 Config.ClumpSize = 4
-Config.PileLayers = 64 -- 64 layers x 4 studs = 256 studs
-Config.PileRadiusBottom = 38
+Config.PileLayers = 20 -- 20 layers x 4 studs = 80 studs
+Config.PileRadiusBottom = 44
 Config.PileRadiusTop = 4
-Config.PileCurve = 1.6 -- above 1: a wide, sloping base and a steep, narrow top
+-- radius at height share t: top + (bottom - top) x (1 - t ^ PileDome) ^ PileCurve
+Config.PileDome = 2.5 -- above 1: the sides stay wide for longer, then round over
+Config.PileCurve = 0.7 -- below 1: a fuller, rounder top
 Config.HeapColour = { 222, 186, 92 } -- straw gold (the terrain Grass material is the heap)
 -- Your hay texture: upload garden-hay.jpg (and its normal map) in Studio (Asset Manager > Import),
 -- paste the IDs here ("rbxassetid://123"), rebuild. The heap, the hay on tools and the bundles
@@ -111,7 +114,7 @@ Config.Pieces = {
 	{ id = "baler", name = "Bale Maker", price = 60000, max = 3, size = { 8, 7, 10 }, text = "Feed it hay at the back; it pushes out bales. Trucks carry bales 3x as easily." },
 	{ id = "trader", name = "Trader's Stall", price = 0, max = 1, size = { 12, 12, 8 }, text = "Your trader. Dump your hay in the basket. Move it anywhere, even up a platform." },
 }
-Config.TraderDistance = 50 -- your trader's stall starts this far from your plot's centre, towards the hub
+Config.TraderDistance = 57 -- your trader's stall starts this far from your plot's centre, towards the hub
 Config.BasketDrainSeconds = 4 -- how fast the basket's hay level eases down after a dump (just for show)
 
 -- Hauling: what you dump waits in your trader's basket. The trader himself buys TraderRate
@@ -195,7 +198,7 @@ Config.Jetpack = {
 -- items whose ID is set, has a "No thanks" button as big as the others, and never comes back.
 Config.OfferAfterClumps = 25
 
-Config.DataStoreName = "NeedleHaystack_v4" -- v4: the terrain heap numbers clumps differently
+Config.DataStoreName = "NeedleHaystack_v5" -- v5: the lower, wider haystack numbers clumps differently
 Config.AutosaveSeconds = 120
 
 -- Robux. Nothing shows in the shop until you create the item on the Creator Dashboard
@@ -242,7 +245,7 @@ Config.Achievements = {
 	{ id = "collector", name = "Collector", text = "Own every tool, up to the Needle Detector.", stat = "tool", goal = 10 },
 	{ id = "engineer", name = "Engineer", text = "Have 10 machines working on your plot.", stat = "machines", goal = 10 },
 	{ id = "power_plant", name = "Power Plant", text = "Generate 500 power on your plot.", stat = "power", goal = 500 },
-	{ id = "sky_high", name = "Sky High", text = "Stand 250 studs up on your own plot.", stat = "best_height", goal = 250 },
+	{ id = "sky_high", name = "Sky High", text = "Stand on top of your haystack, 75 studs up.", stat = "best_height", goal = 75 },
 	{ id = "perfectionist", name = "Perfectionist", text = "Max out all three perks on one tool.", stat = "perks_maxed", goal = 1 },
 	{ id = "lucky", name = "Lucky Duck", text = "Make 25 lucky finds in the hay.", stat = "lucky_finds", goal = 25 },
 	{ id = "needle", name = "Needle Finder", text = "Find the needle.", stat = "needles", goal = 1 },

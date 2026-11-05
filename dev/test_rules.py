@@ -26,11 +26,13 @@ def layout() -> list[tuple[float, float, float]]:
 
 
 class Pile(unittest.TestCase):
-    def test_exactly_the_configured_clumps_at_least_70_metres_high(self):
+    def test_exactly_the_configured_clumps_shaped_like_a_haystack(self):
         clumps = layout()
         self.assertEqual(len(clumps), pacing.number("Clumps"))
         top = max(c[1] for c in clumps) + pacing.number("ClumpSize") / 2
-        self.assertGreaterEqual(top * 0.28, 70, f"{top} studs is {top * 0.28:.1f} m")  # 1 stud = 0.28 m
+        width = 2 * max(abs(c[0]) for c in clumps) + pacing.number("ClumpSize")
+        self.assertGreaterEqual(top * 0.28, 20, f"{top} studs is {top * 0.28:.1f} m")  # 1 stud = 0.28 m
+        self.assertTrue(0.8 <= top / width <= 1.3, f"{top} tall and {width} wide: a haystack is about as tall as wide")
         self.assertEqual(pacing.number("TotalStraws") % pacing.number("Clumps"), 0)
 
     def test_the_pile_fits_its_plot(self):
