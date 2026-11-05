@@ -36,6 +36,7 @@ function Hauling.dump(player, reason, basket)
 		data.basket += straws
 		data.coins += golden
 		data.stats.straws_sold += data.carriedGolden
+		data.stats.dumps += 1
 		data.carried, data.carriedGolden, data.siloStraw = 0, 0, 0
 	end)
 	Remotes.SearchFx:FireClient(player, { kind = "dumped", straws = total, coins = golden, reason = reason, basket = basket })

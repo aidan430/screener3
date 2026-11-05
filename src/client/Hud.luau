@@ -34,17 +34,18 @@ function Hud.mount(gui, open)
 	local pileFill = bar(top, 54, Ui.colors.hay)
 	local warmth = Ui.label({ Size = UDim2.new(1, -20, 0, 14), Position = UDim2.fromOffset(10, 67), TextColor3 = Ui.colors.cream, Parent = top }, 13)
 
-	local left = Ui.make("Frame", { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 10, 0.5, 0), Size = UDim2.fromOffset(220, 470), BackgroundTransparency = 1, Parent = gui }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
+	local left = Ui.make("Frame", { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 10, 0.5, 0), Size = UDim2.fromOffset(220, 488), BackgroundTransparency = 1, Parent = gui }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
 	Ui.autoScale(left)
-	local stats = Ui.make("Frame", { LayoutOrder = 1, Size = UDim2.fromOffset(220, 176), BackgroundColor3 = Ui.colors.wood, BackgroundTransparency = 0.1, Parent = left }, { Ui.corner(12), Ui.stroke(Ui.colors.woodDark, 3) })
+	local stats = Ui.make("Frame", { LayoutOrder = 1, Size = UDim2.fromOffset(220, 194), BackgroundColor3 = Ui.colors.wood, BackgroundTransparency = 0.1, Parent = left }, { Ui.corner(12), Ui.stroke(Ui.colors.woodDark, 3) })
 	local coinsLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 36), Position = UDim2.fromOffset(8, 4), TextColor3 = Ui.colors.hay, Parent = stats }, 32)
-	local carryLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(8, 42), Parent = stats }, 16)
-	local carryFill = bar(stats, 62, Ui.colors.green)
-	local siloLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(8, 76), Parent = stats }, 16)
-	local siloFill = bar(stats, 96, Ui.colors.blue)
-	local powerLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(8, 110), Parent = stats }, 15)
-	local rateLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(8, 130), Parent = stats }, 15)
-	local bonusLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(8, 150), Parent = stats }, 15)
+	local earnLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 16), Position = UDim2.fromOffset(8, 38), TextColor3 = Ui.colors.cream, Parent = stats }, 14) -- coins a minute (client Goals.luau)
+	local carryLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(8, 60), Parent = stats }, 16)
+	local carryFill = bar(stats, 80, Ui.colors.green)
+	local siloLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(8, 94), Parent = stats }, 16)
+	local siloFill = bar(stats, 114, Ui.colors.blue)
+	local powerLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(8, 128), Parent = stats }, 15)
+	local rateLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(8, 148), Parent = stats }, 15)
+	local bonusLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(8, 168), Parent = stats }, 15)
 	local coinValue = Instance.new("NumberValue")
 
 	local function button(order, text, colour, onClick)
@@ -130,7 +131,7 @@ function Hud.mount(gui, open)
 		end
 	end)
 	Hud.refresh = refresh
-	return { refresh = refresh, coins = coinsLabel, crosshair = crosshair }
+	return { refresh = refresh, coins = coinsLabel, earn = earnLabel, crosshair = crosshair }
 end
 
 return Hud

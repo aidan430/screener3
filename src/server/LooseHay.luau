@@ -80,6 +80,7 @@ local function spawnBale(player, baler)
 	LooseHay.watch(bale)
 	PlayerData.update(player, function(data)
 		data.loose += Config.BaleStraws
+		data.stats.bales_made += 1
 	end)
 end
 
@@ -165,6 +166,7 @@ local function drop(player)
 	PlayerData.update(player, function(data)
 		data.carried -= straws
 		data.loose += straws
+		data.stats.drops += 1
 	end)
 	LooseHay.watch(bundle)
 end

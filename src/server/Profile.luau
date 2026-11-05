@@ -10,7 +10,7 @@ local Layout = require(Shared:WaitForChild("Layout"))(Config)
 local Profile = {}
 local rng = Random.new()
 
-Profile.STATS = { "searches", "loads_filled", "straws_sold", "lucky_finds", "perks_maxed", "total_searched", "best_height" }
+Profile.STATS = { "searches", "loads_filled", "straws_sold", "lucky_finds", "perks_maxed", "total_searched", "best_height", "dumps", "drops", "bales_made" }
 
 local function number(saved, name, default)
 	local v = type(saved) == "table" and saved[name]
@@ -42,6 +42,7 @@ function Profile.fresh(saved)
 		needles = number(saved, "needles", 0),
 		whistles = number(saved, "whistles", 0),
 		lastSeen = number(saved, "lastSeen", 0),
+		goal = math.clamp(math.floor(number(saved, "goal", 1)), 1, #Config.Goals + 1), -- the guided goal you're on
 		skin = if type(saved.skin) == "string" then saved.skin else "",
 		removed = if type(saved.removed) == "string" and #saved.removed == Config.Clumps then saved.removed else string.rep("0", Config.Clumps),
 		partial = {},
