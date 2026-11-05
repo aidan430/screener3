@@ -99,7 +99,50 @@ Config.LuckyChance = 0.006
 Config.LuckyValueSearches = 60
 
 -- Sounds: paste asset IDs from the Studio Toolbox (e.g. "rbxassetid://12345"). "" = silent.
-Config.Sounds = { harvest = "", pop = "", coins = "", cheer = "", spin = "" }
+-- The rbxasset://sounds/... files ship inside every Roblox client (the default character and
+-- classic gear sounds), so they can't go private or be removed. Check them in Studio.
+Config.Sounds = {
+	harvest = "rbxasset://sounds/action_footsteps_plastic.mp3", -- a soft, muffled touch
+	pop = "rbxasset://sounds/action_jump_land.mp3", -- a soft "fwump" when a clump empties
+	coins = "rbxasset://sounds/electronicpingshort.wav", -- a short, gentle chime
+	cheer = "rbxasset://sounds/electronicpingshort.wav", -- the same chime, lower and fuller
+	spin = "",
+}
+-- Per sound: volume (0-1), pitch multiplier, wobble = random pitch +/- so clicks don't tire.
+Config.SoundSettings = {
+	harvest = { volume = 0.25, pitch = 1.1, wobble = 0.06 },
+	pop = { volume = 0.4, pitch = 0.85 },
+	coins = { volume = 0.3, pitch = 1 },
+	cheer = { volume = 0.35, pitch = 0.7 },
+}
+
+-- Background music: soft acoustic / country instrumentals, looping on each player's side
+-- with a gentle fade between tracks and a music on/off button (top right). A track that
+-- won't load is skipped quietly. Licensed library tracks Roblox uploaded for every game:
+Config.Music = {
+	{ id = "rbxassetid://1844140274", name = "Country Folk Picking" }, -- found online, check in Studio
+	{ id = "rbxassetid://1842101902", name = "Acoustic Nomad" }, -- found online, check in Studio
+}
+Config.MusicVolume = 0.25
+Config.MusicFadeSeconds = 3 -- fade out at a track's end, fade in the next
+Config.MusicLoadSeconds = 10 -- a track that hasn't loaded by then is skipped
+
+-- Jetpack (Robux game pass, Config.GamePasses.Jetpack). Hold Space in the air to rise, let go
+-- to drift gently down, or press the hover key to stay put; steer with WASD as usual.
+Config.Jetpack = {
+	riseSpeed = 18, -- studs a second going up
+	fallSpeed = 7, -- studs a second drifting down after you let go (a soft landing)
+	thrust = 2.5, -- most force it pushes with, in body weights: it can never fling you
+	ease = 5, -- how quickly the speed eases to its target (higher = snappier)
+	ceiling = 275, -- no lift above this height (the pile is 255 high; the loft starts at 300)
+	fuelSeconds = 0, -- seconds of flight before you land to refuel; 0 = unlimited
+	refuelSeconds = 4, -- seconds on the ground to refill a full tank
+	hoverKey = "H", -- F already places things in build mode
+}
+
+-- One friendly Robux suggestion per session, after this many clumps harvested. It lists only
+-- items whose ID is set, has a "No thanks" button as big as the others, and never comes back.
+Config.OfferAfterClumps = 25
 
 Config.DataStoreName = "NeedleHaystack_v3"
 Config.AutosaveSeconds = 120
@@ -110,6 +153,7 @@ Config.GamePasses = {
 	AutoSell = 0, -- what you carry sells itself when your tool is full
 	VIP = 0, -- +25% coins, a golden name tag, and machines keep running an hour after you leave
 	DoubleMachines = 0, -- every machine works twice as fast (same power)
+	Jetpack = 0, -- hold Space in the air to fly up and hover over your pile (see Config.Jetpack)
 }
 Config.Products = {
 	SpeedBoost = 0, -- 2x straws a click for 1 hour
@@ -3556,6 +3600,192 @@ return Hud
 				</Item>
 				<Item class="ModuleScript" referent="RBX0002D">
 					<Properties>
+						<string name="Name">Jetpack</string>
+						<ProtectedString name="Source"><![CDATA[-- The Jetpack (a Robux game pass; the server sets the "PassJetpack" attribute when you own it).
+-- In the air, hold Space (or the FLY button on touch screens) to rise, let go to drift gently
+-- down, or press the hover key to stay put; WASD steers as usual. A LinearVelocity on the
+-- HumanoidRootPart only sets the up/down speed, eased, with a force capped at a few body
+-- weights, so it can lift you but never fling you. Tunables live in Config.Jetpack.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Ui = require(script.Parent.Ui)
+
+local Jetpack = {}
+local player = Players.LocalPlayer
+local cfg = Config.Jetpack or {}
+local rig = nil -- { root, humanoid, lift, flame } for the current character
+local flying, hover, touchHeld = false, false, false
+local speed = 0
+local fuel = cfg.fuelSeconds or 0
+local touchRow = nil
+
+local function owned()
+	return player:GetAttribute("PassJetpack") == true
+end
+
+local hoverKey = Enum.KeyCode.H
+pcall(function()
+	hoverKey = Enum.KeyCode[cfg.hoverKey or "H"]
+end)
+
+local function build(character)
+	rig, flying, hover, speed = nil, false, false, 0
+	local root = character:WaitForChild("HumanoidRootPart", 10)
+	local humanoid = character:WaitForChild("Humanoid", 10)
+	if not root or not humanoid or not root:IsA("BasePart") or not humanoid:IsA("Humanoid") then
+		return
+	end
+	local attachment = Ui.make("Attachment", { Name = "JetpackAttachment", Parent = root })
+	local lift = Ui.make("LinearVelocity", {
+		Name = "JetpackLift",
+		Attachment0 = attachment,
+		RelativeTo = Enum.ActuatorRelativeTo.World,
+		VelocityConstraintMode = Enum.VelocityConstraintMode.Line,
+		LineDirection = Vector3.new(0, 1, 0),
+		LineVelocity = 0,
+		MaxForce = 0,
+		Enabled = false,
+		Parent = root,
+	})
+	-- a soft flame and puff of smoke from behind your back (+Z is behind the root part)
+	local nozzle = Ui.make("Attachment", { Name = "JetpackNozzle", Position = Vector3.new(0, -1.4, 0.9), Parent = root })
+	local flame = Ui.make("ParticleEmitter", {
+		Rate = 0,
+		EmissionDirection = Enum.NormalId.Bottom,
+		Lifetime = NumberRange.new(0.4, 0.9),
+		Speed = NumberRange.new(4, 7),
+		SpreadAngle = Vector2.new(12, 12),
+		Drag = 3,
+		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(0.4, 0.9), NumberSequenceKeypoint.new(1, 1.6) }),
+		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) }),
+		Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 196, 110)), ColorSequenceKeypoint.new(0.35, Color3.fromRGB(240, 150, 90)), ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 196, 190)) }),
+		LightEmission = 0.25,
+		Rotation = NumberRange.new(0, 360),
+		RotSpeed = NumberRange.new(-60, 60),
+		Parent = nozzle,
+	})
+	rig = { root = root, humanoid = humanoid, lift = lift, flame = flame }
+end
+
+local function wantsUp()
+	if touchHeld then
+		return true
+	end
+	if UserInputService:GetFocusedTextBox() then
+		return false -- typing in chat
+	end
+	local ok, pad = pcall(UserInputService.IsGamepadButtonDown, UserInputService, Enum.UserInputType.Gamepad1, Enum.KeyCode.ButtonA)
+	return UserInputService:IsKeyDown(Enum.KeyCode.Space) or (ok and pad == true)
+end
+
+local function step(dt)
+	if touchRow then
+		touchRow.Visible = owned() and UserInputService.TouchEnabled
+	end
+	if not rig or not rig.root.Parent then
+		return
+	end
+	local root, humanoid, lift = rig.root, rig.humanoid, rig.lift
+	local full = cfg.fuelSeconds or 0
+	local inAir = humanoid.FloorMaterial == Enum.Material.Air and humanoid.Health > 0
+	if not owned() or not inAir or humanoid.Sit then
+		flying, hover = false, false
+		lift.Enabled = false
+		rig.flame.Rate = 0
+		if full > 0 and humanoid.FloorMaterial ~= Enum.Material.Air then
+			fuel = math.min(full, fuel + full / math.max(cfg.refuelSeconds or 4, 0.1) * dt)
+		end
+		return
+	end
+	local hasFuel = full <= 0 or fuel > 0
+	local target = nil
+	if wantsUp() and hasFuel then
+		target = cfg.riseSpeed or 18
+	elseif hover and hasFuel then
+		target = 0
+	elseif flying then
+		target = -(cfg.fallSpeed or 7) -- you let go (or ran out): drift down softly
+	end
+	if target == nil then
+		lift.Enabled = false -- an ordinary jump, no jetpack
+		rig.flame.Rate = 0
+		return
+	end
+	if not flying then
+		flying = true
+		speed = root.AssemblyLinearVelocity.Y -- start from how you're moving: no jolt
+	end
+	if target > 0 and root.Position.Y >= (cfg.ceiling or 275) then
+		target = 0
+	end
+	if full > 0 and target >= 0 then
+		fuel = math.max(0, fuel - dt)
+	end
+	speed += (target - speed) * (1 - math.exp(-(cfg.ease or 5) * dt))
+	lift.LineVelocity = speed
+	lift.MaxForce = root.AssemblyMass * workspace.Gravity * (cfg.thrust or 2.5)
+	lift.Enabled = true
+	rig.flame.Rate = if target > 0 then 40 elseif target == 0 then 18 else 6
+end
+
+function Jetpack.start(gui, notify)
+	player.CharacterAdded:Connect(build)
+	if player.Character then
+		task.spawn(build, player.Character)
+	end
+	RunService.Heartbeat:Connect(step)
+
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if processed or input.KeyCode ~= hoverKey or not owned() or not rig or rig.humanoid.FloorMaterial ~= Enum.Material.Air then
+			return
+		end
+		hover = not hover
+		if notify then
+			notify.toast(if hover then "Jetpack: hovering." else "Jetpack: drifting down.", Ui.colors.blue)
+		end
+	end)
+
+	-- touch screens: hold FLY to rise, tap HOVER to stay put
+	touchRow = Ui.make("Frame", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -16, 1, -190), Size = UDim2.fromOffset(100, 110), BackgroundTransparency = 1, Visible = false, Parent = gui }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6) }) })
+	local fly = Ui.button("FLY", Ui.colors.blue, { Size = UDim2.fromOffset(100, 52), Parent = touchRow })
+	fly.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+			touchHeld = true
+		end
+	end)
+	fly.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+			touchHeld = false
+		end
+	end)
+	Ui.button("HOVER", Ui.colors.wood, { Size = UDim2.fromOffset(100, 52), Parent = touchRow }).Activated:Connect(function()
+		if rig and rig.humanoid.FloorMaterial == Enum.Material.Air then
+			hover = not hover
+		end
+	end)
+
+	local told = false
+	local function tell()
+		if owned() and not told and notify then
+			told = true
+			notify.toast("Jetpack ready! In the air, hold Space to fly up, " .. (cfg.hoverKey or "H") .. " to hover.", Ui.colors.blue)
+		end
+	end
+	player:GetAttributeChangedSignal("PassJetpack"):Connect(tell)
+	tell()
+end
+
+return Jetpack
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX0002E">
+					<Properties>
 						<string name="Name">Juice</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback that makes harvesting feel good: straw bursts, floating numbers, a soft camera
 -- punch, a combo streak, pop rings when a clump is cleared, coins flying to your counter,
@@ -3586,19 +3816,24 @@ local function ease(instance, seconds, goal, style, direction)
 end
 Juice.ease = ease
 
--- Plays a sound from Config.Sounds if one is set (IDs from the Toolbox; "" = silent).
+-- Plays a sound from Config.Sounds if one is set (IDs from the Toolbox; "" = silent), with
+-- Config.SoundSettings' volume, pitch and a little random wobble. One that fails to load stays silent.
 function Juice.sound(name, pitch)
 	local id = Config.Sounds and Config.Sounds[name]
-	if not id or id == "" then
+	if type(id) ~= "string" or id == "" then
 		return
 	end
-	local sound = Instance.new("Sound")
-	sound.SoundId = id
-	sound.Volume = 0.5
-	sound.PlaybackSpeed = pitch or 1
-	sound.Parent = SoundService
-	sound:Play()
-	Debris:AddItem(sound, 3)
+	local settings = (Config.SoundSettings and Config.SoundSettings[name]) or {}
+	local wobble = settings.wobble or 0
+	pcall(function()
+		local sound = Instance.new("Sound")
+		sound.SoundId = id
+		sound.Volume = settings.volume or 0.5
+		sound.PlaybackSpeed = (pitch or 1) * (settings.pitch or 1) * (1 + (math.random() * 2 - 1) * wobble)
+		sound.Parent = SoundService
+		sound:Play()
+		Debris:AddItem(sound, 3)
+	end)
 end
 
 function Juice.mount(screen, coinsLabel)
@@ -3737,7 +3972,7 @@ return Juice
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX0002E">
+				<Item class="LocalScript" referent="RBX0002F">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- The player's side of the game: first-person harvesting, building, the menus, and all the
@@ -3761,6 +3996,9 @@ local Panels = require(script.Parent:WaitForChild("Panels"))
 local Harvest = require(script.Parent:WaitForChild("Harvest"))
 local BuildMode = require(script.Parent:WaitForChild("BuildMode"))
 local WorldFx = require(script.Parent:WaitForChild("WorldFx"))
+local Music = require(script.Parent:WaitForChild("Music"))
+local Jetpack = require(script.Parent:WaitForChild("Jetpack"))
+local Offer = require(script.Parent:WaitForChild("Offer"))
 
 local player = Players.LocalPlayer
 local gui = Ui.make("ScreenGui", { Name = "HaystackUi", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
@@ -3820,6 +4058,15 @@ step("menus", function()
 end)
 step("world effects", function()
 	WorldFx.start()
+end)
+step("music", function()
+	Music.start(gui)
+end)
+step("jetpack", function()
+	Jetpack.start(gui, Notify)
+end)
+step("offers", function()
+	Offer.start(gui)
 end)
 if not hud then
 	hud = { refresh = function() end }
@@ -3971,7 +4218,150 @@ end)
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002F">
+				<Item class="ModuleScript" referent="RBX00030">
+					<Properties>
+						<string name="Name">Music</string>
+						<ProtectedString name="Source"><![CDATA[-- Soft background music: the Config.Music playlist in a loop, low and relaxing, fading gently
+-- from one track to the next. A small button (top right) turns it on and off for the session.
+-- A track that won't load (a missing or private asset) is skipped quietly.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
+local TweenService = game:GetService("TweenService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Ui = require(script.Parent.Ui)
+
+local Music = {}
+local on = true
+local current = nil -- the Sound playing now
+local button = nil
+
+local function volume()
+	return Config.MusicVolume or 0.25
+end
+
+local function fade(sound, goal, seconds)
+	local tween = TweenService:Create(sound, TweenInfo.new(seconds, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Volume = goal })
+	tween:Play()
+	return tween
+end
+
+-- Waits for a track to load. Returns the Sound, or nil (and cleans up) if it never does.
+local function load(track)
+	if type(track) ~= "table" or type(track.id) ~= "string" or track.id == "" then
+		return nil
+	end
+	local ok, sound = pcall(function()
+		local s = Instance.new("Sound")
+		s.Name = "Music"
+		s.SoundId = track.id
+		s.Volume = 0
+		s.Looped = false
+		s.Parent = SoundService
+		return s
+	end)
+	if not ok or not sound then
+		return nil
+	end
+	local deadline = time() + (Config.MusicLoadSeconds or 10)
+	while not sound.IsLoaded and time() < deadline do
+		task.wait(0.25)
+	end
+	if not sound.IsLoaded or sound.TimeLength <= 0 then
+		sound:Destroy()
+		return nil
+	end
+	return sound
+end
+
+local function play(sound)
+	local fadeTime = Config.MusicFadeSeconds or 3
+	current = sound
+	pcall(function()
+		sound:Play()
+	end)
+	if not on then
+		sound:Pause()
+	else
+		fade(sound, volume(), fadeTime)
+	end
+	-- wait until near the end (paused time doesn't count), then fade out
+	while sound.Parent and sound.TimeLength - sound.TimePosition > fadeTime do
+		task.wait(0.5)
+		if on and not sound.IsPlaying and sound.TimePosition < 0.1 and sound.TimeLength > 0 then
+			break -- it stopped by itself (it ended early or failed mid-way)
+		end
+	end
+	if sound.Parent then
+		fade(sound, 0, fadeTime)
+		task.wait(fadeTime)
+		sound:Destroy()
+	end
+end
+
+local function loop()
+	local tracks = Config.Music or {}
+	local index = 0
+	local failsInARow = 0
+	while true do
+		index = index % #tracks + 1
+		local sound = load(tracks[index])
+		if sound then
+			failsInARow = 0
+			play(sound)
+		else
+			failsInARow += 1
+			if failsInARow >= #tracks then
+				task.wait(120) -- nothing loads: try again much later, quietly
+				failsInARow = 0
+			end
+		end
+		task.wait(0.5)
+	end
+end
+
+local function show()
+	if button then
+		button.Text = if on then "♪ On" else "♪ Off"
+		button.BackgroundColor3 = if on then Ui.colors.wood else Ui.colors.grey
+	end
+end
+
+function Music.toggle()
+	on = not on
+	show()
+	local sound = current
+	if sound and sound.Parent then
+		if on then
+			sound:Resume()
+			fade(sound, volume(), 1)
+		else
+			fade(sound, 0, 0.8).Completed:Connect(function()
+				if not on and sound.Parent then
+					sound:Pause()
+				end
+			end)
+		end
+	end
+end
+
+function Music.start(gui)
+	if type(Config.Music) ~= "table" or #Config.Music == 0 then
+		return -- no music set up: no button either
+	end
+	button = Ui.button("", Ui.colors.wood, { Name = "MusicToggle", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 10), Size = UDim2.fromOffset(92, 40), Parent = gui })
+	Ui.autoScale(button)
+	button.Activated:Connect(Music.toggle)
+	show()
+	task.spawn(loop)
+end
+
+return Music
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX00031">
 					<Properties>
 						<string name="Name">Notify</string>
 						<ProtectedString name="Source"><![CDATA[-- Messages: small toasts under the haystack counter, and a big banner for case news.
@@ -4074,7 +4464,113 @@ return Notify
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00030">
+				<Item class="ModuleScript" referent="RBX00032">
+					<Properties>
+						<string name="Name">Offer</string>
+						<ProtectedString name="Source"><![CDATA[-- One gentle Robux suggestion per session: after Config.OfferAfterClumps clumps harvested since
+-- you joined, a small card asks "Enjoying the harvest?" and lists the Robux items that are set
+-- up (ID not 0), each saying exactly what it gives, next to an equally big "No thanks".
+-- No timers, no "limited", no flashing; it never comes back this session. Buying goes through
+-- Roblox's own purchase prompt (which shows the price and can be cancelled), like the shop.
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Ui = require(script.Parent.Ui)
+local Cursor = require(script.Parent.Cursor)
+
+local Offer = {}
+local player = Players.LocalPlayer
+local OPTIONS = {
+	{ kind = "product", key = "SpeedBoost", title = "Speed Boost", text = "2x straws a click for 1 hour" },
+	{ kind = "pass", key = "Jetpack", title = "Jetpack", text = "Fly up and hover over your pile, for good" },
+}
+
+local function available()
+	local list = {}
+	for _, option in ipairs(OPTIONS) do
+		local id = if option.kind == "pass" then Config.GamePasses[option.key] else Config.Products[option.key]
+		local alreadyOwned = option.kind == "pass" and player:GetAttribute("Pass" .. option.key) == true
+		if type(id) == "number" and id ~= 0 and not alreadyOwned then
+			table.insert(list, { option = option, id = id })
+		end
+	end
+	return list
+end
+
+local function show(gui, list)
+	local card = Ui.make("Frame", {
+		Name = "Offer",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.6),
+		Size = UDim2.fromOffset(440, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = Ui.colors.cream,
+		Parent = gui,
+	}, {
+		Ui.corner(18),
+		Ui.stroke(Ui.colors.wood, 4),
+		Ui.make("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+		Ui.make("UIPadding", { PaddingTop = UDim.new(0, 14), PaddingBottom = UDim.new(0, 16), PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16) }),
+	})
+	local scale = Ui.autoScale(card)
+	local full = scale.Scale
+	Ui.paragraph("Enjoying the harvest?", { LayoutOrder = 1, Font = Ui.font, TextSize = 28, TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
+	Ui.paragraph("If you'd like a hand, these are here. Totally optional.", { LayoutOrder = 2, TextSize = 17, TextColor3 = Ui.colors.grey, TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
+
+	Cursor.need("offer", true)
+	local function close()
+		Cursor.need("offer", false)
+		card:Destroy()
+	end
+	for i, entry in ipairs(list) do
+		local option, id = entry.option, entry.id
+		local button = Ui.button(option.title .. ": " .. option.text .. " (Robux)", Ui.colors.blue, { LayoutOrder = 2 + i, Size = UDim2.new(1, 0, 0, 52), Parent = card })
+		button.Activated:Connect(function()
+			close()
+			if option.kind == "pass" then
+				MarketplaceService:PromptGamePassPurchase(player, id)
+			else
+				MarketplaceService:PromptProductPurchase(player, id)
+			end
+		end)
+	end
+	Ui.button("No thanks", Ui.colors.wood, { LayoutOrder = 10, Size = UDim2.new(1, 0, 0, 52), Parent = card }).Activated:Connect(close)
+
+	-- ease in softly
+	scale.Scale = full * 0.9
+	TweenService:Create(scale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = full }):Play()
+end
+
+function Offer.start(gui)
+	local goal = Config.OfferAfterClumps or 25
+	local harvested, shown = 0, false
+	local last = player:GetAttribute("ClumpsLeft")
+	player:GetAttributeChangedSignal("ClumpsLeft"):Connect(function()
+		local now = player:GetAttribute("ClumpsLeft")
+		if type(now) == "number" and type(last) == "number" and now < last and now >= last - 5 then
+			harvested += last - now -- small drops only: a fresh pile or a Straw Blast don't count
+		end
+		last = now
+		if shown or harvested < goal then
+			return
+		end
+		shown = true -- once per session, whatever happens next
+		local list = available()
+		if #list > 0 then
+			task.delay(1.5, show, gui, list) -- a moment after the click, not in the middle of it
+		end
+	end)
+end
+
+return Offer
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX00033">
 					<Properties>
 						<string name="Name">Panels</string>
 						<ProtectedString name="Source"><![CDATA[-- The windows: Shop, secret Achievements, Finds & Skins, and the Wheel of Fortune (odds first).
@@ -4263,7 +4759,7 @@ return Panels
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00031">
+				<Item class="ModuleScript" referent="RBX00034">
 					<Properties>
 						<string name="Name">Shop</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop window: Tools, Perks, Silo, Build (stairs, lifts...), Machines, Power and Robux.
@@ -4290,6 +4786,7 @@ local ROBUX = {
 	{ kind = "pass", key = "AutoSell", title = "Auto Sell", text = "Your load sells itself when your tool is full." },
 	{ kind = "pass", key = "DoubleMachines", title = "Double Machines", text = "Every machine works twice as fast." },
 	{ kind = "pass", key = "VIP", title = "VIP", text = "+25% coins; machines work an hour after you leave." },
+	{ kind = "pass", key = "Jetpack", title = "Jetpack", text = "Hold Space in the air to fly up and hover over your pile." },
 }
 
 local Shop = {}
@@ -4481,7 +4978,7 @@ return Shop
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00032">
+				<Item class="ModuleScript" referent="RBX00035">
 					<Properties>
 						<string name="Name">Ui</string>
 						<ProtectedString name="Source"><![CDATA[-- A small UI kit: the farm colours, rounded wooden buttons and windows that scale with
@@ -4656,7 +5153,7 @@ return Ui
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00033">
+				<Item class="ModuleScript" referent="RBX00036">
 					<Properties>
 						<string name="Name">WorldFx</string>
 						<ProtectedString name="Source"><![CDATA[-- World effects on your screen: the glowing needle clump (Wheel jackpot), the wheel turning
@@ -4768,7 +5265,7 @@ return WorldFx
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX00034">
+	<Item class="Workspace" referent="RBX00037">
 		<Properties>
 			<string name="Name">Workspace</string>
 			<bool name="StreamingEnabled">false</bool>

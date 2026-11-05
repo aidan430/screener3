@@ -51,4 +51,30 @@ One giant shared-looking haystack (v2, commit cead0ee); ten haystacks with case 
 commit 7d2617e). Both in git history.
 
 ## Not done yet
-- Sounds and music, a global leaderboard, daily rewards, 3D models from the Toolbox.
+- A global leaderboard, daily rewards, 3D models from the Toolbox.
+
+## Sound, music, Jetpack and one gentle offer (2026-11-05)
+- **Sounds (`Config.Sounds`, `Config.SoundSettings`):** harvest, pop, coins and cheer now use
+  sound files built into every Roblox client (`rbxasset://sounds/...`: the default footstep,
+  landing thud and the classic short ping), so they can't go private. Harvest plays quietly
+  (0.25) with a random pitch wobble of +/-6% so repeated clicks don't tire. A sound that fails to
+  load stays silent. To swap one: in Studio open the Toolbox, Creator Store > Audio, filter by
+  Sound Effects, search "hay rustle" / "grass rustle" / "soft chime" / "success", preview,
+  right-click > Copy Asset ID, and paste it into Config as "rbxassetid://<id>".
+- **Music (`Config.Music`, `MusicVolume` 0.25, `MusicFadeSeconds` 3, `MusicLoadSeconds` 10):**
+  two acoustic instrumentals from the licensed library Roblox uploaded for every game, found on
+  catalogue sites but not checked here: 1844140274 "Country Folk Picking" (Will Morgan) and
+  1842101902 "Acoustic Nomad" (Alex Tschallener). Check them in Studio. A track that doesn't load
+  in 10 seconds is skipped. To add more: Toolbox, Creator Store > Audio, filter by Music, search
+  "country acoustic" / "folk guitar" / "banjo", keep calm instrumentals, paste each as
+  `{ id = "rbxassetid://<id>", name = "..." }`. The ♪ button (top right; press M to free the
+  mouse) turns music off for the session. Empty `Config.Music` hides the button.
+- **Jetpack (game pass `Config.GamePasses.Jetpack`, 0 = off; tunables in `Config.Jetpack`):**
+  hold Space in the air to rise at 18 studs/s, let go to drift down at 7, H to hover (F places
+  things in build mode, so not F). Force capped at 2.5 body weights; no lift above 275 studs
+  (the pile is 255, the Golden Loft is above 300). Unlimited flight by default
+  (`fuelSeconds = 0`). Touch screens get FLY (hold) and HOVER buttons. To switch it on: create
+  the pass on the Creator Dashboard, paste its ID. It shows in the shop's Robux tab.
+- **Offer (`Config.OfferAfterClumps` 25):** once per session, after 25 clumps harvested since
+  joining, one card "Enjoying the harvest?" lists Speed Boost and Jetpack if their IDs are set
+  (Jetpack not if owned), with a "No thanks" button as big as the others. Nothing set: no card.

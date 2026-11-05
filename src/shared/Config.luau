@@ -87,7 +87,50 @@ Config.LuckyChance = 0.006
 Config.LuckyValueSearches = 60
 
 -- Sounds: paste asset IDs from the Studio Toolbox (e.g. "rbxassetid://12345"). "" = silent.
-Config.Sounds = { harvest = "", pop = "", coins = "", cheer = "", spin = "" }
+-- The rbxasset://sounds/... files ship inside every Roblox client (the default character and
+-- classic gear sounds), so they can't go private or be removed. Check them in Studio.
+Config.Sounds = {
+	harvest = "rbxasset://sounds/action_footsteps_plastic.mp3", -- a soft, muffled touch
+	pop = "rbxasset://sounds/action_jump_land.mp3", -- a soft "fwump" when a clump empties
+	coins = "rbxasset://sounds/electronicpingshort.wav", -- a short, gentle chime
+	cheer = "rbxasset://sounds/electronicpingshort.wav", -- the same chime, lower and fuller
+	spin = "",
+}
+-- Per sound: volume (0-1), pitch multiplier, wobble = random pitch +/- so clicks don't tire.
+Config.SoundSettings = {
+	harvest = { volume = 0.25, pitch = 1.1, wobble = 0.06 },
+	pop = { volume = 0.4, pitch = 0.85 },
+	coins = { volume = 0.3, pitch = 1 },
+	cheer = { volume = 0.35, pitch = 0.7 },
+}
+
+-- Background music: soft acoustic / country instrumentals, looping on each player's side
+-- with a gentle fade between tracks and a music on/off button (top right). A track that
+-- won't load is skipped quietly. Licensed library tracks Roblox uploaded for every game:
+Config.Music = {
+	{ id = "rbxassetid://1844140274", name = "Country Folk Picking" }, -- found online, check in Studio
+	{ id = "rbxassetid://1842101902", name = "Acoustic Nomad" }, -- found online, check in Studio
+}
+Config.MusicVolume = 0.25
+Config.MusicFadeSeconds = 3 -- fade out at a track's end, fade in the next
+Config.MusicLoadSeconds = 10 -- a track that hasn't loaded by then is skipped
+
+-- Jetpack (Robux game pass, Config.GamePasses.Jetpack). Hold Space in the air to rise, let go
+-- to drift gently down, or press the hover key to stay put; steer with WASD as usual.
+Config.Jetpack = {
+	riseSpeed = 18, -- studs a second going up
+	fallSpeed = 7, -- studs a second drifting down after you let go (a soft landing)
+	thrust = 2.5, -- most force it pushes with, in body weights: it can never fling you
+	ease = 5, -- how quickly the speed eases to its target (higher = snappier)
+	ceiling = 275, -- no lift above this height (the pile is 255 high; the loft starts at 300)
+	fuelSeconds = 0, -- seconds of flight before you land to refuel; 0 = unlimited
+	refuelSeconds = 4, -- seconds on the ground to refill a full tank
+	hoverKey = "H", -- F already places things in build mode
+}
+
+-- One friendly Robux suggestion per session, after this many clumps harvested. It lists only
+-- items whose ID is set, has a "No thanks" button as big as the others, and never comes back.
+Config.OfferAfterClumps = 25
 
 Config.DataStoreName = "NeedleHaystack_v3"
 Config.AutosaveSeconds = 120
@@ -98,6 +141,7 @@ Config.GamePasses = {
 	AutoSell = 0, -- what you carry sells itself when your tool is full
 	VIP = 0, -- +25% coins, a golden name tag, and machines keep running an hour after you leave
 	DoubleMachines = 0, -- every machine works twice as fast (same power)
+	Jetpack = 0, -- hold Space in the air to fly up and hover over your pile (see Config.Jetpack)
 }
 Config.Products = {
 	SpeedBoost = 0, -- 2x straws a click for 1 hour
