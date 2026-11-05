@@ -1,9 +1,5 @@
-.env
-.venv/
+.tools/
 __pycache__/
-*.pyc
-data/*
-!data/.gitkeep
-logs/*
-!logs/.gitkeep
-ventures/
+*.rbxl.lock
+*.rbxlx.lock
+sourcemap.json

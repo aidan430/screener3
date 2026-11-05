@@ -1,0 +1,22 @@
+[
+  {"id": "windmill", "name": "Windmill", "side": "north", "water": false, "building": true, "animals": false,
+   "trace": "a dusting of white flour", "x": -78, "z": -140},
+  {"id": "barn", "name": "Red Barn", "side": "north", "water": false, "building": true, "animals": true,
+   "trace": "a tuft of brown cow hair", "x": 0, "z": -158},
+  {"id": "tractor", "name": "Old Tractor", "side": "north", "water": false, "building": false, "animals": false,
+   "trace": "a smear of black engine oil", "x": 78, "z": -140},
+  {"id": "pond", "name": "Duck Pond", "side": "east", "water": true, "building": false, "animals": true,
+   "trace": "a strand of green duckweed", "x": 152, "z": -40},
+  {"id": "appletree", "name": "Apple Tree", "side": "east", "water": false, "building": false, "animals": false,
+   "trace": "a sticky curl of apple peel", "x": 152, "z": 52},
+  {"id": "well", "name": "Old Well", "side": "south", "water": true, "building": false, "animals": false,
+   "trace": "a flake of rust from an old bucket", "x": -46, "z": 152},
+  {"id": "pumpkins", "name": "Pumpkin Patch", "side": "south", "water": false, "building": false, "animals": false,
+   "trace": "a slippery pumpkin seed", "x": 46, "z": 152},
+  {"id": "coop", "name": "Chicken Coop", "side": "west", "water": false, "building": true, "animals": true,
+   "trace": "a fluffy white feather", "x": -152, "z": -64},
+  {"id": "scarecrow", "name": "Scarecrow", "side": "west", "water": false, "building": false, "animals": false,
+   "trace": "a button from a scarecrow's coat", "x": -158, "z": 6},
+  {"id": "shed", "name": "Tool Shed", "side": "west", "water": false, "building": true, "animals": false,
+   "trace": "a curl of fresh sawdust", "x": -152, "z": 76}
+]

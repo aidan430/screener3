@@ -1,0 +1,33 @@
+{
+  "name": "NeedleInTheHaystack",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Shared": { "$path": "src/shared" },
+      "Remotes": {
+        "$className": "Folder",
+        "Search": { "$className": "RemoteEvent" },
+        "SearchFx": { "$className": "RemoteEvent" },
+        "Clue": { "$className": "RemoteEvent" },
+        "Announce": { "$className": "RemoteEvent" },
+        "ToggleAuto": { "$className": "RemoteEvent" },
+        "BuyTool": { "$className": "RemoteFunction" },
+        "Rebirth": { "$className": "RemoteFunction" },
+        "GetState": { "$className": "RemoteFunction" }
+      },
+      "GameState": { "$className": "Folder" }
+    },
+    "ServerScriptService": {
+      "Server": { "$path": "src/server" }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "Client": { "$path": "src/client" }
+      }
+    },
+    "Workspace": {
+      "$properties": { "StreamingEnabled": false }
+    }
+  }
+}
