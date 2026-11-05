@@ -39,6 +39,8 @@ local Processing = require(script.Parent.Processing)
 local Factory = require(script.Parent.Factory)
 local Orders = require(script.Parent.Orders)
 local Goals = require(script.Parent.Goals)
+local Stamina = require(script.Parent.Stamina)
+local Detector = require(script.Parent.Detector)
 
 StarterPlayer.CharacterMaxSlopeAngle = Config.MaxSlopeAngle -- the steep heap needs building to climb
 local Scenery = require(script.Parent.Scenery)
@@ -121,6 +123,8 @@ end)
 -- Each part starts on its own: if one breaks, its error shows in Output and the rest still run.
 local parts = {
 	{ "Search", Search.init }, -- harvesting first: it matters most
+	{ "Stamina", Stamina.init }, -- before PlayerData, so it hears every player load
+	{ "Detector", Detector.init },
 	{ "Plots", Plots.init },
 	{ "Monetization", Monetization.init }, -- before PlayerData, so early players get their passes checked
 	{ "PlayerData", PlayerData.init },

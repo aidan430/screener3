@@ -1,4 +1,5 @@
--- The Shop window: Tools, Perks, Storage (buckets and silos), Build (stairs, lifts...), Machines, Power and Robux.
+-- The Shop window: Tools, Perks, Fitness (stamina, the metal detector), Storage (buckets and
+-- silos), Build (stairs, lifts...), Machines, Power, Trucks and Robux.
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -80,7 +81,7 @@ function Shop.mount(gui, notify)
 		order += 1
 		local list = Ui.make("Frame", { Name = name, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Visible = false, Parent = body }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
 		pages[name], refreshers[name] = list, build(list)
-		Ui.button(name, colour, { LayoutOrder = order, Size = UDim2.new(1 / 8, -4, 1, 0), Parent = tabs }).Activated:Connect(function()
+		Ui.button(name, colour, { LayoutOrder = order, Size = UDim2.new(1 / 9, -4, 1, 0), Parent = tabs }).Activated:Connect(function()
 			for key, p in pairs(pages) do
 				p.Visible = key == name
 			end
@@ -122,6 +123,29 @@ function Shop.mount(gui, notify)
 				subs[i].Text = perk.text .. ". " .. level .. "/" .. perk.levels .. " on this tool."
 				price(rows[i], Economy.perkPrice(d, i), level >= perk.levels, true, "MAXED")
 			end
+		end
+	end)
+
+	-- fitness levels (yours whatever tool you hold) and the metal detector, bought once
+	page("Fitness", Color3.fromRGB(70, 150, 140), function(list)
+		local rows, subs = {}, {}
+		for i, f in ipairs(Config.Fitness) do
+			rows[i], subs[i] = row(list, i, f.name, f.text)
+			rows[i].Activated:Connect(function()
+				buy("fitness", i, rows[i])
+			end)
+		end
+		local detector = row(list, 50, "Metal Detector", "Hold " .. Config.MetalDetector.key .. " near your heap: it beeps faster the closer the needle is (within " .. Config.MetalDetector.range .. " studs).")
+		detector.Activated:Connect(function()
+			buy("detector", 1, detector)
+		end)
+		return function()
+			for i, f in ipairs(Config.Fitness) do
+				local level = player:GetAttribute("Fitness_" .. f.id) or 0
+				subs[i].Text = f.text .. ". " .. level .. "/" .. f.levels .. "."
+				price(rows[i], math.floor(f.price * f.growth ^ level), level >= f.levels, true, "MAXED")
+			end
+			price(detector, Config.MetalDetector.price, player:GetAttribute("Detector") == true, true)
 		end
 	end)
 

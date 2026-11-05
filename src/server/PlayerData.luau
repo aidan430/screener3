@@ -98,6 +98,10 @@ local function publish(player, profile)
 	for _, perk in ipairs(Config.Perks) do
 		player:SetAttribute("Perk_" .. perk.id, d.perks[perk.id])
 	end
+	for _, f in ipairs(Config.Fitness) do
+		player:SetAttribute("Fitness_" .. f.id, d.fitness[f.id])
+	end
+	player:SetAttribute("Detector", d.detector)
 	for _, list in ipairs({ Config.Pieces, Config.Machines, Config.Generators }) do
 		for _, def in ipairs(list) do
 			player:SetAttribute("Inv_" .. def.id, d.inventory[def.id] or 0)

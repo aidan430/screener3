@@ -1,5 +1,6 @@
 -- Buying with coins: tools and silos (in order), perks for the tool you hold, and
--- buildable items (pieces, machines, generators) that go into your inventory to place.
+-- buildable items (pieces, machines, generators) that go into your inventory to place,
+-- fitness levels and the metal detector.
 -- One remote: Buy(kind, key).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -12,6 +13,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local PlayerData = require(script.Parent.PlayerData)
 local Tools = require(script.Parent.Tools)
 local Achievements = require(script.Parent.Achievements)
+local Stamina = require(script.Parent.Stamina)
 
 local Shop = {}
 local buyers = {}
@@ -131,6 +133,44 @@ function buyers.perk(player, d, index)
 		end
 	end)
 	return true, perk.name .. " " .. d.perks[perk.id] .. "/" .. perk.levels .. " on your " .. Economy.tool(d.tool).name .. "."
+end
+
+-- Fitness (Config.Fitness): levels that stay with you, whatever tool you hold.
+function buyers.fitness(player, d, index)
+	local f = Config.Fitness[index]
+	if not f then
+		return false, "No such upgrade."
+	end
+	local level = d.fitness[f.id] or 0
+	if level >= f.levels then
+		return false, f.name .. " is already maxed."
+	end
+	local cost = Stamina.price(f, level + 1)
+	local missing = short(d, cost)
+	if missing then
+		return false, missing
+	end
+	PlayerData.update(player, function(data)
+		data.coins -= cost
+		data.fitness[f.id] = level + 1
+	end)
+	Stamina.applyWalk(player)
+	return true, f.name .. " " .. (level + 1) .. "/" .. f.levels .. ": " .. f.text .. "."
+end
+
+function buyers.detector(player, d)
+	if d.detector then
+		return false, "You already have the metal detector."
+	end
+	local missing = short(d, Config.MetalDetector.price)
+	if missing then
+		return false, missing
+	end
+	PlayerData.update(player, function(data)
+		data.coins -= Config.MetalDetector.price
+		data.detector = true
+	end)
+	return true, "Metal detector bought! Hold " .. Config.MetalDetector.key .. " near your heap: it beeps faster the closer the needle is."
 end
 
 function buyers.item(player, d, id)

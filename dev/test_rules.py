@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT / "dev"))
 import pacing  # noqa: E402
 
 SHARED = ROOT / "src" / "shared"
-CONFIG = "\n".join((SHARED / f).read_text() for f in ("Config.luau", "ConfigFactory.luau", "ConfigGoals.luau"))
+CONFIG = "\n".join((SHARED / f).read_text() for f in ("Config.luau", "ConfigFactory.luau", "ConfigGoals.luau", "ConfigPlayer.luau"))
 FINDS = json.loads((SHARED / "Finds.json").read_text())
 
 
@@ -65,6 +65,29 @@ class Items(unittest.TestCase):
         self.assertGreaterEqual(made, draw, "every machine at once must be powerable")
         ids = [r["id"] for table in ("Pieces", "Machines", "Generators") for r in pacing.rows(table)]
         self.assertEqual(len(ids), len(set(ids)), "buildable item ids must be unique")
+
+    def test_fitness_levels_cost_more_each_time(self):
+        fitness = pacing.rows("Fitness")
+        self.assertEqual({f["stat"] for f in fitness}, {"max", "regen", "walk"})
+        self.assertEqual(len({f["id"] for f in fitness}), len(fitness))
+        for f in fitness:
+            prices = [f["price"] * f["growth"] ** n for n in range(int(f["levels"]))]
+            self.assertGreater(f["price"], 0, f["name"])
+            self.assertEqual(prices, sorted(set(prices)), f"{f['name']} prices must rise")
+            self.assertGreater(f["per_level"], 0, f["name"])
+
+    def test_stamina_refills_gently(self):
+        st = pacing.table("Stamina")
+        self.assertGreater(st["regenPerSecond"], 0)
+        self.assertGreater(st["max"], 0)
+        self.assertTrue(0 < st["recover"] <= st["max"], "you get your breath back before the bar is full")
+        self.assertLessEqual(st["regenDelay"], 3, "a short rest, never a punishment")
+
+    def test_the_metal_detector_is_an_early_buy(self):
+        detector = pacing.table("MetalDetector")
+        self.assertLess(detector["price"], pacing.rows("Tools")[2]["price"])
+        self.assertTrue(0 < detector["range"] <= 40, "it only helps once you're close")
+        self.assertGreaterEqual(detector["pollSeconds"], 0.2, "at most about 4-5 asks a second")
 
     def test_finds_tell_a_story(self):
         self.assertGreaterEqual(len(FINDS), 10)

@@ -195,3 +195,45 @@ Not done yet: session locking for saves (a very quick server hop could lose that
   confetti every fifth goal and the last.
 - **Coins a minute:** under the coins counter, what you earned in the last
   `RateWindowSeconds` (60), counting only rises (spending and goal rewards don't count).
+## Stamina, fitness and the metal detector (2026-11-05)
+- **Stamina (`Config.Stamina`):** max 100, 1 per harvest click, refills 2.5 a second all the
+  time (so clicking 3 a second drains only 0.5 a second: about 200 s of steady harvesting from
+  full). At 0 you "catch your breath": a 1 s rest, then it refills to 15 and you carry on. The
+  server owns it (`server/Stamina.luau`; attributes Stamina, StaminaMax, Winded); a slim bar
+  under the crosshair shows only when it isn't full. Walking speed base 16 (Roblox's default).
+- **Fitness (`Config.Fitness`, saved as `d.fitness`, shop tab "Fitness"):** Stronger Arms +50
+  max stamina a level (5 levels, 300 coins x3 each level), Second Wind +0.25 refill a second (4
+  levels, 500 x3: at level 2 a steady 3 clicks a second never runs out), Light Boots +1.5
+  walking speed (4 levels, 600 x3; set on the Humanoid by the server on spawn and purchase).
+- **Pacing:** `dev/pacing.py` caps the click rate by stamina (rested at the start of each load,
+  since the walk to the trader refills it; no rest with Auto Sell) and buys Stronger Arms and
+  Second Wind. Free player's needle: about 34 h (unchanged); Robux: about 12 h.
+- **Metal detector (`Config.MetalDetector`, saved as `d.detector`):** 900 coins, bought once
+  (Fitness tab). Hold V: the client asks `Remotes.Detect` about 4 times a second (the server
+  answers at most every 0.2 s) and gets only a signal 0-5: 0 beyond 30 studs from your head to
+  your needle's clump, then 1-5 in 6-stud bands. It beeps (the built-in short ping, quiet,
+  pitch rising with the signal) every 1.2 / 0.9 / 0.65 / 0.45 / 0.28 s, lights 1-5 meter bars
+  and pulses gently. The needle's position never leaves the server. Separate from the Needle
+  Detector tool (tool 10), whose warmth on each click still works as before.
+
+## v6: factory line, processing chain, goals, stamina (2026-11-05)
+Owner's request: the depth of a factory-style needle game, with original systems only.
+- **Config split** (300-line limit): `ConfigFactory.luau`, `ConfigGoals.luau` and
+  `ConfigPlayer.luau` are merged into Config at load (lists append). Read them as `Config.X`.
+- **Belts:** Belt Corner (300; turns hay sideways, rotate with R), Belt Splitter (2,500; pushes
+  each new item left, then right), Belt Motors in the Logistics tab (`BeltSpeeds`: 10 / 14 /
+  19 / 25 studs/s for 0 / 20K / 120K / 700K).
+- **Feeders** (`Feeders`, Machines tab): Hay Arm (8 straws every 4 s, 6 power, 50K, max 8),
+  Hay Thrower (30 every 4 s, 30 power, 900K, max 6, throws 22 studs). They take hay from the
+  heap like machines (outside in, needle included) and drop bundles at their front, within
+  `FeederReach` 30 of the heap. Tuned so a free player finds the needle in about 31 h (34 h
+  without them); stronger feeders made it 21 h.
+- **Hay Burner** (Power tab, 8K, max 6): 30 power only while it has hay; each straw burns
+  `BurnerSecondsPerStraw` 0.25 s. Not counted as free power in pacing.
+- **Processing:** Bale Wrapper (150K): bale in, wrapped bale out, worth x1.4. Pellet Press
+  (400K): bundles in, 500-straw pellet sacks out, worth x1.7. The extra is paid as a bonus when
+  they reach the basket; they haul like bales.
+- **Delivery orders** (`Orders`, `OrderGrowth` 2): 8 orders in a cycle from 10 bundles (2K)
+  to 60 pellet sacks (1.5M), each round x2. Shown on a card on the right.
+- Code: `HayItems` (the items), `Processing` (machines' sensors), `LooseHay` (you and the hay),
+  `Factory` (feeders, burners, belt speeds), `Orders`, `PiecesFactory`.

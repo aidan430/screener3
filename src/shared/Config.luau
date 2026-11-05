@@ -1,5 +1,5 @@
 -- Every number you might want to tune lives here. Change it, rebuild, play-test.
--- It requires only ConfigFactory and ConfigGoals (more of the same numbers), so the server, the client and the checks can all read it.
+-- It requires only its companion Config* files (more of the same numbers), so the server, the client and the checks can all read it.
 local Config = {}
 
 Config.Title = "Needle in the Haystack"
@@ -180,6 +180,7 @@ Config.Sounds = {
 	coins = "rbxasset://sounds/electronicpingshort.wav", -- a short, gentle chime
 	cheer = "rbxasset://sounds/electronicpingshort.wav", -- the same chime, lower and fuller
 	spin = "",
+	detector = "rbxasset://sounds/electronicpingshort.wav", -- the metal detector's beep
 }
 -- Per sound: volume (0-1), pitch multiplier, wobble = random pitch +/- so clicks don't tire.
 Config.SoundSettings = {
@@ -187,6 +188,7 @@ Config.SoundSettings = {
 	pop = { volume = 0.4, pitch = 0.85 },
 	coins = { volume = 0.3, pitch = 1 },
 	cheer = { volume = 0.35, pitch = 0.7 },
+	detector = { volume = 0.18, pitch = 0.8 },
 }
 
 -- Background music: soft acoustic / country instrumentals, looping on each player's side
@@ -275,8 +277,8 @@ Config.BadgeIds = {} -- optional: { first_straw = 123456 } awards a Roblox badge
 Config.Loft = { straws = 250000, coinMultiplier = 20, needleEarliest = 0.5 }
 
 -- More numbers kept in companion files (to keep each under 300 lines): the factory line and
--- processing chain, and the guided goals. Their lists add to the ones above.
-for _, file in ipairs({ "ConfigFactory", "ConfigGoals" }) do
+-- processing chain, the guided goals, and stamina and the metal detector. Their lists add to the ones above.
+for _, file in ipairs({ "ConfigFactory", "ConfigGoals", "ConfigPlayer" }) do
 	for name, value in pairs(require(script.Parent:WaitForChild(file))) do
 		if type(value) == "table" and type(Config[name]) == "table" and #value > 0 then
 			for _, entry in ipairs(value) do

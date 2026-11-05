@@ -43,6 +43,7 @@ function Profile.fresh(saved)
 		orderDone = math.max(0, math.floor(number(saved, "orderDone", 0))), -- delivered towards it
 		needleClump = math.floor(number(saved, "needleClump", 0)),
 		revealed = saved.revealed == true,
+		detector = saved.detector == true, -- the metal detector (Config.MetalDetector)
 		needles = number(saved, "needles", 0),
 		whistles = number(saved, "whistles", 0),
 		lastSeen = number(saved, "lastSeen", 0),
@@ -51,6 +52,7 @@ function Profile.fresh(saved)
 		removed = if type(saved.removed) == "string" and #saved.removed == Config.Clumps then saved.removed else string.rep("0", Config.Clumps),
 		partial = {},
 		perks = {},
+		fitness = {},
 		inventory = {},
 		placed = {},
 		skins = {},
@@ -82,6 +84,9 @@ function Profile.fresh(saved)
 	end
 	for _, perk in ipairs(Config.Perks) do
 		d.perks[perk.id] = math.clamp(math.floor(number(saved.perks, perk.id, 0)), 0, perk.levels)
+	end
+	for _, f in ipairs(Config.Fitness) do
+		d.fitness[f.id] = math.clamp(math.floor(number(saved.fitness, f.id, 0)), 0, f.levels)
 	end
 	if type(saved.inventory) == "table" then
 		for id, n in pairs(saved.inventory) do

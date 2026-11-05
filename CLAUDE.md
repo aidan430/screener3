@@ -10,7 +10,7 @@ and buy tools, perks, buckets, a silo, building pieces (stairs, escalators, elev
 machines and the generators that power them, all placed freely on their plot. Robux buys
 power-ups and Wheel of Fortune spins (skins, or a 1-in-10,000 needle reveal). Ten secret
 achievements open the Golden Loft. Machines peel the heap from the outside in, so a free player
-who never climbs finds the needle in about 34 hours; climbing up and digging in is faster.
+who never climbs finds the needle in about 31 hours; climbing up and digging in is faster.
 
 The owner publishes from Roblox Studio and owns the Roblox account, the Robux items and the
 earnings. Nothing is published, sold or priced without them.
@@ -38,14 +38,16 @@ earnings. Nothing is published, sold or priced without them.
 
 ## Layout (Rojo project: `default.project.json`)
 ```
-src/shared/  -> ReplicatedStorage.Shared: Config, Economy, Layout, Format, HayLook, Finds.json
+src/shared/  -> ReplicatedStorage.Shared: Config (+ ConfigFactory, ConfigGoals, ConfigPlayer, merged
+                in), Economy, Layout, Format, HayLook, Finds.json
 src/server/  -> ServerScriptService.Server: Main (Script), World, Scenery, Build, Plots, Piles,
                 Pieces, Structures, Profile, PlayerData, Search, Machines, Shop, Achievements,
-                Loft, Haystack (the loft), Wheel, Tools, Carry, Hauling, LooseHay, PiecesBelts,
-                Monetization
+                Loft, Haystack (the loft), Wheel, Tools, ToolLook, Assets, Carry, Hauling,
+                HayItems, LooseHay, Processing, Factory, Orders, Goals, Stamina, Detector,
+                PiecesBelts, PiecesFactory, Monetization
 src/client/  -> StarterPlayerScripts.Client: Main (LocalScript), Ui, Cursor, Juice, Hud, Shop,
-                Panels, Harvest, HayFx, Teleport, BuildMode, Notify, WorldFx, Music, Jetpack,
-                Offer, Animals
+                Panels, Harvest, HayFx, Teleport, Guide, OrderCard, Goals, Stamina, Detector,
+                BuildMode, Notify, WorldFx, Music, Jetpack, Offer, Animals
 dev/         -> build.py, luau.py (checker), test_rules.py, pacing.py (keep in step with Economy)
 assets/hay/  the hay texture and the simplified hay model, for the owner to import in Studio
 NeedleInTheHaystack.rbxlx   the built place file (committed)
@@ -68,7 +70,8 @@ NeedleInTheHaystack.rbxlx   the built place file (committed)
   every Robux item says exactly what it gives.
 - The server decides everything that matters (searches, coins, clues, the needle, purchases);
   the client asks and shows.
-- Every tunable number lives in `src/shared/Config.luau`. Record changed defaults in NOTES.md.
+- Every tunable number lives in `src/shared/Config.luau` or its merged companions
+  (`ConfigFactory`, `ConfigGoals`, `ConfigPlayer`). Record changed defaults in NOTES.md.
 - Keep files under 300 lines. No new external dependency without asking.
 - Run `python3 dev/test_rules.py && python3 dev/build.py` before every commit and commit the
   rebuilt place file with the code.
