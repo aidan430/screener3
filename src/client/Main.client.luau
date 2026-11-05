@@ -95,6 +95,37 @@ ProximityPromptService.PromptTriggered:Connect(function(prompt)
 	end
 end)
 
+-- What the server said about your last click, just under the crosshair. If a click gets no
+-- answer at all, say so: that means the server's harvesting isn't running (see Output).
+local statusLabel = Ui.label({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.5, 26), Size = UDim2.fromOffset(520, 26), TextTransparency = 1, TextStrokeTransparency = 1, Parent = gui }, 18)
+local statusToken, lastAnswer = 0, 0
+local function showStatus(text, colour)
+	statusToken += 1
+	local token = statusToken
+	statusLabel.Text = text
+	statusLabel.TextColor3 = colour or Ui.colors.cream
+	statusLabel.TextTransparency, statusLabel.TextStrokeTransparency = 0, 0.4
+	task.delay(2.5, function()
+		if token == statusToken then
+			Juice.ease(statusLabel, 0.5, { TextTransparency = 1, TextStrokeTransparency = 1 })
+		end
+	end)
+end
+player:GetAttributeChangedSignal("HarvestTick"):Connect(function()
+	lastAnswer = time()
+	showStatus(tostring(player:GetAttribute("HarvestStatus") or ""))
+end)
+task.spawn(function()
+	while true do
+		task.wait(0.5)
+		local fired = Harvest.lastFired or 0
+		if fired > lastAnswer and time() - fired > 2 then
+			lastAnswer = time()
+			showStatus("The server didn't answer your click. Look for red text in the Output window.", Color3.fromRGB(255, 120, 100))
+		end
+	end
+end)
+
 -- what the crosshair is on, whether you're in the loft (HUD state, not attributes)
 task.spawn(function()
 	while true do
@@ -127,6 +158,7 @@ end)
 
 Remotes.SearchFx.OnClientEvent:Connect(function(message)
 	if message.kind == "harvest" then
+		Juice.hit()
 		Juice.float(message.position + Vector3.new(0, 2, 0), "+" .. message.straws, if message.golden then Ui.colors.hay else Ui.colors.cream)
 		if message.gone then -- you cleared a clump: it pops
 			Juice.pop(message.position, message.golden)

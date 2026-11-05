@@ -103,7 +103,7 @@ end
 
 -- The combo streak: harvests within 1.2 seconds of each other count up.
 function Juice.hit()
-	local now = os.clock()
+	local now = time()
 	combo = if now - lastHit < 1.2 then combo + 1 else 1
 	lastHit = now
 	if comboLabel and combo >= 3 then
@@ -114,7 +114,7 @@ function Juice.hit()
 		scale.Scale = 1.25
 		ease(scale, 0.2, { Scale = 1 }, Enum.EasingStyle.Back)
 		task.delay(1.3, function()
-			if os.clock() - lastHit >= 1.2 then
+			if time() - lastHit >= 1.2 then
 				ease(comboLabel, 0.4, { TextTransparency = 1, TextStrokeTransparency = 1 })
 			end
 		end)

@@ -61,11 +61,12 @@ end
 -- A click that hit no harvestable clump: say what the crosshair is on (at most every 2 s).
 local lastMiss = 0
 Harvest.onMiss = nil
+Harvest.lastFired = 0
 function Harvest.miss()
-	if os.clock() - lastMiss < 2 or not Harvest.onMiss then
+	if time() - lastMiss < 2 or not Harvest.onMiss then
 		return
 	end
-	lastMiss = os.clock()
+	lastMiss = time()
 	local camera, character = workspace.CurrentCamera, player.Character
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
@@ -100,15 +101,15 @@ local function swing(tool)
 		Harvest.miss()
 		return
 	end
-	if os.clock() - lastSwing < cooldown() then
+	if time() - lastSwing < cooldown() then
 		return
 	end
-	lastSwing = os.clock()
+	lastSwing = time()
+	Harvest.lastFired = time()
 	Remotes.Harvest:FireServer(part)
-	-- instant feel: a puff where you hit, a tiny camera push and the combo
+	-- instant feel: a puff where you hit and a tiny camera push (the combo waits for the server)
 	Juice.burst(point, 6, part.Name:sub(1, 6) == "Golden")
 	Juice.punch(1.2)
-	Juice.hit()
 	local anim = Instance.new("StringValue") -- the default Animate script plays a swing for this
 	anim.Name = "toolanim"
 	anim.Value = "Slash"

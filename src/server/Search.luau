@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
@@ -15,6 +16,7 @@ local PlayerData = require(script.Parent.PlayerData)
 local Plots = require(script.Parent.Plots)
 local Piles = require(script.Parent.Piles)
 local Achievements = require(script.Parent.Achievements)
+local Tools = require(script.Parent.Tools)
 
 local Search = {}
 local lastHarvest = {}
@@ -29,9 +31,23 @@ local function character(player)
 	return c
 end
 
-local function holdingTool(c)
-	local tool = c:FindFirstChildOfClass("Tool")
-	return tool ~= nil and tool:GetAttribute("Level") ~= nil
+-- The search tool, wherever it is. If it's in the backpack, the server equips it, so a click
+-- never fails just because equipping didn't reach the server.
+local function searchTool(player, c)
+	for _, container in ipairs({ c, player:FindFirstChildOfClass("Backpack") }) do
+		for _, item in ipairs(container and container:GetChildren() or {}) do
+			if item:IsA("Tool") and item:GetAttribute("Level") ~= nil then
+				if container ~= c then
+					local humanoid = c:FindFirstChildOfClass("Humanoid")
+					if humanoid then
+						humanoid:EquipTool(item)
+					end
+				end
+				return item
+			end
+		end
+	end
+	return nil
 end
 
 local function room(d)
@@ -109,26 +125,40 @@ local function goldenHarvest(player, d, amount)
 	return amount, hit
 end
 
--- Tells the player why a click didn't harvest (at most every 1.5 seconds).
+-- Every click's result goes on the player as HarvestStatus (shown under the crosshair), and
+-- the reason a click didn't harvest is also sent as a message (at most every 1.5 seconds).
 local lastNope = {}
+local function status(player, text)
+	player:SetAttribute("HarvestStatus", text)
+	player:SetAttribute("HarvestTick", (player:GetAttribute("HarvestTick") or 0) + 1)
+end
 local function nope(player, reason)
-	if os.clock() - (lastNope[player] or 0) > 1.5 then
-		lastNope[player] = os.clock()
+	status(player, reason)
+	if time() - (lastNope[player] or 0) > 1.5 then
+		lastNope[player] = time()
 		Remotes.SearchFx:FireClient(player, { kind = "nope", reason = reason })
 	end
 end
 
 local function harvest(player, target)
 	local d, c = PlayerData.get(player), character(player)
-	local now = os.clock()
+	local now = time()
+	if RunService:IsStudio() then
+		print("[Harvest] click from", player.Name, "on", if typeof(target) == "Instance" then target:GetFullName() else tostring(target))
+	end
 	if not d then
 		return nope(player, "Still loading your farm...")
 	elseif not c then
-		return
-	elseif not holdingTool(c) then
-		return nope(player, "Hold your fork to harvest (press 1).")
-	elseif now - (lastHarvest[player] or 0) < Economy.cooldown(d) * 0.9 then
-		return -- clicking faster than the tool swings: just ignored
+		return nope(player, "Your character is respawning. Try again in a moment.")
+	end
+	if not searchTool(player, c) then
+		Tools.give(player, d.tool, d.skin) -- lost somehow: hand a new one over and carry on
+		if not searchTool(player, c) then
+			return nope(player, "Your fork is on its way. Try again in a moment.")
+		end
+	end
+	if now - (lastHarvest[player] or 0) < Economy.cooldown(d) * 0.9 then
+		return status(player, player:GetAttribute("HarvestStatus") or "") -- faster than the tool swings: ignored
 	end
 	if typeof(target) ~= "Instance" or not target:IsA("BasePart") then
 		return nope(player, "That isn't a clump of hay.")
@@ -143,6 +173,7 @@ local function harvest(player, target)
 		if flags.autoSell then
 			Search.sell(player, "auto")
 		else
+			status(player, "Your tool is full. Sell at the merchant.")
 			Remotes.SearchFx:FireClient(player, { kind = "full" })
 			return
 		end
@@ -177,6 +208,7 @@ local function harvest(player, target)
 			data.stats.loads_filled += 1
 		end
 	end)
+	status(player, "+" .. Format.commas(taken) .. " straw (carrying " .. Format.commas(d.carried + d.carriedGolden) .. " / " .. Format.commas(Economy.capacity(d)) .. ")")
 	local warmth = nil
 	local plotIndex = Plots.of(player)
 	if not golden and d.tool >= Config.DetectorLevel and plotIndex then
