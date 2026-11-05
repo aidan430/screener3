@@ -70,7 +70,7 @@ end
 -- The part for a clump on a plot, if it still exists.
 function Piles.part(plotIndex, clump)
 	local pile = piles[plotIndex]
-	return pile and pile.parts[clump]
+	return pile and pile.folder.Parent ~= nil and pile.parts[clump] or nil
 end
 
 -- Takes up to `amount` straws from a clump. Returns straws taken and whether the clump
@@ -104,12 +104,16 @@ function Piles.top(d)
 	return nil
 end
 
--- A fresh pile for a new needle: every clump back.
-function Piles.reset(plotIndex, d)
+-- A fresh pile for a new needle, in the saved data (do this straight away).
+function Piles.resetData(d)
 	d.removed = string.rep("0", Config.Clumps)
 	d.partial = {}
 	d.needleClump = Profile.newNeedle()
 	d.revealed = false
+end
+
+-- Rebuilds the pile's parts from the data (after resetData).
+function Piles.rebuild(plotIndex, d)
 	local pile = piles[plotIndex]
 	if pile then
 		pile.folder:Destroy()

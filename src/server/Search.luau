@@ -79,15 +79,15 @@ function Search.needleFound(player, golden, position)
 			data.loft.needleAt = Economy.needleAt(Config.Loft.straws, Config.Loft.needleEarliest, rng)
 		else
 			data.needles += 1
+			Piles.resetData(data) -- saved at once, so leaving now can't lose the new needle
 		end
 	end)
 	Remotes.Announce:FireAllClients({ kind = "needle", finder = player.DisplayName, finderId = player.UserId, golden = golden, prize = prize, position = position })
 	if not golden and plotIndex then
 		task.delay(6, function() -- let the celebration play, then a fresh pile with a new needle
-			if PlayerData.get(player) and Plots.of(player) == plotIndex then
-				PlayerData.update(player, function(data)
-					Piles.reset(plotIndex, data)
-				end)
+			local current = PlayerData.get(player)
+			if current and Plots.of(player) == plotIndex then
+				Piles.rebuild(plotIndex, current)
 			end
 		end)
 	end

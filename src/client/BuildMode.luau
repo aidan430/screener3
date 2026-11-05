@@ -40,7 +40,14 @@ local function aimPoint()
 	local camera = workspace.CurrentCamera
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { player.Character, ghost, workspace:FindFirstChild("MyEffects") }
+	local ignore = {}
+	local things = { player.Character, ghost, workspace:FindFirstChild("MyEffects") }
+	for i = 1, 3 do
+		if things[i] then
+			table.insert(ignore, things[i])
+		end
+	end
+	params.FilterDescendantsInstances = ignore
 	return workspace:Raycast(camera.CFrame.Position, camera.CFrame.LookVector * 90, params)
 end
 
@@ -85,7 +92,7 @@ local function place()
 	if ok then
 		Juice.burst(base + Vector3.new(0, 1, 0), 18)
 		Juice.punch(1.5)
-		if (player:GetAttribute("Inv_" .. selected) or 0) <= 1 then
+		if (player:GetAttribute("Inv_" .. selected) or 0) <= 0 then
 			selected = nil
 			clearGhost()
 		end
@@ -114,6 +121,14 @@ function BuildMode.toggle(on)
 		selected, removing, hovered = nil, false, nil
 		removeBox.Adornee = nil
 		clearGhost()
+		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		local backpack = player:FindFirstChildOfClass("Backpack")
+		for _, tool in ipairs(backpack and backpack:GetChildren() or {}) do
+			if humanoid and tool:IsA("Tool") and tool:GetAttribute("Level") ~= nil then
+				humanoid:EquipTool(tool) -- back to harvesting
+				break
+			end
+		end
 	end
 end
 

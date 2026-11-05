@@ -1,6 +1,5 @@
 -- Free building on your own plot: place pieces, machines and generators you've bought, take
 -- them back, and ride elevators. Placements are saved relative to the plot's centre.
-local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -14,6 +13,15 @@ local Plots = require(script.Parent.Plots)
 local Pieces = require(script.Parent.Pieces)
 
 local Structures = {}
+
+-- Lights every machine and generator on the player's plot for the current power.
+local function relight(player)
+	local d = PlayerData.get(player)
+	if d then
+		local plot = Economy.plot(d.placed, PlayerData.flags(player).doubleMachines)
+		Structures.light(player, plot.machines > 0 and plot.share >= 1)
+	end
+end
 
 local function builtFolder(plotIndex)
 	local plot = Plots.folder(plotIndex)
@@ -40,6 +48,10 @@ end
 function Structures.build(plotIndex, d)
 	for slot, entry in ipairs(d.placed) do
 		spawnPiece(plotIndex, entry, slot)
+	end
+	local owner = Plots.owner(plotIndex)
+	if owner then
+		task.defer(relight, owner)
 	end
 end
 
@@ -73,6 +85,7 @@ local function place(player, id, position, rotation)
 		table.insert(data.placed, entry)
 	end)
 	spawnPiece(plotIndex, entry, #d.placed)
+	relight(player)
 	return true, Economy.item(id).def.name .. " placed."
 end
 
@@ -91,6 +104,7 @@ local function remove(player, model)
 		data.inventory[entry.k] = (data.inventory[entry.k] or 0) + 1
 	end)
 	renumber(plotIndex, d)
+	relight(player)
 	return true, Economy.item(entry.k).def.name .. " back in your inventory."
 end
 
@@ -123,7 +137,6 @@ function Structures.init()
 		root.CFrame = target
 		root.AssemblyLinearVelocity = Vector3.zero
 	end)
-	Players.PlayerRemoving:Connect(function() end)
 end
 
 return Structures

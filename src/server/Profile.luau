@@ -50,12 +50,21 @@ function Profile.fresh(saved)
 	if d.needleClump < 1 or d.needleClump > Config.Clumps then
 		d.needleClump = Profile.newNeedle()
 	end
+	if string.sub(d.removed, d.needleClump, d.needleClump) == "1" then
+		-- the needle's clump is gone but no new pile was started (an old save): start one now
+		d.removed = string.rep("0", Config.Clumps)
+		d.needleClump = Profile.newNeedle()
+		d.revealed = false
+	end
 	if type(saved.partial) == "table" then
 		for index, left in pairs(saved.partial) do
 			if tonumber(index) and type(left) == "number" then
 				d.partial[tostring(index)] = left
 			end
 		end
+	end
+	if string.find(d.removed, "1", 1, true) == nil then
+		d.partial = {} -- a fresh pile has no half-harvested clumps
 	end
 	for _, perk in ipairs(Config.Perks) do
 		d.perks[perk.id] = math.clamp(math.floor(number(saved.perks, perk.id, 0)), 0, perk.levels)

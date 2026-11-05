@@ -63,8 +63,8 @@ function Panels.mount(gui, notify, actions)
 	local skinsHeader = Ui.paragraph("Tool skins (win them on the Wheel of Fortune):", { LayoutOrder = 1, Font = Ui.font, TextSize = 20, Parent = findsBody })
 	local skinButtons = {}
 	local function wear(id)
-		local ok, message = pcall(Remotes.EquipSkin.InvokeServer, Remotes.EquipSkin, id)
-		notify.toast(if ok then message else "Try again.", Ui.colors.purple)
+		local ok, _, message = pcall(Remotes.EquipSkin.InvokeServer, Remotes.EquipSkin, id)
+		notify.toast(if ok then tostring(message) else "Try again.", Ui.colors.purple)
 	end
 	local plain = Ui.button("Plain tool", Ui.colors.wood, { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 40), Parent = findsBody })
 	plain.Activated:Connect(function()

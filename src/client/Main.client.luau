@@ -36,8 +36,8 @@ panels = Panels.mount(gui, Notify, {
 		BuildMode.toggle()
 	end,
 	Whistle = function()
-		local ok, message = pcall(Remotes.Whistle.InvokeServer, Remotes.Whistle)
-		Notify.toast(if ok then message else "Try again.", Ui.colors.green)
+		local ok, success, message = pcall(Remotes.Whistle.InvokeServer, Remotes.Whistle)
+		Notify.toast(if ok then tostring(message) else "Try again.", if ok and success then Ui.colors.green else Ui.colors.red)
 	end,
 })
 Harvest.start()

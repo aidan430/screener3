@@ -52,7 +52,7 @@ function builders.elevator(model, cf)
 	end
 	p(model, cf * CFrame.new(0, 0.25, 0), Vector3.new(10, 0.5, 10), METAL, "DiamondPlate")
 	local top = p(model, cf * CFrame.new(0, 50.5, 0), Vector3.new(10, 1, 10), WOOD)
-	local bottom = p(model, cf * CFrame.new(0, 3, 4.6), Vector3.new(2, 2, 0.4), { 245, 200, 66 }, "Neon")
+	local bottom = p(model, cf * CFrame.new(0, 3, -4.6), Vector3.new(2, 2, 0.4), { 245, 200, 66 }, "Neon")
 	local upper = p(model, cf * CFrame.new(0, 53, 4.6), Vector3.new(2, 2, 0.4), { 245, 200, 66 }, "Neon")
 	top.Name = "Top"
 	for _, pair in ipairs({ { bottom, "Ride up", "up" }, { upper, "Ride down", "down" } }) do
@@ -60,7 +60,7 @@ function builders.elevator(model, cf)
 		prompt.ActionText = pair[2]
 		prompt.ObjectText = "Elevator"
 		prompt.HoldDuration = 0
-		prompt.MaxActivationDistance = 10
+		prompt.MaxActivationDistance = 6
 		prompt.RequiresLineOfSight = false
 		prompt:SetAttribute("Direction", pair[3])
 		prompt.Parent = pair[1]

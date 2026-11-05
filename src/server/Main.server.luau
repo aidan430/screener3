@@ -73,8 +73,8 @@ PlayerData.onLoaded(function(player, saveable)
 end)
 
 Plots.init()
+Monetization.init() -- before PlayerData.init, so early players get their passes checked
 PlayerData.init()
-Monetization.init()
 Achievements.init()
 Structures.init()
 Search.init()
