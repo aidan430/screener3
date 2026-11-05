@@ -21,30 +21,8 @@ FINDS = json.loads((SHARED / "Finds.json").read_text())
 
 
 def layout() -> list[tuple[float, float, float]]:
-    """Mirror of src/shared/Layout.luau: clump positions, bottom to top."""
-    import math
-    size, layers_n = pacing.number("ClumpSize"), int(pacing.number("PileLayers"))
-    r0, r1, clumps = pacing.number("PileRadiusBottom"), pacing.number("PileRadiusTop"), int(pacing.number("Clumps"))
-    layers, total = [], 0
-    for i in range(layers_n):
-        r = r0 - (r0 - r1) * i / (layers_n - 1)
-        n = math.floor(r / size)
-        layer = [(gx, i, gz, gx * gx + gz * gz) for gx in range(-n, n + 1) for gz in range(-n, n + 1) if (gx * size) ** 2 + (gz * size) ** 2 <= r * r]
-        total += len(layer)
-        layers.append(layer)
-    excess = total - clumps
-    for layer in layers:
-        if excess <= 0:
-            break
-        layer.sort(key=lambda c: (-c[3], c[0], c[2]))
-        cut = min(excess, len(layer) // 4)
-        del layer[:cut]
-        excess -= cut
-    out = []
-    for layer in layers:
-        layer.sort(key=lambda c: (c[0], c[2]))
-        out += [(c[0] * size, c[1] * size + size / 2, c[2] * size) for c in layer]
-    return out
+    """Clump positions, bottom to top (dev/pacing.py mirrors src/shared/Layout.luau)."""
+    return [c[:3] for c in pacing.layout()["cells"]]
 
 
 class Pile(unittest.TestCase):
@@ -122,14 +100,21 @@ class Achievements(unittest.TestCase):
 
 
 class Pacing(unittest.TestCase):
-    def test_a_free_player_finds_the_needle_in_about_a_day(self):
-        marks = pacing.simulate(False)
-        half = next(h for h, s in marks if s >= 0.5)
-        self.assertTrue(20 <= half <= 28, f"average needle at {half:.1f} h")
+    def test_the_needle_hides_deep_in_the_upper_heap(self):
+        lay = pacing.layout()
+        self.assertGreaterEqual(len(lay["spots"]), 30, "enough hiding places that it isn't guessable")
+        self.assertGreaterEqual(pacing.needle_share(), 0.85, "machines reach the needle only near the end")
+        top = max(c[1] for c in lay["cells"])
+        self.assertTrue(all(lay["cells"][i][1] >= top * 0.45 for i in lay["spots"]))
+        self.assertEqual(sorted(lay["order"]), list(range(len(lay["cells"]))))
+
+    def test_a_free_player_finds_the_needle_in_about_a_day_and_a_half(self):
+        found = pacing.needle_hours(pacing.simulate(False))
+        self.assertTrue(28 <= found <= 40, f"average needle at {found:.1f} h")
 
     def test_robux_is_much_faster(self):
-        free = next(h for h, s in pacing.simulate(False) if s >= 0.5)
-        robux = next(h for h, s in pacing.simulate(True) if s >= 0.5)
+        free = pacing.needle_hours(pacing.simulate(False))
+        robux = pacing.needle_hours(pacing.simulate(True))
         self.assertTrue(0.15 <= robux / free <= 0.5, f"robux {robux:.1f} h vs free {free:.1f} h")
 
     def test_the_first_upgrade_comes_within_minutes(self):

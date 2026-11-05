@@ -1,14 +1,24 @@
--- Where each clump sits in the pile: a tapering stack of Config.PileLayers layers, trimmed
--- at the bottom edge to exactly Config.Clumps. Always the same order (bottom to top), so a
--- clump's index means the same clump in every visit; saves refer to clumps by index.
--- Plain Luau: no Roblox services. Returns { {x, y, z}, ... } offsets from the pile's base centre.
+-- Where each clump sits in the heap: one cell of the 4-stud terrain grid each, in
+-- Config.PileLayers layers that taper from PileRadiusBottom to a peak (curved by PileCurve), trimmed
+-- at the bottom edge to exactly Config.Clumps. Always the same order (bottom to top), so a clump's
+-- index means the same clump in every visit; saves refer to clumps by index.
+-- Plain Luau: no Roblox services. Returns a list of { x, y, z } offsets from the heap's base centre,
+-- with these extras:
+--   .cell[i] = { gx, layer, gz }       .lookup(gx, layer, gz) -> index or nil
+--   .shape[i] = terrain fullness 0..1 that rounds the heap's outside smoothly
+--   .core[i] = how far out the clump is, 0 at the middle to 1 at the outside
+--   .machineOrder = indices from the outside skin inwards (machines peel the heap evenly)
+--   .needleSpots = indices deep inside the upper heap, where the needle hides
+--   .origin(x, z) = the heap's base centre for a plot centre, on the terrain grid
 return function(Config)
 	local s = Config.ClumpSize
 	local layerCount = Config.PileLayers
-	local layers = {}
+	local r0, r1, curve = Config.PileRadiusBottom, Config.PileRadiusTop, Config.PileCurve
+	local layers, radius = {}, {}
 	local total = 0
 	for i = 0, layerCount - 1 do
-		local r = Config.PileRadiusBottom - (Config.PileRadiusBottom - Config.PileRadiusTop) * i / (layerCount - 1)
+		local r = r1 + (r0 - r1) * (1 - i / (layerCount - 1)) ^ curve
+		radius[i] = r
 		local n = math.floor(r / s)
 		local layer = {}
 		for gx = -n, n do
@@ -41,7 +51,8 @@ return function(Config)
 		end
 		excess -= cut
 	end
-	local out = {}
+	local out = { cell = {}, shape = {}, core = {}, machineOrder = {}, needleSpots = {} }
+	local grid = {}
 	for _, layer in ipairs(layers) do
 		table.sort(layer, function(a, b)
 			if a[1] ~= b[1] then
@@ -51,7 +62,40 @@ return function(Config)
 		end)
 		for _, c in ipairs(layer) do
 			table.insert(out, { c[1] * s, c[2] * s + s / 2, c[3] * s })
+			local index = #out
+			local r = radius[c[2]]
+			local d = math.sqrt(c[4]) * s
+			out.cell[index] = { c[1], c[2], c[3] }
+			out.shape[index] = math.clamp((r - d) / s + 0.5, 0.35, 1)
+			out.core[index] = math.clamp(d / math.max(r, s), 0, 1)
+			grid[c[1] .. "," .. c[2] .. "," .. c[3]] = index
 		end
+	end
+	function out.lookup(gx, layer, gz)
+		return grid[gx .. "," .. layer .. "," .. gz]
+	end
+	-- outside first (most exposed), then lower first, then by index, so the order never changes
+	for i = 1, #out do
+		out.machineOrder[i] = i
+	end
+	table.sort(out.machineOrder, function(a, b)
+		local ca, cb = math.floor(out.core[a] * 8), math.floor(out.core[b] * 8)
+		if ca ~= cb then
+			return ca > cb
+		elseif out.cell[a][2] ~= out.cell[b][2] then
+			return out.cell[a][2] < out.cell[b][2]
+		end
+		return a < b
+	end)
+	local low, high = Config.NeedleHeight[1] * layerCount, Config.NeedleHeight[2] * layerCount
+	for i = 1, #out do
+		local layer = out.cell[i][2]
+		if layer >= low and layer <= high and out.core[i] <= Config.NeedleCore then
+			table.insert(out.needleSpots, i)
+		end
+	end
+	function out.origin(x, z)
+		return math.floor(x / s) * s + s / 2, math.floor(z / s) * s + s / 2
 	end
 	return out
 end

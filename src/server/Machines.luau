@@ -29,12 +29,12 @@ local function character(player)
 	return c
 end
 
--- Takes `amount` straws from the top of the pile (machines, Straw Blast). Returns straws taken.
+-- Takes `amount` straws from the outside of the heap inwards (machines, Straw Blast). Returns straws taken.
 local function fromTop(player, d, amount)
 	local plotIndex = Plots.of(player)
 	local taken = 0
 	while plotIndex and amount > 0 do
-		local top = Piles.top(d)
+		local top = Piles.next(d)
 		if not top then
 			break
 		end

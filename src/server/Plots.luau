@@ -80,9 +80,13 @@ function Plots.claim(player)
 	return nil
 end
 
+Plots.onRelease = nil -- set by Main: clears the heap's terrain
 function Plots.release(player)
 	local index = byPlayer[player]
 	if index then
+		if Plots.onRelease then
+			Plots.onRelease(index)
+		end
 		owners[index] = nil
 		byPlayer[player] = nil
 		signs[index].Text = "FREE PLOT"

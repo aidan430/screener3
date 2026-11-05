@@ -21,13 +21,22 @@ Config.FarmName = "Hollow Creek Farm"
 Config.PlotSize = 140
 Config.PlotCentres = { { 85, 85 }, { -85, 85 }, { -85, -85 }, { 85, -85 } }
 
--- The pile: 5,000,000 straws in clumps stacked about 255 studs (70 m) high.
+-- The heap: 5,000,000 straws in clumps, one smooth terrain heap 256 studs (70 m) high.
+-- Each clump is one 4-stud terrain cell (the terrain grid size, so keep ClumpSize = 4).
 Config.TotalStraws = 5000000
 Config.Clumps = 5000 -- each holds TotalStraws / Clumps = 1,000 straws
-Config.ClumpSize = 5
-Config.PileLayers = 51 -- 51 layers x 5 studs = 255 studs
-Config.PileRadiusBottom = 42
-Config.PileRadiusTop = 12
+Config.ClumpSize = 4
+Config.PileLayers = 64 -- 64 layers x 4 studs = 256 studs
+Config.PileRadiusBottom = 38
+Config.PileRadiusTop = 4
+Config.PileCurve = 1.6 -- above 1: a wide, sloping base and a steep, narrow top
+Config.HeapColour = { 222, 186, 92 } -- straw gold (the terrain Grass material is the heap)
+Config.MaxSlopeAngle = 46 -- players can't walk up anything steeper: they build to climb
+-- The needle hides deep inside the upper heap: between these shares of the height, and no
+-- further from the middle than this share of the heap's width there. Machines peel the heap
+-- from the outside in, so they reach it last; climbing up and digging in finds it sooner.
+Config.NeedleHeight = { 0.5, 0.8 }
+Config.NeedleCore = 0.4
 Config.Reach = 18 -- studs from your head to a clump you can harvest
 Config.SearchCooldown = 0.3 -- seconds between harvests (the Swift perk shortens it)
 Config.MerchantRange = 16
@@ -47,7 +56,18 @@ Config.Tools = {
 	{ name = "Twin Turbines", power = 19, capacity = 75000, price = 1700000, shaft = { 40, 44, 52 }, head = { 255, 170, 40 }, material = "Metal" },
 	{ name = "Needle Detector", power = 22, capacity = 100000, price = 3400000, shaft = { 40, 44, 52 }, head = { 70, 255, 150 }, material = "Neon" },
 }
-Config.DetectorLevel = 10 -- from this tool on, the HUD shows how close the needle is
+Config.DetectorLevel = 10
+Config.LoadSize = 2.4 -- studs across the hay on a full tool
+
+-- Buckets hang at your hip and carry what the tool can't: tool fills first, then the bucket.
+Config.Buckets = {
+	{ name = "No bucket", capacity = 0, price = 0, size = 0 },
+	{ name = "Tin Pail", capacity = 600, price = 1500, size = 1.2 },
+	{ name = "Hay Bucket", capacity = 2000, price = 9000, size = 1.6 },
+	{ name = "Big Tub", capacity = 6000, price = 60000, size = 2 },
+	{ name = "Hay Barrel", capacity = 20000, price = 400000, size = 2.4 },
+	{ name = "Giant Basket", capacity = 60000, price = 2500000, size = 2.8 },
+} -- from this tool on, the HUD shows how close the needle is
 
 -- The silo on your plot holds what your machines harvest until you next sell.
 Config.Silos = {
@@ -84,7 +104,11 @@ Config.Pieces = {
 	{ id = "pillar", name = "Pillar", price = 100, size = { 2, 10, 2 }, text = "A 10-stud post to hold things up." },
 	{ id = "escalator", name = "Escalator", price = 4000, size = { 8, 10, 10 }, text = "Stairs that carry you up 10 studs." },
 	{ id = "elevator", name = "Elevator", price = 30000, size = { 10, 51, 10 }, text = "A 50-stud lift. Press E at the bottom or top." },
+	{ id = "teleporter", name = "Teleporter Pad", price = 25000, size = { 8, 1, 8 }, text = "Step on, press E, pick any of your other pads." },
+	{ id = "trader", name = "Trader's Stall", price = 0, max = 1, size = { 12, 12, 8 }, text = "Your trader. Dump your hay in the basket. Move it anywhere, even up a platform." },
 }
+Config.TraderDistance = 50 -- your trader's stall starts this far from your plot's centre, towards the hub
+Config.BasketDrainSeconds = 4 -- the trader carts the basket away this fast (just for show)
 Config.BuildGrid = 1 -- placement snaps to this many studs
 Config.MaxPlaced = 400 -- pieces, machines and generators on one plot
 
@@ -101,7 +125,7 @@ Config.LuckyValueSearches = 60
 -- Sounds: paste asset IDs from the Studio Toolbox (e.g. "rbxassetid://12345"). "" = silent.
 Config.Sounds = { harvest = "", pop = "", coins = "", cheer = "", spin = "" }
 
-Config.DataStoreName = "NeedleHaystack_v3"
+Config.DataStoreName = "NeedleHaystack_v4" -- v4: the terrain heap numbers clumps differently
 Config.AutosaveSeconds = 120
 
 -- Robux. Nothing shows in the shop until you create the item on the Creator Dashboard
@@ -204,8 +228,13 @@ return function(Config)
 		return math.max(1, math.floor(p + 0.5))
 	end
 
+	-- what you can carry: the tool fills first, then the bucket at your hip
 	function Economy.capacity(data)
-		return Economy.tool(data.tool).capacity
+		return Economy.tool(data.tool).capacity + Economy.bucket(data.bucket or 1).capacity
+	end
+
+	function Economy.bucket(level)
+		return Config.Buckets[math.clamp(level, 1, #Config.Buckets)]
 	end
 
 	function Economy.cooldown(data)
@@ -446,17 +475,27 @@ return Format
 			<Item class="ModuleScript" referent="RBX00006">
 				<Properties>
 					<string name="Name">Layout</string>
-					<ProtectedString name="Source"><![CDATA[-- Where each clump sits in the pile: a tapering stack of Config.PileLayers layers, trimmed
--- at the bottom edge to exactly Config.Clumps. Always the same order (bottom to top), so a
--- clump's index means the same clump in every visit; saves refer to clumps by index.
--- Plain Luau: no Roblox services. Returns { {x, y, z}, ... } offsets from the pile's base centre.
+					<ProtectedString name="Source"><![CDATA[-- Where each clump sits in the heap: one cell of the 4-stud terrain grid each, in
+-- Config.PileLayers layers that taper from PileRadiusBottom to a peak (curved by PileCurve), trimmed
+-- at the bottom edge to exactly Config.Clumps. Always the same order (bottom to top), so a clump's
+-- index means the same clump in every visit; saves refer to clumps by index.
+-- Plain Luau: no Roblox services. Returns a list of { x, y, z } offsets from the heap's base centre,
+-- with these extras:
+--   .cell[i] = { gx, layer, gz }       .lookup(gx, layer, gz) -> index or nil
+--   .shape[i] = terrain fullness 0..1 that rounds the heap's outside smoothly
+--   .core[i] = how far out the clump is, 0 at the middle to 1 at the outside
+--   .machineOrder = indices from the outside skin inwards (machines peel the heap evenly)
+--   .needleSpots = indices deep inside the upper heap, where the needle hides
+--   .origin(x, z) = the heap's base centre for a plot centre, on the terrain grid
 return function(Config)
 	local s = Config.ClumpSize
 	local layerCount = Config.PileLayers
-	local layers = {}
+	local r0, r1, curve = Config.PileRadiusBottom, Config.PileRadiusTop, Config.PileCurve
+	local layers, radius = {}, {}
 	local total = 0
 	for i = 0, layerCount - 1 do
-		local r = Config.PileRadiusBottom - (Config.PileRadiusBottom - Config.PileRadiusTop) * i / (layerCount - 1)
+		local r = r1 + (r0 - r1) * (1 - i / (layerCount - 1)) ^ curve
+		radius[i] = r
 		local n = math.floor(r / s)
 		local layer = {}
 		for gx = -n, n do
@@ -489,7 +528,8 @@ return function(Config)
 		end
 		excess -= cut
 	end
-	local out = {}
+	local out = { cell = {}, shape = {}, core = {}, machineOrder = {}, needleSpots = {} }
+	local grid = {}
 	for _, layer in ipairs(layers) do
 		table.sort(layer, function(a, b)
 			if a[1] ~= b[1] then
@@ -499,7 +539,40 @@ return function(Config)
 		end)
 		for _, c in ipairs(layer) do
 			table.insert(out, { c[1] * s, c[2] * s + s / 2, c[3] * s })
+			local index = #out
+			local r = radius[c[2]]
+			local d = math.sqrt(c[4]) * s
+			out.cell[index] = { c[1], c[2], c[3] }
+			out.shape[index] = math.clamp((r - d) / s + 0.5, 0.35, 1)
+			out.core[index] = math.clamp(d / math.max(r, s), 0, 1)
+			grid[c[1] .. "," .. c[2] .. "," .. c[3]] = index
 		end
+	end
+	function out.lookup(gx, layer, gz)
+		return grid[gx .. "," .. layer .. "," .. gz]
+	end
+	-- outside first (most exposed), then lower first, then by index, so the order never changes
+	for i = 1, #out do
+		out.machineOrder[i] = i
+	end
+	table.sort(out.machineOrder, function(a, b)
+		local ca, cb = math.floor(out.core[a] * 8), math.floor(out.core[b] * 8)
+		if ca ~= cb then
+			return ca > cb
+		elseif out.cell[a][2] ~= out.cell[b][2] then
+			return out.cell[a][2] < out.cell[b][2]
+		end
+		return a < b
+	end)
+	local low, high = Config.NeedleHeight[1] * layerCount, Config.NeedleHeight[2] * layerCount
+	for i = 1, #out do
+		local layer = out.cell[i][2]
+		if layer >= low and layer <= high and out.core[i] <= Config.NeedleCore then
+			table.insert(out.needleSpots, i)
+		end
+	end
+	function out.origin(x, z)
+		return math.floor(x / s) * s + s / 2, math.floor(z / s) * s + s / 2
 	end
 	return out
 end
@@ -877,12 +950,12 @@ local function character(player)
 	return c
 end
 
--- Takes `amount` straws from the top of the pile (machines, Straw Blast). Returns straws taken.
+-- Takes `amount` straws from the outside of the heap inwards (machines, Straw Blast). Returns straws taken.
 local function fromTop(player, d, amount)
 	local plotIndex = Plots.of(player)
 	local taken = 0
 	while plotIndex and amount > 0 do
-		local top = Piles.top(d)
+		local top = Piles.next(d)
 		if not top then
 			break
 		end
@@ -1012,6 +1085,7 @@ World.ground()
 StarterPlayer.CameraMode = Enum.CameraMode.LockFirstPerson
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 
 -- While testing in Studio, server errors also show on the players' screens.
 if RunService:IsStudio() then
@@ -1034,8 +1108,11 @@ local Loft = require(script.Parent.Loft)
 local Wheel = require(script.Parent.Wheel)
 local Monetization = require(script.Parent.Monetization)
 
+StarterPlayer.CharacterMaxSlopeAngle = Config.MaxSlopeAngle -- the steep heap needs building to climb
+
 World.build()
 Plots.build()
+Plots.onRelease = Piles.clear
 Haystack.build()
 
 local function toPlot(player)
@@ -1361,66 +1438,110 @@ local Plots = require(script.Parent.Plots)
 local Profile = require(script.Parent.Profile)
 
 local Piles = {}
-local piles = {} -- [plot index] = { folder, parts = { [clump index] = part }, base = Vector3 }
+local piles = {} -- [plot index] = { folder, origin = Vector3 }
+local cursor = setmetatable({}, { __mode = "k" }) -- [data] = where the machines got to in machineOrder
+local terrain = workspace.Terrain
+local HEAP = Enum.Material.Grass -- recoloured to straw; its grass blades read as loose straw
+local STEPS = 8 -- a clump shrinks in this many visible steps as you harvest it
 
-local HAY = {
-	Color3.fromRGB(226, 190, 92),
-	Color3.fromRGB(212, 172, 76),
-	Color3.fromRGB(236, 204, 112),
-	Color3.fromRGB(220, 182, 84),
-}
-
-local function shade(index)
-	return HAY[(index * 7919) % #HAY + 1]
+local function setup()
+	terrain:SetMaterialColor(HEAP, Color3.fromRGB(Config.HeapColour[1], Config.HeapColour[2], Config.HeapColour[3]))
+	pcall(function()
+		terrain.Decoration = true -- the grass blades: individual straws on the heap
+	end)
 end
 
--- A partly harvested clump shrinks a little, so you can see your progress on it.
-local function sizeFor(left)
-	local s = Config.ClumpSize + 0.3
-	local k = 0.6 + 0.4 * left / Economy.STRAWS_PER_CLUMP
-	return Vector3.new(s * k, s * k, s * k)
+local function origin(plotIndex)
+	local centre = Plots.centre(plotIndex)
+	local x, z = Layout.origin(centre.X, centre.Z)
+	return Vector3.new(x, 0, z)
+end
+
+-- How full a clump's terrain cell looks: the heap's rounded outside, shrinking as it's harvested.
+local function fullness(index, left)
+	if left <= 0 then
+		return 0
+	end
+	local step = math.ceil(left / Economy.STRAWS_PER_CLUMP * STEPS) / STEPS
+	return Layout.shape[index] * (0.3 + 0.7 * step)
+end
+
+local function writeCell(plotIndex, index, left)
+	local o = piles[plotIndex] and piles[plotIndex].origin
+	if not o then
+		return
+	end
+	local c = o + Vector3.new(Layout[index][1], Layout[index][2], Layout[index][3])
+	local half = Vector3.new(1, 1, 1) * (Config.ClumpSize / 2)
+	local amount = fullness(index, left)
+	terrain:WriteVoxels(Region3.new(c - half, c + half), Config.ClumpSize, { { { if amount > 0 then HEAP else Enum.Material.Air } } }, { { { amount } } })
 end
 
 function Piles.position(plotIndex, clump)
 	local c = Layout[clump]
-	return Plots.centre(plotIndex) + Vector3.new(c[1], c[2], c[3])
+	return origin(plotIndex) + Vector3.new(c[1], c[2], c[3])
 end
 
--- Builds the player's pile on their plot from their data. Yields a little between batches.
+-- The clump nearest a point on (or just inside) the heap's surface, if one is left there.
+function Piles.clumpAt(plotIndex, d, point)
+	local o = origin(plotIndex)
+	local s = Config.ClumpSize
+	local gx, layer, gz = math.floor((point.X - o.X) / s + 0.5), math.floor(point.Y / s), math.floor((point.Z - o.Z) / s + 0.5)
+	local best, bestDistance = nil, math.huge
+	for dx = -1, 1 do
+		for dy = -1, 1 do
+			for dz = -1, 1 do
+				local index = Layout.lookup(gx + dx, layer + dy, gz + dz)
+				if index and Profile.clumpLeft(d, index) > 0 then
+					local distance = (Piles.position(plotIndex, index) - point).Magnitude
+					if distance < bestDistance then
+						best, bestDistance = index, distance
+					end
+				end
+			end
+		end
+	end
+	return best
+end
+
+-- Builds the player's heap on their plot from their data, as one smooth piece of terrain.
 function Piles.build(plotIndex, d)
+	setup()
 	local folder = Instance.new("Folder")
 	folder.Name = "Pile"
 	folder.Parent = Plots.folder(plotIndex)
-	local pile = { folder = folder, parts = {} }
-	piles[plotIndex] = pile
-	for index = 1, #Layout do
-		local left = Profile.clumpLeft(d, index)
-		if left > 0 then
-			local part = Instance.new("Part")
-			part.Name = tostring(index)
-			part.Anchored = true
-			part.Size = sizeFor(left)
-			part.CFrame = CFrame.new(Piles.position(plotIndex, index))
-			part.Color = shade(index)
-			part.Material = Enum.Material.Grass
-			part.CastShadow = false
-			part.TopSurface = Enum.SurfaceType.Smooth
-			part.BottomSurface = Enum.SurfaceType.Smooth
-			part:SetAttribute("Clump", index)
-			part.Parent = folder
-			pile.parts[index] = part
-		end
-		if index % 400 == 0 then
-			task.wait()
+	local o = origin(plotIndex)
+	piles[plotIndex] = { folder = folder, origin = o }
+	local s = Config.ClumpSize
+	local n = math.ceil(Config.PileRadiusBottom / s) + 1
+	local materials, amounts = {}, {}
+	for x = 1, 2 * n + 1 do
+		materials[x], amounts[x] = {}, {}
+		for y = 1, Config.PileLayers do
+			materials[x][y], amounts[x][y] = {}, {}
+			for z = 1, 2 * n + 1 do
+				materials[x][y][z], amounts[x][y][z] = Enum.Material.Air, 0
+			end
 		end
 	end
-	return pile
+	for index, cell in ipairs(Layout.cell) do
+		local amount = fullness(index, Profile.clumpLeft(d, index))
+		if amount > 0 then
+			local x, y, z = cell[1] + n + 1, cell[2] + 1, cell[3] + n + 1
+			materials[x][y][z], amounts[x][y][z] = HEAP, amount
+		end
+	end
+	local corner = o - Vector3.new(n * s + s / 2, 0, n * s + s / 2)
+	terrain:WriteVoxels(Region3.new(corner, corner + Vector3.new((2 * n + 1) * s, Config.PileLayers * s, (2 * n + 1) * s)), s, materials, amounts)
+	return piles[plotIndex]
 end
 
--- The part for a clump on a plot, if it still exists.
-function Piles.part(plotIndex, clump)
-	local pile = piles[plotIndex]
-	return pile and pile.folder.Parent ~= nil and pile.parts[clump] or nil
+-- Clears a plot's heap from the terrain (when its player leaves).
+function Piles.clear(plotIndex)
+	local o = origin(plotIndex)
+	local reach = (math.ceil(Config.PileRadiusBottom / Config.ClumpSize) + 1) * Config.ClumpSize + Config.ClumpSize / 2
+	terrain:FillBlock(CFrame.new(o + Vector3.new(0, Config.PileLayers * Config.ClumpSize / 2, 0)), Vector3.new(reach * 2, Config.PileLayers * Config.ClumpSize, reach * 2), Enum.Material.Air)
+	piles[plotIndex] = nil
 end
 
 -- Takes up to `amount` straws from a clump. Returns straws taken and whether the clump
@@ -1432,26 +1553,21 @@ function Piles.take(plotIndex, d, clump, amount)
 		return 0, false
 	end
 	Profile.setClumpLeft(d, clump, left - taken)
-	local part = Piles.part(plotIndex, clump)
-	if part then
-		if left - taken <= 0 then
-			piles[plotIndex].parts[clump] = nil
-			part:Destroy()
-		else
-			part.Size = sizeFor(left - taken)
-		end
+	if fullness(clump, left - taken) ~= fullness(clump, left) then
+		writeCell(plotIndex, clump, left - taken)
 	end
 	return taken, left - taken <= 0
 end
 
--- The highest clump still standing (machines harvest the pile from the top down).
-function Piles.top(d)
-	for index = Config.Clumps, 1, -1 do
-		if string.sub(d.removed, index, index) == "0" then
-			return index
-		end
+-- The next clump for the machines: they peel the heap from the outside in, bottom first.
+function Piles.next(d)
+	local order = Layout.machineOrder
+	local i = cursor[d] or 1
+	while i <= #order and string.sub(d.removed, order[i], order[i]) == "1" do
+		i += 1
 	end
-	return nil
+	cursor[d] = i
+	return order[i]
 end
 
 -- A fresh pile for a new needle, in the saved data (do this straight away).
@@ -1460,20 +1576,16 @@ function Piles.resetData(d)
 	d.partial = {}
 	d.needleClump = Profile.newNeedle()
 	d.revealed = false
+	cursor[d] = nil
 end
 
--- Rebuilds the pile's parts from the data (after resetData).
+-- Rebuilds the heap from the data (after resetData).
 function Piles.rebuild(plotIndex, d)
 	local pile = piles[plotIndex]
 	if pile then
 		pile.folder:Destroy()
-		piles[plotIndex] = nil
 	end
-	task.spawn(Piles.build, plotIndex, d)
-end
-
-function Piles.forget(plotIndex)
-	piles[plotIndex] = nil
+	Piles.build(plotIndex, d)
 end
 
 return Piles
@@ -1553,6 +1665,7 @@ local function publish(player, profile)
 	player:SetAttribute("Coins", d.coins)
 	player:SetAttribute("Tool", d.tool)
 	player:SetAttribute("Silo", d.silo)
+	player:SetAttribute("Bucket", d.bucket)
 	player:SetAttribute("Carried", d.carried + d.carriedGolden)
 	player:SetAttribute("Capacity", Economy.capacity(d))
 	player:SetAttribute("SiloStraw", d.siloStraw)
@@ -1838,9 +1951,13 @@ function Plots.claim(player)
 	return nil
 end
 
+Plots.onRelease = nil -- set by Main: clears the heap's terrain
 function Plots.release(player)
 	local index = byPlayer[player]
 	if index then
+		if Plots.onRelease then
+			Plots.onRelease(index)
+		end
 		owners[index] = nil
 		byPlayer[player] = nil
 		signs[index].Text = "FREE PLOT"
@@ -1870,6 +1987,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Economy = require(Shared:WaitForChild("Economy"))(Config)
+local Layout = require(Shared:WaitForChild("Layout"))(Config)
 
 local Profile = {}
 local rng = Random.new()
@@ -1881,8 +1999,10 @@ local function number(saved, name, default)
 	return if type(v) == "number" then v else default
 end
 
+-- The needle hides deep inside the upper heap (Config.NeedleHeight, Config.NeedleCore).
 function Profile.newNeedle()
-	return rng:NextInteger(1, Config.Clumps)
+	local spots = Layout.needleSpots
+	return if #spots > 0 then spots[rng:NextInteger(1, #spots)] else rng:NextInteger(1, Config.Clumps)
 end
 
 function Profile.fresh(saved)
@@ -1891,6 +2011,7 @@ function Profile.fresh(saved)
 		coins = number(saved, "coins", 0),
 		tool = math.clamp(math.floor(number(saved, "tool", 1)), 1, #Config.Tools),
 		silo = math.clamp(math.floor(number(saved, "silo", 1)), 1, #Config.Silos),
+		bucket = math.clamp(math.floor(number(saved, "bucket", 1)), 1, #Config.Buckets),
 		carried = number(saved, "carried", 0),
 		carriedGolden = number(saved, "carriedGolden", 0),
 		siloStraw = number(saved, "siloStraw", 0),
@@ -2166,12 +2287,16 @@ local function harvest(player, target)
 	if now - (lastHarvest[player] or 0) < Economy.cooldown(d) * 0.9 then
 		return status(player, player:GetAttribute("HarvestStatus") or "") -- faster than the tool swings: ignored
 	end
-	if typeof(target) ~= "Instance" or not target:IsA("BasePart") then
-		return nope(player, "That isn't a clump of hay.")
+	-- the heap is terrain: the client sends the point it aimed at (just inside the surface);
+	-- the golden haystack in the loft is still parts, so that's the part itself
+	local isPart = typeof(target) == "Instance" and target:IsA("BasePart")
+	if not isPart and typeof(target) ~= "Vector3" then
+		return nope(player, "That isn't hay.")
 	end
+	local point = if isPart then target.Position else target
 	local head = c:FindFirstChild("Head")
-	if not head or (head.Position - target.Position).Magnitude > Config.Reach + 6 then
-		return nope(player, "Too far away. Step closer to the clump.")
+	if not head or (head.Position - point).Magnitude > Config.Reach + 6 then
+		return nope(player, "Too far away. Step closer to the hay.")
 	end
 	lastHarvest[player] = now
 	local flags = PlayerData.flags(player)
@@ -2179,7 +2304,7 @@ local function harvest(player, target)
 		if flags.autoSell then
 			Search.sell(player, "auto")
 		else
-			status(player, "Your tool is full. Sell at the merchant.")
+			status(player, "You're full. Dump your hay in your trader's basket.")
 			Remotes.SearchFx:FireClient(player, { kind = "full" })
 			return
 		end
@@ -2187,17 +2312,22 @@ local function harvest(player, target)
 	local power = math.min(Economy.power(d, flags.speedBoost), room(d))
 	local taken, hit, golden, gone = 0, false, false, false
 	local loft = workspace:FindFirstChild("Loft")
-	if loft and target:IsDescendantOf(loft) and player:GetAttribute("LoftOpen") then
+	if isPart then
+		if not (loft and target:IsDescendantOf(loft) and player:GetAttribute("LoftOpen")) then
+			return nope(player, "That isn't your hay.")
+		end
 		golden = true
 		taken, hit = goldenHarvest(player, d, power)
 	else
 		local plotIndex = Plots.of(player)
-		local clump = target:GetAttribute("Clump")
 		if not plotIndex then
 			return nope(player, "You don't have a farm yet (all four plots may be taken).")
-		elseif not clump or not target:IsDescendantOf(Plots.folder(plotIndex)) then
-			return nope(player, "That's not your pile. Yours is on the farm marked YOUR FARM.")
 		end
+		local clump = Plots.contains(plotIndex, point, 0) and Piles.clumpAt(plotIndex, d, point)
+		if not clump then
+			return nope(player, "That's not your heap. Yours is on the farm marked YOUR FARM.")
+		end
+		point = Piles.position(plotIndex, clump)
 		taken, gone = Piles.take(plotIndex, d, clump, power)
 		hit = gone and clump == d.needleClump
 		PlayerData.update(player, function(data)
@@ -2220,11 +2350,11 @@ local function harvest(player, target)
 	if not golden and d.tool >= Config.DetectorLevel and plotIndex then
 		warmth = Economy.warmth((head.Position - Piles.position(plotIndex, d.needleClump)).Magnitude)
 	end
-	Remotes.SearchFx:FireClient(player, { kind = "harvest", golden = golden, gone = gone, straws = taken, position = target.Position, warmth = warmth, full = room(d) <= 0 })
+	Remotes.SearchFx:FireClient(player, { kind = "harvest", golden = golden, gone = gone, straws = taken, position = point, warmth = warmth, full = room(d) <= 0 })
 	if hit then
-		Search.needleFound(player, golden, target.Position)
+		Search.needleFound(player, golden, point)
 	elseif rng:NextNumber() < Economy.luckyChance(d, flags.luckyCharm) then
-		luckyFind(player, d, flags, target.Position)
+		luckyFind(player, d, flags, point)
 	end
 	Achievements.check(player)
 end
@@ -2304,6 +2434,22 @@ function buyers.tool(player, d, level)
 	end)
 	Tools.give(player, level, d.skin)
 	return true, "You got the " .. tool.name .. ": " .. tool.power .. " straws a click, carries " .. Format.commas(tool.capacity) .. "."
+end
+
+function buyers.bucket(player, d, level)
+	local bucket = Config.Buckets[level]
+	if level ~= d.bucket + 1 or not bucket then
+		return false, if bucket then "Buy the buckets in order." else "You already have the biggest bucket!"
+	end
+	local missing = short(d, bucket.price)
+	if missing then
+		return false, missing
+	end
+	PlayerData.update(player, function(data)
+		data.coins -= bucket.price
+		data.bucket = level
+	end)
+	return true, "Your " .. bucket.name .. " carries " .. Format.commas(bucket.capacity) .. " more straws."
 end
 
 function buyers.silo(player, d, level)
@@ -3235,49 +3381,89 @@ local target = nil
 local lastSwing = 0
 local hooked = setmetatable({}, { __mode = "k" })
 
+local Layout = require(Shared:WaitForChild("Layout"))(Config)
+local HEAP = Enum.Material.Grass
+
+-- The heap is terrain, so a see-through box marks the clump you're aiming at.
+local marker = Instance.new("Part")
+marker.Name = "AimMarker"
+marker.Anchored, marker.CanCollide, marker.CanQuery, marker.CanTouch = true, false, false, false
+marker.Transparency = 1
+marker.Size = Vector3.new(1, 1, 1) * (Config.ClumpSize + 0.2)
 local outline = Instance.new("SelectionBox")
 outline.Color3 = Color3.fromRGB(255, 236, 170)
-outline.LineThickness = 0.06
-outline.SurfaceTransparency = 0.85
+outline.LineThickness = 0.05
+outline.SurfaceTransparency = 0.88
 outline.SurfaceColor3 = Color3.fromRGB(255, 236, 170)
 outline.Parent = player:WaitForChild("PlayerGui")
 
-local function harvestable(part)
-	if not part then
-		return false
-	end
-	local loft = workspace:FindFirstChild("Loft")
-	if loft and part:IsDescendantOf(loft) and string.sub(part.Name, 1, 6) == "Golden" then
-		return player:GetAttribute("LoftOpen") == true
-	end
+local function myOrigin()
 	local plot = player:GetAttribute("Plot")
-	local plots = workspace:FindFirstChild("Plots")
-	local mine = plot and plots and plots:FindFirstChild("Plot" .. plot)
-	return mine ~= nil and part:GetAttribute("Clump") ~= nil and part:IsDescendantOf(mine)
+	local centre = plot and Config.PlotCentres[plot]
+	if not centre then
+		return nil
+	end
+	local x, z = Layout.origin(centre[1], centre[2])
+	return Vector3.new(x, 0, z), Vector3.new(centre[1], 0, centre[2])
 end
 
-local function aim()
+-- Where on your own heap a ray hit: the point just inside the surface and its clump's centre.
+local function onMyHeap(result)
+	if not result or result.Instance ~= workspace.Terrain or result.Material ~= HEAP then
+		return nil
+	end
+	local origin, centre = myOrigin()
+	if not origin then
+		return nil
+	end
+	local inside = result.Position - result.Normal * 1.5
+	local half = Config.PlotSize / 2
+	if math.abs(inside.X - centre.X) > half or math.abs(inside.Z - centre.Z) > half then
+		return nil
+	end
+	local s = Config.ClumpSize
+	local gx, layer, gz = math.floor((inside.X - origin.X) / s + 0.5), math.floor(inside.Y / s), math.floor((inside.Z - origin.Z) / s + 0.5)
+	return inside, origin + Vector3.new(gx * s, layer * s + s / 2, gz * s)
+end
+
+local function harvestable(part)
+	local loft = workspace:FindFirstChild("Loft")
+	return part ~= nil and loft ~= nil and part:IsDescendantOf(loft) and string.sub(part.Name, 1, 6) == "Golden" and player:GetAttribute("LoftOpen") == true
+end
+
+local function cast(distance, ignoreEffects)
 	local camera = workspace.CurrentCamera
 	local character = player.Character
-	local head = character and character:FindFirstChild("Head")
-	if not camera or not head then
-		return nil, nil
+	if not camera or not character then
+		return nil
 	end
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { character, workspace:FindFirstChild("MyEffects") }
-	local result = workspace:Raycast(camera.CFrame.Position, camera.CFrame.LookVector * (Config.Reach + 4), params)
-	if result and harvestable(result.Instance) and (result.Position - head.Position).Magnitude <= Config.Reach then
-		return result.Instance, result.Position
+	params.FilterDescendantsInstances = if ignoreEffects then { character, workspace:FindFirstChild("MyEffects") } else { character }
+	return workspace:Raycast(camera.CFrame.Position, camera.CFrame.LookVector * distance, params)
+end
+
+-- What a click would harvest: (what to send the server, where it is, the marker's centre)
+local function aim()
+	local head = player.Character and player.Character:FindFirstChild("Head")
+	local result = head and cast(Config.Reach + 4, true)
+	if not result or (result.Position - head.Position).Magnitude > Config.Reach then
+		return nil
 	end
-	return nil, nil
+	local inside, cell = onMyHeap(result)
+	if inside then
+		return inside, result.Position, cell
+	elseif harvestable(result.Instance) then
+		return result.Instance, result.Position, nil
+	end
+	return nil
 end
 
 function Harvest.target()
 	return target
 end
 
--- A click that hit no harvestable clump: say what the crosshair is on (at most every 2 s).
+-- A click that hit nothing to harvest: say what the crosshair is on (at most every 2 s).
 local lastMiss = 0
 Harvest.onMiss = nil
 Harvest.lastFired = 0
@@ -3286,26 +3472,21 @@ function Harvest.miss()
 		return
 	end
 	lastMiss = time()
-	local camera, character = workspace.CurrentCamera, player.Character
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { character }
-	local result = camera and workspace:Raycast(camera.CFrame.Position, camera.CFrame.LookVector * 300, params)
-	local plot = player:GetAttribute("Plot")
-	if not plot then
+	local result = cast(300, false)
+	local head = player.Character and player.Character:FindFirstChild("Head")
+	if not player:GetAttribute("Plot") then
 		Harvest.onMiss("Your farm isn't ready yet. Wait a moment.")
 	elseif not result then
-		Harvest.onMiss("Aim the dot in the middle of the screen at a clump of your pile.")
-	elseif result.Instance:GetAttribute("Clump") then
-		local head = character and character:FindFirstChild("Head")
+		Harvest.onMiss("Aim the dot in the middle of the screen at your hay heap.")
+	elseif result.Instance == workspace.Terrain and result.Material == HEAP then
 		local far = head and (result.Position - head.Position).Magnitude or 0
-		if far > Config.Reach then
+		if onMyHeap(result) and far > Config.Reach then
 			Harvest.onMiss("Too far: " .. math.floor(far) .. " studs. Get within " .. Config.Reach .. ".")
-		else
-			Harvest.onMiss("That's not your pile. Yours is on the farm marked YOUR FARM.")
+		elseif not onMyHeap(result) then
+			Harvest.onMiss("That's not your heap. Yours is on the farm marked YOUR FARM.")
 		end
 	else
-		Harvest.onMiss("That's " .. result.Instance.Name .. ", not hay. Aim the dot at a clump of your pile.")
+		Harvest.onMiss("That's " .. (if result.Instance == workspace.Terrain then "the ground" else result.Instance.Name) .. ", not hay. Aim the dot at your heap.")
 	end
 end
 
@@ -3316,7 +3497,7 @@ end
 -- One swing: harvest the clump under the crosshair (shared by the tool and the mouse button).
 local function swing(tool)
 	local part, point = aim()
-	if not part then
+	if part == nil then
 		Harvest.miss()
 		return
 	end
@@ -3327,7 +3508,7 @@ local function swing(tool)
 	Harvest.lastFired = time()
 	Remotes.Harvest:FireServer(part)
 	-- instant feel: a puff where you hit and a tiny camera push (the combo waits for the server)
-	Juice.burst(point, 6, part.Name:sub(1, 6) == "Golden")
+	Juice.burst(point, 6, typeof(part) == "Instance")
 	Juice.punch(1.2)
 	local anim = Instance.new("StringValue") -- the default Animate script plays a swing for this
 	anim.Name = "toolanim"
@@ -3373,9 +3554,15 @@ function Harvest.start()
 		end
 	end)
 	RunService.RenderStepped:Connect(function()
-		local part = aim()
+		local part, _, cell = aim()
 		target = part
-		outline.Adornee = part
+		if cell then
+			marker.Position = cell
+			marker.Parent = workspace:FindFirstChild("MyEffects") or workspace
+			outline.Adornee = marker
+		else
+			outline.Adornee = if typeof(part) == "Instance" then part else nil
+		end
 	end)
 	local backpackConnection = nil
 	local function onCharacter(character)
@@ -4662,9 +4849,13 @@ return Ui
 						<ProtectedString name="Source"><![CDATA[-- World effects on your screen: the glowing needle clump (Wheel jackpot), the wheel turning
 -- when you spin, your machines' fans spinning, and a marker over your own farm.
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Layout = require(Shared:WaitForChild("Layout"))(Config)
 local Ui = require(script.Parent.Ui)
 local Juice = require(script.Parent.Juice)
 
@@ -4679,22 +4870,27 @@ end
 
 -- The Wheel's NEEDLE REVEAL: the needle's clump glows through everything.
 function WorldFx.reveal(clump)
-	task.spawn(function()
-		local plot = myPlot()
-		local pile = plot and plot:WaitForChild("Pile", 30)
-		local part = pile and pile:WaitForChild(tostring(clump), 30)
-		if not part then
-			return
-		end
-		local glow = Instance.new("Highlight")
-		glow.FillColor = Color3.fromRGB(255, 214, 90)
-		glow.OutlineColor = Color3.fromRGB(255, 255, 255)
-		glow.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-		glow.Adornee = part
-		glow.Parent = part
-		local board = Ui.make("BillboardGui", { Adornee = part, Size = UDim2.fromOffset(220, 40), StudsOffset = Vector3.new(0, 5, 0), AlwaysOnTop = true, LightInfluence = 0, Parent = part })
-		Ui.label({ Text = "THE NEEDLE IS HERE", Size = UDim2.fromScale(1, 1), TextColor3 = Ui.colors.hay, Parent = board }, 30)
-		TweenService:Create(glow, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { FillTransparency = 0.8 }):Play()
+	local plot = player:GetAttribute("Plot")
+	local centre = plot and Config.PlotCentres[plot]
+	local offset = Layout[clump]
+	if not centre or not offset then
+		return
+	end
+	local x, z = Layout.origin(centre[1], centre[2])
+	-- a soft golden glow inside the heap where the needle's clump is, seen through the straw
+	local part = Ui.make("Part", { Name = "NeedleGlow", Anchored = true, CanCollide = false, CanQuery = false, CanTouch = false, Shape = Enum.PartType.Ball, Size = Vector3.new(3, 3, 3), Position = Vector3.new(x + offset[1], offset[2], z + offset[3]), Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 214, 90), Transparency = 0.2, Parent = workspace })
+	local glow = Instance.new("Highlight")
+	glow.FillColor = Color3.fromRGB(255, 214, 90)
+	glow.OutlineColor = Color3.fromRGB(255, 255, 255)
+	glow.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+	glow.Adornee = part
+	glow.Parent = part
+	local board = Ui.make("BillboardGui", { Adornee = part, Size = UDim2.fromOffset(220, 40), StudsOffset = Vector3.new(0, 5, 0), AlwaysOnTop = true, LightInfluence = 0, Parent = part })
+	Ui.label({ Text = "THE NEEDLE IS HERE", Size = UDim2.fromScale(1, 1), TextColor3 = Ui.colors.hay, Parent = board }, 30)
+	TweenService:Create(glow, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { FillTransparency = 0.8 }):Play()
+	-- gone once the needle's found (the clump count jumps back to full)
+	player:GetAttributeChangedSignal("Needles"):Connect(function()
+		part:Destroy()
 	end)
 end
 

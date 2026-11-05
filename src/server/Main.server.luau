@@ -10,6 +10,7 @@ World.ground()
 StarterPlayer.CameraMode = Enum.CameraMode.LockFirstPerson
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 
 -- While testing in Studio, server errors also show on the players' screens.
 if RunService:IsStudio() then
@@ -32,8 +33,11 @@ local Loft = require(script.Parent.Loft)
 local Wheel = require(script.Parent.Wheel)
 local Monetization = require(script.Parent.Monetization)
 
+StarterPlayer.CharacterMaxSlopeAngle = Config.MaxSlopeAngle -- the steep heap needs building to climb
+
 World.build()
 Plots.build()
+Plots.onRelease = Piles.clear
 Haystack.build()
 
 local function toPlot(player)

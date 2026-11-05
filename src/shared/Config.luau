@@ -9,13 +9,22 @@ Config.FarmName = "Hollow Creek Farm"
 Config.PlotSize = 140
 Config.PlotCentres = { { 85, 85 }, { -85, 85 }, { -85, -85 }, { 85, -85 } }
 
--- The pile: 5,000,000 straws in clumps stacked about 255 studs (70 m) high.
+-- The heap: 5,000,000 straws in clumps, one smooth terrain heap 256 studs (70 m) high.
+-- Each clump is one 4-stud terrain cell (the terrain grid size, so keep ClumpSize = 4).
 Config.TotalStraws = 5000000
 Config.Clumps = 5000 -- each holds TotalStraws / Clumps = 1,000 straws
-Config.ClumpSize = 5
-Config.PileLayers = 51 -- 51 layers x 5 studs = 255 studs
-Config.PileRadiusBottom = 42
-Config.PileRadiusTop = 12
+Config.ClumpSize = 4
+Config.PileLayers = 64 -- 64 layers x 4 studs = 256 studs
+Config.PileRadiusBottom = 38
+Config.PileRadiusTop = 4
+Config.PileCurve = 1.6 -- above 1: a wide, sloping base and a steep, narrow top
+Config.HeapColour = { 222, 186, 92 } -- straw gold (the terrain Grass material is the heap)
+Config.MaxSlopeAngle = 46 -- players can't walk up anything steeper: they build to climb
+-- The needle hides deep inside the upper heap: between these shares of the height, and no
+-- further from the middle than this share of the heap's width there. Machines peel the heap
+-- from the outside in, so they reach it last; climbing up and digging in finds it sooner.
+Config.NeedleHeight = { 0.5, 0.8 }
+Config.NeedleCore = 0.4
 Config.Reach = 18 -- studs from your head to a clump you can harvest
 Config.SearchCooldown = 0.3 -- seconds between harvests (the Swift perk shortens it)
 Config.MerchantRange = 16
@@ -35,7 +44,18 @@ Config.Tools = {
 	{ name = "Twin Turbines", power = 19, capacity = 75000, price = 1700000, shaft = { 40, 44, 52 }, head = { 255, 170, 40 }, material = "Metal" },
 	{ name = "Needle Detector", power = 22, capacity = 100000, price = 3400000, shaft = { 40, 44, 52 }, head = { 70, 255, 150 }, material = "Neon" },
 }
-Config.DetectorLevel = 10 -- from this tool on, the HUD shows how close the needle is
+Config.DetectorLevel = 10
+Config.LoadSize = 2.4 -- studs across the hay on a full tool
+
+-- Buckets hang at your hip and carry what the tool can't: tool fills first, then the bucket.
+Config.Buckets = {
+	{ name = "No bucket", capacity = 0, price = 0, size = 0 },
+	{ name = "Tin Pail", capacity = 600, price = 1500, size = 1.2 },
+	{ name = "Hay Bucket", capacity = 2000, price = 9000, size = 1.6 },
+	{ name = "Big Tub", capacity = 6000, price = 60000, size = 2 },
+	{ name = "Hay Barrel", capacity = 20000, price = 400000, size = 2.4 },
+	{ name = "Giant Basket", capacity = 60000, price = 2500000, size = 2.8 },
+} -- from this tool on, the HUD shows how close the needle is
 
 -- The silo on your plot holds what your machines harvest until you next sell.
 Config.Silos = {
@@ -72,7 +92,11 @@ Config.Pieces = {
 	{ id = "pillar", name = "Pillar", price = 100, size = { 2, 10, 2 }, text = "A 10-stud post to hold things up." },
 	{ id = "escalator", name = "Escalator", price = 4000, size = { 8, 10, 10 }, text = "Stairs that carry you up 10 studs." },
 	{ id = "elevator", name = "Elevator", price = 30000, size = { 10, 51, 10 }, text = "A 50-stud lift. Press E at the bottom or top." },
+	{ id = "teleporter", name = "Teleporter Pad", price = 25000, size = { 8, 1, 8 }, text = "Step on, press E, pick any of your other pads." },
+	{ id = "trader", name = "Trader's Stall", price = 0, max = 1, size = { 12, 12, 8 }, text = "Your trader. Dump your hay in the basket. Move it anywhere, even up a platform." },
 }
+Config.TraderDistance = 50 -- your trader's stall starts this far from your plot's centre, towards the hub
+Config.BasketDrainSeconds = 4 -- the trader carts the basket away this fast (just for show)
 Config.BuildGrid = 1 -- placement snaps to this many studs
 Config.MaxPlaced = 400 -- pieces, machines and generators on one plot
 
@@ -89,7 +113,7 @@ Config.LuckyValueSearches = 60
 -- Sounds: paste asset IDs from the Studio Toolbox (e.g. "rbxassetid://12345"). "" = silent.
 Config.Sounds = { harvest = "", pop = "", coins = "", cheer = "", spin = "" }
 
-Config.DataStoreName = "NeedleHaystack_v3"
+Config.DataStoreName = "NeedleHaystack_v4" -- v4: the terrain heap numbers clumps differently
 Config.AutosaveSeconds = 120
 
 -- Robux. Nothing shows in the shop until you create the item on the Creator Dashboard

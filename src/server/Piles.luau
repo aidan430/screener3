@@ -11,66 +11,110 @@ local Plots = require(script.Parent.Plots)
 local Profile = require(script.Parent.Profile)
 
 local Piles = {}
-local piles = {} -- [plot index] = { folder, parts = { [clump index] = part }, base = Vector3 }
+local piles = {} -- [plot index] = { folder, origin = Vector3 }
+local cursor = setmetatable({}, { __mode = "k" }) -- [data] = where the machines got to in machineOrder
+local terrain = workspace.Terrain
+local HEAP = Enum.Material.Grass -- recoloured to straw; its grass blades read as loose straw
+local STEPS = 8 -- a clump shrinks in this many visible steps as you harvest it
 
-local HAY = {
-	Color3.fromRGB(226, 190, 92),
-	Color3.fromRGB(212, 172, 76),
-	Color3.fromRGB(236, 204, 112),
-	Color3.fromRGB(220, 182, 84),
-}
-
-local function shade(index)
-	return HAY[(index * 7919) % #HAY + 1]
+local function setup()
+	terrain:SetMaterialColor(HEAP, Color3.fromRGB(Config.HeapColour[1], Config.HeapColour[2], Config.HeapColour[3]))
+	pcall(function()
+		terrain.Decoration = true -- the grass blades: individual straws on the heap
+	end)
 end
 
--- A partly harvested clump shrinks a little, so you can see your progress on it.
-local function sizeFor(left)
-	local s = Config.ClumpSize + 0.3
-	local k = 0.6 + 0.4 * left / Economy.STRAWS_PER_CLUMP
-	return Vector3.new(s * k, s * k, s * k)
+local function origin(plotIndex)
+	local centre = Plots.centre(plotIndex)
+	local x, z = Layout.origin(centre.X, centre.Z)
+	return Vector3.new(x, 0, z)
+end
+
+-- How full a clump's terrain cell looks: the heap's rounded outside, shrinking as it's harvested.
+local function fullness(index, left)
+	if left <= 0 then
+		return 0
+	end
+	local step = math.ceil(left / Economy.STRAWS_PER_CLUMP * STEPS) / STEPS
+	return Layout.shape[index] * (0.3 + 0.7 * step)
+end
+
+local function writeCell(plotIndex, index, left)
+	local o = piles[plotIndex] and piles[plotIndex].origin
+	if not o then
+		return
+	end
+	local c = o + Vector3.new(Layout[index][1], Layout[index][2], Layout[index][3])
+	local half = Vector3.new(1, 1, 1) * (Config.ClumpSize / 2)
+	local amount = fullness(index, left)
+	terrain:WriteVoxels(Region3.new(c - half, c + half), Config.ClumpSize, { { { if amount > 0 then HEAP else Enum.Material.Air } } }, { { { amount } } })
 end
 
 function Piles.position(plotIndex, clump)
 	local c = Layout[clump]
-	return Plots.centre(plotIndex) + Vector3.new(c[1], c[2], c[3])
+	return origin(plotIndex) + Vector3.new(c[1], c[2], c[3])
 end
 
--- Builds the player's pile on their plot from their data. Yields a little between batches.
+-- The clump nearest a point on (or just inside) the heap's surface, if one is left there.
+function Piles.clumpAt(plotIndex, d, point)
+	local o = origin(plotIndex)
+	local s = Config.ClumpSize
+	local gx, layer, gz = math.floor((point.X - o.X) / s + 0.5), math.floor(point.Y / s), math.floor((point.Z - o.Z) / s + 0.5)
+	local best, bestDistance = nil, math.huge
+	for dx = -1, 1 do
+		for dy = -1, 1 do
+			for dz = -1, 1 do
+				local index = Layout.lookup(gx + dx, layer + dy, gz + dz)
+				if index and Profile.clumpLeft(d, index) > 0 then
+					local distance = (Piles.position(plotIndex, index) - point).Magnitude
+					if distance < bestDistance then
+						best, bestDistance = index, distance
+					end
+				end
+			end
+		end
+	end
+	return best
+end
+
+-- Builds the player's heap on their plot from their data, as one smooth piece of terrain.
 function Piles.build(plotIndex, d)
+	setup()
 	local folder = Instance.new("Folder")
 	folder.Name = "Pile"
 	folder.Parent = Plots.folder(plotIndex)
-	local pile = { folder = folder, parts = {} }
-	piles[plotIndex] = pile
-	for index = 1, #Layout do
-		local left = Profile.clumpLeft(d, index)
-		if left > 0 then
-			local part = Instance.new("Part")
-			part.Name = tostring(index)
-			part.Anchored = true
-			part.Size = sizeFor(left)
-			part.CFrame = CFrame.new(Piles.position(plotIndex, index))
-			part.Color = shade(index)
-			part.Material = Enum.Material.Grass
-			part.CastShadow = false
-			part.TopSurface = Enum.SurfaceType.Smooth
-			part.BottomSurface = Enum.SurfaceType.Smooth
-			part:SetAttribute("Clump", index)
-			part.Parent = folder
-			pile.parts[index] = part
-		end
-		if index % 400 == 0 then
-			task.wait()
+	local o = origin(plotIndex)
+	piles[plotIndex] = { folder = folder, origin = o }
+	local s = Config.ClumpSize
+	local n = math.ceil(Config.PileRadiusBottom / s) + 1
+	local materials, amounts = {}, {}
+	for x = 1, 2 * n + 1 do
+		materials[x], amounts[x] = {}, {}
+		for y = 1, Config.PileLayers do
+			materials[x][y], amounts[x][y] = {}, {}
+			for z = 1, 2 * n + 1 do
+				materials[x][y][z], amounts[x][y][z] = Enum.Material.Air, 0
+			end
 		end
 	end
-	return pile
+	for index, cell in ipairs(Layout.cell) do
+		local amount = fullness(index, Profile.clumpLeft(d, index))
+		if amount > 0 then
+			local x, y, z = cell[1] + n + 1, cell[2] + 1, cell[3] + n + 1
+			materials[x][y][z], amounts[x][y][z] = HEAP, amount
+		end
+	end
+	local corner = o - Vector3.new(n * s + s / 2, 0, n * s + s / 2)
+	terrain:WriteVoxels(Region3.new(corner, corner + Vector3.new((2 * n + 1) * s, Config.PileLayers * s, (2 * n + 1) * s)), s, materials, amounts)
+	return piles[plotIndex]
 end
 
--- The part for a clump on a plot, if it still exists.
-function Piles.part(plotIndex, clump)
-	local pile = piles[plotIndex]
-	return pile and pile.folder.Parent ~= nil and pile.parts[clump] or nil
+-- Clears a plot's heap from the terrain (when its player leaves).
+function Piles.clear(plotIndex)
+	local o = origin(plotIndex)
+	local reach = (math.ceil(Config.PileRadiusBottom / Config.ClumpSize) + 1) * Config.ClumpSize + Config.ClumpSize / 2
+	terrain:FillBlock(CFrame.new(o + Vector3.new(0, Config.PileLayers * Config.ClumpSize / 2, 0)), Vector3.new(reach * 2, Config.PileLayers * Config.ClumpSize, reach * 2), Enum.Material.Air)
+	piles[plotIndex] = nil
 end
 
 -- Takes up to `amount` straws from a clump. Returns straws taken and whether the clump
@@ -82,26 +126,21 @@ function Piles.take(plotIndex, d, clump, amount)
 		return 0, false
 	end
 	Profile.setClumpLeft(d, clump, left - taken)
-	local part = Piles.part(plotIndex, clump)
-	if part then
-		if left - taken <= 0 then
-			piles[plotIndex].parts[clump] = nil
-			part:Destroy()
-		else
-			part.Size = sizeFor(left - taken)
-		end
+	if fullness(clump, left - taken) ~= fullness(clump, left) then
+		writeCell(plotIndex, clump, left - taken)
 	end
 	return taken, left - taken <= 0
 end
 
--- The highest clump still standing (machines harvest the pile from the top down).
-function Piles.top(d)
-	for index = Config.Clumps, 1, -1 do
-		if string.sub(d.removed, index, index) == "0" then
-			return index
-		end
+-- The next clump for the machines: they peel the heap from the outside in, bottom first.
+function Piles.next(d)
+	local order = Layout.machineOrder
+	local i = cursor[d] or 1
+	while i <= #order and string.sub(d.removed, order[i], order[i]) == "1" do
+		i += 1
 	end
-	return nil
+	cursor[d] = i
+	return order[i]
 end
 
 -- A fresh pile for a new needle, in the saved data (do this straight away).
@@ -110,20 +149,16 @@ function Piles.resetData(d)
 	d.partial = {}
 	d.needleClump = Profile.newNeedle()
 	d.revealed = false
+	cursor[d] = nil
 end
 
--- Rebuilds the pile's parts from the data (after resetData).
+-- Rebuilds the heap from the data (after resetData).
 function Piles.rebuild(plotIndex, d)
 	local pile = piles[plotIndex]
 	if pile then
 		pile.folder:Destroy()
-		piles[plotIndex] = nil
 	end
-	task.spawn(Piles.build, plotIndex, d)
-end
-
-function Piles.forget(plotIndex)
-	piles[plotIndex] = nil
+	Piles.build(plotIndex, d)
 end
 
 return Piles

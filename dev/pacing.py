@@ -6,7 +6,9 @@ with the best rate gain per coin it can afford. Machines need generator power, s
 cost includes the power it needs. Machines fill the silo, sold on every trip. Reads the live
 numbers from src/shared/Config.luau, so retuning Config retunes this.
 
-The needle is in a random clump, so a player finds it on average halfway through the pile.
+The needle hides deep in the upper heap and machines peel the heap from the outside in, so
+without climbing a player reaches it only after most of the heap (needle_share() says how
+much on average). Climbing up and digging straight in is the shortcut that finds it sooner.
 
     python3 dev/pacing.py            # free player
     python3 dev/pacing.py --robux    # with every pass and a permanent 2x speed power-up
@@ -39,6 +41,48 @@ def rows(table: str) -> list[dict]:
         fields = dict(re.findall(r'(\w+) = ("[^"]*"|[\d.]+)', line))
         out.append({k: (v.strip('"') if v.startswith('"') else float(v)) for k, v in fields.items()})
     return out
+
+
+def layout() -> dict:
+    """Mirror of src/shared/Layout.luau: clump cells bottom to top, the machines' order and
+    the needle's hiding places."""
+    import math
+    s, n_layers = number("ClumpSize"), int(number("PileLayers"))
+    r0, r1, curve, clumps = number("PileRadiusBottom"), number("PileRadiusTop"), number("PileCurve"), int(number("Clumps"))
+    height = [float(v) for v in re.search(r"^Config\.NeedleHeight = \{ ([\d.]+), ([\d.]+) \}", CONFIG, re.M).groups()]
+    core_max = number("NeedleCore")
+    layers, radius, total = [], [], 0
+    for i in range(n_layers):
+        r = r1 + (r0 - r1) * (1 - i / (n_layers - 1)) ** curve
+        radius.append(r)
+        n = math.floor(r / s)
+        layer = [(gx, i, gz, gx * gx + gz * gz) for gx in range(-n, n + 1) for gz in range(-n, n + 1) if (gx * s) ** 2 + (gz * s) ** 2 <= r * r]
+        total += len(layer)
+        layers.append(layer)
+    excess = total - clumps
+    for layer in layers:
+        if excess <= 0:
+            break
+        layer.sort(key=lambda c: (-c[3], c[0], c[2]))
+        cut = min(excess, len(layer) // 4)
+        del layer[:cut]
+        excess -= cut
+    cells, core = [], []
+    for layer in layers:
+        layer.sort(key=lambda c: (c[0], c[2]))
+        for c in layer:
+            cells.append((c[0] * s, c[1] * s + s / 2, c[2] * s, c[1]))
+            core.append(min(1.0, max(0.0, math.sqrt(c[3]) * s / max(radius[c[1]], s))))
+    order = sorted(range(len(cells)), key=lambda i: (-math.floor(core[i] * 8), cells[i][3], i))
+    spots = [i for i in range(len(cells)) if height[0] * n_layers <= cells[i][3] <= height[1] * n_layers and core[i] <= core_max]
+    return {"cells": cells, "core": core, "order": order, "spots": spots}
+
+
+def needle_share() -> float:
+    """How much of the heap the machines clear, on average, before reaching the needle."""
+    lay = layout()
+    rank = {c: i for i, c in enumerate(lay["order"])}
+    return sum(rank[c] + 1 for c in lay["spots"]) / len(lay["spots"]) / len(lay["cells"])
 
 
 class Player:
@@ -157,6 +201,11 @@ def simulate(robux: bool) -> list[tuple[float, float]]:
     return marks
 
 
+def needle_hours(marks) -> float:
+    share = needle_share()
+    return next(h for h, s in marks if s >= share - 0.025)
+
+
 def main() -> None:
     robux = "--robux" in sys.argv
     marks = simulate(robux)
@@ -164,8 +213,9 @@ def main() -> None:
     for hours, share in marks:
         if round(share * 100) % 20 == 0:
             print(f"  {share:4.0%} after {hours:5.1f} h")
-    half = next(h for h, s in marks if s >= 0.5)
-    print(f"  the needle is found after about {half:.1f} h on average (the pile is cleared at {marks[-1][0]:.1f} h)")
+    share = needle_share()
+    found = needle_hours(marks)
+    print(f"  the needle is {share:.0%} of the way in: found after about {found:.1f} h on average without climbing (the pile is cleared at {marks[-1][0]:.1f} h)")
 
 
 if __name__ == "__main__":

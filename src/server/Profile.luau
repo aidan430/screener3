@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Economy = require(Shared:WaitForChild("Economy"))(Config)
+local Layout = require(Shared:WaitForChild("Layout"))(Config)
 
 local Profile = {}
 local rng = Random.new()
@@ -16,8 +17,10 @@ local function number(saved, name, default)
 	return if type(v) == "number" then v else default
 end
 
+-- The needle hides deep inside the upper heap (Config.NeedleHeight, Config.NeedleCore).
 function Profile.newNeedle()
-	return rng:NextInteger(1, Config.Clumps)
+	local spots = Layout.needleSpots
+	return if #spots > 0 then spots[rng:NextInteger(1, #spots)] else rng:NextInteger(1, Config.Clumps)
 end
 
 function Profile.fresh(saved)
@@ -26,6 +29,7 @@ function Profile.fresh(saved)
 		coins = number(saved, "coins", 0),
 		tool = math.clamp(math.floor(number(saved, "tool", 1)), 1, #Config.Tools),
 		silo = math.clamp(math.floor(number(saved, "silo", 1)), 1, #Config.Silos),
+		bucket = math.clamp(math.floor(number(saved, "bucket", 1)), 1, #Config.Buckets),
 		carried = number(saved, "carried", 0),
 		carriedGolden = number(saved, "carriedGolden", 0),
 		siloStraw = number(saved, "siloStraw", 0),

@@ -43,6 +43,22 @@ function buyers.tool(player, d, level)
 	return true, "You got the " .. tool.name .. ": " .. tool.power .. " straws a click, carries " .. Format.commas(tool.capacity) .. "."
 end
 
+function buyers.bucket(player, d, level)
+	local bucket = Config.Buckets[level]
+	if level ~= d.bucket + 1 or not bucket then
+		return false, if bucket then "Buy the buckets in order." else "You already have the biggest bucket!"
+	end
+	local missing = short(d, bucket.price)
+	if missing then
+		return false, missing
+	end
+	PlayerData.update(player, function(data)
+		data.coins -= bucket.price
+		data.bucket = level
+	end)
+	return true, "Your " .. bucket.name .. " carries " .. Format.commas(bucket.capacity) .. " more straws."
+end
+
 function buyers.silo(player, d, level)
 	local silo = Config.Silos[level]
 	if level ~= d.silo + 1 or not silo then

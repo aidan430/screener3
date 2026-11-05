@@ -1,9 +1,13 @@
 -- World effects on your screen: the glowing needle clump (Wheel jackpot), the wheel turning
 -- when you spin, your machines' fans spinning, and a marker over your own farm.
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Layout = require(Shared:WaitForChild("Layout"))(Config)
 local Ui = require(script.Parent.Ui)
 local Juice = require(script.Parent.Juice)
 
@@ -18,22 +22,27 @@ end
 
 -- The Wheel's NEEDLE REVEAL: the needle's clump glows through everything.
 function WorldFx.reveal(clump)
-	task.spawn(function()
-		local plot = myPlot()
-		local pile = plot and plot:WaitForChild("Pile", 30)
-		local part = pile and pile:WaitForChild(tostring(clump), 30)
-		if not part then
-			return
-		end
-		local glow = Instance.new("Highlight")
-		glow.FillColor = Color3.fromRGB(255, 214, 90)
-		glow.OutlineColor = Color3.fromRGB(255, 255, 255)
-		glow.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-		glow.Adornee = part
-		glow.Parent = part
-		local board = Ui.make("BillboardGui", { Adornee = part, Size = UDim2.fromOffset(220, 40), StudsOffset = Vector3.new(0, 5, 0), AlwaysOnTop = true, LightInfluence = 0, Parent = part })
-		Ui.label({ Text = "THE NEEDLE IS HERE", Size = UDim2.fromScale(1, 1), TextColor3 = Ui.colors.hay, Parent = board }, 30)
-		TweenService:Create(glow, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { FillTransparency = 0.8 }):Play()
+	local plot = player:GetAttribute("Plot")
+	local centre = plot and Config.PlotCentres[plot]
+	local offset = Layout[clump]
+	if not centre or not offset then
+		return
+	end
+	local x, z = Layout.origin(centre[1], centre[2])
+	-- a soft golden glow inside the heap where the needle's clump is, seen through the straw
+	local part = Ui.make("Part", { Name = "NeedleGlow", Anchored = true, CanCollide = false, CanQuery = false, CanTouch = false, Shape = Enum.PartType.Ball, Size = Vector3.new(3, 3, 3), Position = Vector3.new(x + offset[1], offset[2], z + offset[3]), Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 214, 90), Transparency = 0.2, Parent = workspace })
+	local glow = Instance.new("Highlight")
+	glow.FillColor = Color3.fromRGB(255, 214, 90)
+	glow.OutlineColor = Color3.fromRGB(255, 255, 255)
+	glow.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+	glow.Adornee = part
+	glow.Parent = part
+	local board = Ui.make("BillboardGui", { Adornee = part, Size = UDim2.fromOffset(220, 40), StudsOffset = Vector3.new(0, 5, 0), AlwaysOnTop = true, LightInfluence = 0, Parent = part })
+	Ui.label({ Text = "THE NEEDLE IS HERE", Size = UDim2.fromScale(1, 1), TextColor3 = Ui.colors.hay, Parent = board }, 30)
+	TweenService:Create(glow, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { FillTransparency = 0.8 }):Play()
+	-- gone once the needle's found (the clump count jumps back to full)
+	player:GetAttributeChangedSignal("Needles"):Connect(function()
+		part:Destroy()
 	end)
 end
 

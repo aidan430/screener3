@@ -38,8 +38,13 @@ return function(Config)
 		return math.max(1, math.floor(p + 0.5))
 	end
 
+	-- what you can carry: the tool fills first, then the bucket at your hip
 	function Economy.capacity(data)
-		return Economy.tool(data.tool).capacity
+		return Economy.tool(data.tool).capacity + Economy.bucket(data.bucket or 1).capacity
+	end
+
+	function Economy.bucket(level)
+		return Config.Buckets[math.clamp(level, 1, #Config.Buckets)]
 	end
 
 	function Economy.cooldown(data)

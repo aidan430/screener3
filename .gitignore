@@ -3,3 +3,4 @@ __pycache__/
 *.rbxl.lock
 *.rbxlx.lock
 sourcemap.json
+.claude/worktrees/

@@ -160,12 +160,16 @@ local function harvest(player, target)
 	if now - (lastHarvest[player] or 0) < Economy.cooldown(d) * 0.9 then
 		return status(player, player:GetAttribute("HarvestStatus") or "") -- faster than the tool swings: ignored
 	end
-	if typeof(target) ~= "Instance" or not target:IsA("BasePart") then
-		return nope(player, "That isn't a clump of hay.")
+	-- the heap is terrain: the client sends the point it aimed at (just inside the surface);
+	-- the golden haystack in the loft is still parts, so that's the part itself
+	local isPart = typeof(target) == "Instance" and target:IsA("BasePart")
+	if not isPart and typeof(target) ~= "Vector3" then
+		return nope(player, "That isn't hay.")
 	end
+	local point = if isPart then target.Position else target
 	local head = c:FindFirstChild("Head")
-	if not head or (head.Position - target.Position).Magnitude > Config.Reach + 6 then
-		return nope(player, "Too far away. Step closer to the clump.")
+	if not head or (head.Position - point).Magnitude > Config.Reach + 6 then
+		return nope(player, "Too far away. Step closer to the hay.")
 	end
 	lastHarvest[player] = now
 	local flags = PlayerData.flags(player)
@@ -173,7 +177,7 @@ local function harvest(player, target)
 		if flags.autoSell then
 			Search.sell(player, "auto")
 		else
-			status(player, "Your tool is full. Sell at the merchant.")
+			status(player, "You're full. Dump your hay in your trader's basket.")
 			Remotes.SearchFx:FireClient(player, { kind = "full" })
 			return
 		end
@@ -181,17 +185,22 @@ local function harvest(player, target)
 	local power = math.min(Economy.power(d, flags.speedBoost), room(d))
 	local taken, hit, golden, gone = 0, false, false, false
 	local loft = workspace:FindFirstChild("Loft")
-	if loft and target:IsDescendantOf(loft) and player:GetAttribute("LoftOpen") then
+	if isPart then
+		if not (loft and target:IsDescendantOf(loft) and player:GetAttribute("LoftOpen")) then
+			return nope(player, "That isn't your hay.")
+		end
 		golden = true
 		taken, hit = goldenHarvest(player, d, power)
 	else
 		local plotIndex = Plots.of(player)
-		local clump = target:GetAttribute("Clump")
 		if not plotIndex then
 			return nope(player, "You don't have a farm yet (all four plots may be taken).")
-		elseif not clump or not target:IsDescendantOf(Plots.folder(plotIndex)) then
-			return nope(player, "That's not your pile. Yours is on the farm marked YOUR FARM.")
 		end
+		local clump = Plots.contains(plotIndex, point, 0) and Piles.clumpAt(plotIndex, d, point)
+		if not clump then
+			return nope(player, "That's not your heap. Yours is on the farm marked YOUR FARM.")
+		end
+		point = Piles.position(plotIndex, clump)
 		taken, gone = Piles.take(plotIndex, d, clump, power)
 		hit = gone and clump == d.needleClump
 		PlayerData.update(player, function(data)
@@ -214,11 +223,11 @@ local function harvest(player, target)
 	if not golden and d.tool >= Config.DetectorLevel and plotIndex then
 		warmth = Economy.warmth((head.Position - Piles.position(plotIndex, d.needleClump)).Magnitude)
 	end
-	Remotes.SearchFx:FireClient(player, { kind = "harvest", golden = golden, gone = gone, straws = taken, position = target.Position, warmth = warmth, full = room(d) <= 0 })
+	Remotes.SearchFx:FireClient(player, { kind = "harvest", golden = golden, gone = gone, straws = taken, position = point, warmth = warmth, full = room(d) <= 0 })
 	if hit then
-		Search.needleFound(player, golden, target.Position)
+		Search.needleFound(player, golden, point)
 	elseif rng:NextNumber() < Economy.luckyChance(d, flags.luckyCharm) then
-		luckyFind(player, d, flags, target.Position)
+		luckyFind(player, d, flags, point)
 	end
 	Achievements.check(player)
 end
