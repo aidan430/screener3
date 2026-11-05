@@ -150,3 +150,7 @@ commit 7d2617e). Both in git history.
 - **Hay texture on:** `HayTexture` = the owner's uploaded image 92326825877863 (garden-hay.jpg).
   That ID is an Image, not a model, so `HayModel` is back to 0: loose hay uses the built-in
   shape in the Grass material, which now wears the same texture.
+- **Owner's feedback:** `HayTextureStuds` 8 -> 3 (the texture was too big). Imported tools are
+  held straight out in front, working end forward (`flip`, `roll`, `bladeTop`, `loadAt`,
+  `loadSize` per tool tune it). The hay on a tool now sits on a Weld whose offset keeps its
+  bottom on the blade (or tines) as it grows, so it never sinks through.

@@ -59,19 +59,22 @@ function Tools.make(level, skinId)
 	handle.CFrame = CFrame.new()
 	handle.Parent = tool
 	local look, length = ToolLook.make(def)
-	local top = 4 -- where the hay sits: on the tines, or on the end of an imported tool
+	-- where the hay sits (its bottom, in the handle's space) and how big it can get
+	local seat, maxLoad = CFrame.new(0, 3.6, 0), Config.LoadSize
 	if look then
-		-- an imported model: the handle becomes an invisible grip inside it
-		handle.Size = Vector3.new(0.3, length, 0.3)
+		-- an imported model, held straight out in front with its working end forward and up,
+		-- like a scoop holding the hay. The handle's -Z points away from the hand.
+		handle.Size = Vector3.new(0.3, 0.3, length)
 		handle.Transparency = 1
-		tool.Grip = CFrame.new(0, -length * 0.2, 0)
-		local flip = if def.flip == false then CFrame.new() else CFrame.Angles(math.rad(180), 0, 0)
-		look.CFrame = handle.CFrame * flip * look:GetAttribute("Turn")
+		tool.Grip = CFrame.new(0, 0, length * 0.38) -- the hand near the back end
+		local point = if def.flip == false then CFrame.Angles(math.rad(-90), 0, 0) else CFrame.Angles(math.rad(90), 0, 0)
+		look.CFrame = handle.CFrame * CFrame.Angles(0, 0, math.rad(def.roll or 0)) * point * look:GetAttribute("Turn")
 		local w = Instance.new("WeldConstraint")
 		w.Part0, w.Part1 = handle, look
 		w.Parent = look
 		look.Parent = tool
-		top = length / 2
+		seat = CFrame.new(0, def.bladeTop or 0.15, -length * (def.loadAt or 0.3))
+		maxLoad = def.loadSize or length * 0.45
 	else
 		local colour = Build.rgb(if skin then skin.head else def.head)
 		local material = Enum.Material[if skin then skin.material else def.material]
@@ -85,9 +88,12 @@ function Tools.make(level, skinId)
 	load.Name = "Load"
 	load.Massless = true
 	load.Transparency = 1
-	load.CFrame = handle.CFrame * CFrame.new(0, top, 0)
-	local weld = Instance.new("WeldConstraint")
+	load:SetAttribute("Seat", seat) -- Carry keeps the hay's bottom here as it grows
+	load:SetAttribute("MaxSize", maxLoad)
+	local weld = Instance.new("Weld")
+	weld.Name = "LoadWeld"
 	weld.Part0, weld.Part1 = handle, load
+	weld.C0 = seat
 	weld.Parent = load
 	load.Parent = tool
 	return tool

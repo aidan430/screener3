@@ -81,7 +81,12 @@ function Carry.show(player)
 		for _, tool in ipairs(container and container:GetChildren() or {}) do
 			local hay = tool:IsA("Tool") and tool:FindFirstChild("Load")
 			if hay then
-				mound(hay, onTool, Config.LoadSize, golden)
+				mound(hay, onTool, hay:GetAttribute("MaxSize") or Config.LoadSize, golden)
+				-- keep the hay's bottom on the blade (or tines) as it grows, never through it
+				local weld, seat = hay:FindFirstChild("LoadWeld"), hay:GetAttribute("Seat")
+				if weld and seat then
+					weld.C0 = seat * CFrame.new(0, hay.Size.Y / 2, 0)
+				end
 			end
 		end
 	end

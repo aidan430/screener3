@@ -27,7 +27,7 @@ Config.HeapColour = { 222, 186, 92 } -- straw gold (the terrain Grass material i
 -- then wear it. Empty = plain straw-gold Grass.
 Config.HayTexture = "rbxassetid://92326825877863"
 Config.HayNormal = ""
-Config.HayTextureStuds = 8 -- how many studs one copy of the texture covers
+Config.HayTextureStuds = 3 -- how many studs one copy of the texture covers
 -- The hay model you imported and uploaded (a Model or a mesh ID): lumps on tools, flying hay,
 -- bundles, bales' neighbours and the mounds round the heap use it. 0 = rounded hay balls.
 Config.HayModel = 0
@@ -49,9 +49,11 @@ Config.MerchantRange = 16
 Config.CoinsPerStraw = 1
 
 -- Tools: power = straws per click, capacity = straws you can carry before selling.
--- Any tool can wear a model imported in Studio: model = its asset ID, length = studs long,
--- flip = false if it comes out upside down (the working end should point up). Without a
--- model a tool is built as a pitchfork from the colours below.
+-- Any tool can wear a model imported in Studio: model = its asset ID, length = studs long. It's
+-- held straight out in front, working end forward. flip = false if it points backwards,
+-- roll = degrees to turn it about its length (so a scoop faces up), bladeTop = studs from the
+-- middle of the blade to where hay sits on it, loadAt = how far along the hay sits (0..0.5),
+-- loadSize = how big the hay on it gets. Without a model a tool is built as a pitchfork.
 Config.Tools = {
 	{ name = "Garden Trowel", model = 139238222017221, length = 3, power = 1, capacity = 300, price = 0, shaft = { 112, 82, 58 }, head = { 128, 98, 78 }, material = "CorrodedMetal" },
 	{ name = "Wooden Pitchfork", power = 2, capacity = 1000, price = 400, shaft = { 160, 116, 72 }, head = { 176, 128, 82 }, material = "Wood" },
