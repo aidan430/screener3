@@ -1511,7 +1511,16 @@ function Assets.place(id, cf, size, parent, byWidth)
 	end
 	local box, ext = model:GetBoundingBox()
 	local bottom = box.Position - Vector3.new(0, ext.Y / 2, 0)
-	model:PivotTo(model:GetPivot() + (cf.Position - bottom))
+	local stand = cf.Position
+	-- stand on the ground that's really there (a slope or a raised spot), never sunk into it
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { model }
+	local hit = workspace:Raycast(stand + Vector3.new(0, 60, 0), Vector3.new(0, -120, 0), params)
+	if hit and hit.Instance == workspace.Terrain and hit.Position.Y > stand.Y then
+		stand = Vector3.new(stand.X, hit.Position.Y, stand.Z)
+	end
+	model:PivotTo(model:GetPivot() + (stand - bottom))
 	model.Parent = parent
 	return model
 end
@@ -7475,8 +7484,8 @@ local World = {}
 local terrain = workspace.Terrain
 local AUTUMN = { { 214, 120, 40 }, { 196, 72, 44 }, { 232, 176, 54 }, { 150, 150, 58 } }
 local WOOD = { 122, 86, 52 }
-local GROUND = math.floor(520 * Config.FarmScale) -- the ground is GROUND x GROUND studs
 local FENCE = math.floor(245 * Config.FarmScale) -- the boundary fence, this far from the middle
+local GROUND = (FENCE + 18) * 2 -- the ground is GROUND x GROUND studs: past the tree line, to where the hills rise
 
 -- The haystack stands in the middle now, so these stand round it, facing it.
 World.MERCHANT = Vector3.new(-50, 0, 62) -- west of where you arrive, clear of the Robux pads
@@ -7512,13 +7521,13 @@ function World.ground()
 	for i = -2, 2 do
 		for _, side in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
 			local along = i * 120 + rng:NextNumber(-12, 12)
-			local out = GROUND / 2 + 45 -- low enough at the fence that it stays clear
+			local out = FENCE + 72 -- far enough out that no hill rises above the ground inside the fence
 			local centre = if side[1] ~= 0 then Vector3.new(side[1] * out, -40, along) else Vector3.new(along, -40, side[2] * out)
 			terrain:FillBall(centre, rng:NextNumber(58, 72), Enum.Material.LeafyGrass)
 		end
 	end
 	for _, c in ipairs({ { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } }) do
-		terrain:FillBall(Vector3.new(c[1] * (GROUND / 2 + 30), -40, c[2] * (GROUND / 2 + 30)), rng:NextNumber(62, 70), Enum.Material.LeafyGrass)
+		terrain:FillBall(Vector3.new(c[1] * (FENCE + 54), -40, c[2] * (FENCE + 54)), rng:NextNumber(62, 70), Enum.Material.LeafyGrass)
 	end
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "Spawn"

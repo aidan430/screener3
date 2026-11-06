@@ -128,7 +128,16 @@ function Assets.place(id, cf, size, parent, byWidth)
 	end
 	local box, ext = model:GetBoundingBox()
 	local bottom = box.Position - Vector3.new(0, ext.Y / 2, 0)
-	model:PivotTo(model:GetPivot() + (cf.Position - bottom))
+	local stand = cf.Position
+	-- stand on the ground that's really there (a slope or a raised spot), never sunk into it
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { model }
+	local hit = workspace:Raycast(stand + Vector3.new(0, 60, 0), Vector3.new(0, -120, 0), params)
+	if hit and hit.Instance == workspace.Terrain and hit.Position.Y > stand.Y then
+		stand = Vector3.new(stand.X, hit.Position.Y, stand.Z)
+	end
+	model:PivotTo(model:GetPivot() + (stand - bottom))
 	model.Parent = parent
 	return model
 end

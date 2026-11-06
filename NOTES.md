@@ -498,3 +498,8 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   pulled in (Kit.clearAround), so no lantern stands in the portal. With an uploaded stall the
   trader stands in front of it beside the basket (inside it he was hidden), and the stall is
   lifted 0.15 so the ground's grass doesn't show through its floor.
+- Buildings half in the ground: the edge hills were placed for the old, bigger farm and rose
+  above ground from 128 studs out, inside the 134 fence, swallowing the outer ring (windmill,
+  water tower, silos, pens' fences, field edges). Hills now sit at FENCE + 72 (sides) and
+  FENCE + 54 (corners) and rise only past 146; the ground is (FENCE + 18) x 2 across to meet
+  them. Uploaded models (Assets.place) also stand on any terrain that's higher under them.
