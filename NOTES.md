@@ -264,3 +264,11 @@ The owner created the passes and products (prices: Jetpack 175, Double Machines 
 149, VIP 299; 2x Speed 49, 2x Coins 49, Lucky Charm 29, Straw Blast 99, Whistle x10 25,
 Wheel Spin 25) and their IDs are in `Config.GamePasses` / `Config.Products`. A grant that
 errors now returns NotProcessedYet so Roblox retries it instead of losing the purchase.
+
+## Haystack looked pink (2026-11-06)
+The sunset lighting (OutdoorAmbient 170,136,112, ColorShift_Top 255,196,146, reddish
+atmosphere decay, haze 1.4) tinted the straw-gold heap salmon-pink in shade. Now a golden late
+afternoon: ClockTime 17.4 -> 16.2, OutdoorAmbient 150,146,134, ColorShift_Top 255,236,205,
+atmosphere colour 240,226,200 / decay 150,132,110 / haze 0.9. `HeapColour` 222,186,92 ->
+232,198,86 (yellower). Uploading assets/hay/garden-hay-golden.jpg as the hay texture
+(`HayTexture`) is still the best fix for the look.

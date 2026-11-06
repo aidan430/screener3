@@ -64,11 +64,13 @@ function World.ground()
 end
 
 function World.lighting()
-	Lighting.ClockTime = 17.4
-	Lighting.Brightness = 2.2
-	Lighting.Ambient = Color3.fromRGB(86, 70, 60)
-	Lighting.OutdoorAmbient = Color3.fromRGB(170, 136, 112)
-	Lighting.ColorShift_Top = Color3.fromRGB(255, 196, 146)
+	-- a golden late afternoon: warm, but neutral enough that straw looks like straw (the old
+	-- pink-orange sunset light turned the haystacks salmon-pink in the shade)
+	Lighting.ClockTime = 16.2
+	Lighting.Brightness = 2.4
+	Lighting.Ambient = Color3.fromRGB(80, 78, 72)
+	Lighting.OutdoorAmbient = Color3.fromRGB(150, 146, 134)
+	Lighting.ColorShift_Top = Color3.fromRGB(255, 236, 205)
 	Lighting.EnvironmentDiffuseScale = 0.6
 	Lighting.EnvironmentSpecularScale = 0.6
 	Lighting.GlobalShadows = true
@@ -80,10 +82,10 @@ function World.lighting()
 	local atmosphere = Instance.new("Atmosphere")
 	atmosphere.Density = 0.3
 	atmosphere.Offset = 0.15
-	atmosphere.Color = Color3.fromRGB(255, 204, 158)
-	atmosphere.Decay = Color3.fromRGB(176, 108, 78)
-	atmosphere.Glare = 0.5
-	atmosphere.Haze = 1.4
+	atmosphere.Color = Color3.fromRGB(240, 226, 200)
+	atmosphere.Decay = Color3.fromRGB(150, 132, 110)
+	atmosphere.Glare = 0.4
+	atmosphere.Haze = 0.9
 	atmosphere.Parent = Lighting
 	local bloom = Instance.new("BloomEffect")
 	bloom.Intensity = 0.5
@@ -93,7 +95,7 @@ function World.lighting()
 	local grade = Instance.new("ColorCorrectionEffect")
 	grade.Saturation = 0.12
 	grade.Contrast = 0.06
-	grade.TintColor = Color3.fromRGB(255, 246, 234)
+	grade.TintColor = Color3.fromRGB(255, 250, 240)
 	grade.Parent = Lighting
 end
 

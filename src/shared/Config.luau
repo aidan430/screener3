@@ -21,7 +21,7 @@ Config.PileRadiusTop = 4
 -- radius at height share t: top + (bottom - top) x (1 - t ^ PileDome) ^ PileCurve
 Config.PileDome = 2.5 -- above 1: the sides stay wide for longer, then round over
 Config.PileCurve = 0.7 -- below 1: a fuller, rounder top
-Config.HeapColour = { 222, 186, 92 } -- straw gold (the terrain Grass material is the heap)
+Config.HeapColour = { 232, 198, 86 } -- straw gold (the terrain Grass material is the heap)
 Config.HeapLumpiness = 0.45 -- 0 = a smooth dome; higher = a lumpier, more hay-like surface
 -- Your hay texture: upload garden-hay.jpg (and its normal map) in Studio (Asset Manager > Import),
 -- paste the IDs here ("rbxassetid://123"), rebuild. The heap, the hay on tools and the bundles
