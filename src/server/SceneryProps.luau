@@ -145,7 +145,7 @@ end
 -- The gate arch where the north lane leaves the farm, and the farm's name over it.
 local function gate(parent)
 	local m = Kit.model(parent, "FarmGate")
-	local base = facing(0, -478, 0, 0) -- the sign faces into the farm
+	local base = facing(0, -243, 0, 0) -- the sign faces into the farm
 	for _, x in ipairs({ -13, 13 }) do
 		part(m, base, "GatePost", Vector3.new(1.6, 15, 1.6), Vector3.new(x, 7.5, 0), C.darkWood, "Wood")
 		Kit.lantern(m, base * CFrame.new(x * 1.25, 0, -1), 6)
@@ -157,29 +157,37 @@ end
 
 function Props.build(folder)
 	local m = Kit.model(folder, "Props")
-	Props.tractor(m, facing(-40, -242, 100, -242))
-	Props.trailer(m, facing(-54, -242, 100, -242))
-	Props.cart(m, facing(116, -230, 116, 0), C.pumpkin)
-	Props.cart(m, facing(186, -6, 0, -6), C.pumpkin)
-	Props.cart(m, facing(-44, 238, 0, 0), { 196, 54, 44 })
-	for _, p in ipairs({ { -35, -284 }, { -195, -140 }, { 320, -150 }, { 40, 215 } }) do
+	-- the farmyard, north
+	Props.tractor(m, facing(-70, -196, 100, -196))
+	Props.trailer(m, facing(-84, -196, 100, -196))
+	Props.cart(m, facing(96, -186, 96, 0), C.pumpkin)
+	Props.mailbox(m, facing(11, -180, 0, -180))
+	-- the east meadow between the fields, the south meadow and the west, past the sheep
+	Props.cart(m, facing(186, 0, 0, 0), C.pumpkin)
+	Props.cart(m, facing(-26, 194, 0, 0), { 196, 54, 44 })
+	Props.cart(m, facing(-184, 140, 0, 140), C.hay)
+	for _, p in ipairs({ { -48, -212 }, { 220, 0 }, { 2, 208 }, { -205, 108 } }) do
 		Props.bales(m, facing(p[1], p[2], 0, 0))
 	end
-	Props.scarecrow(m, facing(250, -70, 0, -70))
-	Props.scarecrow(m, facing(252, 76, 0, 76))
-	Props.mailbox(m, facing(-12, -196, 0, -196))
-	Props.waterTower(m, facing(-270, 258, 0, 0))
+	Props.scarecrow(m, facing(207, -91, 0, -91))
+	Props.scarecrow(m, facing(207, 92, 0, 92))
+	Props.scarecrow(m, facing(28, 196, 0, 0))
+	Props.waterTower(m, facing(-205, 205, 0, 0))
 	gate(m)
-	for i, z in ipairs({ -180, -245, -300, -350, -400, -450 }) do
+	for i, z in ipairs({ -186, -210, -234 }) do
 		Kit.lantern(m, CFrame.new(if i % 2 == 0 then 11 else -11, 0, z), 7)
 	end
+	-- lanterns along the farmyard lane, the pens' lane and the south meadow
+	for _, p in ipairs({ { -150, -162 }, { -90, -162 }, { -30, -162 }, { 30, -162 }, { 100, -162 }, { -173, -86 }, { -173, 16 }, { -173, 78 }, { -50, 166 }, { 30, 166 }, { 168, -160 }, { 168, 160 } }) do
+		Kit.lantern(m, CFrame.new(p[1], 0, p[2]), 6)
+	end
 	for _, s in ipairs({
-		{ "Farmyard", 14, -200 },
-		{ "Pumpkin Patch", 188, -40 },
-		{ "Corn Rows", 188, 40 },
-		{ "Duck Pond", -50, 226 },
-		{ "Meadow Pens", -180, 14 },
-		{ "Orchard", 212, 204 },
+		{ "Farmyard", 19, -172 },
+		{ "Pumpkin Patch", 172, -24 },
+		{ "Corn Rows", 172, 24 },
+		{ "Duck Pond", -64, 170 },
+		{ "Meadow Pens", -180, 6 },
+		{ "Orchard", 44, 170 },
 	}) do
 		Kit.sign(m, facing(s[2], s[3], 0, 0), s[1], 10)
 	end

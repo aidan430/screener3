@@ -24,21 +24,32 @@ Kit.C = {
 }
 Kit.AUTUMN = { { 214, 120, 40 }, { 196, 72, 44 }, { 232, 176, 54 }, { 150, 150, 58 }, { 178, 96, 40 } }
 
+-- The countryside fills the ring between the plots (which end at 155, their fences at 156.5)
+-- and the boundary fence at 245. Nothing is built nearer the centre than RING_IN.
+Kit.RING_IN = 162
+Kit.RING_OUT = 238
+
 -- Areas kept clear of trees and bushes: the plots and hub, lanes, buildings, pens, fields.
 -- Each is { minX, minZ, maxX, maxZ }.
 Kit.KEEP_CLEAR = {
-	{ -172, -172, 172, 172 }, -- plots, roads and hub
-	{ -16, -500, 16, -160 }, -- north lane to the gate
-	{ -180, -310, 135, -195 }, -- farmyard: barn, silos, farmhouse, tractor
-	{ -300, -110, -160, 170 }, -- animal pens and their path
-	{ -215, -160, -175, -120 }, -- bales by the pens
-	{ 180, -125, 320, 135 }, -- pumpkin and corn fields
-	{ 300, -170, 340, -130 }, -- bales by the fields
-	{ -140, 215, -30, 320 }, -- duck pond
-	{ 80, 215, 145, 295 }, -- windmill
-	{ -300, 225, -240, 290 }, -- water tower
-	{ 200, 190, 410, 410 }, -- orchard
-	{ 20, 195, 60, 235 }, -- bales in the south meadow
+	{ -162, -162, 162, 162 }, -- plots, their fences, roads and hub
+	{ -14, -262, 14, -160 }, -- north lane to the gate, its lanterns and the mailbox
+	{ -195, -175, 150, -163 }, -- farmyard lane
+	{ -213, -225, -171, -179 }, -- silos
+	{ -150, -235, -100, -168 }, -- barn
+	{ -94, -203, -61, -187 }, -- tractor and trailer
+	{ -56, -224, -40, -199 }, -- bales
+	{ 38, -226, 82, -176 }, -- farmhouse
+	{ 89, -193, 103, -176 }, -- cart by the farmhouse
+	{ 108, -228, 162, -182 }, -- chicken run
+	{ 186, -234, 234, -186 }, -- windmill
+	{ -238, -146, -159, 74 }, -- pig, cow and sheep pens and their lane
+	{ -216, 100, -174, 148 }, -- bales and cart past the sheep
+	{ -216, 192, -192, 220 }, -- water tower
+	{ -134, 164, -58, 238 }, -- duck pond
+	{ -34, 184, 36, 222 }, -- south meadow: bales, cart, scarecrow
+	{ 38, 164, 240, 240 }, -- orchard
+	{ 166, -160, 240, 160 }, -- pumpkin patch, east meadow, corn rows
 }
 
 function Kit.clear(x, z, margin)

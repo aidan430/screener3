@@ -1,5 +1,6 @@
--- Animal pens to the west of the plots and the cute blocky animals in them: cows, sheep, pigs,
--- chickens (with their coop) and ducks on the pond. The animals are anchored, walk-through
+-- Animal pens just west of the plots and the cute blocky animals in them: pigs, cows and sheep
+-- along the pens' lane, chickens (with their coop) in the farmyard to the north, and ducks on
+-- the pond to the south. The animals are anchored, walk-through
 -- Models (pivot at their feet, facing local -Z); client/Animals moves them gently. Each one
 -- carries attributes: Kind, PenMin/PenMax (where it may wander), HeadHinge/TailHinge (local
 -- points its "Head" and "Tail" parts turn about).
@@ -195,21 +196,22 @@ function Pens.build(folder)
 	animals.Name = "Animals"
 	animals.Parent = folder
 	local rng = Random.new(3)
-	local min, max = pen(m, -250, 0, 70, 56) -- cows
-	trough(m, CFrame.new(-280, 0, -18) * CFrame.Angles(0, math.pi / 2, 0), true)
-	trough(m, CFrame.new(-280, 0, 16) * CFrame.Angles(0, math.pi / 2, 0), false)
+	-- each pen's gate (east side) opens onto the pens' lane at x -164; their east fences line up at -170
+	local min, max = pen(m, -202, -40, 64, 60) -- cows
+	trough(m, CFrame.new(-228, 0, -58) * CFrame.Angles(0, math.pi / 2, 0), true)
+	trough(m, CFrame.new(-228, 0, -24) * CFrame.Angles(0, math.pi / 2, 0), false)
 	herd(animals, rng, 4, min, max, cow)
-	min, max = pen(m, -245, 72, 50, 40) -- sheep
-	trough(m, CFrame.new(-245, 0, 89), true)
+	min, max = pen(m, -198, 45, 56, 48) -- sheep
+	trough(m, CFrame.new(-198, 0, 63), true)
 	herd(animals, rng, 4, min, max, sheep)
-	min, max = pen(m, -240, -82, 40, 32) -- pigs, with their mud
-	trough(m, CFrame.new(-240, 0, -95), false)
+	min, max = pen(m, -194, -120, 48, 40) -- pigs, with their mud
+	trough(m, CFrame.new(-188, 0, -134), false)
 	herd(animals, rng, 3, min, max, pig)
-	min, max = pen(m, -235, 135, 40, 34) -- chickens and their coop
-	coop(m, CFrame.lookAt(Vector3.new(-249, 0, 135), Vector3.new(0, 0, 135)))
+	min, max = pen(m, 135, -205, 48, 40) -- chickens and their coop, in the farmyard
+	coop(m, CFrame.lookAt(Vector3.new(121, 0, -205), Vector3.new(160, 0, -205)))
 	herd(animals, rng, 9, min + Vector3.new(8, 0, 0), max, chicken)
-	-- ducks paddle about the pond (it is centred at -90, 268, radius 30; the dock is on its north side)
-	herd(animals, rng, 4, Vector3.new(-107, -1.1, 257), Vector3.new(-73, -1.1, 285), duck)
+	-- ducks paddle about the pond (centred at -100, 205, radius 24; the dock is on its north side)
+	herd(animals, rng, 4, Vector3.new(-114, -1.1, 198), Vector3.new(-86, -1.1, 218), duck)
 end
 
 return Pens
