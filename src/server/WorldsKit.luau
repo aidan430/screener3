@@ -1,5 +1,6 @@
 -- Shared pieces for the portal worlds: the arches, signs, lights, embers and each world's
 -- harvestable haystack (balls of hay like the Golden Loft's, tagged with the World attribute).
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Build = require(script.Parent.Build)
@@ -50,19 +51,6 @@ function Kit.ground(centre, material, size)
 	terrain:FillBlock(CFrame.new(centre + Vector3.new(0, -8, 0)), Vector3.new(size, 16, size), material)
 end
 
-function Kit.prompt(part, action, text, object, worldId, hold)
-	local p = Instance.new("ProximityPrompt")
-	p.ActionText = text
-	p.ObjectText = object
-	p.HoldDuration = hold or 0
-	p.MaxActivationDistance = 12
-	p.RequiresLineOfSight = false
-	p:SetAttribute("Action", action)
-	p:SetAttribute("World", worldId)
-	p.Parent = part
-	return p
-end
-
 -- A sign board: text on its front (the -Z face of `cf`).
 function Kit.sign(cf, size, text, colour, ink, parent)
 	local board = Build.part({ name = "Sign", size = size, cframe = cf, color = colour, material = "SmoothPlastic", parent = parent })
@@ -71,7 +59,7 @@ function Kit.sign(cf, size, text, colour, ink, parent)
 end
 
 -- A glowing portal arch standing at `cf` (its base), opening towards cf's look direction.
--- Returns the glowing membrane (put the prompt on it).
+-- Returns the glowing membrane (put a walk-in trigger on it: Kit.trigger).
 function Kit.arch(cf, colour, parent, title, subtitle)
 	local model = Instance.new("Model")
 	model.Name = "Portal"
@@ -119,11 +107,24 @@ function Kit.arrival(w)
 	return CFrame.lookAt(centre + Vector3.new(0, 4, 100), centre + Vector3.new(0, 4, 0))
 end
 
+-- A walk-in trigger over an arch's membrane: walking into it travels to `to` ("lobby", "farm"
+-- or a Config.Worlds id; server/Lobby.luau listens). `from` says which arch it is, so coming
+-- back to the lobby lands you in front of that world's arch.
+function Kit.trigger(membrane, to, from)
+	local part = Build.part({ name = "PortalTrigger", size = Vector3.new(9.6, 12.2, 2), cframe = membrane.CFrame, transparency = 1, collide = false, shadow = false, parent = membrane.Parent })
+	part.CanTouch = true -- (Build.part turns touching off for parts you walk through)
+	part:SetAttribute("To", to)
+	part:SetAttribute("From", from)
+	CollectionService:AddTag(part, "WalkPortal")
+	return part
+end
+
+-- The arch just behind where you arrive in a world: walk in to go back to the lobby.
 function Kit.returnPortal(w, parent)
 	local base = Vector3.new(w.x, 0, w.z + 114)
 	local cf = CFrame.lookAt(base, Vector3.new(w.x, 0, w.z))
-	local membrane = Kit.arch(cf, Config.WorldHay[w.id][3], parent, "Back to the farm", w.name)
-	Kit.prompt(membrane, "portal_home", "Go back to the farm", w.name, w.id, 0)
+	local membrane = Kit.arch(cf, Config.WorldHay[w.id][3], parent, "Back to the lobby", Config.LobbyName)
+	Kit.trigger(membrane, "lobby", w.id)
 	return membrane
 end
 

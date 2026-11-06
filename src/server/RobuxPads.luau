@@ -1,5 +1,5 @@
--- The Robux corner: one round pad per Robux item (Config.RobuxPads), in two arcs beside where
--- you arrive. The server builds the plain, anchored pads and looks up each item's icon and
+-- The Robux corner: one round pad per Robux item (Config.RobuxPads), in an arc on the lobby's
+-- east rim. The server builds the plain, anchored pads and looks up each item's icon and
 -- price; client/RobuxPads.luau adds the hologram, the gentle colours and the purchase prompt.
 -- Purchases are granted by Monetization.luau as before; nothing here grants anything.
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -88,8 +88,8 @@ function RobuxPads.build()
 	end
 	local folder = Instance.new("Folder")
 	folder.Name = "RobuxPads"
-	local e, f = Config.FarmEntrance, Config.RobuxPadFacing
-	local origin = Vector3.new(e[1], e[2], e[3])
+	local l, f = Config.Lobby, Config.RobuxPadFacing
+	local origin = Vector3.new(l.x, l.floor, l.z) -- the pads stand in the lobby (Config.RobuxPads)
 	local facing = origin + Vector3.new(f[1], 0, f[2])
 	for _, entry in ipairs(Config.RobuxPads) do
 		local id = idOf(entry)

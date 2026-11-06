@@ -1,9 +1,8 @@
--- The portal worlds: four arches on the hub's west road lead to the Moon, the Ember Lands,
--- Bubble City and Haystack Stadium (Config.Worlds). A portal is opened once with coins (saved
--- in d.worlds[id].unlocked); travelling is free after. Each world's haystack pays coins at
--- once for every click, at that world's multiplier, and hides its own needle at a straw index.
-local Players = game:GetService("Players")
-local ProximityPromptService = game:GetService("ProximityPromptService")
+-- The portal worlds: four arches in the lobby (server/Lobby.luau) lead to the Moon, the Ember
+-- Lands, Bubble City and Haystack Stadium (Config.Worlds). A portal is opened once with coins
+-- (saved in d.worlds[id].unlocked; Worlds.open); travelling is free after. Each world's
+-- haystack pays coins at once for every click, at that world's multiplier, and hides its own
+-- needle at a straw index.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -23,12 +22,11 @@ local BUILDERS = {
 }
 
 local Worlds = {}
-local byId, indexOf = {}, {}
-for i, w in ipairs(Config.Worlds) do
-	byId[w.id], indexOf[w.id] = w, i
+local byId = {}
+for _, w in ipairs(Config.Worlds) do
+	byId[w.id] = w
 end
 local rng = Random.new()
-local lastPortal = {}
 
 -- What the client shows: which portals are open, and each world's score.
 function Worlds.publish(player)
@@ -44,41 +42,50 @@ function Worlds.publish(player)
 	end
 end
 
-local function hubSpot(w)
-	local spot = Config.WorldPortals.spots[indexOf[w.id]]
-	return CFrame.lookAt(Vector3.new(spot[1] + 10, 4, spot[2]), Vector3.new(0, 4, spot[2])) -- just in front of its arch
-end
-
-local function teleport(player, cf)
-	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-	if root then
-		root.CFrame = cf
-		root.AssemblyLinearVelocity = Vector3.zero
-	end
-end
-
 local function notice(player, text)
 	Remotes.Announce:FireClient(player, { kind = "notice", text = text })
 end
 
-local function usePortal(player, w)
-	local d = PlayerData.get(player)
+function Worlds.byId(id)
+	return byId[id]
+end
+
+-- Where you arrive in world `id`.
+function Worlds.arrival(id)
+	return byId[id] and Kit.arrival(byId[id])
+end
+
+-- Opens world `id`'s portal for its price in coins, once (the server checks the coins).
+-- Returns true if the portal is open (already, or now).
+function Worlds.open(player, id)
+	local w, d = byId[id], PlayerData.get(player)
+	if not w then
+		return false
+	end
 	if not d then
-		return notice(player, "Still loading your farm...")
+		notice(player, "Still loading your farm...")
+		return false
 	end
-	if not d.worlds[w.id].unlocked then
-		if d.coins < w.price then
-			return notice(player, "The portal to " .. w.name .. " opens for " .. Format.commas(w.price) .. " coins. You have " .. Format.commas(math.floor(d.coins)) .. ".")
-		end
-		PlayerData.update(player, function(data)
-			data.coins -= w.price
-			data.worlds[w.id].unlocked = true
-		end)
-		Worlds.publish(player)
-		task.spawn(PlayerData.save, player)
-		notice(player, "You opened the portal to " .. w.name .. "! Travelling there is free from now on.")
+	if d.worlds[w.id].unlocked then
+		return true
 	end
-	teleport(player, Kit.arrival(w))
+	if d.coins < w.price then
+		notice(player, "The portal to " .. w.name .. " opens for " .. Format.commas(w.price) .. " coins. You have " .. Format.commas(math.floor(d.coins)) .. ".")
+		return false
+	end
+	PlayerData.update(player, function(data)
+		data.coins -= w.price
+		data.worlds[w.id].unlocked = true
+	end)
+	Worlds.publish(player)
+	task.spawn(PlayerData.save, player)
+	notice(player, "You opened the portal to " .. w.name .. "! Travelling there is free from now on.")
+	return true
+end
+
+function Worlds.isOpen(player, id)
+	local d = PlayerData.get(player)
+	return d ~= nil and byId[id] ~= nil and d.worlds[id].unlocked == true
 end
 
 -- A click on a world's haystack (called by Search after its reach, cooldown and stamina
@@ -92,7 +99,7 @@ function Worlds.harvest(player, d, part, power)
 	end
 	local state = d.worlds[w.id]
 	if not state.unlocked then
-		return "Open this world's portal in the hub first."
+		return "Open this world's portal in the lobby first."
 	end
 	if state.searched >= w.straws then -- (only if the haystack was made smaller since)
 		PlayerData.update(player, function(data)
@@ -132,13 +139,6 @@ end
 
 function Worlds.build()
 	local root = Kit.folder("Worlds", workspace)
-	local portals = Kit.folder("Portals", root)
-	for i, w in ipairs(Config.Worlds) do
-		local spot = Config.WorldPortals.spots[i]
-		local cf = CFrame.lookAt(Vector3.new(spot[1], 0, spot[2]), Vector3.new(0, 0, spot[2]))
-		local membrane = Kit.arch(cf, Config.WorldHay[w.id][1], portals, w.name, "Open: " .. Format.short(w.price) .. " coins")
-		Kit.prompt(membrane, "portal", "Travel", w.name, w.id, Config.WorldPortals.holdSeconds)
-	end
 	for _, w in ipairs(Config.Worlds) do
 		local folder = Kit.folder(w.id, root)
 		local centre = Vector3.new(w.x, 0, w.z)
@@ -154,25 +154,6 @@ end
 
 function Worlds.init()
 	PlayerData.onLoaded(Worlds.publish)
-	ProximityPromptService.PromptTriggered:Connect(function(prompt, player)
-		local action = prompt:GetAttribute("Action")
-		local w = byId[prompt:GetAttribute("World")]
-		if (action ~= "portal" and action ~= "portal_home") or not w then
-			return
-		end
-		if os.clock() - (lastPortal[player] or 0) < Config.WorldPortals.cooldown then
-			return
-		end
-		lastPortal[player] = os.clock()
-		if action == "portal_home" then
-			teleport(player, hubSpot(w))
-		else
-			usePortal(player, w)
-		end
-	end)
-	Players.PlayerRemoving:Connect(function(player)
-		lastPortal[player] = nil
-	end)
 end
 
 return Worlds

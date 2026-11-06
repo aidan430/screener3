@@ -26,6 +26,9 @@
         "GoHome": {
           "$className": "RemoteEvent"
         },
+        "Portal": {
+          "$className": "RemoteEvent"
+        },
         "DropHay": {
           "$className": "RemoteEvent"
         },

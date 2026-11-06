@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT / "dev"))
 import pacing  # noqa: E402
 
 SHARED = ROOT / "src" / "shared"
-CONFIG = "\n".join((SHARED / f).read_text() for f in ("Config.luau", "ConfigFactory.luau", "ConfigGoals.luau", "ConfigPlayer.luau", "ConfigWorlds.luau", "ConfigPads.luau"))
+CONFIG = "\n".join((SHARED / f).read_text() for f in ("Config.luau", "ConfigFactory.luau", "ConfigGoals.luau", "ConfigPlayer.luau", "ConfigWorlds.luau", "ConfigPads.luau", "ConfigLobby.luau"))
 FINDS = json.loads((SHARED / "Finds.json").read_text())
 
 
@@ -211,16 +211,63 @@ class PortalWorlds(unittest.TestCase):
             for x2, z2 in centres[i + 1:]:
                 self.assertGreater(math.hypot(x - x2, z - z2), 2 * inside + 200, "worlds overlap")
 
-    def test_portals_stand_round_the_haystack_clear_of_it(self):
-        line = re.search(r"^Config\.WorldPortals = \{ spots = \{ (.*?) \}, holdSeconds", CONFIG, re.M)
-        spots = [tuple(float(v) for v in m) for m in re.findall(r"\{ (-?[\d.]+), (-?[\d.]+) \}", line.group(1))]
-        self.assertEqual(len(spots), 4)
-        heap = pacing.number("PileRadiusBottom")
-        for i, (x, z) in enumerate(spots):
-            self.assertGreater(math.hypot(x, z), heap + 30, "arches stand well clear of the haystack")
-            self.assertLess(max(abs(x), abs(z)), pacing.number("PlotSize") / 2, "inside the farm's middle")
-            for x2, z2 in spots[i + 1:]:
+
+class Lobby(unittest.TestCase):
+    def lobby(self):
+        m = re.search(r"^Config\.Lobby = \{ x = (-?[\d.]+), floor = (-?[\d.]+), z = (-?[\d.]+) \}", CONFIG, re.M)
+        self.assertIsNotNone(m, "Config.Lobby = { x = .., floor = .., z = .. }")
+        return float(m.group(1)), float(m.group(3))
+
+    def spots(self, table):
+        block = re.search(rf"^Config\.{table} = \{{(.*?)^\}}", CONFIG, re.M | re.S).group(1)
+        return [(key, float(x), float(z)) for key, x, z in re.findall(r'(?:id|key) = "(\w+)".*?at = \{ (-?[\d.]+), (-?[\d.]+) \}', block)]
+
+    def test_the_lobby_is_far_from_the_farm_and_the_worlds(self):
+        x, z = self.lobby()
+        inside = pacing.number("LobbyInside")
+        self.assertGreaterEqual(inside, pacing.number("LobbyRadius") + 40, "the whole island counts as the lobby")
+        self.assertGreater(math.hypot(x, z) - inside, PortalWorlds.FARM_REACH, "the lobby overlaps the farm")
+        block = re.search(r"^Config\.Worlds = \{(.*?)^\}", CONFIG, re.M | re.S).group(1)
+        for wx, wz in re.findall(r"x = (-?\d+), z = (-?\d+)", block):
+            gap = math.hypot(x - int(wx), z - int(wz)) - inside - pacing.number("WorldInside")
+            self.assertGreater(gap, 200, "the lobby overlaps a world")
+
+    def test_five_arches_one_for_the_farm_and_each_world(self):
+        arches = self.spots("LobbyPortals")
+        ids = [a[0] for a in arches]
+        self.assertEqual(len(arches), 5)
+        self.assertEqual(sorted(ids), sorted(["farm"] + [r["id"] for r in pacing.rows("Worlds")]))
+        radius = pacing.number("LobbyRadius")
+        for i, (_, x, z) in enumerate(arches):
+            self.assertLess(math.hypot(x, z) + 8, radius, "arches stand on the island")
+            self.assertGreater(math.hypot(x, z), 30, "arches stand round the plaza, not in the fountain")
+            for _, x2, z2 in arches[i + 1:]:
                 self.assertGreaterEqual(math.hypot(x - x2, z - z2), 16, "arches (13 wide) must not touch")
+
+    def test_robux_pads_stand_in_the_lobby_clear_of_the_arches(self):
+        pads = self.spots("RobuxPads")
+        arches = self.spots("LobbyPortals")
+        size, radius = pacing.number("RobuxPadSize"), pacing.number("LobbyRadius")
+        arrival = re.search(r"^Config\.LobbyArrival = \{ (-?[\d.]+), (-?[\d.]+) \}", CONFIG, re.M)
+        ax, az = float(arrival.group(1)), float(arrival.group(2))
+        self.assertGreaterEqual(len(pads), 10)
+        self.assertLess(math.hypot(ax, az) + 5, radius, "you arrive on the island")
+        for i, (key, x, z) in enumerate(pads):
+            self.assertLess(math.hypot(x, z) + size / 2, radius - 2, f"{key} is on the island")
+            self.assertGreater(math.hypot(x - ax, z - az), size / 2 + 8, f"{key} is clear of where you arrive")
+            for _, x2, z2 in arches:
+                self.assertGreater(math.hypot(x - x2, z - z2), size / 2 + 6.5 + 2, f"{key} is clear of the arches")
+            for _, x2, z2 in pads[i + 1:]:
+                self.assertGreater(math.hypot(x - x2, z - z2), size + 1, "pads must not touch")
+
+    def test_the_farms_arch_stands_off_the_build_area(self):
+        m = re.search(r"^Config\.LobbyFarmPortal = \{ x = (-?[\d.]+), past = ([\d.]+), behind = ([\d.]+) \}", CONFIG, re.M)
+        x, past, behind = (float(v) for v in m.groups())
+        entrance = re.search(r"^Config\.FarmEntrance = \{ (-?[\d.]+), (-?[\d.]+), (-?[\d.]+) \}", CONFIG, re.M)
+        z = max(pacing.number("PlotSize") / 2 + past, float(entrance.group(3)) + behind)
+        self.assertGreater(z - 2, pacing.number("PlotSize") / 2, "outside the build area")
+        self.assertGreater(math.hypot(x, z), pacing.number("BuildClear") + 10, "well clear of the haystack")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=1)
