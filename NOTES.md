@@ -410,3 +410,15 @@ arc Speed, Coins, Lucky Charm, Straw Blast, Wheel Spin), `RobuxPadFacing` {0, 0}
 - Check in Studio: that Touched fires stepping onto the 0.8-stud disc, the panel's size and
   readability, that GetProductInfo returns icons once published, and the arcs against the
   compacted map.
+
+## Review of the shared middle (2026-11-06)
+- `BuildClear` 40 -> 50, and it's tested against the piece's whole footprint (half its widest
+  side), below the haystack's top (80): anything above it can be built over the hay. The build
+  ghost turns red inside it too.
+- Old saves' traders: if the stall is in the hay or faces into it (its truck stop would be
+  within 54 of the middle), it moves to `TraderStart` instead of going to the inventory (a
+  trader in the inventory was never placed again). `TruckStart` moved to (22, 98), off the
+  arrival path.
+- The whole-heap sync is sent at most every 3 s per player on request; pick-up prompts don't
+  need line of sight (items can sink into your on-screen heap); a player still loading is in
+  a "Lobby" collision group that passes through every farm.

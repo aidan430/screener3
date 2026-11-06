@@ -25,8 +25,8 @@ Config.FarmScale = 0.65 -- the countryside, fence and ground are pulled in to th
 Config.PlotCentres = { { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } }
 Config.FarmEntrance = { 0, 0, 80 } -- where you arrive: south of the haystack, facing it
 Config.TraderStart = { 0, 0, 58 } -- your trader's stall, between the haystack and where you arrive
-Config.TruckStart = { 0, 0, 98 } -- trucks drive in from the south meadow
-Config.BuildClear = 40 -- nothing can stand this close to the haystack's centre (it's hay)
+Config.TruckStart = { 22, 0, 98 } -- trucks drive in from the south meadow, beside the arrival path
+Config.BuildClear = 50 -- no part of anything can stand this close to the haystack's centre, below its top
 
 -- The heap: 5,000,000 straws in clumps, one smooth terrain haystack 80 studs (22 m) high and
 -- 88 across: steep sides and a rounded top, like a beehive haystack.
@@ -2243,6 +2243,7 @@ function HayItems.spawn(player, kind, straws, cf, velocity)
 		prompt.ObjectText = if kind == "bale" then "Hay bale" elseif kind == "wrapped" then "Wrapped bale" else "Pellet sack"
 		prompt.HoldDuration = 0.2
 		prompt.MaxActivationDistance = 9
+		prompt.RequiresLineOfSight = false -- it may have sunk into your haystack (only on your screen)
 		prompt:SetAttribute("Action", "pickup")
 		prompt.Parent = item
 	end
@@ -3569,11 +3570,16 @@ end
 
 -- The next clump for the machines: they peel the heap from the outside in, bottom first.
 function Piles.init()
+	local asked = {}
 	Remotes.PileSync.OnServerEvent:Connect(function(player) -- the screen asks once it's ready
 		local plotIndex = Plots.of(player)
-		if plotIndex then
+		if plotIndex and os.clock() - (asked[player] or -10) >= 3 then -- the whole heap at most every 3 s
+			asked[player] = os.clock()
 			Piles.sync(plotIndex)
 		end
+	end)
+	game:GetService("Players").PlayerRemoving:Connect(function(player)
+		asked[player] = nil
 	end)
 end
 
@@ -3965,9 +3971,9 @@ function Plots.build()
 	local root = Instance.new("Folder")
 	root.Name = "Plots"
 	root.Parent = workspace
-	for index in ipairs(Config.PlotCentres) do
+	for _, name in ipairs({ "Lobby", "Plot1", "Plot2", "Plot3", "Plot4" }) do
 		pcall(function()
-			PhysicsService:RegisterCollisionGroup(Plots.group(index))
+			PhysicsService:RegisterCollisionGroup(name)
 		end)
 	end
 	for index in ipairs(Config.PlotCentres) do
@@ -3976,6 +3982,8 @@ function Plots.build()
 				PhysicsService:CollisionGroupSetCollidable(Plots.group(index), Plots.group(other), false)
 			end
 		end
+		-- a player who hasn't got a plot yet (still loading) passes through every farm too
+		PhysicsService:CollisionGroupSetCollidable("Lobby", Plots.group(index), false)
 		local folder = Instance.new("Folder")
 		folder.Name = "Plot" .. index
 		folder:SetAttribute("Index", index)
@@ -4027,6 +4035,18 @@ end
 
 function Plots.init()
 	Players.PlayerRemoving:Connect(Plots.release)
+	-- until their data loads and they get a plot, a new player's character is in the Lobby group
+	Players.PlayerAdded:Connect(function(player)
+		player.CharacterAdded:Connect(function(character)
+			if not byPlayer[player] then
+				for _, part in ipairs(character:GetDescendants()) do
+					if part:IsA("BasePart") then
+						part.CollisionGroup = "Lobby"
+					end
+				end
+			end
+		end)
+	end)
 end
 
 return Plots
@@ -6175,17 +6195,33 @@ local function ensureTrader(_, d)
 	table.insert(d.placed, { k = "trader", x = t[1], y = t[2], z = t[3], r = 180 }) -- front (-Z) turned to face south
 end
 
--- True if a spot is inside the haystack (where nothing can be built).
-local function inHaystack(rel)
-	return Vector3.new(rel.X, 0, rel.Z).Magnitude < Config.BuildClear
+-- True if a piece of item `id` placed at `rel` (from the middle) would stand in the haystack:
+-- any part of its footprint inside Config.BuildClear, below the haystack's top.
+local HAY_TOP = Config.PileLayers * Config.ClumpSize
+local function inHaystack(rel, id)
+	local item = id and Economy.item(id)
+	local size = item and item.def.size or { 0, 0, 0 }
+	local reach = math.max(size[1], size[3]) / 2
+	return rel.Y < HAY_TOP and Vector3.new(rel.X, 0, rel.Z).Magnitude - reach < Config.BuildClear
 end
 
--- Things placed where the haystack now stands (old saves, from when plots were elsewhere) go
--- back into the player's inventory, to be built again.
+-- A stall whose front faces the haystack would call trucks into it: true if so.
+local function truckStopInHay(e)
+	local a = math.rad(e.r or 0)
+	local stop = Vector3.new(e.x, 0, e.z) + Vector3.new(-math.sin(a), 0, -math.cos(a)) * 14
+	return stop.Magnitude < Config.PileRadiusBottom + 10
+end
+
+-- Old saves (from when plots were elsewhere): things now in the haystack go back to the
+-- inventory to build again, and a trader in the hay or facing into it moves to TraderStart.
 local function clearHaystack(d)
 	for i = #d.placed, 1, -1 do
 		local e = d.placed[i]
-		if inHaystack(Vector3.new(e.x, e.y, e.z)) then
+		local inHay = inHaystack(Vector3.new(e.x, e.y, e.z), e.k)
+		if e.k == "trader" and (inHay or truckStopInHay(e)) then
+			local t = Config.TraderStart
+			e.x, e.y, e.z, e.r = t[1], t[2], t[3], 180
+		elseif inHay then
 			table.remove(d.placed, i)
 			d.inventory[e.k] = (d.inventory[e.k] or 0) + 1
 		end
@@ -6228,7 +6264,7 @@ local function place(player, id, position, rotation)
 	end
 	if not Plots.contains(plotIndex, position, 1) then
 		return false, "You can only build on your farm."
-	elseif inHaystack(position - Plots.centre(plotIndex)) then
+	elseif inHaystack(position - Plots.centre(plotIndex), id) then
 		return false, "That's inside the haystack: build next to it."
 	end
 	if #d.placed >= Config.MaxPlaced then
@@ -8168,7 +8204,8 @@ function BuildMode.mount(gui, notifier)
 			ghost.CFrame = ghost.CFrame:Lerp(cf, 0.5) -- glides into place
 			arrow.CFrame = ghost.CFrame * CFrame.new(0, ghost.Size.Y / 2 + 0.5, -ghost.Size.Z / 2)
 			local half = Config.PlotSize / 2 - 1
-			local inside = math.abs(snapped.X - centre.X) <= half and math.abs(snapped.Z - centre.Z) <= half
+			local fromHay = Vector3.new(snapped.X - centre.X, 0, snapped.Z - centre.Z).Magnitude - math.max(ghost.Size.X, ghost.Size.Z) / 2
+			local inside = math.abs(snapped.X - centre.X) <= half and math.abs(snapped.Z - centre.Z) <= half and (fromHay >= Config.BuildClear or snapped.Y >= Config.PileLayers * Config.ClumpSize)
 			ghost.Color = if inside then Color3.fromRGB(120, 255, 140) else Color3.fromRGB(255, 100, 90)
 		end
 	end)

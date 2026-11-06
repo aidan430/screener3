@@ -150,11 +150,16 @@ end
 
 -- The next clump for the machines: they peel the heap from the outside in, bottom first.
 function Piles.init()
+	local asked = {}
 	Remotes.PileSync.OnServerEvent:Connect(function(player) -- the screen asks once it's ready
 		local plotIndex = Plots.of(player)
-		if plotIndex then
+		if plotIndex and os.clock() - (asked[player] or -10) >= 3 then -- the whole heap at most every 3 s
+			asked[player] = os.clock()
 			Piles.sync(plotIndex)
 		end
+	end)
+	game:GetService("Players").PlayerRemoving:Connect(function(player)
+		asked[player] = nil
 	end)
 end
 

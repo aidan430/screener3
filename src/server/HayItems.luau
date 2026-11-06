@@ -106,6 +106,7 @@ function HayItems.spawn(player, kind, straws, cf, velocity)
 		prompt.ObjectText = if kind == "bale" then "Hay bale" elseif kind == "wrapped" then "Wrapped bale" else "Pellet sack"
 		prompt.HoldDuration = 0.2
 		prompt.MaxActivationDistance = 9
+		prompt.RequiresLineOfSight = false -- it may have sunk into your haystack (only on your screen)
 		prompt:SetAttribute("Action", "pickup")
 		prompt.Parent = item
 	end

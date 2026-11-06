@@ -54,17 +54,33 @@ local function ensureTrader(_, d)
 	table.insert(d.placed, { k = "trader", x = t[1], y = t[2], z = t[3], r = 180 }) -- front (-Z) turned to face south
 end
 
--- True if a spot is inside the haystack (where nothing can be built).
-local function inHaystack(rel)
-	return Vector3.new(rel.X, 0, rel.Z).Magnitude < Config.BuildClear
+-- True if a piece of item `id` placed at `rel` (from the middle) would stand in the haystack:
+-- any part of its footprint inside Config.BuildClear, below the haystack's top.
+local HAY_TOP = Config.PileLayers * Config.ClumpSize
+local function inHaystack(rel, id)
+	local item = id and Economy.item(id)
+	local size = item and item.def.size or { 0, 0, 0 }
+	local reach = math.max(size[1], size[3]) / 2
+	return rel.Y < HAY_TOP and Vector3.new(rel.X, 0, rel.Z).Magnitude - reach < Config.BuildClear
 end
 
--- Things placed where the haystack now stands (old saves, from when plots were elsewhere) go
--- back into the player's inventory, to be built again.
+-- A stall whose front faces the haystack would call trucks into it: true if so.
+local function truckStopInHay(e)
+	local a = math.rad(e.r or 0)
+	local stop = Vector3.new(e.x, 0, e.z) + Vector3.new(-math.sin(a), 0, -math.cos(a)) * 14
+	return stop.Magnitude < Config.PileRadiusBottom + 10
+end
+
+-- Old saves (from when plots were elsewhere): things now in the haystack go back to the
+-- inventory to build again, and a trader in the hay or facing into it moves to TraderStart.
 local function clearHaystack(d)
 	for i = #d.placed, 1, -1 do
 		local e = d.placed[i]
-		if inHaystack(Vector3.new(e.x, e.y, e.z)) then
+		local inHay = inHaystack(Vector3.new(e.x, e.y, e.z), e.k)
+		if e.k == "trader" and (inHay or truckStopInHay(e)) then
+			local t = Config.TraderStart
+			e.x, e.y, e.z, e.r = t[1], t[2], t[3], 180
+		elseif inHay then
 			table.remove(d.placed, i)
 			d.inventory[e.k] = (d.inventory[e.k] or 0) + 1
 		end
@@ -107,7 +123,7 @@ local function place(player, id, position, rotation)
 	end
 	if not Plots.contains(plotIndex, position, 1) then
 		return false, "You can only build on your farm."
-	elseif inHaystack(position - Plots.centre(plotIndex)) then
+	elseif inHaystack(position - Plots.centre(plotIndex), id) then
 		return false, "That's inside the haystack: build next to it."
 	end
 	if #d.placed >= Config.MaxPlaced then

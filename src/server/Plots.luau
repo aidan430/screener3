@@ -66,9 +66,9 @@ function Plots.build()
 	local root = Instance.new("Folder")
 	root.Name = "Plots"
 	root.Parent = workspace
-	for index in ipairs(Config.PlotCentres) do
+	for _, name in ipairs({ "Lobby", "Plot1", "Plot2", "Plot3", "Plot4" }) do
 		pcall(function()
-			PhysicsService:RegisterCollisionGroup(Plots.group(index))
+			PhysicsService:RegisterCollisionGroup(name)
 		end)
 	end
 	for index in ipairs(Config.PlotCentres) do
@@ -77,6 +77,8 @@ function Plots.build()
 				PhysicsService:CollisionGroupSetCollidable(Plots.group(index), Plots.group(other), false)
 			end
 		end
+		-- a player who hasn't got a plot yet (still loading) passes through every farm too
+		PhysicsService:CollisionGroupSetCollidable("Lobby", Plots.group(index), false)
 		local folder = Instance.new("Folder")
 		folder.Name = "Plot" .. index
 		folder:SetAttribute("Index", index)
@@ -128,6 +130,18 @@ end
 
 function Plots.init()
 	Players.PlayerRemoving:Connect(Plots.release)
+	-- until their data loads and they get a plot, a new player's character is in the Lobby group
+	Players.PlayerAdded:Connect(function(player)
+		player.CharacterAdded:Connect(function(character)
+			if not byPlayer[player] then
+				for _, part in ipairs(character:GetDescendants()) do
+					if part:IsA("BasePart") then
+						part.CollisionGroup = "Lobby"
+					end
+				end
+			end
+		end)
+	end)
 end
 
 return Plots

@@ -13,8 +13,8 @@ Config.FarmScale = 0.65 -- the countryside, fence and ground are pulled in to th
 Config.PlotCentres = { { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } }
 Config.FarmEntrance = { 0, 0, 80 } -- where you arrive: south of the haystack, facing it
 Config.TraderStart = { 0, 0, 58 } -- your trader's stall, between the haystack and where you arrive
-Config.TruckStart = { 0, 0, 98 } -- trucks drive in from the south meadow
-Config.BuildClear = 40 -- nothing can stand this close to the haystack's centre (it's hay)
+Config.TruckStart = { 22, 0, 98 } -- trucks drive in from the south meadow, beside the arrival path
+Config.BuildClear = 50 -- no part of anything can stand this close to the haystack's centre, below its top
 
 -- The heap: 5,000,000 straws in clumps, one smooth terrain haystack 80 studs (22 m) high and
 -- 88 across: steep sides and a rounded top, like a beehive haystack.

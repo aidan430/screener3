@@ -288,7 +288,8 @@ function BuildMode.mount(gui, notifier)
 			ghost.CFrame = ghost.CFrame:Lerp(cf, 0.5) -- glides into place
 			arrow.CFrame = ghost.CFrame * CFrame.new(0, ghost.Size.Y / 2 + 0.5, -ghost.Size.Z / 2)
 			local half = Config.PlotSize / 2 - 1
-			local inside = math.abs(snapped.X - centre.X) <= half and math.abs(snapped.Z - centre.Z) <= half
+			local fromHay = Vector3.new(snapped.X - centre.X, 0, snapped.Z - centre.Z).Magnitude - math.max(ghost.Size.X, ghost.Size.Z) / 2
+			local inside = math.abs(snapped.X - centre.X) <= half and math.abs(snapped.Z - centre.Z) <= half and (fromHay >= Config.BuildClear or snapped.Y >= Config.PileLayers * Config.ClumpSize)
 			ghost.Color = if inside then Color3.fromRGB(120, 255, 140) else Color3.fromRGB(255, 100, 90)
 		end
 	end)
