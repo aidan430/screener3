@@ -6,6 +6,7 @@ simulation (dev/pacing.py), which mirrors Economy.luau's arithmetic.
 from __future__ import annotations
 
 import json
+import math
 import re
 import sys
 import unittest
@@ -16,7 +17,7 @@ sys.path.insert(0, str(ROOT / "dev"))
 import pacing  # noqa: E402
 
 SHARED = ROOT / "src" / "shared"
-CONFIG = "\n".join((SHARED / f).read_text() for f in ("Config.luau", "ConfigFactory.luau", "ConfigGoals.luau", "ConfigPlayer.luau"))
+CONFIG = "\n".join((SHARED / f).read_text() for f in ("Config.luau", "ConfigFactory.luau", "ConfigGoals.luau", "ConfigPlayer.luau", "ConfigWorlds.luau"))
 FINDS = json.loads((SHARED / "Finds.json").read_text())
 
 
@@ -183,6 +184,45 @@ class Pacing(unittest.TestCase):
         tools = pacing.rows("Tools")
         seconds = tools[1]["price"] / (tools[0]["power"] * pacing.CLICKS_PER_SECOND)
         self.assertLessEqual(seconds, 300)
+
+
+class PortalWorlds(unittest.TestCase):
+    FARM_REACH = 720  # the farm's ground is 1000 across, with hills to about 720 from the hub
+
+    def worlds(self):
+        rows = pacing.rows("Worlds")
+        block = re.search(r"^Config\.Worlds = \{(.*?)^\}", CONFIG, re.M | re.S).group(1)
+        centres = [(int(x), int(z)) for x, z in re.findall(r"x = (-?\d+), z = (-?\d+)", block)]
+        self.assertEqual(len(rows), 4)
+        self.assertEqual(len(centres), len(rows))
+        return rows, centres
+
+    def test_prices_and_multipliers_rise_world_by_world(self):
+        rows, _ = self.worlds()
+        for a, b in zip(rows, rows[1:]):
+            for key in ("price", "multiplier", "straws"):
+                self.assertGreater(b[key], a[key], f"{b['id']} {key}")
+        self.assertGreater(rows[0]["multiplier"], 1, "a world pays more than the farm")
+        self.assertEqual(len({r["id"] for r in rows}), len(rows))
+
+    def test_worlds_are_far_apart_and_outside_the_farm(self):
+        _, centres = self.worlds()
+        size, inside = pacing.number("WorldSize"), pacing.number("WorldInside")
+        self.assertGreaterEqual(inside, size / 2, "the whole world counts as inside it")
+        for i, (x, z) in enumerate(centres):
+            self.assertGreater(math.hypot(x, z) - inside, self.FARM_REACH, f"world {i + 1} overlaps the farm")
+            for x2, z2 in centres[i + 1:]:
+                self.assertGreater(math.hypot(x - x2, z - z2), 2 * inside + 200, "worlds overlap")
+
+    def test_portals_stand_on_the_west_road_and_leave_a_lane(self):
+        line = re.search(r"^Config\.WorldPortals = \{ xs = \{ (.*?) \}, z = (-?[\d.]+)", CONFIG, re.M)
+        xs = sorted(float(v) for v in line.group(1).split(","))
+        z = float(line.group(2))
+        self.assertEqual(len(xs), 4)
+        self.assertTrue(all(-150 <= x <= -20 for x in xs), xs)
+        self.assertTrue(all(b - a >= 16 for a, b in zip(xs, xs[1:])), "arches (13 wide) must not touch")
+        self.assertLessEqual(abs(z) + 2, 13, "the arch's step stays inside the road, clear of the plots")
+        self.assertGreaterEqual(abs(z) - 2 + 15, 18, "a walking lane on the other half of the road")
 
 
 if __name__ == "__main__":

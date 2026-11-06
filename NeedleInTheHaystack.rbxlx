@@ -290,7 +290,7 @@ Config.Loft = { straws = 250000, coinMultiplier = 20, needleEarliest = 0.5 }
 
 -- More numbers kept in companion files (to keep each under 300 lines): the factory line and
 -- processing chain, the guided goals, and stamina and the metal detector. Their lists add to the ones above.
-for _, file in ipairs({ "ConfigFactory", "ConfigGoals", "ConfigPlayer" }) do
+for _, file in ipairs({ "ConfigFactory", "ConfigGoals", "ConfigPlayer", "ConfigWorlds" }) do
 	for name, value in pairs(require(script.Parent:WaitForChild(file))) do
 		if type(value) == "table" and type(Config[name]) == "table" and #value > 0 then
 			for _, entry in ipairs(value) do
@@ -424,6 +424,60 @@ return Config
 				</Properties>
 			</Item>
 			<Item class="ModuleScript" referent="RBX00006">
+				<Properties>
+					<string name="Name">ConfigWorlds</string>
+					<ProtectedString name="Source"><![CDATA[-- The four portal worlds (Config.luau merges this file in: read and tune them as Config.Worlds,
+-- Config.WorldPortals, Config.WorldMoods and the other Config.World* numbers).
+local Config = {}
+
+-- One row per world, in unlock order. price = coins to open its portal once (saved);
+-- multiplier = coins per straw there, times the normal straw value (and your coin multiplier);
+-- straws = how many straws its haystack holds before a fresh one (with a new needle) grows;
+-- x, z = the world's centre (studs; the farm reaches about 500 from the hub, so stay far out).
+Config.Worlds = {
+	{ id = "moon", name = "The Moon", price = 250000, multiplier = 3, straws = 60000, x = 0, z = 2500 },
+	{ id = "lava", name = "Ember Lands", price = 2000000, multiplier = 6, straws = 120000, x = 2500, z = 0 },
+	{ id = "atlantis", name = "Bubble City", price = 10000000, multiplier = 12, straws = 240000, x = 0, z = -2500 },
+	{ id = "field", name = "Haystack Stadium", price = 50000000, multiplier = 25, straws = 480000, x = -2500, z = 0 },
+}
+Config.WorldSize = 300 -- each world is about this many studs across
+Config.WorldInside = 220 -- within this many studs (flat) of a world's centre you are "in" it
+Config.WorldNeedleEarliest = 0.25 -- a world's needle hides after this share of its straws
+Config.WorldNeedleSearches = 5000 -- the needle pays this many clicks of straw at that world's rate
+Config.WorldHaystackSize = 30 -- the haystack's main ball (studs)
+
+-- The portal arches on the west road: their x positions (the road runs along negative x) and
+-- their z (the south half of the road, leaving the north half as a walking lane).
+Config.WorldPortals = { xs = { -42, -70, -98, -126 }, z = 10, holdSeconds = 0.8, cooldown = 2 }
+
+-- Moon gravity: an upward push cancelling this share of normal gravity while you're there.
+Config.MoonLift = 0.7
+-- Lava never hurts: stepping on it nudges you back to the bank at this speed (studs/s).
+Config.LavaPush = { out = 30, up = 50, every = 0.4, toastEvery = 4 }
+Config.WorldFadeSeconds = 1.6 -- the light eases this long on arrival and on leaving
+Config.WorldTitleSeconds = 3.5 -- the world's name stays on screen this long
+
+-- The light in each world (applied on your own screen only, eased in and out).
+Config.WorldMoods = {
+	moon = { clock = 0, brightness = 2, ambient = { 90, 96, 112 }, outdoor = { 150, 156, 176 }, shift = { 196, 210, 255 }, color = { 10, 10, 18 }, decay = { 0, 0, 0 }, density = 0, haze = 0, glare = 0 },
+	lava = { clock = 18.2, brightness = 1.6, ambient = { 110, 52, 40 }, outdoor = { 170, 86, 60 }, shift = { 255, 128, 64 }, color = { 255, 120, 70 }, decay = { 120, 34, 20 }, density = 0.42, haze = 2, glare = 0.4 },
+	atlantis = { clock = 13, brightness = 1.4, ambient = { 60, 104, 134 }, outdoor = { 96, 156, 186 }, shift = { 120, 204, 255 }, color = { 60, 140, 190 }, decay = { 20, 64, 112 }, density = 0.5, haze = 2.4, glare = 0 },
+	field = { clock = 14, brightness = 3, ambient = { 112, 112, 112 }, outdoor = { 176, 176, 176 }, shift = { 255, 250, 240 }, color = { 200, 222, 255 }, decay = { 150, 180, 220 }, density = 0.2, haze = 0.6, glare = 0.2 },
+}
+
+-- Each world's hay (three shades) for its haystack.
+Config.WorldHay = {
+	moon = { { 196, 200, 210 }, { 170, 176, 188 }, { 222, 226, 234 } },
+	lava = { { 240, 124, 40 }, { 220, 96, 30 }, { 255, 160, 70 } },
+	atlantis = { { 70, 170, 140 }, { 50, 140, 116 }, { 110, 200, 170 } },
+	field = { { 96, 176, 70 }, { 76, 150, 56 }, { 130, 200, 96 } },
+}
+
+return Config
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00007">
 				<Properties>
 					<string name="Name">Economy</string>
 					<ProtectedString name="Source"><![CDATA[-- Rates, prices, power and odds. Plain maths: no Roblox services.
@@ -611,7 +665,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00007">
+			<Item class="ModuleScript" referent="RBX00008">
 				<Properties>
 					<string name="Name">Finds</string>
 					<ProtectedString name="Source"><![CDATA[-- Generated from Finds.json
@@ -670,7 +724,7 @@ return {
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00008">
+			<Item class="ModuleScript" referent="RBX00009">
 				<Properties>
 					<string name="Name">Format</string>
 					<ProtectedString name="Source"><![CDATA[-- Number formatting for the UI. Plain Luau: no Roblox services.
@@ -728,7 +782,7 @@ return Format
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00009">
+			<Item class="ModuleScript" referent="RBX0000A">
 				<Properties>
 					<string name="Name">HayLook</string>
 					<ProtectedString name="Source"><![CDATA[-- One look for every loose bit of hay (on tools, in buckets and baskets, flying, dropped
@@ -792,7 +846,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0000A">
+			<Item class="ModuleScript" referent="RBX0000B">
 				<Properties>
 					<string name="Name">Layout</string>
 					<ProtectedString name="Source"><![CDATA[-- Where each clump sits in the heap: one cell of the 4-stud terrain grid each, in
@@ -903,91 +957,91 @@ end
 				</Properties>
 			</Item>
 		</Item>
-		<Item class="Folder" referent="RBX0000B">
+		<Item class="Folder" referent="RBX0000C">
 			<Properties>
 				<string name="Name">Remotes</string>
 			</Properties>
-			<Item class="RemoteEvent" referent="RBX0000C">
+			<Item class="RemoteEvent" referent="RBX0000D">
 				<Properties>
 					<string name="Name">Harvest</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0000D">
+			<Item class="RemoteEvent" referent="RBX0000E">
 				<Properties>
 					<string name="Name">SearchFx</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0000E">
+			<Item class="RemoteEvent" referent="RBX0000F">
 				<Properties>
 					<string name="Name">Announce</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0000F">
+			<Item class="RemoteEvent" referent="RBX00010">
 				<Properties>
 					<string name="Name">Achievement</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00010">
+			<Item class="RemoteEvent" referent="RBX00011">
 				<Properties>
 					<string name="Name">GoHome</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00011">
+			<Item class="RemoteEvent" referent="RBX00012">
 				<Properties>
 					<string name="Name">DropHay</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00012">
+			<Item class="RemoteEvent" referent="RBX00013">
 				<Properties>
 					<string name="Name">Teleport</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00013">
+			<Item class="RemoteFunction" referent="RBX00014">
 				<Properties>
 					<string name="Name">Whistle</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00014">
+			<Item class="RemoteFunction" referent="RBX00015">
 				<Properties>
 					<string name="Name">Buy</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00015">
+			<Item class="RemoteFunction" referent="RBX00016">
 				<Properties>
 					<string name="Name">Place</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00016">
+			<Item class="RemoteFunction" referent="RBX00017">
 				<Properties>
 					<string name="Name">TakeBack</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00017">
+			<Item class="RemoteFunction" referent="RBX00018">
 				<Properties>
 					<string name="Name">EquipSkin</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00018">
+			<Item class="RemoteFunction" referent="RBX00019">
 				<Properties>
 					<string name="Name">GetAchievements</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00019">
+			<Item class="RemoteFunction" referent="RBX0001A">
 				<Properties>
 					<string name="Name">Detect</string>
 				</Properties>
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerScriptService" referent="RBX0001A">
+	<Item class="ServerScriptService" referent="RBX0001B">
 		<Properties>
 			<string name="Name">ServerScriptService</string>
 		</Properties>
-		<Item class="Folder" referent="RBX0001B">
+		<Item class="Folder" referent="RBX0001C">
 			<Properties>
 				<string name="Name">Server</string>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX0001C">
+			<Item class="ModuleScript" referent="RBX0001D">
 				<Properties>
 					<string name="Name">Achievements</string>
 					<ProtectedString name="Source"><![CDATA[-- The ten achievements, secret until earned. Each watches one number; all ten open the Golden Loft.
@@ -1075,7 +1129,7 @@ return Achievements
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001D">
+			<Item class="ModuleScript" referent="RBX0001E">
 				<Properties>
 					<string name="Name">Assets</string>
 					<ProtectedString name="Source"><![CDATA[-- Things the owner imported in Studio and uploaded, loaded by asset ID: a saved Model (via
@@ -1150,7 +1204,7 @@ return Assets
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001E">
+			<Item class="ModuleScript" referent="RBX0001F">
 				<Properties>
 					<string name="Name">Build</string>
 					<ProtectedString name="Source"><![CDATA[-- Helpers for building the world out of simple anchored parts.
@@ -1232,7 +1286,7 @@ return Build
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001F">
+			<Item class="ModuleScript" referent="RBX00020">
 				<Properties>
 					<string name="Name">Carry</string>
 					<ProtectedString name="Source"><![CDATA[-- What you carry, where everyone can see it: the hay on your tool grows with every harvest,
@@ -1389,7 +1443,7 @@ return Carry
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00020">
+			<Item class="ModuleScript" referent="RBX00021">
 				<Properties>
 					<string name="Name">Detector</string>
 					<ProtectedString name="Source"><![CDATA[-- The metal detector (Config.MetalDetector), bought once in the shop. While the player holds
@@ -1447,7 +1501,7 @@ return Detector
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00021">
+			<Item class="ModuleScript" referent="RBX00022">
 				<Properties>
 					<string name="Name">Factory</string>
 					<ProtectedString name="Source"><![CDATA[-- The factory line, ticking: Hay Arms and Throwers take hay from your heap and put bundles on
@@ -1578,7 +1632,7 @@ return Factory
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00022">
+			<Item class="ModuleScript" referent="RBX00023">
 				<Properties>
 					<string name="Name">Goals</string>
 					<ProtectedString name="Source"><![CDATA[-- Guided goals: a step-by-step list (Config.Goals) that teaches the game. The server checks the
@@ -1696,7 +1750,7 @@ return Goals
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00023">
+			<Item class="ModuleScript" referent="RBX00024">
 				<Properties>
 					<string name="Name">Hauling</string>
 					<ProtectedString name="Source"><![CDATA[-- Hauling: everything you dump waits in your trader's basket. Every second the trader buys
@@ -1897,7 +1951,7 @@ return Hauling
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00024">
+			<Item class="ModuleScript" referent="RBX00025">
 				<Properties>
 					<string name="Name">HayItems</string>
 					<ProtectedString name="Source"><![CDATA[-- Every physical bit of hay lying on a plot: bundles (loose hay), bales, wrapped bales and
@@ -2029,7 +2083,7 @@ return HayItems
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00025">
+			<Item class="ModuleScript" referent="RBX00026">
 				<Properties>
 					<string name="Name">Haystack</string>
 					<ProtectedString name="Source"><![CDATA[-- The Golden Loft: the secret level in the clouds above the hub, with its golden haystack.
@@ -2090,7 +2144,7 @@ return Haystack
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00026">
+			<Item class="ModuleScript" referent="RBX00027">
 				<Properties>
 					<string name="Name">Loft</string>
 					<ProtectedString name="Source"><![CDATA[-- The Golden Loft: the secret level above the hub, open only to players with all ten
@@ -2131,7 +2185,7 @@ return Loft
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00027">
+			<Item class="ModuleScript" referent="RBX00028">
 				<Properties>
 					<string name="Name">LooseHay</string>
 					<ProtectedString name="Source"><![CDATA[-- You and loose hay: press G to drop what you carry as a bundle; E picks up a bale, wrapped
@@ -2251,7 +2305,7 @@ return LooseHay
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00028">
+			<Item class="ModuleScript" referent="RBX00029">
 				<Properties>
 					<string name="Name">Machines</string>
 					<ProtectedString name="Source"><![CDATA[-- Machines harvest the top of your pile into your silo every second, if your generators make
@@ -2407,7 +2461,7 @@ return Machines
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Script" referent="RBX00029">
+			<Item class="Script" referent="RBX0002A">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Starts the game. The ground and spawn point are built first, so nobody spawns into the void.
@@ -2453,6 +2507,7 @@ local Orders = require(script.Parent.Orders)
 local Goals = require(script.Parent.Goals)
 local Stamina = require(script.Parent.Stamina)
 local Detector = require(script.Parent.Detector)
+local Worlds = require(script.Parent.Worlds)
 
 StarterPlayer.CharacterMaxSlopeAngle = Config.MaxSlopeAngle -- the steep heap needs building to climb
 local Scenery = require(script.Parent.Scenery)
@@ -2472,6 +2527,11 @@ Haystack.build()
 local sceneryOk, sceneryError = pcall(Scenery.build)
 if not sceneryOk then
 	warn("[Start] Scenery failed to build: " .. tostring(sceneryError))
+end
+-- the portal arches on the west road and the four worlds far beyond the farm
+local worldsOk, worldsError = pcall(Worlds.build)
+if not worldsOk then
+	warn("[Start] Worlds failed to build: " .. tostring(worldsError))
 end
 
 local function toPlot(player)
@@ -2539,6 +2599,7 @@ local parts = {
 	{ "Detector", Detector.init },
 	{ "Plots", Plots.init },
 	{ "Monetization", Monetization.init }, -- before PlayerData, so early players get their passes checked
+	{ "Worlds", Worlds.init }, -- before PlayerData, so it hears every player load
 	{ "PlayerData", PlayerData.init },
 	{ "Achievements", Achievements.init },
 	{ "Structures", Structures.init },
@@ -2561,7 +2622,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002A">
+			<Item class="ModuleScript" referent="RBX0002B">
 				<Properties>
 					<string name="Name">Monetization</string>
 					<ProtectedString name="Source"><![CDATA[-- Robux items. Every ID in Config.GamePasses and Config.Products starts at 0 (switched off);
@@ -2679,7 +2740,7 @@ return Monetization
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002B">
+			<Item class="ModuleScript" referent="RBX0002C">
 				<Properties>
 					<string name="Name">Orders</string>
 					<ProtectedString name="Source"><![CDATA[-- Delivery orders: one at a time, a truck driver asks for straws of one kind (bundles, bales,
@@ -2747,7 +2808,7 @@ return Orders
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002C">
+			<Item class="ModuleScript" referent="RBX0002D">
 				<Properties>
 					<string name="Name">Pieces</string>
 					<ProtectedString name="Source"><![CDATA[-- What each buildable item looks like, built from parts around `cf`: the base centre on the
@@ -2981,7 +3042,7 @@ return Pieces
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002D">
+			<Item class="ModuleScript" referent="RBX0002E">
 				<Properties>
 					<string name="Name">PiecesBelts</string>
 					<ProtectedString name="Source"><![CDATA[-- Conveyor belts, the conveyor down off a platform, and the bale maker. Belts move anything
@@ -3054,7 +3115,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002E">
+			<Item class="ModuleScript" referent="RBX0002F">
 				<Properties>
 					<string name="Name">PiecesFactory</string>
 					<ProtectedString name="Source"><![CDATA[-- The factory line's pieces: belt corners and splitters, Hay Arms and Hay Throwers that feed
@@ -3165,7 +3226,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002F">
+			<Item class="ModuleScript" referent="RBX00030">
 				<Properties>
 					<string name="Name">Piles</string>
 					<ProtectedString name="Source"><![CDATA[-- Each player's 70 m pile: 5,000 clumps of 1,000 straws on their plot, built from their save
@@ -3366,7 +3427,7 @@ return Piles
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00030">
+			<Item class="ModuleScript" referent="RBX00031">
 				<Properties>
 					<string name="Name">PlayerData</string>
 					<ProtectedString name="Source"><![CDATA[-- Each player's saved progress and the leaderboard. If the DataStore can't be read (Studio
@@ -3651,7 +3712,7 @@ return PlayerData
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00031">
+			<Item class="ModuleScript" referent="RBX00032">
 				<Properties>
 					<string name="Name">Plots</string>
 					<ProtectedString name="Source"><![CDATA[-- The four plots around the hub. A player gets a free plot when they join and gives it
@@ -3762,7 +3823,7 @@ return Plots
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00032">
+			<Item class="ModuleScript" referent="RBX00033">
 				<Properties>
 					<string name="Name">Processing</string>
 					<ProtectedString name="Source"><![CDATA[-- What happens when loose hay touches a machine's sensor on its owner's plot: the trader's
@@ -3893,7 +3954,7 @@ return Processing
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00033">
+			<Item class="ModuleScript" referent="RBX00034">
 				<Properties>
 					<string name="Name">Profile</string>
 					<ProtectedString name="Source"><![CDATA[-- A player's data model: what is saved, with its defaults. Anything missing or of the
@@ -3960,6 +4021,7 @@ function Profile.fresh(saved)
 		achievements = {},
 		boosts = {},
 		receipts = {},
+		worlds = {}, -- [world id] = { unlocked, searched, needleAt, needles } (Config.Worlds)
 		loft = { searched = number(saved.loft, "searched", 0), needleAt = number(saved.loft, "needleAt", 0), needles = number(saved.loft, "needles", 0) },
 	}
 	if d.needleClump < 1 or d.needleClump > Config.Clumps then
@@ -4025,6 +4087,12 @@ function Profile.fresh(saved)
 			end
 		end
 	end
+	for _, w in ipairs(Config.Worlds) do
+		local s = type(saved.worlds) == "table" and saved.worlds[w.id] or nil
+		local at = number(s, "needleAt", 0)
+		d.worlds[w.id] = { unlocked = type(s) == "table" and s.unlocked == true, searched = number(s, "searched", 0), needles = number(s, "needles", 0),
+			needleAt = if at > 0 then at else Economy.needleAt(w.straws, Config.WorldNeedleEarliest, rng) }
+	end
 	if d.loft.needleAt <= 0 then
 		d.loft.needleAt = Economy.needleAt(Config.Loft.straws, Config.Loft.needleEarliest, rng)
 	end
@@ -4057,7 +4125,7 @@ return Profile
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00034">
+			<Item class="ModuleScript" referent="RBX00035">
 				<Properties>
 					<string name="Name">Scenery</string>
 					<ProtectedString name="Source"><![CDATA[-- The countryside of Hollow Creek Farm, in the wide ring between the plots and the fence:
@@ -4292,7 +4360,7 @@ return Scenery
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00035">
+			<Item class="ModuleScript" referent="RBX00036">
 				<Properties>
 					<string name="Name">SceneryAnimals</string>
 					<ProtectedString name="Source"><![CDATA[-- Animal pens to the west of the plots and the cute blocky animals in them: cows, sheep, pigs,
@@ -4513,7 +4581,7 @@ return Pens
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00036">
+			<Item class="ModuleScript" referent="RBX00037">
 				<Properties>
 					<string name="Name">SceneryKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Shared helpers for the countryside around the plots (see Scenery): a part maker that works
@@ -4642,7 +4710,7 @@ return Kit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00037">
+			<Item class="ModuleScript" referent="RBX00038">
 				<Properties>
 					<string name="Name">SceneryNature</string>
 					<ProtectedString name="Source"><![CDATA[-- The living countryside (see Scenery): dirt lanes, the duck pond, the pumpkin and corn
@@ -4832,7 +4900,7 @@ return Nature
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00038">
+			<Item class="ModuleScript" referent="RBX00039">
 				<Properties>
 					<string name="Name">SceneryProps</string>
 					<ProtectedString name="Source"><![CDATA[-- Farm props for the countryside (see Scenery): a tractor and trailer, carts, round hay bales,
@@ -5026,7 +5094,7 @@ return Props
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00039">
+			<Item class="ModuleScript" referent="RBX0003A">
 				<Properties>
 					<string name="Name">Search</string>
 					<ProtectedString name="Source"><![CDATA[-- The loop: click the clump you're looking at to harvest it onto your tool, sell at the
@@ -5050,6 +5118,7 @@ local Achievements = require(script.Parent.Achievements)
 local Hauling = require(script.Parent.Hauling)
 local Tools = require(script.Parent.Tools)
 local Stamina = require(script.Parent.Stamina)
+local Worlds = require(script.Parent.Worlds)
 
 local Search = {}
 local lastHarvest = {}
@@ -5189,6 +5258,12 @@ local function harvest(player, target)
 	end
 	lastHarvest[player] = now
 	local flags = PlayerData.flags(player)
+	if isPart and target:GetAttribute("World") ~= nil then -- a portal world's haystack pays at once (Worlds.luau)
+		if not Stamina.spend(player, Config.Stamina.perHarvest) then
+			return status(player, "Catching your breath...")
+		end
+		return status(player, Worlds.harvest(player, d, target, Economy.power(d, flags.speedBoost)))
+	end
 	if room(d) <= 0 then
 		if flags.autoSell then
 			Search.sell(player, "auto")
@@ -5291,7 +5366,7 @@ return Search
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003A">
+			<Item class="ModuleScript" referent="RBX0003B">
 				<Properties>
 					<string name="Name">Shop</string>
 					<ProtectedString name="Source"><![CDATA[-- Buying with coins: tools and silos (in order), perks for the tool you hold, and
@@ -5522,7 +5597,7 @@ return Shop
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003B">
+			<Item class="ModuleScript" referent="RBX0003C">
 				<Properties>
 					<string name="Name">Stamina</string>
 					<ProtectedString name="Source"><![CDATA[-- Stamina: each harvest click spends some (Config.Stamina) and it refills all the time. Out of
@@ -5658,7 +5733,7 @@ return Stamina
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003C">
+			<Item class="ModuleScript" referent="RBX0003D">
 				<Properties>
 					<string name="Name">Structures</string>
 					<ProtectedString name="Source"><![CDATA[-- Free building on your own plot: place pieces, machines and generators you've bought, take
@@ -5844,7 +5919,7 @@ return Structures
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003D">
+			<Item class="ModuleScript" referent="RBX0003E">
 				<Properties>
 					<string name="Name">ToolLook</string>
 					<ProtectedString name="Source"><![CDATA[-- Tools that wear a model you imported in Studio (Config.Tools[n].model = its asset ID).
@@ -5902,7 +5977,7 @@ return ToolLook
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003E">
+			<Item class="ModuleScript" referent="RBX0003F">
 				<Properties>
 					<string name="Name">Tools</string>
 					<ProtectedString name="Source"><![CDATA[-- The search tools: a pitchfork-shaped Tool per level, coloured from Config.Tools.
@@ -6057,7 +6132,7 @@ return Tools
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003F">
+			<Item class="ModuleScript" referent="RBX00040">
 				<Properties>
 					<string name="Name">Wheel</string>
 					<ProtectedString name="Source"><![CDATA[-- The Wheel of Fortune: one Robux spin (the WheelSpin product) = one prize, picked here on the
@@ -6131,7 +6206,7 @@ return Wheel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00040">
+			<Item class="ModuleScript" referent="RBX00041">
 				<Properties>
 					<string name="Name">World</string>
 					<ProtectedString name="Source"><![CDATA[-- Hollow Creek Farm: four plots around a hub with the merchant, the Wheel of Fortune and the
@@ -6346,21 +6421,872 @@ return World
 ]]></ProtectedString>
 				</Properties>
 			</Item>
+			<Item class="ModuleScript" referent="RBX00042">
+				<Properties>
+					<string name="Name">Worlds</string>
+					<ProtectedString name="Source"><![CDATA[-- The portal worlds: four arches on the hub's west road lead to the Moon, the Ember Lands,
+-- Bubble City and Haystack Stadium (Config.Worlds). A portal is opened once with coins (saved
+-- in d.worlds[id].unlocked); travelling is free after. Each world's haystack pays coins at
+-- once for every click, at that world's multiplier, and hides its own needle at a straw index.
+local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Economy = require(Shared:WaitForChild("Economy"))(Config)
+local Format = require(Shared:WaitForChild("Format"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local PlayerData = require(script.Parent.PlayerData)
+local Kit = require(script.Parent.WorldsKit)
+
+local BUILDERS = {
+	moon = require(script.Parent.WorldsMoon),
+	lava = require(script.Parent.WorldsLava),
+	atlantis = require(script.Parent.WorldsAtlantis),
+	field = require(script.Parent.WorldsField),
+}
+
+local Worlds = {}
+local byId, indexOf = {}, {}
+for i, w in ipairs(Config.Worlds) do
+	byId[w.id], indexOf[w.id] = w, i
+end
+local rng = Random.new()
+local lastPortal = {}
+
+-- What the client shows: which portals are open, and each world's score.
+function Worlds.publish(player)
+	local d = PlayerData.get(player)
+	if not d then
+		return
+	end
+	for _, w in ipairs(Config.Worlds) do
+		local state = d.worlds[w.id]
+		player:SetAttribute("World_" .. w.id, state.unlocked)
+		player:SetAttribute("WorldStraws_" .. w.id, state.searched)
+		player:SetAttribute("WorldNeedles_" .. w.id, state.needles)
+	end
+end
+
+local function hubSpot(w)
+	local x = Config.WorldPortals.xs[indexOf[w.id]]
+	return CFrame.lookAt(Vector3.new(x, 4, 0), Vector3.new(0, 4, 0))
+end
+
+local function teleport(player, cf)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if root then
+		root.CFrame = cf
+		root.AssemblyLinearVelocity = Vector3.zero
+	end
+end
+
+local function notice(player, text)
+	Remotes.Announce:FireClient(player, { kind = "notice", text = text })
+end
+
+local function usePortal(player, w)
+	local d = PlayerData.get(player)
+	if not d then
+		return notice(player, "Still loading your farm...")
+	end
+	if not d.worlds[w.id].unlocked then
+		if d.coins < w.price then
+			return notice(player, "The portal to " .. w.name .. " opens for " .. Format.commas(w.price) .. " coins. You have " .. Format.commas(math.floor(d.coins)) .. ".")
+		end
+		PlayerData.update(player, function(data)
+			data.coins -= w.price
+			data.worlds[w.id].unlocked = true
+		end)
+		Worlds.publish(player)
+		task.spawn(PlayerData.save, player)
+		notice(player, "You opened the portal to " .. w.name .. "! Travelling there is free from now on.")
+	end
+	teleport(player, Kit.arrival(w))
+end
+
+-- A click on a world's haystack (called by Search after its reach, cooldown and stamina
+-- checks). Returns the line shown under the crosshair.
+function Worlds.harvest(player, d, part, power)
+	local w = byId[part:GetAttribute("World")]
+	local root = workspace:FindFirstChild("Worlds")
+	local home = w and root and root:FindFirstChild(w.id)
+	if not home or not part:IsDescendantOf(home) then
+		return "That isn't hay."
+	end
+	local state = d.worlds[w.id]
+	if not state.unlocked then
+		return "Open this world's portal in the hub first."
+	end
+	if state.searched >= w.straws then -- (only if the haystack was made smaller since)
+		PlayerData.update(player, function(data)
+			data.worlds[w.id].searched = 0
+			data.worlds[w.id].needleAt = Economy.needleAt(w.straws, Config.WorldNeedleEarliest, rng)
+		end)
+	end
+	local amount = math.min(power, w.straws - state.searched)
+	local multiplier = Economy.coinMultiplier(PlayerData.flags(player), d.needles)
+	local coins = Economy.coinsFor(amount, false, multiplier) * w.multiplier
+	local hit = state.searched < state.needleAt and state.searched + amount >= state.needleAt
+	PlayerData.update(player, function(data)
+		data.coins += coins
+		data.worlds[w.id].searched += amount
+		data.stats.searches += 1
+	end)
+	local head = player.Character and player.Character:FindFirstChild("Head")
+	local towards = if head then (head.Position - part.Position).Unit else Vector3.yAxis
+	local point = part.Position + towards * part.Size.X * 0.45
+	Remotes.SearchFx:FireClient(player, { kind = "harvest", golden = false, gone = false, straws = amount, position = point, full = false })
+	Remotes.SearchFx:FireClient(player, { kind = "paid", coins = coins })
+	if hit then
+		local prize = Economy.coinsFor(Economy.power(d, false) * Config.WorldNeedleSearches, false, multiplier) * w.multiplier
+		PlayerData.update(player, function(data)
+			local s = data.worlds[w.id]
+			data.coins += prize
+			s.needles += 1
+			s.searched = 0
+			s.needleAt = Economy.needleAt(w.straws, Config.WorldNeedleEarliest, rng)
+		end)
+		task.spawn(PlayerData.save, player)
+		Remotes.Announce:FireAllClients({ kind = "worldneedle", world = w.id, name = w.name, finder = player.DisplayName, finderId = player.UserId, prize = prize, position = point })
+	end
+	Worlds.publish(player)
+	return "+" .. Format.commas(amount) .. " straw: +" .. Format.commas(coins) .. " coins (" .. w.multiplier .. "x on " .. w.name .. ")"
+end
+
+function Worlds.build()
+	local root = Kit.folder("Worlds", workspace)
+	local portals = Kit.folder("Portals", root)
+	for i, w in ipairs(Config.Worlds) do
+		local x = Config.WorldPortals.xs[i]
+		local cf = CFrame.lookAt(Vector3.new(x, 0, Config.WorldPortals.z), Vector3.new(x, 0, 0))
+		local membrane = Kit.arch(cf, Config.WorldHay[w.id][1], portals, w.name, "Open: " .. Format.short(w.price) .. " coins")
+		Kit.prompt(membrane, "portal", "Travel", w.name, w.id, Config.WorldPortals.holdSeconds)
+	end
+	for _, w in ipairs(Config.Worlds) do
+		local folder = Kit.folder(w.id, root)
+		local centre = Vector3.new(w.x, 0, w.z)
+		-- each world is decoration around its haystack: if a build fails, warn and carry on
+		local ok, err = pcall(BUILDERS[w.id].build, w, centre, folder)
+		if not ok then
+			warn("[Worlds] " .. w.name .. " failed to build: " .. tostring(err))
+		end
+		Kit.haystack(w.id, centre, folder)
+		Kit.returnPortal(w, folder)
+	end
+end
+
+function Worlds.init()
+	PlayerData.onLoaded(Worlds.publish)
+	ProximityPromptService.PromptTriggered:Connect(function(prompt, player)
+		local action = prompt:GetAttribute("Action")
+		local w = byId[prompt:GetAttribute("World")]
+		if (action ~= "portal" and action ~= "portal_home") or not w then
+			return
+		end
+		if os.clock() - (lastPortal[player] or 0) < Config.WorldPortals.cooldown then
+			return
+		end
+		lastPortal[player] = os.clock()
+		if action == "portal_home" then
+			teleport(player, hubSpot(w))
+		else
+			usePortal(player, w)
+		end
+	end)
+	Players.PlayerRemoving:Connect(function(player)
+		lastPortal[player] = nil
+	end)
+end
+
+return Worlds
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00043">
+				<Properties>
+					<string name="Name">WorldsAtlantis</string>
+					<ProtectedString name="Source"><![CDATA[-- Bubble City: a domed city on the sea floor inside a great air bubble. Sand, coral, kelp,
+-- sunken columns, and fish (moved on each player's screen by client Worlds.luau). Outside the
+-- bubble is water; inside, the air is carved out so you walk normally.
+local Build = require(script.Parent.Build)
+local Kit = require(script.Parent.WorldsKit)
+
+local Atlantis = {}
+local terrain = workspace.Terrain
+local MARBLE = { 222, 230, 226 }
+local TEAL = { 60, 170, 170 }
+local CORAL = { { 250, 120, 120 }, { 255, 170, 90 }, { 190, 110, 220 }, { 255, 210, 120 }, { 240, 90, 150 } }
+local BUBBLE = 128 -- the bubble's radius (studs)
+
+local function dome(at, radius, height, folder, glow)
+	Build.part({ name = "DomeWall", shape = "Cylinder", size = Vector3.new(height, radius * 2, radius * 2), cframe = CFrame.new(at + Vector3.new(0, height / 2, 0)) * CFrame.Angles(0, 0, math.rad(90)), color = MARBLE, material = "Marble", parent = folder })
+	local cap = Build.part({ name = "Dome", shape = "Ball", size = Vector3.one * radius * 2, cframe = CFrame.new(at + Vector3.new(0, height, 0)), color = TEAL, material = "Glass", parent = folder })
+	cap.Transparency = 0.25
+	Build.part({ name = "DomeBand", shape = "Cylinder", size = Vector3.new(1, radius * 2 + 0.6, radius * 2 + 0.6), cframe = CFrame.new(at + Vector3.new(0, height - 0.5, 0)) * CFrame.Angles(0, 0, math.rad(90)), color = { 220, 190, 90 }, material = "Metal", parent = folder })
+	for i = 0, 5 do -- glowing round windows
+		local a = i / 6 * math.pi * 2
+		local p = at + Vector3.new(math.cos(a) * radius, height * 0.5, math.sin(a) * radius)
+		Build.part({ name = "DomeWindow", shape = "Cylinder", size = Vector3.new(0.4, 2.4, 2.4), cframe = CFrame.lookAt(p, at + Vector3.new(0, height * 0.5, 0)) * CFrame.Angles(0, math.rad(90), 0), color = glow, material = "Neon", parent = folder })
+	end
+	local lamp = Build.part({ name = "DomeLamp", shape = "Ball", size = Vector3.one * 2, cframe = CFrame.new(at + Vector3.new(0, height + radius + 0.6, 0)), color = glow, material = "Neon", parent = folder })
+	Kit.light(lamp, glow, 26, 1)
+end
+
+local function column(at, height, tilt, broken, folder)
+	local cf = CFrame.new(at) * CFrame.Angles(tilt, 0, tilt * 0.5)
+	Build.part({ name = "ColumnBase", size = Vector3.new(5, 1.2, 5), cframe = CFrame.new(at + Vector3.new(0, 0.4, 0)), color = MARBLE, material = "Marble", parent = folder })
+	Build.post({ name = "Column", color = MARBLE, material = "Marble", parent = folder }, cf, height, 3.2)
+	if not broken then
+		Build.part({ name = "ColumnTop", size = Vector3.new(4.6, 1, 4.6), cframe = cf * CFrame.new(0, height + 0.5, 0), color = MARBLE, material = "Marble", parent = folder })
+	end
+end
+
+local function coral(at, rng, folder)
+	local colour = CORAL[rng:NextInteger(1, #CORAL)]
+	for _ = 1, rng:NextInteger(3, 6) do
+		local h = rng:NextNumber(1.5, 5)
+		local base = CFrame.new(at + Vector3.new(rng:NextNumber(-2, 2), 0, rng:NextNumber(-2, 2))) * CFrame.Angles(rng:NextNumber(-0.4, 0.4), 0, rng:NextNumber(-0.4, 0.4))
+		Build.post({ name = "Coral", color = colour, material = "Sand", parent = folder }, base, h, rng:NextNumber(0.6, 1.2))
+		Build.part({ name = "CoralTip", shape = "Ball", size = Vector3.one * rng:NextNumber(1.2, 2), cframe = base * CFrame.new(0, h, 0), color = colour, material = "Sand", collide = false, parent = folder })
+	end
+end
+
+local function kelp(at, rng, folder)
+	local height = rng:NextNumber(12, 30)
+	local segments = math.floor(height / 4)
+	for i = 0, segments - 1 do
+		local sway = math.sin(i * 0.9) * 0.8
+		Build.part({ name = "Kelp", size = Vector3.new(0.8, 4.2, 1.6), cframe = CFrame.new(at + Vector3.new(sway, i * 4 + 2, 0)) * CFrame.Angles(0, rng:NextNumber(0, 6), sway * 0.15), color = { 46, 120, 60 }, material = "Fabric", collide = false, shadow = false, parent = folder })
+	end
+end
+
+-- A fish: a body, a tail and an eye, as one model the client swims round in a circle.
+local function fish(centre, rng, folder, i)
+	local model = Instance.new("Model")
+	model.Name = "Fish"
+	local colour = CORAL[rng:NextInteger(1, #CORAL)]
+	local s = rng:NextNumber(0.8, 1.8)
+	local radius, height = rng:NextNumber(24, 150), rng:NextNumber(5, 40)
+	local phase = i * 2.4
+	local at = CFrame.new(centre + Vector3.new(math.cos(phase) * radius, height, math.sin(phase) * radius))
+	local body = Build.part({ name = "FishBody", shape = "Ball", size = Vector3.new(1.4, 1.2, 2.4) * s, cframe = at, color = colour, material = "SmoothPlastic", collide = false, shadow = false, parent = model })
+	Build.part({ name = "FishTail", class = "WedgePart", size = Vector3.new(0.2, 1.2, 1) * s, cframe = at * CFrame.new(0, 0, 1.5 * s), color = colour, material = "SmoothPlastic", collide = false, shadow = false, parent = model })
+	Build.part({ name = "FishEye", shape = "Ball", size = Vector3.one * 0.3 * s, cframe = at * CFrame.new(0.5 * s, 0.2 * s, -0.8 * s), color = { 20, 20, 30 }, collide = false, shadow = false, parent = model })
+	model.PrimaryPart = body
+	model:SetAttribute("Radius", radius)
+	model:SetAttribute("Height", height)
+	model:SetAttribute("Speed", rng:NextNumber(0.04, 0.12) * (if i % 2 == 0 then 1 else -1))
+	model:SetAttribute("Phase", phase)
+	model.Parent = folder
+end
+
+function Atlantis.build(w, centre, folder)
+	-- the sea, then the bubble carved out of it, then the sea floor laid back under the bubble
+	Kit.ground(centre, Enum.Material.Sand, 340)
+	terrain:FillBlock(CFrame.new(centre + Vector3.new(0, 70, 0)), Vector3.new(340, 140, 340), Enum.Material.Water)
+	terrain:FillBall(centre, BUBBLE - 2, Enum.Material.Air)
+	Kit.ground(centre, Enum.Material.Sand, 340)
+	local rng = Random.new(71)
+	local bubble = Build.part({ name = "Bubble", shape = "Ball", size = Vector3.one * BUBBLE * 2, cframe = CFrame.new(centre), color = { 170, 230, 255 }, material = "Glass", collide = false, shadow = false, parent = folder })
+	bubble.Transparency = 0.82
+	local city = Kit.folder("City", folder)
+	dome(centre + Vector3.new(-46, 0, -40), 14, 12, city, { 120, 240, 255 })
+	dome(centre + Vector3.new(46, 0, -44), 12, 10, city, { 180, 255, 210 })
+	dome(centre + Vector3.new(-62, 0, 20), 9, 8, city, { 255, 220, 140 })
+	dome(centre + Vector3.new(62, 0, 16), 10, 9, city, { 200, 170, 255 })
+	-- the great hall behind the haystack, with a spire
+	dome(centre + Vector3.new(0, 0, -78), 22, 16, city, { 120, 240, 255 })
+	Build.post({ name = "Spire", color = MARBLE, material = "Marble", parent = city }, CFrame.new(centre + Vector3.new(0, 38, -78)), 30, 3)
+	local crown = Build.part({ name = "SpireLight", shape = "Ball", size = Vector3.one * 4, cframe = CFrame.new(centre + Vector3.new(0, 70, -78)), color = { 140, 250, 255 }, material = "Neon", parent = city })
+	Kit.light(crown, { 140, 250, 255 }, 60, 1.5)
+	-- a ring of columns round the haystack, some fallen
+	for i = 0, 9 do
+		local a = i / 10 * math.pi * 2 + 0.3
+		local p = centre + Vector3.new(math.cos(a) * 32, 0, math.sin(a) * 32)
+		if not (p.Z - centre.Z > 20 and math.abs(p.X - centre.X) < 14) then
+			column(p, if i % 3 == 0 then 6 else 14, if i % 4 == 1 then 0.18 else 0, i % 3 == 0, city)
+		end
+	end
+	local fallen = Build.post({ name = "FallenColumn", color = MARBLE, material = "Marble", parent = city }, CFrame.new(centre + Vector3.new(-28, 1.6, 52)) * CFrame.Angles(0, 0.6, math.rad(90)), 16, 3.2)
+	fallen.CanCollide = true
+	-- paths of pale stone to the domes
+	for _, target in ipairs({ { -46, -40 }, { 46, -44 }, { -62, 20 }, { 62, 16 }, { 0, -78 } }) do
+		local to = centre + Vector3.new(target[1], 0, target[2])
+		local mid = (centre + to) / 2
+		Build.part({ name = "Path", size = Vector3.new(5, 0.2, (to - centre).Magnitude), cframe = CFrame.lookAt(mid + Vector3.new(0, 0.1, 0), to + Vector3.new(0, 0.1, 0)), color = { 230, 220, 190 }, material = "Sandstone", parent = city })
+	end
+	local life = Kit.folder("Life", folder)
+	for _ = 1, 50 do
+		local a, r = rng:NextNumber(0, math.pi * 2), rng:NextNumber(26, 160)
+		local p = centre + Vector3.new(math.cos(a) * r, 0, math.sin(a) * r)
+		if not (math.abs(p.X - centre.X) < 16 and p.Z - centre.Z > 70) then
+			if rng:NextNumber() < 0.55 then
+				coral(p, rng, life)
+			else
+				kelp(p, rng, life)
+			end
+		end
+	end
+	local fishes = Kit.folder("Fish", folder)
+	for i = 1, 28 do
+		fish(centre, rng, fishes, i)
+	end
+	-- rising bubbles from a few vents
+	for _, v in ipairs({ { -20, -20 }, { 30, 10 }, { -80, -10 }, { 90, -70 } }) do
+		local vent = Build.part({ name = "Vent", shape = "Ball", size = Vector3.new(3, 1.4, 3), cframe = CFrame.new(centre + Vector3.new(v[1], 0, v[2])), color = { 120, 110, 100 }, material = "Slate", parent = life })
+		Kit.drift(vent, { 220, 245, 255 }, 3, 4, 0.6)
+	end
+end
+
+return Atlantis
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00044">
+				<Properties>
+					<string name="Name">WorldsField</string>
+					<ProtectedString name="Source"><![CDATA[-- Haystack Stadium: a striped grass pitch with its lines and two goals, stands of seats on three
+-- sides, four floodlight towers and a scoreboard (each player's screen writes their own world
+-- score on it: client Worlds.luau). The south end is open: you arrive behind the south goal.
+local Build = require(script.Parent.Build)
+local Kit = require(script.Parent.WorldsKit)
+
+local Field = {}
+local WHITE = { 246, 246, 240 }
+local STRIPES = { { 76, 150, 60 }, { 90, 168, 72 } }
+local SEATS = { { 200, 60, 50 }, { 245, 200, 66 }, { 64, 136, 206 } }
+local CONCRETE = { 170, 170, 168 }
+local LONG, WIDE = 170, 100 -- the pitch runs along z
+
+local function line(at, sx, sz, folder)
+	Build.part({ name = "Line", size = Vector3.new(sx, 0.1, sz), cframe = CFrame.new(at + Vector3.new(0, 0.45, 0)), color = WHITE, material = "SmoothPlastic", parent = folder })
+end
+
+local function markings(c, folder)
+	local hl, hw = LONG / 2, WIDE / 2
+	line(c + Vector3.new(-hw, 0, 0), 0.6, LONG, folder)
+	line(c + Vector3.new(hw, 0, 0), 0.6, LONG, folder)
+	for _, s in ipairs({ -1, 1 }) do
+		line(c + Vector3.new(0, 0, s * hl), WIDE, 0.6, folder)
+		line(c + Vector3.new(0, 0, s * (hl - 16)), 40, 0.6, folder) -- the penalty box
+		line(c + Vector3.new(-20, 0, s * (hl - 8)), 0.6, 16, folder)
+		line(c + Vector3.new(20, 0, s * (hl - 8)), 0.6, 16, folder)
+		line(c + Vector3.new(0, 0, s * (hl - 6)), 18, 0.6, folder) -- the goal box
+		line(c + Vector3.new(-9, 0, s * (hl - 3)), 0.6, 6, folder)
+		line(c + Vector3.new(9, 0, s * (hl - 3)), 0.6, 6, folder)
+		Build.part({ name = "Spot", shape = "Cylinder", size = Vector3.new(0.1, 1, 1), cframe = CFrame.new(c + Vector3.new(0, 0.45, s * (hl - 11))) * CFrame.Angles(0, 0, math.rad(90)), color = WHITE, parent = folder })
+		for _, x in ipairs({ -hw, hw }) do -- corner flags
+			Build.post({ name = "CornerPole", color = WHITE, material = "SmoothPlastic", parent = folder }, CFrame.new(c + Vector3.new(x, 0, s * hl)), 4, 0.2)
+			Build.part({ name = "CornerFlag", size = Vector3.new(0.1, 1, 1.4), cframe = CFrame.new(c + Vector3.new(x, 3.5, s * hl + 0.7 * -s)), color = { 245, 200, 66 }, material = "Fabric", collide = false, parent = folder })
+		end
+	end
+	line(c, WIDE, 0.6, folder) -- the halfway line
+	for i = 0, 35 do -- the centre circle, round the haystack
+		local a = i / 36 * math.pi * 2
+		local p = c + Vector3.new(math.cos(a) * 24, 0, math.sin(a) * 24)
+		Build.part({ name = "Line", size = Vector3.new(0.6, 0.1, 4.4), cframe = CFrame.new(p + Vector3.new(0, 0.45, 0)) * CFrame.Angles(0, -a, 0), color = WHITE, parent = folder })
+	end
+end
+
+local function goal(c, s, folder)
+	local mouth = c + Vector3.new(0, 0, s * LONG / 2)
+	for _, x in ipairs({ -7.3, 7.3 }) do
+		Build.post({ name = "GoalPost", color = WHITE, material = "Metal", parent = folder }, CFrame.new(mouth + Vector3.new(x, 0, 0)), 8, 0.6)
+		Build.post({ name = "GoalBack", color = WHITE, material = "Metal", parent = folder }, CFrame.new(mouth + Vector3.new(x, 0, s * 4)), 6, 0.3)
+		Build.part({ name = "NetSide", size = Vector3.new(0.1, 7, 4), cframe = CFrame.new(mouth + Vector3.new(x, 3.5, s * 2)), color = WHITE, material = "Fabric", transparency = 0.6, parent = folder })
+	end
+	Build.part({ name = "Crossbar", shape = "Cylinder", size = Vector3.new(15.2, 0.6, 0.6), cframe = CFrame.new(mouth + Vector3.new(0, 8, 0)), color = WHITE, material = "Metal", parent = folder })
+	Build.part({ name = "NetBack", size = Vector3.new(14.6, 6, 0.1), cframe = CFrame.new(mouth + Vector3.new(0, 3, s * 4)), color = WHITE, material = "Fabric", transparency = 0.6, parent = folder })
+	Build.part({ name = "NetTop", size = Vector3.new(14.6, 0.1, 4.2), cframe = CFrame.new(mouth + Vector3.new(0, 7.2, s * 2)) * CFrame.Angles(s * math.rad(-14), 0, 0), color = WHITE, material = "Fabric", transparency = 0.6, parent = folder })
+end
+
+-- A stand: `rows` steps rising away from the pitch, seats in coloured blocks with aisles.
+-- `cf` sits at the front of the lowest step, facing the pitch (its -Z); `length` along its X.
+local function stand(cf, length, rows, folder)
+	local sections = 5
+	local gap = 3
+	local each = (length - gap * (sections - 1)) / sections
+	for r = 0, rows - 1 do
+		local step = cf * CFrame.new(0, r * 1.6 + 0.8, r * 3 + 1.5)
+		Build.part({ name = "Terrace", size = Vector3.new(length, r * 1.6 + 1.6, 3), cframe = step * CFrame.new(0, -r * 0.8, 0), color = CONCRETE, material = "Concrete", parent = folder })
+		for k = 0, sections - 1 do
+			local x = -length / 2 + each / 2 + k * (each + gap)
+			Build.part({ name = "Seats", size = Vector3.new(each, 1.2, 1.4), cframe = step * CFrame.new(x, 1.4, 0.4), color = SEATS[(r + k) % #SEATS + 1], material = "SmoothPlastic", parent = folder })
+		end
+	end
+	Build.part({ name = "StandBack", size = Vector3.new(length, rows * 1.6 + 8, 1), cframe = cf * CFrame.new(0, (rows * 1.6 + 8) / 2, rows * 3 + 1), color = { 120, 124, 130 }, material = "Concrete", parent = folder })
+	Build.part({ name = "StandRoof", size = Vector3.new(length + 2, 0.8, rows * 3 + 4), cframe = cf * CFrame.new(0, rows * 1.6 + 8, rows * 1.5) * CFrame.Angles(math.rad(-6), 0, 0), color = { 230, 230, 234 }, material = "Metal", parent = folder })
+end
+
+local function floodlight(at, centre, folder)
+	Build.post({ name = "FloodPole", color = { 150, 154, 160 }, material = "Metal", parent = folder }, CFrame.new(at), 50, 1.6)
+	local head = CFrame.lookAt(at + Vector3.new(0, 52, 0), centre)
+	Build.part({ name = "FloodFrame", size = Vector3.new(12, 7, 1), cframe = head * CFrame.new(0, 0, 0.6), color = { 90, 94, 100 }, material = "Metal", parent = folder })
+	for x = -1, 1 do
+		for y = 0, 1 do
+			local lamp = Build.part({ name = "FloodLamp", size = Vector3.new(3, 2.4, 0.4), cframe = head * CFrame.new(x * 3.8, y * 3 - 1.5, 0), color = { 255, 252, 236 }, material = "Neon", parent = folder })
+			if x == 0 and y == 0 then
+				Kit.light(lamp, { 255, 250, 236 }, 60, 2)
+			end
+		end
+	end
+end
+
+local function scoreboard(at, centre, folder)
+	local cf = CFrame.lookAt(at, Vector3.new(centre.X, at.Y, centre.Z))
+	for _, x in ipairs({ -14, 14 }) do
+		Build.part({ name = "BoardLeg", size = Vector3.new(1.4, at.Y, 1.4), cframe = CFrame.new((cf * CFrame.new(x, 0, 1)).Position - Vector3.new(0, at.Y / 2, 0)), color = { 60, 62, 70 }, material = "Metal", parent = folder })
+	end
+	local frame = Build.part({ name = "BoardFrame", size = Vector3.new(34, 15, 1.4), cframe = cf * CFrame.new(0, 0, 0.6), color = { 245, 200, 66 }, material = "Neon", parent = folder })
+	frame.CastShadow = false
+	local board = Build.part({ name = "Scoreboard", size = Vector3.new(32, 13, 1), cframe = cf, color = { 18, 22, 30 }, material = "SmoothPlastic", parent = folder })
+	local label = Build.text(board, Enum.NormalId.Front, "HAYSTACK STADIUM\nYour score shows here", { color = Color3.fromRGB(255, 220, 110), pixels = 20 })
+	label.Name = "ScoreText"
+	label.Parent.LightInfluence = 0
+end
+
+function Field.build(w, centre, folder)
+	Kit.ground(centre, Enum.Material.Pavement, 340)
+	local pitch = Kit.folder("Pitch", folder)
+	local n = 10
+	for i = 0, n - 1 do
+		local z = -LONG / 2 - 6 + (LONG + 12) / n * (i + 0.5)
+		Build.part({ name = "Turf", size = Vector3.new(WIDE + 12, 0.4, (LONG + 12) / n), cframe = CFrame.new(centre + Vector3.new(0, 0.2, z)), color = STRIPES[i % 2 + 1], material = "Fabric", parent = pitch })
+	end
+	markings(centre, pitch)
+	goal(centre, -1, pitch)
+	goal(centre, 1, pitch)
+	local stands = Kit.folder("Stands", folder)
+	stand(CFrame.lookAt(centre + Vector3.new(-62, 0, 0), centre), 150, 9, stands)
+	stand(CFrame.lookAt(centre + Vector3.new(62, 0, 0), centre), 150, 9, stands)
+	stand(CFrame.lookAt(centre + Vector3.new(0, 0, -96), centre), 110, 9, stands)
+	-- low boards along the touchlines, with our own cheers on them
+	local cheers = { "GO HAY GO!", "FIND THE NEEDLE!", "STRAW STARS", "HAY HOORAY!" }
+	for _, s in ipairs({ -1, 1 }) do
+		for k = 0, 3 do
+			local at = centre + Vector3.new(s * 56, 1.2, -60 + k * 40)
+			local board = Build.part({ name = "PitchBoard", size = Vector3.new(34, 2.4, 0.4), cframe = CFrame.lookAt(at, Vector3.new(centre.X, at.Y, at.Z)), color = SEATS[(k % 3) + 1], material = "SmoothPlastic", parent = stands })
+			Build.text(board, Enum.NormalId.Front, cheers[k + 1], { color = Color3.new(1, 1, 1), pixels = 16 })
+		end
+	end
+	for _, x in ipairs({ -84, 84 }) do
+		for _, z in ipairs({ -104, 104 }) do
+			floodlight(centre + Vector3.new(x, 0, z), centre, stands)
+		end
+	end
+	scoreboard(centre + Vector3.new(0, 34, -128), centre, stands)
+end
+
+return Field
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00045">
+				<Properties>
+					<string name="Name">WorldsKit</string>
+					<ProtectedString name="Source"><![CDATA[-- Shared pieces for the portal worlds: the arches, signs, lights, embers and each world's
+-- harvestable haystack (balls of hay like the Golden Loft's, tagged with the World attribute).
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Build = require(script.Parent.Build)
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local Kit = {}
+local terrain = workspace.Terrain
+
+function Kit.folder(name, parent)
+	local f = Instance.new("Folder")
+	f.Name = name
+	f.Parent = parent
+	return f
+end
+
+-- A soft glow on a part (PointLight unless `kind` names another light class).
+function Kit.light(part, colour, range, brightness, kind)
+	local light = Instance.new(kind or "PointLight")
+	light.Color = Build.rgb(colour)
+	light.Range = range
+	light.Brightness = brightness
+	if kind == "SpotLight" then
+		light.Face = Enum.NormalId.Bottom
+		light.Angle = 70
+	end
+	light.Parent = part
+	return light
+end
+
+-- Slow drifting sparks (embers, bubbles, dust): calm, never flashing.
+function Kit.drift(part, colour, rate, rise, size)
+	local p = Instance.new("ParticleEmitter")
+	p.Color = ColorSequence.new(Build.rgb(colour))
+	p.LightEmission = 0.6
+	p.Rate = rate
+	p.Lifetime = NumberRange.new(3, 6)
+	p.Speed = NumberRange.new(0.5, 2)
+	p.SpreadAngle = Vector2.new(40, 40)
+	p.Acceleration = Vector3.new(0, rise, 0)
+	p.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size or 0.3), NumberSequenceKeypoint.new(1, 0) })
+	p.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.2), NumberSequenceKeypoint.new(1, 1) })
+	p.Parent = part
+	return p
+end
+
+-- A flat terrain floor, its top at y = 0 like the farm's.
+function Kit.ground(centre, material, size)
+	terrain:FillBlock(CFrame.new(centre + Vector3.new(0, -8, 0)), Vector3.new(size, 16, size), material)
+end
+
+function Kit.prompt(part, action, text, object, worldId, hold)
+	local p = Instance.new("ProximityPrompt")
+	p.ActionText = text
+	p.ObjectText = object
+	p.HoldDuration = hold or 0
+	p.MaxActivationDistance = 12
+	p.RequiresLineOfSight = false
+	p:SetAttribute("Action", action)
+	p:SetAttribute("World", worldId)
+	p.Parent = part
+	return p
+end
+
+-- A sign board: text on its front (the -Z face of `cf`).
+function Kit.sign(cf, size, text, colour, ink, parent)
+	local board = Build.part({ name = "Sign", size = size, cframe = cf, color = colour, material = "SmoothPlastic", parent = parent })
+	Build.text(board, Enum.NormalId.Front, text, { color = Build.rgb(ink), pixels = 30 })
+	return board
+end
+
+-- A glowing portal arch standing at `cf` (its base), opening towards cf's look direction.
+-- Returns the glowing membrane (put the prompt on it).
+function Kit.arch(cf, colour, parent, title, subtitle)
+	local model = Instance.new("Model")
+	model.Name = "Portal"
+	local stone = { 70, 66, 80 }
+	Build.part({ name = "PortalStep", size = Vector3.new(13, 0.6, 4), cframe = cf * CFrame.new(0, 0.3, 0), color = stone, material = "Slate", parent = model })
+	for _, x in ipairs({ -5.6, 5.6 }) do
+		Build.part({ name = "PortalPillar", size = Vector3.new(1.6, 13, 1.6), cframe = cf * CFrame.new(x, 6.5, 0), color = stone, material = "Slate", parent = model })
+		local gem = Build.part({ name = "PortalGem", shape = "Ball", size = Vector3.new(1.6, 1.6, 1.6), cframe = cf * CFrame.new(x, 13.9, 0), color = colour, material = "Neon", parent = model })
+		Kit.light(gem, colour, 10, 0.6)
+	end
+	Build.part({ name = "PortalLintel", size = Vector3.new(12.8, 1.4, 1.8), cframe = cf * CFrame.new(0, 13.4, 0), color = stone, material = "Slate", parent = model })
+	local membrane = Build.part({ name = "PortalGlow", size = Vector3.new(9.6, 12.2, 0.3), cframe = cf * CFrame.new(0, 6.7, 0), color = colour, material = "Neon", transparency = 0.45, collide = false, parent = model })
+	Kit.light(membrane, colour, 16, 1)
+	Kit.drift(membrane, colour, 6, 1.2, 0.35)
+	local sign = Kit.sign(cf * CFrame.new(0, 16.4, 0), Vector3.new(12, 3.6, 0.4), title .. "\n" .. subtitle, { 40, 34, 48 }, colour, model)
+	sign.Material = Enum.Material.Slate
+	model.Parent = parent
+	return membrane
+end
+
+-- The world's haystack: a mound of balls, each one harvestable (attribute World = id).
+function Kit.haystack(worldId, centre, parent)
+	local colours = Config.WorldHay[worldId]
+	local size = Config.WorldHaystackSize
+	local model = Instance.new("Model")
+	model.Name = "Haystack"
+	local function ball(label, diameter, offset, colour)
+		local part = Build.part({ name = label, shape = "Ball", size = Vector3.new(diameter, diameter, diameter), cframe = CFrame.new(centre + offset), color = colour, material = "Sand", parent = model })
+		part:SetAttribute("World", worldId)
+		return part
+	end
+	ball("WorldHayCore", size, Vector3.new(0, size * 0.14, 0), colours[1])
+	for i = 1, 10 do
+		local a = i / 10 * math.pi * 2
+		ball("WorldHayLump", size * (0.5 + (i % 3) * 0.06), Vector3.new(math.cos(a) * size * 0.36, size * 0.02, math.sin(a) * size * 0.36), colours[i % 3 + 1])
+	end
+	ball("WorldHayTop", size * 0.42, Vector3.new(size * 0.04, size * 0.58, -size * 0.04), colours[3])
+	model.Parent = parent
+	return model
+end
+
+-- Where you arrive in a world, and the return portal just behind you.
+function Kit.arrival(w)
+	local centre = Vector3.new(w.x, 0, w.z)
+	return CFrame.lookAt(centre + Vector3.new(0, 4, 100), centre + Vector3.new(0, 4, 0))
+end
+
+function Kit.returnPortal(w, parent)
+	local base = Vector3.new(w.x, 0, w.z + 114)
+	local cf = CFrame.lookAt(base, Vector3.new(w.x, 0, w.z))
+	local membrane = Kit.arch(cf, Config.WorldHay[w.id][3], parent, "Back to the farm", w.name)
+	Kit.prompt(membrane, "portal_home", "Go back to the farm", w.name, w.id, 0)
+	return membrane
+end
+
+return Kit
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00046">
+				<Properties>
+					<string name="Name">WorldsLava</string>
+					<ProtectedString name="Source"><![CDATA[-- The Ember Lands: dark basalt, a smoking volcano, glowing lava rivers with stone bridges,
+-- obsidian spires and drifting embers. Lava never hurts: each part in the Lava folder carries
+-- the attribute Lava, and the client gently nudges you back to the bank (client Worlds.luau).
+local Build = require(script.Parent.Build)
+local Kit = require(script.Parent.WorldsKit)
+
+local Lava = {}
+local terrain = workspace.Terrain
+local GLOW = { 255, 112, 30 }
+local OBSIDIAN = { 26, 20, 36 }
+local STONE = { 64, 56, 54 }
+
+-- One river: Neon slabs from point to point (x, z offsets from the centre).
+local function river(centre, points, width, folder)
+	for i = 1, #points - 1 do
+		local a = centre + Vector3.new(points[i][1], 0, points[i][2])
+		local b = centre + Vector3.new(points[i + 1][1], 0, points[i + 1][2])
+		local mid = (a + b) / 2
+		local length = (b - a).Magnitude + width * 0.6
+		local slab = Build.part({ name = "LavaRiver", size = Vector3.new(width, 1, length), cframe = CFrame.lookAt(mid, b) * CFrame.new(0, -0.2, 0), color = GLOW, material = "Neon", parent = folder })
+		slab:SetAttribute("Lava", true)
+		terrain:FillBlock(CFrame.lookAt(mid, b) * CFrame.new(0, -2, 0), Vector3.new(width + 8, 4, length), Enum.Material.CrackedLava)
+		if i % 2 == 1 then
+			Kit.drift(slab, { 255, 150, 60 }, 4, 2.5, 0.25)
+			Kit.light(slab, GLOW, 24, 1.2)
+		end
+	end
+end
+
+local function bridge(at, angle, folder)
+	local cf = CFrame.new(at) * CFrame.Angles(0, angle, 0)
+	Build.part({ name = "Bridge", size = Vector3.new(8, 1, 22), cframe = cf * CFrame.new(0, 0.6, 0), color = STONE, material = "Slate", parent = folder })
+	for _, x in ipairs({ -3.6, 3.6 }) do
+		Build.part({ name = "BridgeRail", size = Vector3.new(0.6, 1.4, 22), cframe = cf * CFrame.new(x, 1.8, 0), color = { 44, 38, 38 }, material = "Slate", parent = folder })
+	end
+	for _, z in ipairs({ -12, 12 }) do -- a low step on and off
+		Build.part({ name = "BridgeStep", size = Vector3.new(8, 0.6, 2.4), cframe = cf * CFrame.new(0, 0.3, z + (if z > 0 then 0.8 else -0.8)), color = STONE, material = "Slate", parent = folder })
+	end
+end
+
+local function spire(at, height, rng, folder)
+	for k = 0, 2 do
+		local h = height * (1 - k * 0.25)
+		local w = 3 + rng:NextNumber(0, 2) - k * 0.6
+		local offset = Vector3.new(rng:NextNumber(-3, 3), 0, rng:NextNumber(-3, 3))
+		local part = Build.part({ name = "ObsidianSpire", size = Vector3.new(w, h, w), cframe = CFrame.new(at + offset + Vector3.new(0, h / 2 - 1, 0)) * CFrame.Angles(rng:NextNumber(-0.12, 0.12), rng:NextNumber(0, 6), rng:NextNumber(-0.12, 0.12)), color = OBSIDIAN, material = "Glass", parent = folder })
+		part.Reflectance = 0.25
+		Build.part({ name = "SpireTip", class = "WedgePart", size = Vector3.new(w, w * 1.4, w), cframe = part.CFrame * CFrame.new(0, h / 2 + w * 0.7, 0), color = OBSIDIAN, material = "Glass", parent = folder })
+	end
+end
+
+local function volcano(top, folder, lava)
+	local base = Vector3.new(top.X, 0, top.Z)
+	local height, r0, r1 = 72, 56, 13
+	for y = 0, height, 4 do
+		local t = y / height
+		terrain:FillCylinder(CFrame.new(base + Vector3.new(0, y / 2, 0)), y + 4, r0 + (r1 - r0) * t, Enum.Material.Basalt)
+	end
+	terrain:FillCylinder(CFrame.new(base + Vector3.new(0, height - 2, 0)), 12, r1 - 3, Enum.Material.Air) -- the crater
+	local pool = Build.part({ name = "CraterLava", shape = "Cylinder", size = Vector3.new(1, (r1 - 3) * 2, (r1 - 3) * 2), cframe = CFrame.new(base + Vector3.new(0, height - 7, 0)) * CFrame.Angles(0, 0, math.rad(90)), color = GLOW, material = "Neon", parent = lava })
+	pool:SetAttribute("Lava", true)
+	Kit.light(pool, GLOW, 60, 3)
+	Kit.drift(pool, { 90, 84, 84 }, 10, 3, 6) -- slow smoke
+	Kit.drift(pool, { 255, 160, 70 }, 8, 6, 0.4)
+	-- a glowing flow down the side facing the haystack
+	local dir = (Vector3.new(0, 0, 0) - Vector3.new(-1, 0, -1)).Unit
+	for i = 0, 8 do
+		local t = i / 8
+		local r = r1 + (r0 - r1) * t
+		local p = base + dir * (r - 2) + Vector3.new(0, height * (1 - t) - 2.5, 0)
+		local flow = Build.part({ name = "LavaFlow", size = Vector3.new(6, 1.2, 11), cframe = CFrame.lookAt(p, p + dir) * CFrame.Angles(math.rad(-55), 0, 0), color = GLOW, material = "Neon", parent = lava })
+		flow:SetAttribute("Lava", true)
+	end
+end
+
+function Lava.build(w, centre, folder)
+	Kit.ground(centre, Enum.Material.Basalt, 340)
+	local rng = Random.new(53)
+	local lava = Kit.folder("Lava", folder)
+	local props = Kit.folder("Props", folder)
+	volcano(centre + Vector3.new(-92, 0, -92), props, lava)
+	-- two rivers that never cross the path from the return portal to the haystack
+	river(centre, { { -60, -50 }, { -40, -30 }, { -50, 0 }, { -42, 30 }, { -60, 60 }, { -70, 100 }, { -64, 140 } }, 10, lava)
+	river(centre, { { 50, -150 }, { 44, -110 }, { 60, -70 }, { 46, -36 }, { 58, 0 }, { 80, 36 }, { 120, 52 }, { 150, 48 } }, 9, lava)
+	bridge(centre + Vector3.new(-45, 0, 15), math.rad(90) + 0.25, props)
+	bridge(centre + Vector3.new(52, 0, -18), math.rad(90) - 0.3, props)
+	for _ = 1, 16 do
+		local a, r = rng:NextNumber(0, math.pi * 2), rng:NextNumber(40, 145)
+		local p = centre + Vector3.new(math.cos(a) * r, 0, math.sin(a) * r)
+		local nearPath = math.abs(p.X - centre.X) < 20 and p.Z - centre.Z > 60
+		local nearVolcano = (p - (centre + Vector3.new(-92, 0, -92))).Magnitude < 64
+		if not nearPath and not nearVolcano then
+			spire(p, rng:NextNumber(14, 30), rng, props)
+		end
+	end
+	for _ = 1, 40 do -- scattered dark rocks with glowing cracks
+		local a, r = rng:NextNumber(0, math.pi * 2), rng:NextNumber(26, 150)
+		local p = centre + Vector3.new(math.cos(a) * r, 0, math.sin(a) * r)
+		if not (math.abs(p.X - centre.X) < 16 and p.Z - centre.Z > 70) then
+			local s = rng:NextNumber(1.5, 4.5)
+			local rock = Build.part({ name = "EmberRock", size = Vector3.new(s * 1.4, s, s * 1.2), cframe = CFrame.new(p + Vector3.new(0, s * 0.3, 0)) * CFrame.Angles(rng:NextNumber(-0.4, 0.4), rng:NextNumber(0, 6), 0), color = STONE, material = "Slate", parent = props })
+			if rng:NextNumber() < 0.4 then
+				Build.part({ name = "EmberCrack", size = Vector3.new(s * 1.42, 0.2, 0.3), cframe = rock.CFrame * CFrame.new(0, 0, 0), color = GLOW, material = "Neon", collide = false, parent = props })
+			end
+		end
+	end
+	-- glowing lanterns along the arrival path
+	for i = 0, 3 do
+		for _, x in ipairs({ -12, 12 }) do
+			local post = CFrame.new(centre + Vector3.new(x, 0, 30 + i * 22))
+			Build.post({ name = "LanternPost", color = { 40, 34, 34 }, material = "Metal", parent = props }, post, 6, 0.6)
+			local lamp = Build.part({ name = "Lantern", size = Vector3.new(1.4, 1.4, 1.4), cframe = post * CFrame.new(0, 6.6, 0), color = { 255, 170, 80 }, material = "Neon", parent = props })
+			Kit.light(lamp, { 255, 170, 80 }, 16, 0.8)
+		end
+	end
+	-- embers drifting up over the whole land
+	local sky = Build.part({ name = "EmberCloud", size = Vector3.new(260, 1, 260), cframe = CFrame.new(centre + Vector3.new(0, 2, 0)), color = GLOW, transparency = 1, collide = false, shadow = false, parent = props })
+	Kit.drift(sky, { 255, 140, 50 }, 30, 2, 0.3)
+end
+
+return Lava
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00047">
+				<Properties>
+					<string name="Name">WorldsMoon</string>
+					<ProtectedString name="Source"><![CDATA[-- The Moon: grey dust with craters and boulders, a little landed lander with its flag (a
+-- golden needle on blue: our own), moon rocks, footprints, and the Earth hanging in the black sky.
+-- Low gravity is applied on each player's own screen (client Worlds.luau).
+local Build = require(script.Parent.Build)
+local Kit = require(script.Parent.WorldsKit)
+
+local Moon = {}
+local terrain = workspace.Terrain
+local DUST = { 168, 168, 172 }
+local DARK = { 104, 104, 112 }
+
+local function crater(at, radius)
+	terrain:FillBall(at + Vector3.new(0, -radius * 0.45, 0), radius * 1.2, Enum.Material.Concrete) -- the raised rim
+	terrain:FillBall(at + Vector3.new(0, radius * 0.35, 0), radius, Enum.Material.Air) -- the bowl
+	terrain:FillBlock(CFrame.new(at + Vector3.new(0, -12, 0)), Vector3.new(radius * 2.6, 8, radius * 2.6), Enum.Material.Slate) -- never a hole to the void
+end
+
+local function lander(base, parent)
+	local model = Instance.new("Model")
+	model.Name = "Lander"
+	local gold, white = { 214, 170, 70 }, { 230, 232, 236 }
+	Build.part({ name = "Body", size = Vector3.new(10, 6, 10), cframe = base * CFrame.new(0, 8, 0) * CFrame.Angles(0, math.rad(45), 0), color = gold, material = "Foil", parent = model })
+	Build.part({ name = "Cabin", size = Vector3.new(7, 6, 7), cframe = base * CFrame.new(0, 14, 0), color = white, material = "Metal", parent = model })
+	local window = Build.part({ name = "Window", size = Vector3.new(2.4, 1.6, 0.2), cframe = base * CFrame.new(0, 15, -3.55), color = { 120, 190, 255 }, material = "Glass", parent = model })
+	window.Transparency = 0.2
+	Build.part({ name = "Hatch", size = Vector3.new(2.4, 2.6, 0.3), cframe = base * CFrame.new(0, 8, -5.1), color = DARK, material = "Metal", parent = model })
+	Build.post({ name = "Antenna", color = white, material = "Metal", parent = model }, base * CFrame.new(1.8, 17, 1.8), 4, 0.3)
+	Build.part({ name = "Dish", shape = "Cylinder", size = Vector3.new(0.3, 3, 3), cframe = base * CFrame.new(1.8, 21, 1.8) * CFrame.Angles(0, 0, math.rad(60)), color = white, material = "Metal", parent = model })
+	for i = 0, 3 do
+		local a = math.rad(45 + i * 90)
+		local out = Vector3.new(math.cos(a), 0, math.sin(a))
+		local foot = base.Position + out * 8.5
+		local hip = base.Position + out * 4.5 + Vector3.new(0, 7, 0)
+		local mid = (foot + hip) / 2
+		Build.part({ name = "Leg", size = Vector3.new(0.6, 0.6, (hip - foot).Magnitude), cframe = CFrame.lookAt(mid, hip), color = { 190, 190, 196 }, material = "Metal", parent = model })
+		Build.part({ name = "Foot", shape = "Cylinder", size = Vector3.new(0.4, 2.4, 2.4), cframe = CFrame.new(foot + Vector3.new(0, 0.2, 0)) * CFrame.Angles(0, 0, math.rad(90)), color = { 190, 190, 196 }, material = "Metal", parent = model })
+	end
+	for step = 0, 4 do -- a ladder down from the hatch
+		Build.part({ name = "Rung", size = Vector3.new(2.2, 0.25, 0.25), cframe = base * CFrame.new(0, 1 + step * 1.3, -6.2), color = white, material = "Metal", parent = model })
+	end
+	model.Parent = parent
+end
+
+local function flag(at, parent)
+	Build.post({ name = "FlagPole", color = { 220, 220, 224 }, material = "Metal", parent = parent }, CFrame.new(at), 12, 0.3)
+	local cloth = Build.part({ name = "Flag", size = Vector3.new(6, 3.6, 0.15), cframe = CFrame.new(at + Vector3.new(3.1, 10, 0)), color = { 40, 70, 150 }, material = "Fabric", parent = parent })
+	Build.part({ name = "FlagNeedle", size = Vector3.new(4.4, 0.35, 0.2), cframe = cloth.CFrame * CFrame.Angles(0, 0, math.rad(20)), color = { 245, 200, 66 }, material = "Neon", parent = parent })
+	Build.part({ name = "FlagHay", shape = "Ball", size = Vector3.new(1.4, 1.4, 0.22), cframe = cloth.CFrame * CFrame.new(-1.6, -0.8, 0), color = { 240, 210, 120 }, material = "Fabric", parent = parent })
+end
+
+-- Earth: a big glowing blue ball with green land and white cloud caps, high in the sky.
+local function earth(centre, parent)
+	local at = centre + Vector3.new(-400, 300, 380)
+	local radius = 110
+	local planet = Build.part({ name = "Earth", shape = "Ball", size = Vector3.one * radius * 2, cframe = CFrame.new(at), color = { 40, 92, 176 }, material = "Neon", collide = false, shadow = false, parent = parent })
+	planet.Transparency = 0.05
+	local facing = (centre + Vector3.new(0, 20, 0) - at).Unit
+	local look = CFrame.lookAt(at, at + facing)
+	local land = { { -0.35, 0.25, 70, { 46, 140, 70 } }, { 0.3, -0.15, 80, { 70, 150, 64 } }, { 0.1, 0.45, 50, { 210, 190, 130 } }, { -0.1, -0.6, 60, { 236, 240, 248 } }, { 0.5, 0.5, 40, { 236, 240, 248 } } }
+	for _, l in ipairs(land) do
+		local dir = (look * CFrame.Angles(l[2], l[1], 0)).LookVector
+		Build.part({ name = "EarthLand", shape = "Ball", size = Vector3.one * l[3], cframe = CFrame.new(at + dir * (radius - l[3] * 0.32)), color = l[4], material = "Neon", collide = false, shadow = false, parent = parent })
+	end
+	local glow = Build.part({ name = "EarthAir", shape = "Ball", size = Vector3.one * (radius * 2 + 14), cframe = CFrame.new(at), color = { 140, 200, 255 }, material = "ForceField", collide = false, shadow = false, parent = parent })
+	glow.Transparency = 0.3
+end
+
+function Moon.build(w, centre, folder)
+	Kit.ground(centre, Enum.Material.Slate, 340)
+	terrain:FillBlock(CFrame.new(centre + Vector3.new(0, -2, 0)), Vector3.new(340, 4, 340), Enum.Material.Concrete) -- the dust on top
+	local rng = Random.new(31)
+	local craters = { { -80, -60, 18 }, { 70, -90, 24 }, { -110, 40, 14 }, { 100, 30, 16 }, { -40, -120, 12 }, { 120, -20, 10 }, { -120, -110, 20 }, { 40, 60, 9 }, { -60, 70, 11 } }
+	for _, c in ipairs(craters) do
+		crater(centre + Vector3.new(c[1], 0, c[2]), c[3])
+	end
+	local rocks = Kit.folder("Rocks", folder)
+	for _ = 1, 70 do
+		local a, r = rng:NextNumber(0, math.pi * 2), rng:NextNumber(30, 150)
+		local p = centre + Vector3.new(math.cos(a) * r, 0, math.sin(a) * r)
+		if not (math.abs(p.X - centre.X) < 16 and p.Z - centre.Z > 70) then -- keep the arrival path clear
+			local s = rng:NextNumber(1, 5)
+			Build.part({ name = "MoonRock", size = Vector3.new(s * rng:NextNumber(1, 1.8), s, s * rng:NextNumber(1, 1.6)), cframe = CFrame.new(p + Vector3.new(0, s * 0.3, 0)) * CFrame.Angles(rng:NextNumber(-0.5, 0.5), rng:NextNumber(0, 6), rng:NextNumber(-0.5, 0.5)), color = if rng:NextNumber() < 0.5 then DUST else DARK, material = "Slate", parent = rocks })
+		end
+	end
+	for _ = 1, 6 do -- a few big boulders near the edge
+		local a = rng:NextNumber(0, math.pi * 2)
+		local p = centre + Vector3.new(math.cos(a) * 140, 0, math.sin(a) * 140)
+		if p.Z - centre.Z < 90 then
+			terrain:FillBall(p, rng:NextNumber(8, 14), Enum.Material.Rock)
+		end
+	end
+	local base = CFrame.new(centre + Vector3.new(48, 0, 30))
+	lander(base, folder)
+	flag(centre + Vector3.new(36, 0, 44), folder)
+	for i = 0, 14 do -- footprints from the lander to the haystack
+		local t = i / 14
+		local p = centre:Lerp(base.Position, 0.35 + t * 0.55) + Vector3.new(if i % 2 == 0 then 0.8 else -0.8, 0.05, 0)
+		Build.part({ name = "Footprint", size = Vector3.new(1, 0.1, 1.8), cframe = CFrame.lookAt(p, base.Position), color = { 120, 120, 128 }, material = "Slate", collide = false, shadow = false, parent = folder })
+	end
+	-- a small rover parked by the lander
+	local rover = CFrame.new(centre + Vector3.new(66, 0, 58)) * CFrame.Angles(0, math.rad(30), 0)
+	Build.part({ name = "RoverDeck", size = Vector3.new(6, 0.6, 9), cframe = rover * CFrame.new(0, 2.4, 0), color = { 200, 200, 206 }, material = "Metal", parent = folder })
+	Build.part({ name = "RoverSeat", size = Vector3.new(4, 2, 1), cframe = rover * CFrame.new(0, 3.6, 1.5), color = { 60, 60, 70 }, material = "Fabric", parent = folder })
+	for _, x in ipairs({ -3.3, 3.3 }) do
+		for _, z in ipairs({ -3.4, 3.4 }) do
+			Build.part({ name = "RoverWheel", shape = "Cylinder", size = Vector3.new(1, 2.6, 2.6), cframe = rover * CFrame.new(x, 1.3, z), color = { 70, 70, 76 }, material = "SmoothPlastic", parent = folder })
+		end
+	end
+	earth(centre, folder)
+	-- soft lamps along the arrival path, so the dark side is never too dark
+	for i = 0, 3 do
+		for _, x in ipairs({ -12, 12 }) do
+			local lamp = Build.part({ name = "PathLight", size = Vector3.new(1, 1, 1), cframe = CFrame.new(centre + Vector3.new(x, 0.5, 30 + i * 22)), color = { 170, 210, 255 }, material = "Neon", parent = folder })
+			Kit.light(lamp, { 170, 210, 255 }, 18, 0.8)
+		end
+	end
+end
+
+return Moon
+]]></ProtectedString>
+				</Properties>
+			</Item>
 		</Item>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX00041">
+	<Item class="StarterPlayer" referent="RBX00048">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX00042">
+		<Item class="StarterPlayerScripts" referent="RBX00049">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX00043">
+			<Item class="Folder" referent="RBX0004A">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX00044">
+				<Item class="ModuleScript" referent="RBX0004B">
 					<Properties>
 						<string name="Name">Animals</string>
 						<ProtectedString name="Source"><![CDATA[-- Brings the farm's animals to life on this screen only: each one ambles to a new spot in its
@@ -6540,7 +7466,7 @@ return Animals
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00045">
+				<Item class="ModuleScript" referent="RBX0004C">
 					<Properties>
 						<string name="Name">BuildMode</string>
 						<ProtectedString name="Source"><![CDATA[-- Free building in first person. Z and C pick from your inventory bar (or press M and click
@@ -6775,7 +7701,7 @@ return BuildMode
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00046">
+				<Item class="ModuleScript" referent="RBX0004D">
 					<Properties>
 						<string name="Name">Cursor</string>
 						<ProtectedString name="Source"><![CDATA[-- First person locks the mouse to the centre of the screen. Menus need a pointer, so a
@@ -6824,7 +7750,7 @@ return Cursor
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00047">
+				<Item class="ModuleScript" referent="RBX0004E">
 					<Properties>
 						<string name="Name">Detector</string>
 						<ProtectedString name="Source"><![CDATA[-- The metal detector: hold Config.MetalDetector.key to sweep. The client only says "I'm
@@ -6930,7 +7856,7 @@ return Detector
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00048">
+				<Item class="ModuleScript" referent="RBX0004F">
 					<Properties>
 						<string name="Name">Goals</string>
 						<ProtectedString name="Source"><![CDATA[-- The guided goal card (top left) and the coins-a-minute line under the coins counter.
@@ -7070,7 +7996,7 @@ return Goals
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00049">
+				<Item class="ModuleScript" referent="RBX00050">
 					<Properties>
 						<string name="Name">Guide</string>
 						<ProtectedString name="Source"><![CDATA[-- When your tool and bucket are full, a soft golden line runs from you to your trader's
@@ -7132,7 +8058,7 @@ return Guide
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004A">
+				<Item class="ModuleScript" referent="RBX00051">
 					<Properties>
 						<string name="Name">Harvest</string>
 						<ProtectedString name="Source"><![CDATA[-- Aiming in first person: the clump under the crosshair (within reach, on your own pile or the
@@ -7199,6 +8125,9 @@ local function onMyHeap(result)
 end
 
 local function harvestable(part)
+	if part ~= nil and part:GetAttribute("World") ~= nil then
+		return true -- a portal world's haystack (the server checks the portal is yours)
+	end
 	local loft = workspace:FindFirstChild("Loft")
 	return part ~= nil and loft ~= nil and part:IsDescendantOf(loft) and string.sub(part.Name, 1, 6) == "Golden" and player:GetAttribute("LoftOpen") == true
 end
@@ -7381,7 +8310,7 @@ return Harvest
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004B">
+				<Item class="ModuleScript" referent="RBX00052">
 					<Properties>
 						<string name="Name">HayFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The hay you can see moving: every harvest lifts a lump off the heap onto your tool, and
@@ -7479,7 +8408,7 @@ return HayFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004C">
+				<Item class="ModuleScript" referent="RBX00053">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: a crosshair, your pile's progress at the top, and on the left your
@@ -7623,7 +8552,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004D">
+				<Item class="ModuleScript" referent="RBX00054">
 					<Properties>
 						<string name="Name">Jetpack</string>
 						<ProtectedString name="Source"><![CDATA[-- The Jetpack (a Robux game pass; the server sets the "PassJetpack" attribute when you own it).
@@ -7809,7 +8738,7 @@ return Jetpack
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004E">
+				<Item class="ModuleScript" referent="RBX00055">
 					<Properties>
 						<string name="Name">Juice</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback that makes harvesting feel good: straw bursts, floating numbers, a soft camera
@@ -7997,7 +8926,7 @@ return Juice
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX0004F">
+				<Item class="LocalScript" referent="RBX00056">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- The player's side of the game: first-person harvesting, building, the menus, and all the
@@ -8124,6 +9053,7 @@ end)
 step("metal detector", function()
 	Detector.start(gui, Notify)
 end)
+step("worlds", function() require(script.Parent:WaitForChild("Worlds")).start(gui, Notify) end)
 if not hud then
 	hud = { refresh = function() end }
 end
@@ -8300,7 +9230,7 @@ end)
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00050">
+				<Item class="ModuleScript" referent="RBX00057">
 					<Properties>
 						<string name="Name">Music</string>
 						<ProtectedString name="Source"><![CDATA[-- Soft background music: the Config.Music playlist in a loop, low and relaxing, fading gently
@@ -8443,7 +9373,7 @@ return Music
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00051">
+				<Item class="ModuleScript" referent="RBX00058">
 					<Properties>
 						<string name="Name">Notify</string>
 						<ProtectedString name="Source"><![CDATA[-- Messages: small toasts under the haystack counter, and a big banner for case news.
@@ -8546,7 +9476,7 @@ return Notify
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00052">
+				<Item class="ModuleScript" referent="RBX00059">
 					<Properties>
 						<string name="Name">Offer</string>
 						<ProtectedString name="Source"><![CDATA[-- One gentle Robux suggestion per session: after Config.OfferAfterClumps clumps harvested since
@@ -8652,7 +9582,7 @@ return Offer
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00053">
+				<Item class="ModuleScript" referent="RBX0005A">
 					<Properties>
 						<string name="Name">OrderCard</string>
 						<ProtectedString name="Source"><![CDATA[-- The current delivery order, on the right of the screen: what the driver wants, how many
@@ -8699,7 +9629,7 @@ return OrderCard
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00054">
+				<Item class="ModuleScript" referent="RBX0005B">
 					<Properties>
 						<string name="Name">Panels</string>
 						<ProtectedString name="Source"><![CDATA[-- The windows: Shop, secret Achievements, Finds & Skins, and the Wheel of Fortune (odds first).
@@ -8888,7 +9818,7 @@ return Panels
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00055">
+				<Item class="ModuleScript" referent="RBX0005C">
 					<Properties>
 						<string name="Name">Shop</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop window: Tools, Perks, Fitness (stamina, the metal detector), Storage (buckets and
@@ -9181,7 +10111,7 @@ return Shop
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00056">
+				<Item class="ModuleScript" referent="RBX0005D">
 					<Properties>
 						<string name="Name">Stamina</string>
 						<ProtectedString name="Source"><![CDATA[-- A slim stamina bar under the crosshair (the server owns stamina: attributes Stamina,
@@ -9229,7 +10159,7 @@ return StaminaBar
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00057">
+				<Item class="ModuleScript" referent="RBX0005E">
 					<Properties>
 						<string name="Name">Teleport</string>
 						<ProtectedString name="Source"><![CDATA[-- The teleporter menu: standing on one of your pads, pick any of your other pads (listed by
@@ -9300,7 +10230,7 @@ return Teleport
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00058">
+				<Item class="ModuleScript" referent="RBX0005F">
 					<Properties>
 						<string name="Name">Ui</string>
 						<ProtectedString name="Source"><![CDATA[-- A small UI kit: the farm colours, rounded wooden buttons and windows that scale with
@@ -9479,7 +10409,7 @@ return Ui
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00059">
+				<Item class="ModuleScript" referent="RBX00060">
 					<Properties>
 						<string name="Name">WorldFx</string>
 						<ProtectedString name="Source"><![CDATA[-- World effects on your screen: the glowing needle clump (Wheel jackpot), the wheel turning
@@ -9597,22 +10527,295 @@ return WorldFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
+				<Item class="ModuleScript" referent="RBX00061">
+					<Properties>
+						<string name="Name">Worlds</string>
+						<ProtectedString name="Source"><![CDATA[-- The portal worlds on your own screen: each world's light eased in on arrival (and the farm's
+-- eased back on return), its name on screen, low gravity on the Moon, the lava's gentle nudge
+-- back to the bank, the fish of Bubble City, the portal prompts' words and the stadium
+-- scoreboard. The server decides unlocking, travel and every coin (server/Worlds.luau).
+local Lighting = game:GetService("Lighting")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Format = require(Shared:WaitForChild("Format"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local Ui = require(script.Parent.Ui)
+local Juice = require(script.Parent.Juice)
+
+local player = Players.LocalPlayer
+local Worlds = {}
+local byId = {}
+for _, w in ipairs(Config.Worlds) do
+	byId[w.id] = w
+end
+
+local function rgb(c)
+	return Color3.fromRGB(c[1], c[2], c[3])
+end
+
+-- The light as one flat table, so a fade can ease every value together.
+local function read()
+	local atmo = Lighting:FindFirstChildOfClass("Atmosphere")
+	return {
+		clock = Lighting.ClockTime, brightness = Lighting.Brightness, ambient = Lighting.Ambient, outdoor = Lighting.OutdoorAmbient, shift = Lighting.ColorShift_Top,
+		density = atmo and atmo.Density, color = atmo and atmo.Color, decay = atmo and atmo.Decay, haze = atmo and atmo.Haze, glare = atmo and atmo.Glare,
+	}
+end
+
+local function mood(id)
+	local m = Config.WorldMoods[id]
+	return { clock = m.clock, brightness = m.brightness, ambient = rgb(m.ambient), outdoor = rgb(m.outdoor), shift = rgb(m.shift), density = m.density, color = rgb(m.color), decay = rgb(m.decay), haze = m.haze, glare = m.glare }
+end
+
+local function write(a, b, e)
+	local function mix(x, y)
+		if typeof(x) == "Color3" then
+			return x:Lerp(y, e)
+		end
+		return x + (y - x) * e
+	end
+	local delta = ((b.clock - a.clock + 12) % 24) - 12 -- the short way round the clock: no sudden noon
+	Lighting.ClockTime = (a.clock + delta * e) % 24
+	Lighting.Brightness = mix(a.brightness, b.brightness)
+	Lighting.Ambient, Lighting.OutdoorAmbient, Lighting.ColorShift_Top = mix(a.ambient, b.ambient), mix(a.outdoor, b.outdoor), mix(a.shift, b.shift)
+	local atmo = Lighting:FindFirstChildOfClass("Atmosphere")
+	if atmo and a.density and b.density then
+		atmo.Density, atmo.Haze, atmo.Glare = mix(a.density, b.density), mix(a.haze, b.haze), mix(a.glare, b.glare)
+		atmo.Color, atmo.Decay = mix(a.color, b.color), mix(a.decay, b.decay)
+	end
+end
+
+local farm = nil -- the farm's light, kept while you're away
+local fade = nil -- { from, to, start, done }
+local function fadeTo(target, done)
+	fade = { from = read(), to = target, start = os.clock(), done = done }
+end
+
+local function worldAt(position)
+	for _, w in ipairs(Config.Worlds) do
+		local flat = Vector3.new(position.X - w.x, 0, position.Z - w.z)
+		if flat.Magnitude < Config.WorldInside then
+			return w
+		end
+	end
+	return nil
+end
+
+-- Moon gravity: a VectorForce lifting part of your weight.
+local lift = nil
+local function setLift(root)
+	if not root then
+		if lift then
+			lift.force:Destroy()
+			lift.attachment:Destroy()
+			lift = nil
+		end
+		return
+	end
+	if not lift or lift.force.Parent ~= root then
+		setLift(nil)
+		local attachment = Instance.new("Attachment")
+		attachment.Name = "MoonLiftAttachment"
+		attachment.Parent = root
+		local force = Instance.new("VectorForce")
+		force.Name = "MoonLift"
+		force.Attachment0 = attachment
+		force.RelativeTo = Enum.ActuatorRelativeTo.World
+		force.ApplyAtCenterOfMass = true
+		force.Parent = root
+		lift = { force = force, attachment = attachment }
+	end
+	lift.force.Force = Vector3.new(0, root.AssemblyMass * workspace.Gravity * Config.MoonLift, 0)
+end
+
+-- Lava: standing on it hops you gently back towards the nearer bank.
+local lastPush, lastToast = 0, 0
+local function lavaCheck(root, character, notify)
+	if os.clock() - lastPush < Config.LavaPush.every then
+		return
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { character }
+	local hit = workspace:Raycast(root.Position, Vector3.new(0, -7, 0), params)
+	local part = hit and hit.Instance
+	if not part or part:GetAttribute("Lava") ~= true then
+		return
+	end
+	lastPush = os.clock()
+	local rel = part.CFrame:PointToObjectSpace(root.Position)
+	local dir = if part.Size.X <= part.Size.Z then part.CFrame.RightVector * (if rel.X >= 0 then 1 else -1) else part.CFrame.LookVector * (if rel.Z >= 0 then -1 else 1)
+	dir = Vector3.new(dir.X, 0, dir.Z)
+	if dir.Magnitude < 0.3 then -- a round pool: straight out from its middle
+		dir = Vector3.new(root.Position.X - part.Position.X, 0, root.Position.Z - part.Position.Z)
+	end
+	dir = if dir.Magnitude > 0.01 then dir.Unit else Vector3.xAxis
+	root.AssemblyLinearVelocity = dir * Config.LavaPush.out + Vector3.new(0, Config.LavaPush.up, 0)
+	if os.clock() - lastToast > Config.LavaPush.toastEvery then
+		lastToast = os.clock()
+		notify.toast("Warm toes! The lava nudges you back to the bank.", Ui.colors.wood)
+	end
+end
+
+-- Bubble City's fish swim slow circles (only drawn moving while you're there).
+local function swim(folder)
+	local t = os.clock()
+	for _, fish in ipairs(folder:GetChildren()) do
+		local r, h, speed, phase = fish:GetAttribute("Radius"), fish:GetAttribute("Height"), fish:GetAttribute("Speed"), fish:GetAttribute("Phase")
+		if fish:IsA("Model") and r and h and speed and phase then
+			local w = byId.atlantis
+			local a = phase + speed * t
+			local p = Vector3.new(w.x + math.cos(a) * r, h + math.sin(t * 0.6 + phase) * 1.5, w.z + math.sin(a) * r)
+			local heading = Vector3.new(-math.sin(a), 0, math.cos(a)) * (if speed >= 0 then 1 else -1)
+			fish:PivotTo(CFrame.lookAt(p, p + heading))
+		end
+	end
+end
+
+-- The portal prompts say "Travel" once open, or the price until then.
+local function promptWords(root)
+	for _, prompt in ipairs(root:GetDescendants()) do
+		local w = prompt:IsA("ProximityPrompt") and prompt:GetAttribute("Action") == "portal" and byId[prompt:GetAttribute("World")]
+		if w then
+			prompt.ActionText = if player:GetAttribute("World_" .. w.id) then "Travel" else "Open for " .. Format.short(w.price) .. " coins"
+		end
+	end
+end
+
+local function scoreText(root)
+	local label = root:FindFirstChild("field") and root.field:FindFirstChild("ScoreText", true)
+	if label and label:IsA("TextLabel") then
+		local needles = player:GetAttribute("WorldNeedles_field") or 0
+		local straws = player:GetAttribute("WorldStraws_field") or 0
+		label.Text = "YOUR WORLD SCORE\n" .. Format.commas(needles) .. " NEEDLE" .. (if needles == 1 then "" else "S") .. "  |  " .. Format.commas(straws) .. " STRAWS"
+	end
+end
+
+function Worlds.start(gui, notify)
+	local title = Ui.label({ AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.26), Size = UDim2.new(0.8, 0, 0, 70), TextTransparency = 1, TextStrokeTransparency = 1, Parent = gui }, 64)
+	local subtitle = Ui.label({ AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.26, 52), Size = UDim2.new(0.8, 0, 0, 30), TextTransparency = 1, TextStrokeTransparency = 1, TextColor3 = Ui.colors.hay, Parent = gui }, 26)
+	local titleToken = 0
+	local function showTitle(text, sub)
+		titleToken += 1
+		local token = titleToken
+		title.Text, subtitle.Text = text, sub
+		for _, label in ipairs({ title, subtitle }) do
+			Juice.ease(label, 1, { TextTransparency = 0, TextStrokeTransparency = 0.4 })
+		end
+		task.delay(Config.WorldTitleSeconds, function()
+			if token == titleToken then
+				for _, label in ipairs({ title, subtitle }) do
+					Juice.ease(label, 1.2, { TextTransparency = 1, TextStrokeTransparency = 1 })
+				end
+			end
+		end)
+	end
+
+	local root = workspace:FindFirstChild("Worlds")
+	task.spawn(function() -- (never hold up the other parts of the screen while waiting)
+		root = root or workspace:WaitForChild("Worlds", 60)
+		if root then
+			promptWords(root)
+			scoreText(root)
+		end
+	end)
+	for _, w in ipairs(Config.Worlds) do
+		player:GetAttributeChangedSignal("World_" .. w.id):Connect(function()
+			if root then
+				promptWords(root)
+			end
+		end)
+	end
+	for _, name in ipairs({ "WorldNeedles_field", "WorldStraws_field" }) do
+		player:GetAttributeChangedSignal(name):Connect(function()
+			if root then
+				scoreText(root)
+			end
+		end)
+	end
+
+	local inside = nil
+	RunService.Heartbeat:Connect(function()
+		if fade then
+			local t = math.clamp((os.clock() - fade.start) / Config.WorldFadeSeconds, 0, 1)
+			write(fade.from, fade.to, (1 - math.cos(math.pi * t)) / 2)
+			if t >= 1 then
+				local done = fade.done
+				fade = nil
+				if done then
+					done()
+				end
+			end
+		end
+		local character = player.Character
+		local body = character and character:FindFirstChild("HumanoidRootPart")
+		if not body then
+			setLift(nil)
+			return
+		end
+		local here = worldAt(body.Position)
+		if here ~= inside then
+			inside = here
+			if here then
+				farm = farm or read()
+				fadeTo(mood(here.id))
+				showTitle(here.name, "Hay pays " .. here.multiplier .. "x here. Find this world's own needle!")
+			elseif farm then
+				fadeTo(farm, function()
+					farm = nil
+				end)
+				showTitle(Config.FarmName, "Welcome home.")
+			end
+		end
+		setLift(if here and here.id == "moon" then body else nil)
+		if here and here.id == "lava" then
+			lavaCheck(body, character, notify)
+		end
+	end)
+	RunService.RenderStepped:Connect(function()
+		local fish = inside and inside.id == "atlantis" and root and root:FindFirstChild("atlantis") and root.atlantis:FindFirstChild("Fish")
+		if fish then
+			swim(fish)
+		end
+	end)
+
+	Remotes.Announce.OnClientEvent:Connect(function(message)
+		if message.kind ~= "worldneedle" then
+			return
+		end
+		if message.finderId == player.UserId then
+			Juice.confetti()
+			notify.banner("YOU FOUND THE NEEDLE ON " .. string.upper(message.name) .. "!", "You earned " .. Format.short(message.prize) .. " coins. A fresh haystack with a new needle is waiting.", 10)
+		else
+			notify.toast(message.finder .. " found the needle on " .. message.name .. "!", Ui.colors.hay)
+		end
+	end)
+end
+
+return Worlds
+]]></ProtectedString>
+					</Properties>
+				</Item>
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX0005A">
+	<Item class="Workspace" referent="RBX00062">
 		<Properties>
 			<string name="Name">Workspace</string>
 			<bool name="StreamingEnabled">false</bool>
 		</Properties>
 	</Item>
-	<Item class="MaterialService" referent="RBX0005B">
+	<Item class="MaterialService" referent="RBX00063">
 		<Properties>
 			<string name="Name">MaterialService</string>
 			<bool name="Use2022Materials">true</bool>
 			<string name="LeafyGrassName">Field</string>
 		</Properties>
-		<Item class="MaterialVariant" referent="RBX0005C">
+		<Item class="MaterialVariant" referent="RBX00064">
 			<Properties>
 				<string name="Name">Field</string>
 				<token name="BaseMaterial">1284</token>

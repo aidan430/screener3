@@ -278,7 +278,7 @@ Config.Loft = { straws = 250000, coinMultiplier = 20, needleEarliest = 0.5 }
 
 -- More numbers kept in companion files (to keep each under 300 lines): the factory line and
 -- processing chain, the guided goals, and stamina and the metal detector. Their lists add to the ones above.
-for _, file in ipairs({ "ConfigFactory", "ConfigGoals", "ConfigPlayer" }) do
+for _, file in ipairs({ "ConfigFactory", "ConfigGoals", "ConfigPlayer", "ConfigWorlds" }) do
 	for name, value in pairs(require(script.Parent:WaitForChild(file))) do
 		if type(value) == "table" and type(Config[name]) == "table" and #value > 0 then
 			for _, entry in ipairs(value) do

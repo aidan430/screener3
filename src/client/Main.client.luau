@@ -122,6 +122,7 @@ end)
 step("metal detector", function()
 	Detector.start(gui, Notify)
 end)
+step("worlds", function() require(script.Parent:WaitForChild("Worlds")).start(gui, Notify) end)
 if not hud then
 	hud = { refresh = function() end }
 end

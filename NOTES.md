@@ -264,3 +264,28 @@ The owner created the passes and products (prices: Jetpack 175, Double Machines 
 149, VIP 299; 2x Speed 49, 2x Coins 49, Lucky Charm 29, Straw Blast 99, Whistle x10 25,
 Wheel Spin 25) and their IDs are in `Config.GamePasses` / `Config.Products`. A grant that
 errors now returns NotProcessedYet so Roblox retries it instead of losing the purchase.
+
+## Portal worlds (2026-11-06)
+Four glowing arches on the west road lead to four themed worlds, each with its own haystack
+and needle. Numbers in `src/shared/ConfigWorlds.luau` (merged into Config).
+- **Portals (`Config.WorldPortals`):** arches at x = -42, -70, -98, -126 on the south half of
+  the west road (z = 10; the step spans z 8-12), so the north half stays a walking lane. E
+  (hold 0.8 s) opens a portal once for coins (saved in `d.worlds[id].unlocked`), then travels
+  free. Each world has a return arch just behind where you arrive. T still takes you home.
+- **Worlds (`Config.Worlds`):** open price / coins per straw (x the normal value and your coin
+  multiplier) / straws in the haystack: The Moon 250K / 3x / 60,000 at (0, 0, 2500); Ember
+  Lands 2M / 6x / 120,000 at (2500, 0, 0); Bubble City 10M / 12x / 240,000 at (0, 0, -2500);
+  Haystack Stadium 50M / 25x / 480,000 at (-2500, 0, 0). Each about 300 studs across
+  (`WorldSize`); within 220 studs (`WorldInside`) you count as inside it.
+- **World haystacks:** hay balls like the Golden Loft's, in each world's colours
+  (`Config.WorldHay`). Every click pays coins at once (nothing to carry or dump) and counts
+  straws; the needle hides after 25% of the straws (`WorldNeedleEarliest`) and pays 5,000
+  clicks' worth at that world's rate (`WorldNeedleSearches`), then a fresh count starts.
+  Reach, cooldown and stamina work as on the farm.
+- **Feel (your own screen only):** each world's light eases in over 1.6 s (`WorldMoods`,
+  `WorldFadeSeconds`) and the farm's eases back on return; the name fades in for 3.5 s. The
+  Moon cancels 70% of gravity (`MoonLift`). Lava never hurts: stepping on it hops you back to
+  the bank (`LavaPush`). Bubble City's 28 fish swim slow circles; the stadium scoreboard shows
+  your needles and straws there.
+- **Check in Studio:** the bubble's Glass may not show from inside (parts are one-sided); the
+  lava hop strength; how far away the worlds can be seen from the farm.
