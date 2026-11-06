@@ -527,3 +527,11 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
 - The Twin Turbines' fans spin on your own screen (client/WorldFx), Config.ToolFanSpin = 9
   radians a second. Skins recolour each tool's Head parts and handle; Trim parts (collars,
   grips, mesh, poles) keep their colours. Patterned skins cover every visible part.
+
+## Wheel face redrawn as pie slices (2026-11-06)
+- The old face drew each prize as a wide rounded card; with seven prizes they piled on top of
+  each other, hid most labels and drew the 1-in-10,000 needle reveal on top, biggest of all.
+  server/WheelFace draws real pie slices (a fan of thin spokes, 2 degrees apart), white lines
+  between them, a gold hub, and each prize's name and odds along its slice, never upside down.
+  The needle reveal's slice is dark navy with gold text. Prize positions are unchanged, so spins
+  still stop on the prize they won.

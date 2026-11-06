@@ -4,6 +4,7 @@
 local Lighting = game:GetService("Lighting")
 
 local Build = require(script.Parent.Build)
+local WheelFace = require(script.Parent.WheelFace)
 local Assets = require(script.Parent.Assets)
 local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
 
@@ -173,60 +174,12 @@ local function merchant(folder)
 	prompt(head, "sell", "Sell your straw", "Hay Merchant")
 end
 
--- The wheel's face: one coloured slice per prize, with its name and exact odds, laid out so
--- the spin (client/WorldFx.spin) stops prize i under the pointer. The slices are drawn the same
--- size, so the printed odds are what tell you how likely each is.
-function World.wheelFace(disc)
-	local gui = Instance.new("SurfaceGui")
-	gui.Name = "WheelFace"
-	gui.Face = Enum.NormalId.Right -- the flat face turned towards the haystack
-	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	gui.PixelsPerStud = 40
-	gui.LightInfluence = 0.4
-	gui.Parent = disc
-	local total, n = 0, #Config.Wheel
-	for _, prize in ipairs(Config.Wheel) do
-		total += prize.weight
-	end
-	for i, prize in ipairs(Config.Wheel) do
-		local angle = (i - 0.5) / n * 360 -- clockwise from the top
-		local holder = Instance.new("Frame")
-		holder.AnchorPoint = Vector2.new(0.5, 0.5)
-		holder.Position = UDim2.fromScale(0.5, 0.5)
-		holder.Size = UDim2.fromScale(1, 1)
-		holder.BackgroundTransparency = 1
-		holder.Rotation = angle
-		holder.Parent = gui
-		local c = prize.head or { 255, 214, 90 }
-		local slice = Instance.new("Frame")
-		slice.AnchorPoint = Vector2.new(0.5, 0)
-		slice.Position = UDim2.fromScale(0.5, 0.04)
-		slice.Size = UDim2.fromScale(0.36, 0.46)
-		slice.BackgroundColor3 = Color3.fromRGB(c[1], c[2], c[3])
-		slice.BorderSizePixel = 0
-		slice.Parent = holder
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0.2, 0)
-		corner.Parent = slice
-		local text = Instance.new("TextLabel")
-		text.Size = UDim2.fromScale(1, 0.6)
-		text.BackgroundTransparency = 1
-		text.TextScaled = true
-		text.Font = Enum.Font.FredokaOne
-		text.TextColor3 = Color3.new(1, 1, 1)
-		text.TextStrokeTransparency = 0.2
-		local chance = prize.weight / total * 100
-		text.Text = prize.name:gsub(" skin", "") .. "\n" .. (if chance < 1 then string.format("%.2f", chance) else string.format("%.0f", chance)) .. "%"
-		text.Parent = slice
-	end
-end
-
 local function wheel(folder)
 	local cf = CFrame.lookAt(World.WHEEL, Vector3.new(0, 0, 0))
 	Build.part({ name = "WheelStand", size = Vector3.new(2, 14, 2), cframe = cf * CFrame.new(0, 7, 1.5), color = WOOD, material = "Wood", parent = folder })
 	local disc = Build.part({ name = "WheelDisc", shape = "Cylinder", size = Vector3.new(0.6, 16, 16), cframe = cf * CFrame.new(0, 13, 0) * CFrame.Angles(0, math.rad(90), 0), color = { 245, 200, 66 }, material = "SmoothPlastic", parent = folder })
 	Build.part({ name = "WheelPointer", size = Vector3.new(1, 2.4, 0.6), cframe = cf * CFrame.new(0, 21.6, -0.6), color = { 200, 50, 50 }, material = "Neon", parent = folder })
-	World.wheelFace(disc)
+	WheelFace.draw(disc)
 	local sign = Build.part({ name = "WheelSign", size = Vector3.new(14, 2.4, 0.4), cframe = cf * CFrame.new(0, 2.4, -1), color = { 246, 234, 204 }, material = "WoodPlanks", parent = folder })
 	Build.text(sign, Enum.NormalId.Front, "WHEEL OF FORTUNE: odds shown before you spin")
 	prompt(disc, "wheel", "See the wheel", "Wheel of Fortune")
