@@ -98,7 +98,7 @@ class Player:
         self.tools, self.silos = rows("Tools"), rows("Silos")
         # feeders (arms, throwers) count like machines: straws a second for power
         feeders = [{"rate": f["amount"] / f["every"], "draw": f["draw"], "price": f["price"], "max": f["max"]} for f in rows("Feeders")]
-        self.machines = rows("Machines") + feeders
+        self.machines = [m for m in rows("Machines") if not m.get("robux")] + feeders  # Robux machines aren't bought with coins
         # Hay Burners burn your own hay, so they aren't free power: left out
         self.generators = [g for g in rows("Generators") if g.get("id") != "burner"]
         self.perks = rows("Perks")

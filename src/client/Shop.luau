@@ -14,17 +14,7 @@ local Juice = require(script.Parent.Juice)
 
 local player = Players.LocalPlayer
 
-local ROBUX = {
-	{ kind = "product", key = "SpeedBoost", title = "2x Speed (1 hour)", text = "Every click lifts twice the hay, for 1 hour." },
-	{ kind = "product", key = "CoinBoost", title = "2x Coins (1 hour)", text = "All the hay you sell pays double, for 1 hour." },
-	{ kind = "product", key = "LuckyCharm", title = "Lucky Charm (1 hour)", text = "5x the chance of a lucky find, for 1 hour." },
-	{ kind = "product", key = "StrawBlast", title = "Straw Blast", text = "100,000 straws come off your haystack straight into your basket." },
-	{ kind = "product", key = "MerchantWhistle", title = "Merchant's Whistle x10", text = "Send your load to your basket from anywhere, 10 times." },
-	{ kind = "pass", key = "AutoSell", title = "Auto Sell", text = "When you're full, your load goes to your basket by itself." },
-	{ kind = "pass", key = "DoubleMachines", title = "Double Machines", text = "Every machine harvests twice as fast, on the same power." },
-	{ kind = "pass", key = "VIP", title = "VIP", text = "+25% coins, and machines keep working up to 1 hour while you're away." },
-	{ kind = "pass", key = "Jetpack", title = "Jetpack", text = "Hold Space (or FLY) in the air to fly up and hover over your pile." },
-}
+local ROBUX = require(script.Parent.RobuxItems) -- every Robux item, with exactly what it gives
 
 local Shop = {}
 local frame = nil
@@ -210,7 +200,12 @@ function Shop.mount(gui, notify)
 		return def.text
 	end)
 	-- machines fill your silo; feeders (arms, throwers) put bundles on your belts
-	local machines = table.clone(Config.Machines)
+	local machines = {}
+	for _, machine in ipairs(Config.Machines) do
+		if not machine.robux then -- the Hay Tornado comes with its Robux pass, not for coins
+			table.insert(machines, machine)
+		end
+	end
 	for _, feeder in ipairs(Config.Feeders) do
 		table.insert(machines, feeder)
 	end

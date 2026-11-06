@@ -118,7 +118,7 @@ local function publish(player, profile)
 		end
 	end
 	player:SetAttribute("Achievements", done)
-	player:SetAttribute("LoftOpen", done >= #Config.Achievements)
+	player:SetAttribute("LoftOpen", done >= Config.LoftAchievements)
 end
 
 function PlayerData.get(player)
@@ -167,6 +167,12 @@ function PlayerData.setPass(player, name, owned)
 	player:SetAttribute("Pass" .. name, owned)
 	local profile = profiles[player]
 	if profile then
+		if name == "SuperTool" then
+			profile.data.superTool = owned -- not saved: checked with Roblox every visit
+		elseif name == "HayTornado" and owned and Economy.owned(profile.data, "tornado") == 0 then
+			profile.data.inventory.tornado = 1 -- yours to place (B), once
+			profile.dirty = true
+		end
 		publish(player, profile)
 	end
 end

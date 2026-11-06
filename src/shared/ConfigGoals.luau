@@ -1,4 +1,5 @@
--- The guided goals (Config.luau merges this file in: read and tune them as Config.Goals etc.).
+-- The guided goals and the secret achievements (Config.luau merges this file in: read and tune
+-- them as Config.Goals, Config.Achievements etc.).
 local Config = {}
 
 -- Goals: a guided list, in order, each paying `reward` coins. kind: stat (d.stats[key]), tool / bucket / silo
@@ -21,5 +22,23 @@ Config.Goals = {
 }
 Config.GoalCheckSeconds = 2 -- how often the server looks at your current goal
 Config.RateWindowSeconds = 60 -- the HUD's coins/min counts what you earned in this many seconds
+
+-- Achievements stay hidden until you earn them. Any ten open the Golden Loft above the hub.
+Config.Achievements = {
+	{ id = "first_straw", name = "First Straw", text = "Harvest your first straw.", stat = "searches", goal = 1 },
+	{ id = "full_load", name = "Full Load", text = "Fill your tool to the brim.", stat = "loads_filled", goal = 1 },
+	{ id = "merchant", name = "Merchant's Friend", text = "Sell 100,000 straws to the merchant.", stat = "straws_sold", goal = 100000 },
+	{ id = "collector", name = "Collector", text = "Own every tool, up to the Needle Detector.", stat = "tool", goal = 10 },
+	{ id = "engineer", name = "Engineer", text = "Have 10 machines working on your plot.", stat = "machines", goal = 10 },
+	{ id = "power_plant", name = "Power Plant", text = "Generate 500 power on your plot.", stat = "power", goal = 500 },
+	{ id = "sky_high", name = "Sky High", text = "Stand on top of your haystack, 75 studs up.", stat = "best_height", goal = 75 },
+	{ id = "perfectionist", name = "Perfectionist", text = "Max out all three perks on one tool.", stat = "perks_maxed", goal = 1 },
+	{ id = "lucky", name = "Lucky Duck", text = "Make 25 lucky finds in the hay.", stat = "lucky_finds", goal = 25 },
+	{ id = "needle", name = "Needle Finder", text = "Find the needle.", stat = "needles", goal = 1 },
+	{ id = "golden_straw", name = "Hidden Straw", text = "Find the golden straw hidden on the farm.", stat = "secret_straw", goal = 1 },
+}
+Config.LoftAchievements = 10 -- this many achievements (any of them) open the Golden Loft
+Config.SecretStraw = { -119, 0.7, 119 } -- the hidden golden straw: tucked behind the water tower
+Config.BadgeIds = {} -- optional: { first_straw = 123456 } awards a Roblox badge too
 
 return Config

@@ -177,6 +177,8 @@ function buyers.item(player, d, id)
 	local item = Economy.item(id)
 	if not item then
 		return false, "No such thing to buy."
+	elseif item.def.robux then
+		return false, "That comes with its Robux pass."
 	end
 	if item.def.max and Economy.owned(d, id) >= item.def.max then
 		return false, "You own the most " .. item.def.name .. "s allowed (" .. item.def.max .. ")."

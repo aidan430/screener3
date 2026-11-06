@@ -20,12 +20,12 @@ Config.FarmName = "Hollow Creek Farm"
 -- Plots: each player gets one. All four are the SAME place, the middle of the farm, with the
 -- haystack at its centre: everyone sees and digs only their own haystack, and only their own
 -- buildings and hay (other players' are hidden and pass-through on your screen).
-Config.PlotSize = 190 -- the build area round the haystack (the countryside starts at about 105)
-Config.FarmScale = 0.65 -- the countryside, fence and ground are pulled in to this share of their size
+Config.PlotSize = 170 -- the build area round the haystack (the countryside starts at about 89)
+Config.FarmScale = 0.55 -- the countryside, fence and ground are pulled in to this share of their size
 Config.PlotCentres = { { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } }
 Config.FarmEntrance = { 0, 0, 80 } -- where you arrive: south of the haystack, facing it
 Config.TraderStart = { 0, 0, 58 } -- your trader's stall, between the haystack and where you arrive
-Config.TruckStart = { 22, 0, 98 } -- trucks drive in from the south meadow, beside the arrival path
+Config.TruckStart = { 14, 0, 100 } -- trucks drive in from the south meadow, beside the arrival path
 Config.BuildClear = 50 -- no part of anything can stand this close to the haystack's centre, below its top
 
 -- The heap: 5,000,000 straws in clumps, one smooth terrain haystack 80 studs (22 m) high and
@@ -121,6 +121,7 @@ Config.Machines = {
 	{ id = "sieve", name = "Sorting Sieve", rate = 0.6, draw = 6, price = 19000, max = 10, size = { 5, 5, 5 }, color = { 150, 150, 160 } },
 	{ id = "thresher", name = "Steam Thresher", rate = 1.5, draw = 12, price = 152000, max = 8, size = { 6, 6, 6 }, color = { 90, 70, 60 } },
 	{ id = "vacuum", name = "Hay Vacuum", rate = 3.6, draw = 24, price = 855000, max = 6, size = { 7, 7, 7 }, color = { 200, 80, 60 } },
+	{ id = "tornado", name = "Hay Tornado", rate = 10, draw = 0, price = 0, max = 1, robux = 1, size = { 6, 10, 6 }, color = { 240, 220, 150 } },
 	{ id = "magnetron", name = "Needle Magnetron", rate = 7.5, draw = 45, price = 3800000, max = 4, size = { 8, 8, 8 }, color = { 70, 255, 150 } },
 }
 
@@ -246,7 +247,12 @@ Config.GamePasses = {
 	VIP = 2075654337, -- +25% coins, and machines keep running up to an hour after you leave
 	DoubleMachines = 2074994344, -- every machine works twice as fast (same power)
 	Jetpack = 2074622358, -- hold Space in the air to fly up and hover over your pile (see Config.Jetpack)
+	SuperTool = 0, -- whatever tool you hold lifts SuperToolBoost x the hay, carries that much more, and glows
+	HayTornado = 0, -- a Hay Tornado machine for your farm: 10 straws a second, needs no power
+	RainbowHay = 0, -- cosmetic: your hay shows in shifting rainbow colours
+	SparkleTrail = 0, -- cosmetic: a soft golden sparkle trail follows you
 }
+Config.SuperToolBoost = 2
 Config.Products = {
 	SpeedBoost = 3728655884, -- 2x straws a click for 1 hour
 	CoinBoost = 3728656281, -- 2x coins for all hay sold, for 1 hour
@@ -275,20 +281,6 @@ Config.Wheel = {
 }
 Config.WheelDuplicateSearches = 200
 
--- Achievements stay hidden until you earn them. All ten open the Golden Loft above the hub.
-Config.Achievements = {
-	{ id = "first_straw", name = "First Straw", text = "Harvest your first straw.", stat = "searches", goal = 1 },
-	{ id = "full_load", name = "Full Load", text = "Fill your tool to the brim.", stat = "loads_filled", goal = 1 },
-	{ id = "merchant", name = "Merchant's Friend", text = "Sell 100,000 straws to the merchant.", stat = "straws_sold", goal = 100000 },
-	{ id = "collector", name = "Collector", text = "Own every tool, up to the Needle Detector.", stat = "tool", goal = 10 },
-	{ id = "engineer", name = "Engineer", text = "Have 10 machines working on your plot.", stat = "machines", goal = 10 },
-	{ id = "power_plant", name = "Power Plant", text = "Generate 500 power on your plot.", stat = "power", goal = 500 },
-	{ id = "sky_high", name = "Sky High", text = "Stand on top of your haystack, 75 studs up.", stat = "best_height", goal = 75 },
-	{ id = "perfectionist", name = "Perfectionist", text = "Max out all three perks on one tool.", stat = "perks_maxed", goal = 1 },
-	{ id = "lucky", name = "Lucky Duck", text = "Make 25 lucky finds in the hay.", stat = "lucky_finds", goal = 25 },
-	{ id = "needle", name = "Needle Finder", text = "Find the needle.", stat = "needles", goal = 1 },
-}
-Config.BadgeIds = {} -- optional: { first_straw = 123456 } awards a Roblox badge too
 
 -- The Golden Loft: a secret golden haystack above the hub where straw pays 20x.
 Config.Loft = { straws = 250000, coinMultiplier = 20, needleEarliest = 0.5 }
@@ -376,7 +368,8 @@ return Config
 			<Item class="ModuleScript" referent="RBX00004">
 				<Properties>
 					<string name="Name">ConfigGoals</string>
-					<ProtectedString name="Source"><![CDATA[-- The guided goals (Config.luau merges this file in: read and tune them as Config.Goals etc.).
+					<ProtectedString name="Source"><![CDATA[-- The guided goals and the secret achievements (Config.luau merges this file in: read and tune
+-- them as Config.Goals, Config.Achievements etc.).
 local Config = {}
 
 -- Goals: a guided list, in order, each paying `reward` coins. kind: stat (d.stats[key]), tool / bucket / silo
@@ -399,6 +392,24 @@ Config.Goals = {
 }
 Config.GoalCheckSeconds = 2 -- how often the server looks at your current goal
 Config.RateWindowSeconds = 60 -- the HUD's coins/min counts what you earned in this many seconds
+
+-- Achievements stay hidden until you earn them. Any ten open the Golden Loft above the hub.
+Config.Achievements = {
+	{ id = "first_straw", name = "First Straw", text = "Harvest your first straw.", stat = "searches", goal = 1 },
+	{ id = "full_load", name = "Full Load", text = "Fill your tool to the brim.", stat = "loads_filled", goal = 1 },
+	{ id = "merchant", name = "Merchant's Friend", text = "Sell 100,000 straws to the merchant.", stat = "straws_sold", goal = 100000 },
+	{ id = "collector", name = "Collector", text = "Own every tool, up to the Needle Detector.", stat = "tool", goal = 10 },
+	{ id = "engineer", name = "Engineer", text = "Have 10 machines working on your plot.", stat = "machines", goal = 10 },
+	{ id = "power_plant", name = "Power Plant", text = "Generate 500 power on your plot.", stat = "power", goal = 500 },
+	{ id = "sky_high", name = "Sky High", text = "Stand on top of your haystack, 75 studs up.", stat = "best_height", goal = 75 },
+	{ id = "perfectionist", name = "Perfectionist", text = "Max out all three perks on one tool.", stat = "perks_maxed", goal = 1 },
+	{ id = "lucky", name = "Lucky Duck", text = "Make 25 lucky finds in the hay.", stat = "lucky_finds", goal = 25 },
+	{ id = "needle", name = "Needle Finder", text = "Find the needle.", stat = "needles", goal = 1 },
+	{ id = "golden_straw", name = "Hidden Straw", text = "Find the golden straw hidden on the farm.", stat = "secret_straw", goal = 1 },
+}
+Config.LoftAchievements = 10 -- this many achievements (any of them) open the Golden Loft
+Config.SecretStraw = { -119, 0.7, 119 } -- the hidden golden straw: tucked behind the water tower
+Config.BadgeIds = {} -- optional: { first_straw = 123456 } awards a Roblox badge too
 
 return Config
 ]]></ProtectedString>
@@ -584,12 +595,16 @@ return function(Config)
 		if speedBoost then
 			p *= 2
 		end
+		if data.superTool then -- the Super Tool game pass
+			p *= Config.SuperToolBoost
+		end
 		return math.max(1, math.floor(p + 0.5))
 	end
 
 	-- what you can carry: the tool fills first, then the bucket at your hip
 	function Economy.capacity(data)
-		return Economy.tool(data.tool).capacity + Economy.bucket(data.bucket or 1).capacity
+		local tool = Economy.tool(data.tool).capacity * (if data.superTool then Config.SuperToolBoost else 1)
+		return tool + Economy.bucket(data.bucket or 1).capacity
 	end
 
 	-- straws a second leaving your basket: the trader plus every truck you own
@@ -617,7 +632,7 @@ return function(Config)
 	-- Power made, power drawn, machines placed and straws a second, from the placed list.
 	-- `fueled` = how many Hay Burners have hay to burn right now (they make power only then)
 	function Economy.plot(placed, doubleMachines, fueled)
-		local made, draw, rate, machines = 0, 0, 0, 0
+		local made, draw, rate, machines, free = 0, 0, 0, 0, 0
 		local burning = fueled or 0
 		for _, p in ipairs(placed or {}) do
 			local item = items[p.k]
@@ -630,6 +645,9 @@ return function(Config)
 				draw += item.def.draw
 			elseif item and item.kind == "generator" then
 				made += item.def.power
+			elseif item and item.kind == "machine" and item.def.robux then
+				free += item.def.rate -- a Robux machine (Hay Tornado) needs no power
+				machines += 1
 			elseif item and item.kind == "machine" then
 				draw += item.def.draw
 				rate += item.def.rate
@@ -637,7 +655,7 @@ return function(Config)
 			end
 		end
 		local share = if draw > 0 then math.min(1, made / draw) else 0
-		rate *= share * (if doubleMachines then 2 else 1)
+		rate = (rate * share + free) * (if doubleMachines then 2 else 1)
 		return { made = made, draw = draw, rate = rate, machines = machines, share = share }
 	end
 
@@ -1219,7 +1237,7 @@ end
 			<Item class="ModuleScript" referent="RBX00020">
 				<Properties>
 					<string name="Name">Achievements</string>
-					<ProtectedString name="Source"><![CDATA[-- The ten achievements, secret until earned. Each watches one number; all ten open the Golden Loft.
+					<ProtectedString name="Source"><![CDATA[-- The secret achievements, hidden until earned. Each watches one number; any ten open the Golden Loft.
 -- Optional Roblox badges: put badge IDs into Config.BadgeIds.
 local BadgeService = game:GetService("BadgeService")
 local Players = game:GetService("Players")
@@ -1526,13 +1544,13 @@ local function bucketOf(player)
 end
 
 -- Grows a hay mound to show how full something is (0..1), keeping its bottom where it sits.
-local function mound(part, share, width, golden)
+local function mound(part, share, width, golden, rainbow)
 	if share <= 0 then
 		part.Transparency = 1
 		return
 	end
 	part.Transparency = 0
-	part.Color = Build.rgb(if golden then GOLD else HAY)
+	part.Color = if rainbow then Color3.fromHSV((os.clock() / 8) % 1, 0.45, 1) else Build.rgb(if golden then GOLD else HAY)
 	HayLook.resize(part, width * (0.45 + 0.55 * math.sqrt(math.min(share, 1))))
 end
 
@@ -1552,7 +1570,8 @@ function Carry.show(player)
 		for _, tool in ipairs(container and container:GetChildren() or {}) do
 			local hay = tool:IsA("Tool") and tool:FindFirstChild("Load")
 			if hay then
-				mound(hay, onTool, hay:GetAttribute("MaxSize") or Config.LoadSize, golden)
+				mound(hay, onTool, hay:GetAttribute("MaxSize") or Config.LoadSize, golden, player:GetAttribute("PassRainbowHay"))
+				Carry.glow(tool, player:GetAttribute("PassSuperTool") == true)
 				-- keep the hay's bottom on the blade (or tines) as it grows, never through it
 				local weld, seat = hay:FindFirstChild("LoadWeld"), hay:GetAttribute("Seat")
 				if weld and seat then
@@ -1584,17 +1603,67 @@ function Carry.show(player)
 	local def = Economy.bucket(d.bucket)
 	local hay = bucket:FindFirstChild("Hay")
 	if hay then
-		mound(hay, math.max(0, load - toolCap) / math.max(def.capacity, 1), def.size * 0.95, golden)
+		mound(hay, math.max(0, load - toolCap) / math.max(def.capacity, 1), def.size * 0.95, golden, player:GetAttribute("PassRainbowHay"))
 	end
+end
+
+-- Super Tool (game pass): a soft golden glow and sparkle on the tool's handle.
+function Carry.glow(tool, on)
+	local handle = tool:FindFirstChild("Handle")
+	local glow = handle and handle:FindFirstChild("SuperGlow")
+	if handle and on and not glow then
+		local light = Instance.new("PointLight")
+		light.Name = "SuperGlow"
+		light.Color, light.Range, light.Brightness = Color3.fromRGB(255, 214, 110), 8, 1.2
+		light.Parent = handle
+		local sparkle = Instance.new("ParticleEmitter")
+		sparkle.Name = "SuperSparkle"
+		sparkle.Color = ColorSequence.new(Color3.fromRGB(255, 226, 140))
+		sparkle.Rate, sparkle.Lifetime, sparkle.Speed = 6, NumberRange.new(0.6, 1), NumberRange.new(0.5, 1.5)
+		sparkle.Size = NumberSequence.new(0.15, 0)
+		sparkle.LightEmission = 0.8
+		sparkle.Parent = handle
+	elseif glow and not on then
+		glow:Destroy()
+		local sparkle = handle:FindFirstChild("SuperSparkle")
+		if sparkle then
+			sparkle:Destroy()
+		end
+	end
+end
+
+-- Sparkle Trail (game pass): a soft golden trail behind you as you move.
+local function trail(player)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not root or not player:GetAttribute("PassSparkleTrail") or root:FindFirstChild("SparkleTrail") then
+		return
+	end
+	local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
+	a0.Position, a1.Position = Vector3.new(0, 1.2, 0.4), Vector3.new(0, -1.6, 0.4)
+	a0.Parent, a1.Parent = root, root
+	local t = Instance.new("Trail")
+	t.Name = "SparkleTrail"
+	t.Attachment0, t.Attachment1 = a0, a1
+	t.Color = ColorSequence.new(Color3.fromRGB(255, 226, 140), Color3.fromRGB(255, 170, 220))
+	t.Transparency = NumberSequence.new(0.3, 1)
+	t.Lifetime, t.LightEmission, t.FaceCamera = 0.7, 0.6, true
+	t.Parent = root
 end
 
 function Carry.init()
 	local function watch(player)
-		for _, name in ipairs({ "Carried", "Capacity", "Bucket", "Tool" }) do
+		for _, name in ipairs({ "Carried", "Capacity", "Bucket", "Tool", "PassSuperTool", "PassRainbowHay" }) do
 			player:GetAttributeChangedSignal(name):Connect(function()
 				Carry.show(player)
 			end)
 		end
+		player:GetAttributeChangedSignal("PassSparkleTrail"):Connect(function()
+			trail(player)
+		end)
+		player.CharacterAdded:Connect(function(character)
+			character:WaitForChild("HumanoidRootPart", 10)
+			trail(player)
+		end)
 		player.CharacterAdded:Connect(function(character)
 			character:WaitForChild("HumanoidRootPart", 10)
 			task.wait(1.5) -- the tool arrives from StarterGear
@@ -2329,7 +2398,7 @@ return Haystack
 			<Item class="ModuleScript" referent="RBX0002A">
 				<Properties>
 					<string name="Name">Loft</string>
-					<ProtectedString name="Source"><![CDATA[-- The Golden Loft: the secret level above the hub, open only to players with all ten
+					<ProtectedString name="Source"><![CDATA[-- The Golden Loft: the secret level above the hub, open only to players with ten
 -- achievements. The golden door's prompt sends them up; the loft pad brings them down.
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -2711,6 +2780,9 @@ local sceneryOk, sceneryError = pcall(Scenery.build)
 if not sceneryOk then
 	warn("[Start] Scenery failed to build: " .. tostring(sceneryError))
 end
+pcall(function() -- the hidden golden straw (a secret achievement)
+	require(script.Parent.Secrets).build()
+end)
 -- the portal arches on the west road and the four worlds far beyond the farm
 local worldsOk, worldsError = pcall(Worlds.build)
 if not worldsOk then
@@ -3738,7 +3810,7 @@ local function publish(player, profile)
 		end
 	end
 	player:SetAttribute("Achievements", done)
-	player:SetAttribute("LoftOpen", done >= #Config.Achievements)
+	player:SetAttribute("LoftOpen", done >= Config.LoftAchievements)
 end
 
 function PlayerData.get(player)
@@ -3787,6 +3859,12 @@ function PlayerData.setPass(player, name, owned)
 	player:SetAttribute("Pass" .. name, owned)
 	local profile = profiles[player]
 	if profile then
+		if name == "SuperTool" then
+			profile.data.superTool = owned -- not saved: checked with Roblox every visit
+		elseif name == "HayTornado" and owned and Economy.owned(profile.data, "tornado") == 0 then
+			profile.data.inventory.tornado = 1 -- yours to place (B), once
+			profile.dirty = true
+		end
 		publish(player, profile)
 	end
 end
@@ -4199,7 +4277,7 @@ local Layout = require(Shared:WaitForChild("Layout"))(Config)
 local Profile = {}
 local rng = Random.new()
 
-Profile.STATS = { "searches", "loads_filled", "straws_sold", "lucky_finds", "perks_maxed", "total_searched", "best_height", "dumps", "drops", "bales_made" }
+Profile.STATS = { "searches", "loads_filled", "straws_sold", "lucky_finds", "perks_maxed", "total_searched", "best_height", "dumps", "drops", "bales_made", "secret_straw" }
 
 local function number(saved, name, default)
 	local v = type(saved) == "table" and saved[name]
@@ -5771,6 +5849,55 @@ return Search
 			</Item>
 			<Item class="ModuleScript" referent="RBX0003F">
 				<Properties>
+					<string name="Name">Secrets</string>
+					<ProtectedString name="Source"><![CDATA[-- The Hidden Straw: one golden straw tucked away somewhere on the farm (Config.SecretStraw).
+-- Whoever touches it earns the secret achievement "Hidden Straw" (once each). It glows softly,
+-- just enough to be spotted by someone who looks.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local PlayerData = require(script.Parent.PlayerData)
+local Achievements = require(script.Parent.Achievements)
+local Build = require(script.Parent.Build)
+
+local Secrets = {}
+
+function Secrets.build()
+	local at = Config.SecretStraw
+	local base = CFrame.new(at[1], at[2], at[3]) * CFrame.Angles(0, math.rad(35), math.rad(70))
+	local straw = Build.part({ name = "GoldenStraw", size = Vector3.new(2.6, 0.25, 0.25), cframe = base, color = { 255, 214, 90 }, material = "Neon", collide = false, shape = "Cylinder" })
+	straw.CanTouch = true
+	straw.Transparency = 0.1
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255, 220, 120)
+	light.Range = 6
+	light.Brightness = 0.6
+	light.Parent = straw
+	-- a bigger, invisible touch zone so brushing past it counts
+	local zone = Build.part({ name = "GoldenStrawZone", size = Vector3.new(4, 4, 4), cframe = CFrame.new(at[1], at[2] + 1, at[3]), color = { 255, 255, 255 }, collide = false, transparency = 1 })
+	zone.CanTouch = true
+	zone.Touched:Connect(function(hit)
+		local player = Players:GetPlayerFromCharacter(hit.Parent)
+		local d = player and PlayerData.get(player)
+		if d and (d.stats.secret_straw or 0) < 1 then
+			PlayerData.update(player, function(data)
+				data.stats.secret_straw = 1
+			end)
+			Achievements.check(player)
+		end
+	end)
+	straw.Parent = workspace
+	zone.Parent = workspace
+end
+
+return Secrets
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00040">
+				<Properties>
 					<string name="Name">Shop</string>
 					<ProtectedString name="Source"><![CDATA[-- Buying with coins: tools and silos (in order), perks for the tool you hold, and
 -- buildable items (pieces, machines, generators) that go into your inventory to place,
@@ -5951,6 +6078,8 @@ function buyers.item(player, d, id)
 	local item = Economy.item(id)
 	if not item then
 		return false, "No such thing to buy."
+	elseif item.def.robux then
+		return false, "That comes with its Robux pass."
 	end
 	if item.def.max and Economy.owned(d, id) >= item.def.max then
 		return false, "You own the most " .. item.def.name .. "s allowed (" .. item.def.max .. ")."
@@ -6000,7 +6129,7 @@ return Shop
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00040">
+			<Item class="ModuleScript" referent="RBX00041">
 				<Properties>
 					<string name="Name">Stamina</string>
 					<ProtectedString name="Source"><![CDATA[-- Stamina: each harvest click spends some (Config.Stamina) and it refills all the time. Out of
@@ -6136,7 +6265,7 @@ return Stamina
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00041">
+			<Item class="ModuleScript" referent="RBX00042">
 				<Properties>
 					<string name="Name">Structures</string>
 					<ProtectedString name="Source"><![CDATA[-- Free building on your own plot: place pieces, machines and generators you've bought, take
@@ -6355,7 +6484,7 @@ return Structures
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00042">
+			<Item class="ModuleScript" referent="RBX00043">
 				<Properties>
 					<string name="Name">ToolLook</string>
 					<ProtectedString name="Source"><![CDATA[-- Tools that wear a model you imported in Studio (Config.Tools[n].model = its asset ID).
@@ -6413,7 +6542,7 @@ return ToolLook
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00043">
+			<Item class="ModuleScript" referent="RBX00044">
 				<Properties>
 					<string name="Name">Tools</string>
 					<ProtectedString name="Source"><![CDATA[-- The search tools: a pitchfork-shaped Tool per level, coloured from Config.Tools.
@@ -6571,7 +6700,7 @@ return Tools
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00044">
+			<Item class="ModuleScript" referent="RBX00045">
 				<Properties>
 					<string name="Name">Wheel</string>
 					<ProtectedString name="Source"><![CDATA[-- The Wheel of Fortune: one Robux spin (the WheelSpin product) = one prize, picked here on the
@@ -6645,7 +6774,7 @@ return Wheel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00045">
+			<Item class="ModuleScript" referent="RBX00046">
 				<Properties>
 					<string name="Name">World</string>
 					<ProtectedString name="Source"><![CDATA[-- Hollow Creek Farm: four plots around a hub with the merchant, the Wheel of Fortune and the
@@ -6666,7 +6795,7 @@ local FENCE = math.floor(245 * Config.FarmScale) -- the boundary fence, this far
 -- The haystack stands in the middle now, so these stand round it, facing it.
 World.MERCHANT = Vector3.new(-50, 0, 62) -- west of where you arrive, clear of the Robux pads
 World.WHEEL = Vector3.new(50, 0, 62) -- east of where you arrive, clear of the Robux pads
-World.DOOR = Vector3.new(86, 0, 0) -- the golden door, on the east road
+World.DOOR = Vector3.new(76, 0, 0) -- the golden door, on the east road
 World.LOFT = Vector3.new(0, 330, 0) -- the secret level floats high above the hub
 
 local function prompt(parent, action, text, object, key)
@@ -6866,7 +6995,7 @@ return World
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00046">
+			<Item class="ModuleScript" referent="RBX00047">
 				<Properties>
 					<string name="Name">Worlds</string>
 					<ProtectedString name="Source"><![CDATA[-- The portal worlds: four arches on the hub's west road lead to the Moon, the Ember Lands,
@@ -7050,7 +7179,7 @@ return Worlds
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00047">
+			<Item class="ModuleScript" referent="RBX00048">
 				<Properties>
 					<string name="Name">WorldsAtlantis</string>
 					<ProtectedString name="Source"><![CDATA[-- Bubble City: a domed city on the sea floor inside a great air bubble. Sand, coral, kelp,
@@ -7190,7 +7319,7 @@ return Atlantis
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00048">
+			<Item class="ModuleScript" referent="RBX00049">
 				<Properties>
 					<string name="Name">WorldsField</string>
 					<ProtectedString name="Source"><![CDATA[-- Haystack Stadium: a striped grass pitch with its lines and two goals, stands of seats on three
@@ -7329,7 +7458,7 @@ return Field
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00049">
+			<Item class="ModuleScript" referent="RBX0004A">
 				<Properties>
 					<string name="Name">WorldsKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Shared pieces for the portal worlds: the arches, signs, lights, embers and each world's
@@ -7465,7 +7594,7 @@ return Kit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004A">
+			<Item class="ModuleScript" referent="RBX0004B">
 				<Properties>
 					<string name="Name">WorldsLava</string>
 					<ProtectedString name="Source"><![CDATA[-- The Ember Lands: dark basalt, a smoking volcano, glowing lava rivers with stone bridges,
@@ -7592,7 +7721,7 @@ return Lava
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004B">
+			<Item class="ModuleScript" referent="RBX0004C">
 				<Properties>
 					<string name="Name">WorldsMoon</string>
 					<ProtectedString name="Source"><![CDATA[-- The Moon: grey dust with craters and boulders, a little landed lander with its flag (a
@@ -7719,19 +7848,19 @@ return Moon
 			</Item>
 		</Item>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX0004C">
+	<Item class="StarterPlayer" referent="RBX0004D">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX0004D">
+		<Item class="StarterPlayerScripts" referent="RBX0004E">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX0004E">
+			<Item class="Folder" referent="RBX0004F">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX0004F">
+				<Item class="ModuleScript" referent="RBX00050">
 					<Properties>
 						<string name="Name">Animals</string>
 						<ProtectedString name="Source"><![CDATA[-- Brings the farm's animals to life on this screen only: each one ambles to a new spot in its
@@ -7911,7 +8040,7 @@ return Animals
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00050">
+				<Item class="ModuleScript" referent="RBX00051">
 					<Properties>
 						<string name="Name">BuildMode</string>
 						<ProtectedString name="Source"><![CDATA[-- Free building in first person. Z and C pick from your inventory bar (or press M and click
@@ -8215,7 +8344,7 @@ return BuildMode
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00051">
+				<Item class="ModuleScript" referent="RBX00052">
 					<Properties>
 						<string name="Name">Controls</string>
 						<ProtectedString name="Source"><![CDATA[-- The shortcuts: Q shop, T home, G drop hay (or put down a bale), and on touch screens the
@@ -8304,7 +8433,7 @@ return Controls
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00052">
+				<Item class="ModuleScript" referent="RBX00053">
 					<Properties>
 						<string name="Name">Cursor</string>
 						<ProtectedString name="Source"><![CDATA[-- First person locks the mouse to the centre of the screen. Menus need a pointer, so a
@@ -8356,7 +8485,7 @@ return Cursor
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00053">
+				<Item class="ModuleScript" referent="RBX00054">
 					<Properties>
 						<string name="Name">Dents</string>
 						<ProtectedString name="Source"><![CDATA[-- Every swing leaves its mark: a dent carved in your haystack where you hit (on your screen;
@@ -8434,7 +8563,7 @@ return Dents
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00054">
+				<Item class="ModuleScript" referent="RBX00055">
 					<Properties>
 						<string name="Name">Detector</string>
 						<ProtectedString name="Source"><![CDATA[-- The metal detector: hold Config.MetalDetector.key to sweep. The client only says "I'm
@@ -8556,7 +8685,7 @@ return Detector
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00055">
+				<Item class="ModuleScript" referent="RBX00056">
 					<Properties>
 						<string name="Name">Goals</string>
 						<ProtectedString name="Source"><![CDATA[-- The guided goal card (top left) and the coins-a-minute line under the coins counter.
@@ -8696,7 +8825,7 @@ return Goals
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00056">
+				<Item class="ModuleScript" referent="RBX00057">
 					<Properties>
 						<string name="Name">Guide</string>
 						<ProtectedString name="Source"><![CDATA[-- When your tool and bucket are full, a soft golden line runs from you to your trader's
@@ -8758,7 +8887,7 @@ return Guide
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00057">
+				<Item class="ModuleScript" referent="RBX00058">
 					<Properties>
 						<string name="Name">Harvest</string>
 						<ProtectedString name="Source"><![CDATA[-- Aiming in first person: the clump under the crosshair (within reach, on your own pile or the
@@ -9026,7 +9155,7 @@ return Harvest
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00058">
+				<Item class="ModuleScript" referent="RBX00059">
 					<Properties>
 						<string name="Name">HayFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The hay you can see moving: every harvest lifts a lump off the heap onto your tool, and
@@ -9042,6 +9171,9 @@ local HayFx = {}
 
 local function lump(position, size, golden)
 	local part = HayLook.lump(size, golden)
+	if game:GetService("Players").LocalPlayer:GetAttribute("PassRainbowHay") then
+		part.Color = Color3.fromHSV(math.random(), 0.45, 1) -- the Rainbow Hay pass
+	end
 	part.Anchored = true
 	part.CFrame = CFrame.new(position) * CFrame.Angles(0, math.random() * 6.28, 0)
 	part.Parent = workspace:FindFirstChild("MyEffects") or workspace
@@ -9124,7 +9256,7 @@ return HayFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00059">
+				<Item class="ModuleScript" referent="RBX0005A">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: a crosshair, your pile's progress at the top, and on the left your
@@ -9276,7 +9408,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005A">
+				<Item class="ModuleScript" referent="RBX0005B">
 					<Properties>
 						<string name="Name">Jetpack</string>
 						<ProtectedString name="Source"><![CDATA[-- The Jetpack (a Robux game pass; the server sets the "PassJetpack" attribute when you own it).
@@ -9458,7 +9590,7 @@ return Jetpack
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005B">
+				<Item class="ModuleScript" referent="RBX0005C">
 					<Properties>
 						<string name="Name">Juice</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback that makes harvesting feel good: straw bursts, floating numbers, a soft camera
@@ -9647,7 +9779,7 @@ return Juice
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX0005C">
+				<Item class="LocalScript" referent="RBX0005D">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- The player's side of the game: first-person harvesting, building, the menus, and all the
@@ -9951,7 +10083,7 @@ end)
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005D">
+				<Item class="ModuleScript" referent="RBX0005E">
 					<Properties>
 						<string name="Name">Music</string>
 						<ProtectedString name="Source"><![CDATA[-- Soft background music: the Config.Music playlist in a loop, low and relaxing, fading gently
@@ -10094,7 +10226,7 @@ return Music
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005E">
+				<Item class="ModuleScript" referent="RBX0005F">
 					<Properties>
 						<string name="Name">Notify</string>
 						<ProtectedString name="Source"><![CDATA[-- Messages: small toasts under the haystack counter, and a big banner for case news.
@@ -10200,7 +10332,7 @@ return Notify
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005F">
+				<Item class="ModuleScript" referent="RBX00060">
 					<Properties>
 						<string name="Name">Offer</string>
 						<ProtectedString name="Source"><![CDATA[-- One gentle Robux suggestion per session: after Config.OfferAfterClumps clumps harvested since
@@ -10306,7 +10438,7 @@ return Offer
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00060">
+				<Item class="ModuleScript" referent="RBX00061">
 					<Properties>
 						<string name="Name">OnlyMine</string>
 						<ProtectedString name="Source"><![CDATA[-- Every player's farm shares the middle of the map, so on your screen other players' buildings,
@@ -10395,7 +10527,7 @@ return OnlyMine
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00061">
+				<Item class="ModuleScript" referent="RBX00062">
 					<Properties>
 						<string name="Name">OrderCard</string>
 						<ProtectedString name="Source"><![CDATA[-- The current delivery order, on the right of the screen: what the driver wants, how many
@@ -10449,7 +10581,7 @@ return OrderCard
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00062">
+				<Item class="ModuleScript" referent="RBX00063">
 					<Properties>
 						<string name="Name">Panels</string>
 						<ProtectedString name="Source"><![CDATA[-- The windows: Shop, secret Achievements, Finds & Skins, and the Wheel of Fortune (odds first).
@@ -10654,7 +10786,7 @@ return Panels
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00063">
+				<Item class="ModuleScript" referent="RBX00064">
 					<Properties>
 						<string name="Name">PileView</string>
 						<ProtectedString name="Source"><![CDATA[-- Draws your own haystack on your screen. Every player's haystack stands in the same place in
@@ -10705,7 +10837,31 @@ return PileView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00064">
+				<Item class="ModuleScript" referent="RBX00065">
+					<Properties>
+						<string name="Name">RobuxItems</string>
+						<ProtectedString name="Source"><![CDATA[-- Every Robux item the game sells, in shop order, with exactly what it gives (shown in the
+-- shop's Robux tab and on the Robux pads). kind = "pass" (Config.GamePasses) or "product"
+-- (Config.Products); key = its name there. Items whose ID is 0 aren't shown.
+return {
+	{ kind = "product", key = "SpeedBoost", title = "2x Speed (1 hour)", text = "Every click lifts twice the hay, for 1 hour." },
+	{ kind = "product", key = "CoinBoost", title = "2x Coins (1 hour)", text = "All the hay you sell pays double, for 1 hour." },
+	{ kind = "product", key = "LuckyCharm", title = "Lucky Charm (1 hour)", text = "5x the chance of a lucky find, for 1 hour." },
+	{ kind = "product", key = "StrawBlast", title = "Straw Blast", text = "100,000 straws come off your haystack straight into your basket." },
+	{ kind = "product", key = "MerchantWhistle", title = "Merchant's Whistle x10", text = "Send your load to your basket from anywhere, 10 times." },
+	{ kind = "pass", key = "AutoSell", title = "Auto Sell", text = "When you're full, your load goes to your basket by itself." },
+	{ kind = "pass", key = "DoubleMachines", title = "Double Machines", text = "Every machine harvests twice as fast, on the same power." },
+	{ kind = "pass", key = "VIP", title = "VIP", text = "+25% coins, and machines keep working up to 1 hour while you're away." },
+	{ kind = "pass", key = "Jetpack", title = "Jetpack", text = "Hold Space (or FLY) in the air to fly up and hover over your pile." },
+	{ kind = "pass", key = "SuperTool", title = "Super Tool", text = "Any tool you hold lifts twice the hay and carries twice as much, and glows gold." },
+	{ kind = "pass", key = "HayTornado", title = "Hay Tornado", text = "A machine for your farm: harvests 10 straws a second, needs no power." },
+	{ kind = "pass", key = "RainbowHay", title = "Rainbow Hay", text = "Just for fun: your hay shows in shifting rainbow colours." },
+	{ kind = "pass", key = "SparkleTrail", title = "Sparkle Trail", text = "Just for fun: a soft golden sparkle trail follows you." },
+}
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX00066">
 					<Properties>
 						<string name="Name">RobuxPads</string>
 						<ProtectedString name="Source"><![CDATA[-- The Robux corner on your screen: each pad server/RobuxPads.luau built gets a floating
@@ -10947,7 +11103,7 @@ return RobuxPads
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00065">
+				<Item class="ModuleScript" referent="RBX00067">
 					<Properties>
 						<string name="Name">Shop</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop window: Tools, Perks, Fitness (stamina, the metal detector), Storage (buckets and
@@ -10966,17 +11122,7 @@ local Juice = require(script.Parent.Juice)
 
 local player = Players.LocalPlayer
 
-local ROBUX = {
-	{ kind = "product", key = "SpeedBoost", title = "2x Speed (1 hour)", text = "Every click lifts twice the hay, for 1 hour." },
-	{ kind = "product", key = "CoinBoost", title = "2x Coins (1 hour)", text = "All the hay you sell pays double, for 1 hour." },
-	{ kind = "product", key = "LuckyCharm", title = "Lucky Charm (1 hour)", text = "5x the chance of a lucky find, for 1 hour." },
-	{ kind = "product", key = "StrawBlast", title = "Straw Blast", text = "100,000 straws come off your haystack straight into your basket." },
-	{ kind = "product", key = "MerchantWhistle", title = "Merchant's Whistle x10", text = "Send your load to your basket from anywhere, 10 times." },
-	{ kind = "pass", key = "AutoSell", title = "Auto Sell", text = "When you're full, your load goes to your basket by itself." },
-	{ kind = "pass", key = "DoubleMachines", title = "Double Machines", text = "Every machine harvests twice as fast, on the same power." },
-	{ kind = "pass", key = "VIP", title = "VIP", text = "+25% coins, and machines keep working up to 1 hour while you're away." },
-	{ kind = "pass", key = "Jetpack", title = "Jetpack", text = "Hold Space (or FLY) in the air to fly up and hover over your pile." },
-}
+local ROBUX = require(script.Parent.RobuxItems) -- every Robux item, with exactly what it gives
 
 local Shop = {}
 local frame = nil
@@ -11162,7 +11308,12 @@ function Shop.mount(gui, notify)
 		return def.text
 	end)
 	-- machines fill your silo; feeders (arms, throwers) put bundles on your belts
-	local machines = table.clone(Config.Machines)
+	local machines = {}
+	for _, machine in ipairs(Config.Machines) do
+		if not machine.robux then -- the Hay Tornado comes with its Robux pass, not for coins
+			table.insert(machines, machine)
+		end
+	end
 	for _, feeder in ipairs(Config.Feeders) do
 		table.insert(machines, feeder)
 	end
@@ -11251,7 +11402,7 @@ return Shop
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00066">
+				<Item class="ModuleScript" referent="RBX00068">
 					<Properties>
 						<string name="Name">Sprint</string>
 						<ProtectedString name="Source"><![CDATA[-- Sprinting on every device: hold Shift on a keyboard, press the left stick (L3) on a controller
@@ -11334,7 +11485,7 @@ return Sprint
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00067">
+				<Item class="ModuleScript" referent="RBX00069">
 					<Properties>
 						<string name="Name">Stamina</string>
 						<ProtectedString name="Source"><![CDATA[-- A slim stamina bar under the crosshair (the server owns stamina: attributes Stamina,
@@ -11382,7 +11533,7 @@ return StaminaBar
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00068">
+				<Item class="ModuleScript" referent="RBX0006A">
 					<Properties>
 						<string name="Name">Teleport</string>
 						<ProtectedString name="Source"><![CDATA[-- The teleporter menu: standing on one of your pads, pick any of your other pads (listed by
@@ -11453,7 +11604,7 @@ return Teleport
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00069">
+				<Item class="ModuleScript" referent="RBX0006B">
 					<Properties>
 						<string name="Name">TouchAim</string>
 						<ProtectedString name="Source"><![CDATA[-- Harvesting on touch screens. In first person a finger dragged across the screen turns the
@@ -11518,7 +11669,7 @@ return TouchAim
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006A">
+				<Item class="ModuleScript" referent="RBX0006C">
 					<Properties>
 						<string name="Name">TouchPad</string>
 						<ProtectedString name="Source"><![CDATA[-- The action pad on touch screens: the keyboard's shortcuts (shop, build, drop, home, tool,
@@ -11665,7 +11816,7 @@ return TouchPad
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006B">
+				<Item class="ModuleScript" referent="RBX0006D">
 					<Properties>
 						<string name="Name">Ui</string>
 						<ProtectedString name="Source"><![CDATA[-- A small UI kit: the farm colours, rounded wooden buttons and windows that scale with
@@ -11904,7 +12055,7 @@ return Ui
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006C">
+				<Item class="ModuleScript" referent="RBX0006E">
 					<Properties>
 						<string name="Name">WorldFx</string>
 						<ProtectedString name="Source"><![CDATA[-- World effects on your screen: the glowing needle clump (Wheel jackpot), the wheel turning
@@ -12007,7 +12158,7 @@ return WorldFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006D">
+				<Item class="ModuleScript" referent="RBX0006F">
 					<Properties>
 						<string name="Name">Worlds</string>
 						<ProtectedString name="Source"><![CDATA[-- The portal worlds on your own screen: each world's light eased in on arrival (and the farm's
@@ -12283,19 +12434,19 @@ return Worlds
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX0006E">
+	<Item class="Workspace" referent="RBX00070">
 		<Properties>
 			<string name="Name">Workspace</string>
 			<bool name="StreamingEnabled">false</bool>
 		</Properties>
 	</Item>
-	<Item class="MaterialService" referent="RBX0006F">
+	<Item class="MaterialService" referent="RBX00071">
 		<Properties>
 			<string name="Name">MaterialService</string>
 			<bool name="Use2022Materials">true</bool>
 			<string name="LeafyGrassName">Field</string>
 		</Properties>
-		<Item class="MaterialVariant" referent="RBX00070">
+		<Item class="MaterialVariant" referent="RBX00072">
 			<Properties>
 				<string name="Name">Field</string>
 				<token name="BaseMaterial">1284</token>

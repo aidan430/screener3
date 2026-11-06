@@ -35,12 +35,16 @@ return function(Config)
 		if speedBoost then
 			p *= 2
 		end
+		if data.superTool then -- the Super Tool game pass
+			p *= Config.SuperToolBoost
+		end
 		return math.max(1, math.floor(p + 0.5))
 	end
 
 	-- what you can carry: the tool fills first, then the bucket at your hip
 	function Economy.capacity(data)
-		return Economy.tool(data.tool).capacity + Economy.bucket(data.bucket or 1).capacity
+		local tool = Economy.tool(data.tool).capacity * (if data.superTool then Config.SuperToolBoost else 1)
+		return tool + Economy.bucket(data.bucket or 1).capacity
 	end
 
 	-- straws a second leaving your basket: the trader plus every truck you own
@@ -68,7 +72,7 @@ return function(Config)
 	-- Power made, power drawn, machines placed and straws a second, from the placed list.
 	-- `fueled` = how many Hay Burners have hay to burn right now (they make power only then)
 	function Economy.plot(placed, doubleMachines, fueled)
-		local made, draw, rate, machines = 0, 0, 0, 0
+		local made, draw, rate, machines, free = 0, 0, 0, 0, 0
 		local burning = fueled or 0
 		for _, p in ipairs(placed or {}) do
 			local item = items[p.k]
@@ -81,6 +85,9 @@ return function(Config)
 				draw += item.def.draw
 			elseif item and item.kind == "generator" then
 				made += item.def.power
+			elseif item and item.kind == "machine" and item.def.robux then
+				free += item.def.rate -- a Robux machine (Hay Tornado) needs no power
+				machines += 1
 			elseif item and item.kind == "machine" then
 				draw += item.def.draw
 				rate += item.def.rate
@@ -88,7 +95,7 @@ return function(Config)
 			end
 		end
 		local share = if draw > 0 then math.min(1, made / draw) else 0
-		rate *= share * (if doubleMachines then 2 else 1)
+		rate = (rate * share + free) * (if doubleMachines then 2 else 1)
 		return { made = made, draw = draw, rate = rate, machines = machines, share = share }
 	end
 

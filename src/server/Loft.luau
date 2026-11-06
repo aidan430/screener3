@@ -1,4 +1,4 @@
--- The Golden Loft: the secret level above the hub, open only to players with all ten
+-- The Golden Loft: the secret level above the hub, open only to players with ten
 -- achievements. The golden door's prompt sends them up; the loft pad brings them down.
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

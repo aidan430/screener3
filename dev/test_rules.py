@@ -104,13 +104,14 @@ class Wheel(unittest.TestCase):
 
 
 class Achievements(unittest.TestCase):
-    def test_ten_achievements_with_known_numbers(self):
+    def test_secret_achievements_with_known_numbers(self):
         block = re.search(r"^Config\.Achievements = \{(.*?)^\}", CONFIG, re.M | re.S).group(1)
         ids = re.findall(r'id = "(\w+)"', block)
         stats = set(re.findall(r'stat = "(\w+)"', block))
-        self.assertEqual(len(ids), 10)
-        self.assertEqual(len(set(ids)), 10)
-        known = {"searches", "loads_filled", "straws_sold", "tool", "machines", "power", "best_height", "perks_maxed", "lucky_finds", "needles"}
+        self.assertEqual(len(ids), 11)
+        self.assertEqual(len(set(ids)), 11)
+        self.assertLessEqual(pacing.number("LoftAchievements"), len(ids), "the loft can be opened")
+        known = {"searches", "loads_filled", "straws_sold", "tool", "machines", "power", "best_height", "perks_maxed", "lucky_finds", "needles", "secret_straw"}
         self.assertTrue(stats <= known, stats - known)
 
     def test_every_achievement_is_reachable(self):

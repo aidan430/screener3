@@ -11,6 +11,9 @@ local HayFx = {}
 
 local function lump(position, size, golden)
 	local part = HayLook.lump(size, golden)
+	if game:GetService("Players").LocalPlayer:GetAttribute("PassRainbowHay") then
+		part.Color = Color3.fromHSV(math.random(), 0.45, 1) -- the Rainbow Hay pass
+	end
 	part.Anchored = true
 	part.CFrame = CFrame.new(position) * CFrame.Angles(0, math.random() * 6.28, 0)
 	part.Parent = workspace:FindFirstChild("MyEffects") or workspace

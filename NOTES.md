@@ -422,3 +422,15 @@ arc Speed, Coins, Lucky Charm, Straw Blast, Wheel Spin), `RobuxPadFacing` {0, 0}
 - The whole-heap sync is sent at most every 3 s per player on request; pick-up prompts don't
   need line of sight (items can sink into your on-screen heap); a player still loading is in
   a "Lobby" collision group that passes through every farm.
+
+## Smaller farm, Robux for extras, a secret achievement (2026-11-06)
+- Owner's red line: `FarmScale` 0.65 -> 0.55 (fence ±134, countryside ~89-131 out),
+  `PlotSize` 190 -> 170, golden door (76, 0), `TruckStart` (14, 100).
+- Robux is for "that extra something" or harmless fun. New game passes (IDs 0 until the owner
+  creates them; icons in assets/marketing/robux): Super Tool (`SuperToolBoost` 2: any tool
+  lifts and carries 2x, glows gold), Hay Tornado (a machine, 10 straws/s, no power, placed
+  with Build; not sold for coins), Rainbow Hay and Sparkle Trail (cosmetic only). The Robux
+  item list lives in client/RobuxItems.luau (shop and pads).
+- Secret achievement "Hidden Straw": a softly glowing golden straw at `SecretStraw`
+  (behind the water tower). Achievements moved to ConfigGoals.luau; `LoftAchievements` 10:
+  any ten of the eleven open the Golden Loft, so nobody who had it loses it.

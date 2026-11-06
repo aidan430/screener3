@@ -13,6 +13,10 @@ the price. Copy the pass ID (the number in its page address).
 | vip.png | VIP | +25% coins on everything you sell, and your machines keep working for up to 1 hour while you're away. | 299 | GamePasses.VIP |
 | autosell.png | Auto Sell | When your tool and bucket are full, your load goes to your trader's basket by itself. | 149 | GamePasses.AutoSell |
 | doublemachines.png | Double Machines | Every machine harvests twice as fast, on the same power. | 249 | GamePasses.DoubleMachines |
+| supertool.png | Super Tool | Any tool you hold lifts twice the hay and carries twice as much, and glows gold. | 399 | GamePasses.SuperTool |
+| haytornado.png | Hay Tornado | A machine for your farm: harvests 10 straws a second and needs no power. Place it with Build. | 349 | GamePasses.HayTornado |
+| rainbowhay.png | Rainbow Hay | Just for fun: your hay shows in shifting rainbow colours. Changes nothing else. | 99 | GamePasses.RainbowHay |
+| sparkletrail.png | Sparkle Trail | Just for fun: a soft golden sparkle trail follows you. Changes nothing else. | 79 | GamePasses.SparkleTrail |
 | jetpack.png | Jetpack | Hold Space in the air to fly up and hover (H), so you can reach any part of your haystack. | 199 | GamePasses.Jetpack |
 
 ## Developer products (can be bought again)

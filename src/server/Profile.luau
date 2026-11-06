@@ -10,7 +10,7 @@ local Layout = require(Shared:WaitForChild("Layout"))(Config)
 local Profile = {}
 local rng = Random.new()
 
-Profile.STATS = { "searches", "loads_filled", "straws_sold", "lucky_finds", "perks_maxed", "total_searched", "best_height", "dumps", "drops", "bales_made" }
+Profile.STATS = { "searches", "loads_filled", "straws_sold", "lucky_finds", "perks_maxed", "total_searched", "best_height", "dumps", "drops", "bales_made", "secret_straw" }
 
 local function number(saved, name, default)
 	local v = type(saved) == "table" and saved[name]

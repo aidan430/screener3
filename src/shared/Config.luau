@@ -8,12 +8,12 @@ Config.FarmName = "Hollow Creek Farm"
 -- Plots: each player gets one. All four are the SAME place, the middle of the farm, with the
 -- haystack at its centre: everyone sees and digs only their own haystack, and only their own
 -- buildings and hay (other players' are hidden and pass-through on your screen).
-Config.PlotSize = 190 -- the build area round the haystack (the countryside starts at about 105)
-Config.FarmScale = 0.65 -- the countryside, fence and ground are pulled in to this share of their size
+Config.PlotSize = 170 -- the build area round the haystack (the countryside starts at about 89)
+Config.FarmScale = 0.55 -- the countryside, fence and ground are pulled in to this share of their size
 Config.PlotCentres = { { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } }
 Config.FarmEntrance = { 0, 0, 80 } -- where you arrive: south of the haystack, facing it
 Config.TraderStart = { 0, 0, 58 } -- your trader's stall, between the haystack and where you arrive
-Config.TruckStart = { 22, 0, 98 } -- trucks drive in from the south meadow, beside the arrival path
+Config.TruckStart = { 14, 0, 100 } -- trucks drive in from the south meadow, beside the arrival path
 Config.BuildClear = 50 -- no part of anything can stand this close to the haystack's centre, below its top
 
 -- The heap: 5,000,000 straws in clumps, one smooth terrain haystack 80 studs (22 m) high and
@@ -109,6 +109,7 @@ Config.Machines = {
 	{ id = "sieve", name = "Sorting Sieve", rate = 0.6, draw = 6, price = 19000, max = 10, size = { 5, 5, 5 }, color = { 150, 150, 160 } },
 	{ id = "thresher", name = "Steam Thresher", rate = 1.5, draw = 12, price = 152000, max = 8, size = { 6, 6, 6 }, color = { 90, 70, 60 } },
 	{ id = "vacuum", name = "Hay Vacuum", rate = 3.6, draw = 24, price = 855000, max = 6, size = { 7, 7, 7 }, color = { 200, 80, 60 } },
+	{ id = "tornado", name = "Hay Tornado", rate = 10, draw = 0, price = 0, max = 1, robux = 1, size = { 6, 10, 6 }, color = { 240, 220, 150 } },
 	{ id = "magnetron", name = "Needle Magnetron", rate = 7.5, draw = 45, price = 3800000, max = 4, size = { 8, 8, 8 }, color = { 70, 255, 150 } },
 }
 
@@ -234,7 +235,12 @@ Config.GamePasses = {
 	VIP = 2075654337, -- +25% coins, and machines keep running up to an hour after you leave
 	DoubleMachines = 2074994344, -- every machine works twice as fast (same power)
 	Jetpack = 2074622358, -- hold Space in the air to fly up and hover over your pile (see Config.Jetpack)
+	SuperTool = 0, -- whatever tool you hold lifts SuperToolBoost x the hay, carries that much more, and glows
+	HayTornado = 0, -- a Hay Tornado machine for your farm: 10 straws a second, needs no power
+	RainbowHay = 0, -- cosmetic: your hay shows in shifting rainbow colours
+	SparkleTrail = 0, -- cosmetic: a soft golden sparkle trail follows you
 }
+Config.SuperToolBoost = 2
 Config.Products = {
 	SpeedBoost = 3728655884, -- 2x straws a click for 1 hour
 	CoinBoost = 3728656281, -- 2x coins for all hay sold, for 1 hour
@@ -263,20 +269,6 @@ Config.Wheel = {
 }
 Config.WheelDuplicateSearches = 200
 
--- Achievements stay hidden until you earn them. All ten open the Golden Loft above the hub.
-Config.Achievements = {
-	{ id = "first_straw", name = "First Straw", text = "Harvest your first straw.", stat = "searches", goal = 1 },
-	{ id = "full_load", name = "Full Load", text = "Fill your tool to the brim.", stat = "loads_filled", goal = 1 },
-	{ id = "merchant", name = "Merchant's Friend", text = "Sell 100,000 straws to the merchant.", stat = "straws_sold", goal = 100000 },
-	{ id = "collector", name = "Collector", text = "Own every tool, up to the Needle Detector.", stat = "tool", goal = 10 },
-	{ id = "engineer", name = "Engineer", text = "Have 10 machines working on your plot.", stat = "machines", goal = 10 },
-	{ id = "power_plant", name = "Power Plant", text = "Generate 500 power on your plot.", stat = "power", goal = 500 },
-	{ id = "sky_high", name = "Sky High", text = "Stand on top of your haystack, 75 studs up.", stat = "best_height", goal = 75 },
-	{ id = "perfectionist", name = "Perfectionist", text = "Max out all three perks on one tool.", stat = "perks_maxed", goal = 1 },
-	{ id = "lucky", name = "Lucky Duck", text = "Make 25 lucky finds in the hay.", stat = "lucky_finds", goal = 25 },
-	{ id = "needle", name = "Needle Finder", text = "Find the needle.", stat = "needles", goal = 1 },
-}
-Config.BadgeIds = {} -- optional: { first_straw = 123456 } awards a Roblox badge too
 
 -- The Golden Loft: a secret golden haystack above the hub where straw pays 20x.
 Config.Loft = { straws = 250000, coinMultiplier = 20, needleEarliest = 0.5 }

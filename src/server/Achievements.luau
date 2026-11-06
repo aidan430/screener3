@@ -1,4 +1,4 @@
--- The ten achievements, secret until earned. Each watches one number; all ten open the Golden Loft.
+-- The secret achievements, hidden until earned. Each watches one number; any ten open the Golden Loft.
 -- Optional Roblox badges: put badge IDs into Config.BadgeIds.
 local BadgeService = game:GetService("BadgeService")
 local Players = game:GetService("Players")

@@ -63,6 +63,9 @@ local sceneryOk, sceneryError = pcall(Scenery.build)
 if not sceneryOk then
 	warn("[Start] Scenery failed to build: " .. tostring(sceneryError))
 end
+pcall(function() -- the hidden golden straw (a secret achievement)
+	require(script.Parent.Secrets).build()
+end)
 -- the portal arches on the west road and the four worlds far beyond the farm
 local worldsOk, worldsError = pcall(Worlds.build)
 if not worldsOk then
