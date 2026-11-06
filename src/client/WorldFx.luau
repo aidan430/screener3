@@ -54,11 +54,18 @@ function WorldFx.spin(index, slices)
 		return
 	end
 	Juice.sound("spin")
-	local start = disc.CFrame
+	-- always measured from where the wheel stood at first, so every spin lands on its prize
+	local rest = disc:GetAttribute("RestCFrame")
+	if typeof(rest) ~= "CFrame" then
+		rest = disc.CFrame
+		disc:SetAttribute("RestCFrame", rest)
+	end
 	local turns = math.pi * 2 * 5 + (index - 0.5) / slices * math.pi * 2
 	local angle = Instance.new("NumberValue")
+	angle.Value = disc:GetAttribute("RestAngle") or 0
+	disc:SetAttribute("RestAngle", (index - 0.5) / slices * math.pi * 2)
 	angle.Changed:Connect(function(a)
-		disc.CFrame = start * CFrame.Angles(a, 0, 0)
+		disc.CFrame = rest * CFrame.Angles(a, 0, 0)
 	end)
 	TweenService:Create(angle, TweenInfo.new(4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Value = turns }):Play()
 	task.delay(4.2, function()

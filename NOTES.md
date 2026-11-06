@@ -503,3 +503,12 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   water tower, silos, pens' fences, field edges). Hills now sit at FENCE + 72 (sides) and
   FENCE + 54 (corners) and rise only past 146; the ground is (FENCE + 18) x 2 across to meet
   them. Uploaded models (Assets.place) also stand on any terrain that's higher under them.
+
+## Wheel prizes on the wheel; skins on every tool (2026-11-06)
+- The Wheel of Fortune's face shows each prize in its colour with its exact odds (World.wheelFace,
+  a SurfaceGui on the disc; slices are equal in size, the printed odds tell the chances). Spins
+  are measured from where the wheel first stood, so every spin stops on its prize (before, the
+  second spin started from wherever the first stopped and could show the wrong slice).
+- Skins work on every tool: an uploaded model (the Garden Trowel) loses its own texture and
+  takes the skin's colour and material, and any skinned tool gives off a gentle sparkle and
+  light in the skin's colour (Tools.wearSkin). Equip in Finds & Skins.

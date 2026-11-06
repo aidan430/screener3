@@ -30,6 +30,42 @@ local function attach(tool, handle, size, offset, colour, material)
 	return part
 end
 
+-- A skin on any tool: an uploaded model loses its own texture and takes the skin's colour and
+-- material (so the Galaxy, Lava... skins show on it too), and every skinned tool gives off a
+-- gentle sparkle in the skin's colour.
+function Tools.wearSkin(tool, look, skin)
+	local c = Build.rgb(skin.head)
+	if look then
+		for _, part in ipairs(look:GetDescendants()) do
+			if part:IsA("SurfaceAppearance") then
+				part:Destroy()
+			end
+		end
+		for _, part in ipairs(tool:GetDescendants()) do
+			if part:IsA("BasePart") and part.Name ~= "Load" and part.Name ~= "Handle" then
+				if part:IsA("MeshPart") then
+					part.TextureID = ""
+				end
+				part.Color = c
+				part.Material = Enum.Material[skin.material]
+			end
+		end
+	end
+	local handle = tool:FindFirstChild("Handle")
+	if handle then
+		local sparkle = Instance.new("ParticleEmitter")
+		sparkle.Name = "SkinSparkle"
+		sparkle.Color = ColorSequence.new(c, Color3.new(1, 1, 1))
+		sparkle.LightEmission = 0.7
+		sparkle.Rate, sparkle.Lifetime, sparkle.Speed = 5, NumberRange.new(0.5, 0.9), NumberRange.new(0.6, 1.6)
+		sparkle.Size = NumberSequence.new(0.18, 0)
+		sparkle.Parent = handle
+		local light = Instance.new("PointLight")
+		light.Color, light.Range, light.Brightness = c, 6, 0.6
+		light.Parent = handle
+	end
+end
+
 -- The skin (from the Wheel of Fortune) recolours the tool; "" is the plain tool.
 local function skinOf(id)
 	for _, prize in ipairs(Config.Wheel) do
@@ -99,6 +135,9 @@ function Tools.make(level, skinId)
 	weld.C0 = seat
 	weld.Parent = load
 	load.Parent = tool
+	if skin then
+		Tools.wearSkin(tool, look, skin)
+	end
 	return tool
 end
 
