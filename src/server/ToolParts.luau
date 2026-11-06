@@ -15,8 +15,15 @@ ToolParts.ROLL, ToolParts.FLAT, ToolParts.UPRIGHT = ROLL, FLAT, UPRIGHT
 local GREY, DARK, RUBBER = { 150, 154, 160 }, { 70, 72, 78 }, { 46, 46, 50 }
 ToolParts.GREY, ToolParts.DARK, ToolParts.RUBBER = GREY, DARK, RUBBER
 
+-- A place in the shape's own space, shrunk to the tool's real size (k.scale, Config.ToolScale):
+-- shapes are drawn full size and every piece shrinks together.
+function ToolParts.scaled(k, cf)
+	return CFrame.new(cf.Position * k.scale) * cf.Rotation
+end
+
 -- One part welded to the handle. `colour` is a Color3 or {r, g, b}.
 function ToolParts.piece(k, name, size, cf, colour, material, shape)
+	size, cf = size * k.scale, ToolParts.scaled(k, cf)
 	local part = Instance.new("Part")
 	part.Name = name
 	if shape then

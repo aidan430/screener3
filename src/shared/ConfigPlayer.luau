@@ -40,6 +40,7 @@ Config.Touch = {
 
 Config.SkinPulseSeconds = 3 -- one slow swell and fade of an animated skin's glow
 Config.SkinGleamSeconds = 0.9 -- how long a skin's shine takes to sweep along the tool
+Config.ToolScale = 0.5 -- the built tools' size: 1 = the 6-stud pitchfork, which held out too far in first person
 Config.ToolFanSpin = 9 -- radians a second the Twin Turbines' fans turn while held
 
 return Config

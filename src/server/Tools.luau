@@ -135,11 +135,13 @@ function Tools.make(level, skinId)
 			handle = handle,
 			colour = Build.rgb(if skin then skin.head else def.head),
 			material = Enum.Material[if skin then skin.material else def.material],
+			scale = Config.ToolScale,
 		})
-		handle.Size = Vector3.new(0.3, spec.length, 0.3)
+		local scale = Config.ToolScale
+		handle.Size = Vector3.new(0.3 * scale, spec.length * scale, 0.3 * scale)
 		handle.Material = Enum.Material[spec.material or "Wood"]
-		tool.Grip = CFrame.new(0, spec.hold, 0) * CFrame.Angles(math.rad(90), 0, 0)
-		seat, maxLoad = spec.seat, spec.load
+		tool.Grip = CFrame.new(0, spec.hold * scale, 0) * CFrame.Angles(math.rad(90), 0, 0)
+		seat, maxLoad = ToolParts.scaled({ scale = scale }, spec.seat), spec.load * scale
 	end
 	-- the hay you've harvested sits on the working end and grows as you harvest (see Carry.luau)
 	local load = HayLook.lump(0.2, false)

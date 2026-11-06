@@ -555,6 +555,7 @@ Config.Touch = {
 
 Config.SkinPulseSeconds = 3 -- one slow swell and fade of an animated skin's glow
 Config.SkinGleamSeconds = 0.9 -- how long a skin's shine takes to sweep along the tool
+Config.ToolScale = 0.5 -- the built tools' size: 1 = the 6-stud pitchfork, which held out too far in first person
 Config.ToolFanSpin = 9 -- radians a second the Twin Turbines' fans turn while held
 
 return Config
@@ -7304,8 +7305,8 @@ function ToolGadgets.turbines(k)
 		local spin = Instance.new("Weld")
 		spin.Name = "Spin"
 		spin.Part0, spin.Part1 = k.handle, hub
-		spin.C0 = centre * ROLL
-		spin:SetAttribute("Base", centre * ROLL)
+		spin.C0 = P.scaled(k, centre * ROLL)
+		spin:SetAttribute("Base", spin.C0)
 		spin.Parent = hub
 	end
 	return { length = 4, hold = -0.8, seat = CFrame.new(0, 1.5, 0.27) * UPRIGHT, load = 1.15, material = "Metal" }
@@ -7408,8 +7409,15 @@ ToolParts.ROLL, ToolParts.FLAT, ToolParts.UPRIGHT = ROLL, FLAT, UPRIGHT
 local GREY, DARK, RUBBER = { 150, 154, 160 }, { 70, 72, 78 }, { 46, 46, 50 }
 ToolParts.GREY, ToolParts.DARK, ToolParts.RUBBER = GREY, DARK, RUBBER
 
+-- A place in the shape's own space, shrunk to the tool's real size (k.scale, Config.ToolScale):
+-- shapes are drawn full size and every piece shrinks together.
+function ToolParts.scaled(k, cf)
+	return CFrame.new(cf.Position * k.scale) * cf.Rotation
+end
+
 -- One part welded to the handle. `colour` is a Color3 or {r, g, b}.
 function ToolParts.piece(k, name, size, cf, colour, material, shape)
+	size, cf = size * k.scale, ToolParts.scaled(k, cf)
 	local part = Instance.new("Part")
 	part.Name = name
 	if shape then
@@ -7693,11 +7701,13 @@ function Tools.make(level, skinId)
 			handle = handle,
 			colour = Build.rgb(if skin then skin.head else def.head),
 			material = Enum.Material[if skin then skin.material else def.material],
+			scale = Config.ToolScale,
 		})
-		handle.Size = Vector3.new(0.3, spec.length, 0.3)
+		local scale = Config.ToolScale
+		handle.Size = Vector3.new(0.3 * scale, spec.length * scale, 0.3 * scale)
 		handle.Material = Enum.Material[spec.material or "Wood"]
-		tool.Grip = CFrame.new(0, spec.hold, 0) * CFrame.Angles(math.rad(90), 0, 0)
-		seat, maxLoad = spec.seat, spec.load
+		tool.Grip = CFrame.new(0, spec.hold * scale, 0) * CFrame.Angles(math.rad(90), 0, 0)
+		seat, maxLoad = ToolParts.scaled({ scale = scale }, spec.seat), spec.load * scale
 	end
 	-- the hay you've harvested sits on the working end and grows as you harvest (see Carry.luau)
 	local load = HayLook.lump(0.2, false)

@@ -559,3 +559,9 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   glow pulse. Candy Cane: stripes roll. Galaxy: drift + gentle pulse + 4 twinkles/s. Diamond:
   shine every 3 s + 2 twinkles/s. Flow needs the uploaded textures; the rest works without them.
   Uploaded models (the trowel) can't scroll their texture, so they get the glow, shine and stars.
+
+## Tools held closer (2026-11-06)
+- Built tools reached about 6.5 studs past the hand and looked strange in first person.
+  Config.ToolScale = 0.5 shrinks every built tool (shapes, grip point, hay seat and hay size
+  together; ToolParts.scaled); the fork's tines now end about 3 studs past the hand, roughly an
+  arm's length. The trowel model keeps its own `length` (3).

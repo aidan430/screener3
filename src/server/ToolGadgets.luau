@@ -79,8 +79,8 @@ function ToolGadgets.turbines(k)
 		local spin = Instance.new("Weld")
 		spin.Name = "Spin"
 		spin.Part0, spin.Part1 = k.handle, hub
-		spin.C0 = centre * ROLL
-		spin:SetAttribute("Base", centre * ROLL)
+		spin.C0 = P.scaled(k, centre * ROLL)
+		spin:SetAttribute("Base", spin.C0)
 		spin.Parent = hub
 	end
 	return { length = 4, hold = -0.8, seat = CFrame.new(0, 1.5, 0.27) * UPRIGHT, load = 1.15, material = "Metal" }
