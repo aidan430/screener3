@@ -7,6 +7,7 @@
 -- the roads.
 local Build = require(script.Parent.Build)
 local Kit = require(script.Parent.SceneryKit)
+local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
 local Props = require(script.Parent.SceneryProps)
 local Nature = require(script.Parent.SceneryNature)
 local Pens = require(script.Parent.SceneryAnimals)
@@ -228,6 +229,16 @@ function Scenery.build()
 		end
 	end
 	Kit.compact(folder) -- laid out at full size, then pulled in close round the haystack
+	-- keep the farm's key spots clear: the arch to the lobby, where you arrive, your trader's
+	-- stall and the trucks' way in
+	local arch = Config.LobbyFarmPortal
+	local archZ = arch and math.max(Config.PlotSize / 2 + arch.past, Config.FarmEntrance[3] + arch.behind)
+	Kit.clearAround(folder, {
+		{ arch and arch.x or 0, archZ or 0, if arch then 12 else 0 },
+		{ Config.FarmEntrance[1], Config.FarmEntrance[3], 10 },
+		{ Config.TraderStart[1], Config.TraderStart[3], 12 },
+		{ Config.TruckStart[1], Config.TruckStart[3], 10 },
+	})
 end
 
 return Scenery

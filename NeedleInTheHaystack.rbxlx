@@ -3832,9 +3832,10 @@ require(script.Parent.PiecesFactory)(builders, p, belts)
 local function stall(model, cf)
 	-- the owner's stall model (Config.TraderModel) when it loads, else a built market stall
 	local def = Config.TraderModel
-	local custom = def and def.id ~= 0 and Assets.place(def.id, cf * CFrame.new(0, 0, 1) * CFrame.Angles(0, math.rad(def.turn or 0), 0), def.width, model, true)
+	-- (lifted a touch so the ground's grass doesn't poke through its floor)
+	local custom = def and def.id ~= 0 and Assets.place(def.id, cf * CFrame.new(0, 0.15, 1) * CFrame.Angles(0, math.rad(def.turn or 0), 0), def.width, model, true)
 	if custom then
-		return
+		return true
 	end
 	p(model, cf * CFrame.new(0, 1.5, 1), Vector3.new(10, 3, 3), WOOD)
 	p(model, cf * CFrame.new(0, 3.1, 1), Vector3.new(10.4, 0.3, 3.4), DARK, "Wood")
@@ -3850,9 +3851,11 @@ local function stall(model, cf)
 end
 
 function builders.trader(model, cf)
-	stall(model, cf)
+	local custom = stall(model, cf)
 	-- the trader: boots, overalls, a checked shirt, a friendly face and a wide straw hat
-	local body = cf * CFrame.new(0, 0, 3.2) -- facing the front, where customers come
+	-- facing the front, where customers come: behind the counter, or in front of an uploaded
+	-- stall beside the basket (inside it he'd be hidden)
+	local body = if custom then cf * CFrame.new(4.2, 0, -2.6) else cf * CFrame.new(0, 0, 3.2)
 	for _, x in ipairs({ -0.5, 0.5 }) do
 		p(model, body * CFrame.new(x, 1, 0), Vector3.new(0.9, 2, 0.9), { 64, 82, 130 }, "Fabric")
 	end
@@ -5190,6 +5193,7 @@ return RobuxPads
 -- the roads.
 local Build = require(script.Parent.Build)
 local Kit = require(script.Parent.SceneryKit)
+local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
 local Props = require(script.Parent.SceneryProps)
 local Nature = require(script.Parent.SceneryNature)
 local Pens = require(script.Parent.SceneryAnimals)
@@ -5411,6 +5415,16 @@ function Scenery.build()
 		end
 	end
 	Kit.compact(folder) -- laid out at full size, then pulled in close round the haystack
+	-- keep the farm's key spots clear: the arch to the lobby, where you arrive, your trader's
+	-- stall and the trucks' way in
+	local arch = Config.LobbyFarmPortal
+	local archZ = arch and math.max(Config.PlotSize / 2 + arch.past, Config.FarmEntrance[3] + arch.behind)
+	Kit.clearAround(folder, {
+		{ arch and arch.x or 0, archZ or 0, if arch then 12 else 0 },
+		{ Config.FarmEntrance[1], Config.FarmEntrance[3], 10 },
+		{ Config.TraderStart[1], Config.TraderStart[3], 12 },
+		{ Config.TruckStart[1], Config.TruckStart[3], 10 },
+	})
 end
 
 return Scenery
@@ -5649,6 +5663,33 @@ local Build = require(script.Parent.Build)
 
 local Kit = {}
 Kit.SCALE = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config")).FarmScale
+
+-- Removes scenery standing on the farm's key spots: `spots` = { { x, z, radius }, ... }. Big
+-- groups (all the trees, a field) are checked piece by piece, like Kit.compact.
+function Kit.clearAround(root, spots)
+	local function blocked(p)
+		for _, s in ipairs(spots) do
+			if Vector3.new(p.X - s[1], 0, p.Z - s[2]).Magnitude < s[3] then
+				return true
+			end
+		end
+		return false
+	end
+	for _, child in ipairs(root:GetChildren()) do
+		if child:IsA("Folder") then
+			Kit.clearAround(child, spots)
+		elseif child:IsA("Model") then
+			local box, size = child:GetBoundingBox()
+			if math.max(size.X, size.Z) > 70 then
+				Kit.clearAround(child, spots)
+			elseif blocked(box.Position) then
+				child:Destroy()
+			end
+		elseif child:IsA("BasePart") and blocked(child.Position) then
+			child:Destroy()
+		end
+	end
+end
 
 -- Pulls everything built under `root` towards the middle by Kit.SCALE: each model and loose part
 -- keeps its size and turn and moves to SCALE x its position (heights stay), and animals' pens

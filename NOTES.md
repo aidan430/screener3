@@ -493,3 +493,8 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   than 70 studs now have each piece pulled in.
 - `Config.TruckModel` { id = 116817249965623 (the owner's "farm_truck"), turn = 0 }: every truck
   wears it, scaled to that truck's length (van 11 ... large 30), welded to an invisible base.
+- Fixes from the owner's screenshots: scenery standing on the farm's key spots (the arch to the
+  lobby, the arrival point, the trader's stall, the trucks' start) is removed after the farm is
+  pulled in (Kit.clearAround), so no lantern stands in the portal. With an uploaded stall the
+  trader stands in front of it beside the basket (inside it he was hidden), and the stall is
+  lifted 0.15 so the ground's grass doesn't show through its floor.

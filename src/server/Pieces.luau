@@ -132,9 +132,10 @@ require(script.Parent.PiecesFactory)(builders, p, belts)
 local function stall(model, cf)
 	-- the owner's stall model (Config.TraderModel) when it loads, else a built market stall
 	local def = Config.TraderModel
-	local custom = def and def.id ~= 0 and Assets.place(def.id, cf * CFrame.new(0, 0, 1) * CFrame.Angles(0, math.rad(def.turn or 0), 0), def.width, model, true)
+	-- (lifted a touch so the ground's grass doesn't poke through its floor)
+	local custom = def and def.id ~= 0 and Assets.place(def.id, cf * CFrame.new(0, 0.15, 1) * CFrame.Angles(0, math.rad(def.turn or 0), 0), def.width, model, true)
 	if custom then
-		return
+		return true
 	end
 	p(model, cf * CFrame.new(0, 1.5, 1), Vector3.new(10, 3, 3), WOOD)
 	p(model, cf * CFrame.new(0, 3.1, 1), Vector3.new(10.4, 0.3, 3.4), DARK, "Wood")
@@ -150,9 +151,11 @@ local function stall(model, cf)
 end
 
 function builders.trader(model, cf)
-	stall(model, cf)
+	local custom = stall(model, cf)
 	-- the trader: boots, overalls, a checked shirt, a friendly face and a wide straw hat
-	local body = cf * CFrame.new(0, 0, 3.2) -- facing the front, where customers come
+	-- facing the front, where customers come: behind the counter, or in front of an uploaded
+	-- stall beside the basket (inside it he'd be hidden)
+	local body = if custom then cf * CFrame.new(4.2, 0, -2.6) else cf * CFrame.new(0, 0, 3.2)
 	for _, x in ipairs({ -0.5, 0.5 }) do
 		p(model, body * CFrame.new(x, 1, 0), Vector3.new(0.9, 2, 0.9), { 64, 82, 130 }, "Fabric")
 	end

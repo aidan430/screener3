@@ -5,6 +5,33 @@ local Build = require(script.Parent.Build)
 local Kit = {}
 Kit.SCALE = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config")).FarmScale
 
+-- Removes scenery standing on the farm's key spots: `spots` = { { x, z, radius }, ... }. Big
+-- groups (all the trees, a field) are checked piece by piece, like Kit.compact.
+function Kit.clearAround(root, spots)
+	local function blocked(p)
+		for _, s in ipairs(spots) do
+			if Vector3.new(p.X - s[1], 0, p.Z - s[2]).Magnitude < s[3] then
+				return true
+			end
+		end
+		return false
+	end
+	for _, child in ipairs(root:GetChildren()) do
+		if child:IsA("Folder") then
+			Kit.clearAround(child, spots)
+		elseif child:IsA("Model") then
+			local box, size = child:GetBoundingBox()
+			if math.max(size.X, size.Z) > 70 then
+				Kit.clearAround(child, spots)
+			elseif blocked(box.Position) then
+				child:Destroy()
+			end
+		elseif child:IsA("BasePart") and blocked(child.Position) then
+			child:Destroy()
+		end
+	end
+end
+
 -- Pulls everything built under `root` towards the middle by Kit.SCALE: each model and loose part
 -- keeps its size and turn and moves to SCALE x its position (heights stay), and animals' pens
 -- shrink to match. The countryside is laid out at full size and then pulled in this way.
