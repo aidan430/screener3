@@ -35,7 +35,27 @@ end
 -- gentle sparkle in the skin's colour.
 function Tools.wearSkin(tool, look, skin)
 	local c = Build.rgb(skin.head)
-	if look then
+	local texture = skin.texture or ""
+	if texture ~= "" then
+		-- a patterned skin: the uploaded texture wraps the model; built-in forks get it on every face
+		for _, part in ipairs(tool:GetDescendants()) do
+			if part:IsA("SurfaceAppearance") then
+				part:Destroy()
+			elseif part:IsA("MeshPart") and part.Name ~= "Load" then
+				part.TextureID = texture
+				part.Color = Color3.new(1, 1, 1)
+			elseif part:IsA("BasePart") and part.Name ~= "Load" and part.Transparency < 1 then
+				part.Material = Enum.Material.SmoothPlastic
+				for _, face in ipairs(Enum.NormalId:GetEnumItems()) do
+					local t = Instance.new("Texture")
+					t.Texture = texture
+					t.Face = face
+					t.StudsPerTileU, t.StudsPerTileV = Config.SkinTextureStuds, Config.SkinTextureStuds
+					t.Parent = part
+				end
+			end
+		end
+	elseif look then
 		for _, part in ipairs(look:GetDescendants()) do
 			if part:IsA("SurfaceAppearance") then
 				part:Destroy()

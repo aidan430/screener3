@@ -264,15 +264,16 @@ Config.VipOfflineSeconds = 3600
 -- before buying, and the wheel is hidden where paid random items aren't allowed.
 -- weight / total weight = chance. A skin you already own pays `WheelDuplicateSearches` instead.
 Config.Wheel = {
-	{ id = "rose", name = "Rose Gold skin", weight = 3000, shaft = { 120, 70, 60 }, head = { 232, 160, 150 }, material = "Metal" },
-	{ id = "ice", name = "Ice skin", weight = 2500, shaft = { 180, 220, 240 }, head = { 210, 240, 255 }, material = "Ice" },
-	{ id = "lava", name = "Lava skin", weight = 2000, shaft = { 60, 30, 20 }, head = { 255, 90, 30 }, material = "Neon" },
-	{ id = "candy", name = "Candy Cane skin", weight = 1500, shaft = { 245, 245, 245 }, head = { 230, 40, 60 }, material = "SmoothPlastic" },
-	{ id = "galaxy", name = "Galaxy skin", weight = 700, shaft = { 30, 20, 60 }, head = { 140, 90, 255 }, material = "Neon" },
-	{ id = "diamond", name = "Diamond skin", weight = 299, shaft = { 200, 230, 255 }, head = { 160, 220, 255 }, material = "Glass" },
+	{ id = "rose", name = "Rose Gold skin", weight = 3000, texture = "", shaft = { 120, 70, 60 }, head = { 232, 160, 150 }, material = "Metal" },
+	{ id = "ice", name = "Ice skin", weight = 2500, texture = "", shaft = { 180, 220, 240 }, head = { 210, 240, 255 }, material = "Ice" },
+	{ id = "lava", name = "Lava skin", weight = 2000, texture = "", shaft = { 60, 30, 20 }, head = { 255, 90, 30 }, material = "Neon" },
+	{ id = "candy", name = "Candy Cane skin", weight = 1500, texture = "", shaft = { 245, 245, 245 }, head = { 230, 40, 60 }, material = "SmoothPlastic" },
+	{ id = "galaxy", name = "Galaxy skin", weight = 700, texture = "", shaft = { 30, 20, 60 }, head = { 140, 90, 255 }, material = "Neon" },
+	{ id = "diamond", name = "Diamond skin", weight = 299, texture = "", shaft = { 200, 230, 255 }, head = { 160, 220, 255 }, material = "Glass" },
 	{ id = "needle", name = "NEEDLE REVEAL", weight = 1, reveal = true },
 }
 Config.WheelDuplicateSearches = 200
+Config.SkinTextureStuds = 1.5 -- how many studs one copy of a patterned skin covers on the built-in forks
 
 
 -- The Golden Loft: a secret golden haystack above the hub where straw pays 20x.

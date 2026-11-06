@@ -512,3 +512,9 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
 - Skins work on every tool: an uploaded model (the Garden Trowel) loses its own texture and
   takes the skin's colour and material, and any skinned tool gives off a gentle sparkle and
   light in the skin's colour (Tools.wearSkin). Equip in Finds & Skins.
+
+## Patterned skins (2026-11-06)
+- Each Config.Wheel skin has a `texture` (empty until the owner uploads the six PNGs in
+  assets/skins/, made by dev/tools/skin_textures.py, seamless 1024 tiles). With a texture,
+  uploaded models take it as their TextureID and part-built tools (forks) get a Texture on every
+  face, tiled every Config.SkinTextureStuds (1.5) studs. Without one, the colour/material look stays.
