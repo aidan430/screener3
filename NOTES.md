@@ -374,3 +374,24 @@ are still visible, walking around and digging their own copies.
   cobblestone yard is 58 across. The plot fences, signs and per-plot ground are gone.
 - Server physics (bundles, bales) doesn't see haystacks (they're only on screens), so hay
   dropped on the heap falls to the ground.
+
+## Robux corner: holographic shop pads (2026-11-06)
+One round pad (7 studs) per Robux item whose ID is set, in two arcs of five, 32 studs round
+the arrival point (`Config.FarmEntrance`) and a little behind it, off the road (|x| 19-32),
+so nobody arriving is blocked. Numbers in `src/shared/ConfigPads.luau` (merged into Config):
+`RobuxPads` (kind, key, `at` = {x, z} from FarmEntrance: west arc the 4 passes + Whistle, east
+arc Speed, Coins, Lucky Charm, Straw Blast, Wheel Spin), `RobuxPadFacing` {0, 0},
+`RobuxPadSize` 7, `RobuxPadPanelHeight` 7.5, `RobuxPadHueSeconds` 24, `RobuxPadBobSeconds` 3.5,
+`RobuxPadBob` 0.35, `RobuxPadSpinSeconds` 16, `RobuxPadCooldown` 4, `RobuxPadLeave` 2.
+- `server/RobuxPads.luau` builds plain anchored pads in `workspace.RobuxPads` and looks up each
+  item's icon and price (`GetProductInfo`, in pcall, 3 tries) into the attributes Icon / Price.
+- `client/RobuxPads.luau`: a see-through floating panel (icon, name, price or "Robux" if
+  unknown, "OWNED" for passes you have, and the shop's exact one-line description), a soft
+  light, a slow bob and turning shimmer, and the ring's colour drifting round pale rainbow hues
+  (24 s a lap, continuous, no flashing). Stepping on a pad (or E at it) shows Roblox's own
+  purchase prompt: once per pad until you step 2 studs off it, at most one every 4 s; owned
+  passes never prompt. The Wheel Spin pad opens the wheel's odds window instead (never a
+  prompt), and is removed from your screen where PolicyService restricts paid random items.
+- Check in Studio: that Touched fires stepping onto the 0.8-stud disc, the panel's size and
+  readability, that GetProductInfo returns icons once published, and the arcs against the
+  compacted map.
