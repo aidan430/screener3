@@ -62,6 +62,10 @@ Config.GroundTexture = "rbxassetid://92652087782912" -- the owner's grass (gltf_
 Config.GroundNormal = "rbxassetid://81088945047843" -- its normal map (gltf_embedded_3)
 Config.GroundTextureStuds = 16
 Config.GroundTint = { 230, 236, 210 } -- the ground's colour with the texture on
+-- Models the owner uploaded (0 / {} = the built-in look). Turn = degrees to spin a model so
+-- its front faces the right way.
+Config.TraderModel = { id = 108636101057161, width = 12, turn = 0 } -- the Barraca stall: every Trader's Stall
+Config.TreeModels = { 132180459559700, 124134724279082, 115582622540743, 137807887477417 } -- white birches
 Config.HeapMounds = 16 -- loose hay mounds round the foot of each heap (just for looks) -- the heap's colour with the texture on (white = the image as is)
 Config.MaxSlopeAngle = 46 -- players can't walk up anything steeper: they build to climb
 -- The needle hides deep inside the upper heap: between these shares of the height, and no
@@ -1442,6 +1446,73 @@ function Assets.shareHay()
 	hay.Name = "HayTemplate"
 	hay.Anchored, hay.CanCollide, hay.CanQuery, hay.CanTouch = true, false, false, false
 	hay.Parent = ReplicatedStorage
+end
+
+-- A whole uploaded model (every part of it, textures and all) by asset ID, loaded once; or,
+-- for a mesh ID, a model holding that one mesh. Returns a fresh copy, or nil.
+local models = {}
+function Assets.model(id)
+	id = tonumber(id)
+	if not id or id == 0 then
+		return nil
+	end
+	local waited = 0
+	while models[id] == "loading" and waited < 20 do
+		waited += task.wait(0.1)
+	end
+	if models[id] == nil or models[id] == "loading" then
+		models[id] = "loading"
+		local ok, asset = pcall(function()
+			return InsertService:LoadAsset(id)
+		end)
+		local template = nil
+		if ok and asset then
+			local only = asset:GetChildren()
+			template = if #only == 1 and only[1]:IsA("Model") then only[1] else asset
+			template.Parent = nil
+		else
+			local made, part = pcall(function()
+				return AssetService:CreateMeshPartAsync("rbxassetid://" .. id)
+			end)
+			if made and part then
+				template = Instance.new("Model")
+				part.Parent = template
+			else
+				warn("[Assets] Couldn't load model " .. id .. ": " .. tostring(asset))
+			end
+		end
+		models[id] = template or false
+	end
+	return if models[id] then models[id]:Clone() else nil
+end
+
+-- Places a copy of model `id`: turned by `cf`'s rotation, scaled so its height (or, with
+-- `byWidth`, its widest side) is `size`, standing with its base centred on `cf`. Returns it.
+function Assets.place(id, cf, size, parent, byWidth)
+	local model = Assets.model(id)
+	if not model then
+		return nil
+	end
+	for _, part in ipairs(model:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.Anchored = true
+		elseif part:IsA("Script") or part:IsA("LocalScript") then
+			part:Destroy() -- never run scripts that came with a model
+		end
+	end
+	model:PivotTo(CFrame.new(model:GetPivot().Position) * cf.Rotation)
+	local _, extents = model:GetBoundingBox()
+	local now = if byWidth then math.max(extents.X, extents.Z) else extents.Y
+	if now > 0 then
+		pcall(function()
+			model:ScaleTo(model:GetScale() * size / now)
+		end)
+	end
+	local box, ext = model:GetBoundingBox()
+	local bottom = box.Position - Vector3.new(0, ext.Y / 2, 0)
+	model:PivotTo(model:GetPivot() + (cf.Position - bottom))
+	model.Parent = parent
+	return model
 end
 
 return Assets
@@ -3728,7 +3799,13 @@ require(script.Parent.PiecesFactory)(builders, p, belts)
 
 -- Your trader: a market stall with a striped awning, the trader behind the counter, and a
 -- big woven basket in front where you dump your hay (the basket's prompt sells it).
-function builders.trader(model, cf)
+local function stall(model, cf)
+	-- the owner's stall model (Config.TraderModel) when it loads, else a built market stall
+	local def = Config.TraderModel
+	local custom = def and def.id ~= 0 and Assets.place(def.id, cf * CFrame.new(0, 0, 1) * CFrame.Angles(0, math.rad(def.turn or 0), 0), def.width, model, true)
+	if custom then
+		return
+	end
 	p(model, cf * CFrame.new(0, 1.5, 1), Vector3.new(10, 3, 3), WOOD)
 	p(model, cf * CFrame.new(0, 3.1, 1), Vector3.new(10.4, 0.3, 3.4), DARK, "Wood")
 	for _, c in ipairs({ { -4.8, -0.2 }, { 4.8, -0.2 }, { -4.8, 3.6 }, { 4.8, 3.6 } }) do
@@ -3740,6 +3817,10 @@ function builders.trader(model, cf)
 	end
 	local sign = p(model, cf * CFrame.new(0, 10.8, -0.6), Vector3.new(6, 1.6, 0.3), WOOD)
 	Build.text(sign, Enum.NormalId.Front, "TRADER")
+end
+
+function builders.trader(model, cf)
+	stall(model, cf)
 	-- the trader: boots, overalls, a checked shirt, a friendly face and a wide straw hat
 	local body = cf * CFrame.new(0, 0, 3.2) -- facing the front, where customers come
 	for _, x in ipairs({ -0.5, 0.5 }) do
@@ -5550,6 +5631,8 @@ function Kit.compact(root)
 	for _, child in ipairs(root:GetChildren()) do
 		if child:IsA("Folder") then
 			Kit.compact(child)
+		elseif child:IsA("Model") and math.max(select(2, child:GetBoundingBox()).X, select(2, child:GetBoundingBox()).Z) > 70 then
+			Kit.compact(child) -- a group spread over the farm (all the trees, a field's rows): each piece moves in
 		elseif child:IsA("Model") then
 			local pivot = child:GetPivot()
 			child:PivotTo(pivot - pivot.Position + pull(pivot.Position))
@@ -5704,6 +5787,8 @@ return Kit
 -- between the plots and the fence (Kit.RING_IN to Kit.RING_OUT).
 -- Terrain Grass is never used here (it is kept for the straw heaps).
 local Kit = require(script.Parent.SceneryKit)
+local Assets = require(script.Parent.Assets)
+local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
 
 local Nature = {}
 local C = Kit.C
@@ -5741,6 +5826,10 @@ function Nature.terrain()
 end
 
 local function tree(m, base, rng, height)
+	local ids = Config.TreeModels
+	if #ids > 0 and Assets.place(ids[rng:NextInteger(1, #ids)], base, height + 10, m) then
+		return -- one of the owner's trees (white birches)
+	end
 	Kit.post(m, base, "Trunk", Vector3.zero, height, rng:NextNumber(2, 3), { 96, 66, 44 }, "Wood")
 	for _ = 1, 3 do
 		local s = rng:NextNumber(9, 15)
@@ -7308,6 +7397,7 @@ return Wheel
 local Lighting = game:GetService("Lighting")
 
 local Build = require(script.Parent.Build)
+local Assets = require(script.Parent.Assets)
 local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
 
 local World = {}
@@ -7441,8 +7531,12 @@ local function trees(folder)
 		local side = i % 4
 		local x, z = if side < 2 then (side * 2 - 1) * depth else along, if side < 2 then along else (side * 2 - 5) * depth
 		if not (z < 0 and math.abs(x) < 24) then -- keep the north lane clear
-			local base = CFrame.new(x, 0, z)
+			local base = CFrame.new(x, 0, z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0)
 			local height = rng:NextNumber(10, 18)
+			local ids = Config.TreeModels
+			if #ids > 0 and Assets.place(ids[rng:NextInteger(1, #ids)], base, height + 10, folder) then
+				continue -- one of the owner's trees (white birches)
+			end
 			Build.post({ name = "Trunk", color = { 96, 66, 44 }, material = "Wood", parent = folder }, base, height, rng:NextNumber(2.2, 3.2))
 			for _ = 1, 3 do
 				local size = rng:NextNumber(10, 17)

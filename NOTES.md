@@ -479,3 +479,15 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   stand next to it), the locked-arch nudge (client velocity + a 2.5-stud step back), that
   RespawnLocation picks the lobby pad on joining, the fade timing over a slow connection, and
   how the island and clouds look from the arrival point.
+
+## The owner's stall and birch models; a scenery-shrink fix (2026-11-06)
+- `Config.TraderModel` { id = 108636101057161 (the "Barraca de Praia" FAB model), width 12,
+  turn 0 }: every Trader's Stall wears it (scaled to 12 studs wide, standing on the ground);
+  the trader, the basket and its sensor stay in front. Built-in stall if it doesn't load.
+- `Config.TreeModels`: the owner's four white birches; every tree on the farm and in the tree
+  line is a random one of them, scaled to the old tree's height + 10. Block trees if they
+  don't load. Assets.model / Assets.place load a whole model once (InsertService, else a mesh)
+  and never keep scripts that came with it.
+- Fix: Kit.compact moved big groups (all the trees, the bushes, field rows) as one block, so
+  they stayed out at full size (some past the fence) after the farm was pulled in. Groups wider
+  than 70 studs now have each piece pulled in.

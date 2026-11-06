@@ -4,6 +4,7 @@
 local Lighting = game:GetService("Lighting")
 
 local Build = require(script.Parent.Build)
+local Assets = require(script.Parent.Assets)
 local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
 
 local World = {}
@@ -137,8 +138,12 @@ local function trees(folder)
 		local side = i % 4
 		local x, z = if side < 2 then (side * 2 - 1) * depth else along, if side < 2 then along else (side * 2 - 5) * depth
 		if not (z < 0 and math.abs(x) < 24) then -- keep the north lane clear
-			local base = CFrame.new(x, 0, z)
+			local base = CFrame.new(x, 0, z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0)
 			local height = rng:NextNumber(10, 18)
+			local ids = Config.TreeModels
+			if #ids > 0 and Assets.place(ids[rng:NextInteger(1, #ids)], base, height + 10, folder) then
+				continue -- one of the owner's trees (white birches)
+			end
 			Build.post({ name = "Trunk", color = { 96, 66, 44 }, material = "Wood", parent = folder }, base, height, rng:NextNumber(2.2, 3.2))
 			for _ = 1, 3 do
 				local size = rng:NextNumber(10, 17)

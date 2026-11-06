@@ -3,6 +3,8 @@
 -- between the plots and the fence (Kit.RING_IN to Kit.RING_OUT).
 -- Terrain Grass is never used here (it is kept for the straw heaps).
 local Kit = require(script.Parent.SceneryKit)
+local Assets = require(script.Parent.Assets)
+local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
 
 local Nature = {}
 local C = Kit.C
@@ -40,6 +42,10 @@ function Nature.terrain()
 end
 
 local function tree(m, base, rng, height)
+	local ids = Config.TreeModels
+	if #ids > 0 and Assets.place(ids[rng:NextInteger(1, #ids)], base, height + 10, m) then
+		return -- one of the owner's trees (white birches)
+	end
 	Kit.post(m, base, "Trunk", Vector3.zero, height, rng:NextNumber(2, 3), { 96, 66, 44 }, "Wood")
 	for _ = 1, 3 do
 		local s = rng:NextNumber(9, 15)

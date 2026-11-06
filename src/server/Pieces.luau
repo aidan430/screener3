@@ -129,7 +129,13 @@ require(script.Parent.PiecesFactory)(builders, p, belts)
 
 -- Your trader: a market stall with a striped awning, the trader behind the counter, and a
 -- big woven basket in front where you dump your hay (the basket's prompt sells it).
-function builders.trader(model, cf)
+local function stall(model, cf)
+	-- the owner's stall model (Config.TraderModel) when it loads, else a built market stall
+	local def = Config.TraderModel
+	local custom = def and def.id ~= 0 and Assets.place(def.id, cf * CFrame.new(0, 0, 1) * CFrame.Angles(0, math.rad(def.turn or 0), 0), def.width, model, true)
+	if custom then
+		return
+	end
 	p(model, cf * CFrame.new(0, 1.5, 1), Vector3.new(10, 3, 3), WOOD)
 	p(model, cf * CFrame.new(0, 3.1, 1), Vector3.new(10.4, 0.3, 3.4), DARK, "Wood")
 	for _, c in ipairs({ { -4.8, -0.2 }, { 4.8, -0.2 }, { -4.8, 3.6 }, { 4.8, 3.6 } }) do
@@ -141,6 +147,10 @@ function builders.trader(model, cf)
 	end
 	local sign = p(model, cf * CFrame.new(0, 10.8, -0.6), Vector3.new(6, 1.6, 0.3), WOOD)
 	Build.text(sign, Enum.NormalId.Front, "TRADER")
+end
+
+function builders.trader(model, cf)
+	stall(model, cf)
 	-- the trader: boots, overalls, a checked shirt, a friendly face and a wide straw hat
 	local body = cf * CFrame.new(0, 0, 3.2) -- facing the front, where customers come
 	for _, x in ipairs({ -0.5, 0.5 }) do

@@ -16,6 +16,8 @@ function Kit.compact(root)
 	for _, child in ipairs(root:GetChildren()) do
 		if child:IsA("Folder") then
 			Kit.compact(child)
+		elseif child:IsA("Model") and math.max(select(2, child:GetBoundingBox()).X, select(2, child:GetBoundingBox()).Z) > 70 then
+			Kit.compact(child) -- a group spread over the farm (all the trees, a field's rows): each piece moves in
 		elseif child:IsA("Model") then
 			local pivot = child:GetPivot()
 			child:PivotTo(pivot - pivot.Position + pull(pivot.Position))
