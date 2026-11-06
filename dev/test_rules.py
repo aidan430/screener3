@@ -107,6 +107,12 @@ class Heap(unittest.TestCase):
         used = re.findall(r"Enum\.Material\.(\w+)", "".join(p.read_text() for p in (ROOT / "src").rglob("*.luau")))
         self.assertNotIn(material, used, "something else uses the heap's terrain material")
 
+    def test_the_heaps_foot_slopes_out_but_stays_off_the_building_ground(self):
+        foot = {k: float(v) for k, v in re.findall(r"(\w+) = ([\d.]+)", re.search(r"^Config\.HeapSkirt = \{([^}]*)\}", CONFIG, re.M).group(1))}
+        self.assertGreaterEqual(foot["from"], pacing.number("PileRadiusBottom") - 2, "the foot starts at the heap's wall")
+        self.assertLessEqual(foot["to"], pacing.number("BuildClear"), "the foot never buries a building")
+        self.assertGreater(foot["to"] - foot["from"], 4, "a slope, not a step")
+
 
 class Wheel(unittest.TestCase):
     def test_slices_are_sized_by_their_odds(self):

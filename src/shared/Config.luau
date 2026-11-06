@@ -30,10 +30,10 @@ Config.PileDome = 2.5 -- above 1: the sides stay wide for longer, then round ove
 Config.PileCurve = 0.7 -- below 1: a fuller, rounder top
 Config.HeapColour = { 238, 196, 66 } -- golden yellow
 Config.HeapMaterial = "Limestone" -- the heap's own terrain material (nothing else uses it): pale, so it takes the gold well
+Config.HeapSkirt = { from = 43, to = 49, height = 14 } -- the heap's drawn foot: hay sloping from `from` (`height` high) to the ground at `to`
 Config.HeapLumpiness = 0.45 -- 0 = a smooth dome; higher = a lumpier, more hay-like surface
--- Your hay texture: upload garden-hay.jpg (and its normal map) in Studio (Asset Manager > Import),
--- paste the IDs here ("rbxassetid://123"), rebuild. The heap, the hay on tools and the bundles
--- then wear it. Empty = plain straw-gold Grass.
+-- Your hay texture: upload it (and its normal map) in Studio (Asset Manager > Import), paste the IDs
+-- here ("rbxassetid://123"), rebuild: the heap, hay on tools and bundles wear it. Empty = plain gold.
 Config.HayTexture = ""
 Config.HayNormal = ""
 Config.HayTextureStuds = 5 -- how many studs one copy of the texture covers

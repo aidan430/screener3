@@ -576,3 +576,12 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   that material, on the server and on each screen after every full draw. When a hay texture is
   uploaded (Config.HayTexture), the place file now gets a variant for the heap's material too.
   The Grass terrain's straw "blades" are gone with it.
+
+## The heap's foot flows into the ground (2026-11-06)
+- The bottom layer of clumps is trimmed (to keep exactly 5,000), so it was narrower than the
+  layer above: a lip with a dark band under it. Changing the clump layout would renumber
+  everyone's saved heap, so instead each screen draws a foot of hay in the cells no clump uses
+  (HeapTerrain.draw): full against the heap's wall, sloping to the ground at
+  Config.HeapSkirt = { from = 43, to = 49, height = 14 }, like the foot of a hill. It is only
+  drawn, never harvested (aiming at it digs the nearest clump), stays inside BuildClear (50) so
+  it never buries a building, and never refills a clump you dug out.

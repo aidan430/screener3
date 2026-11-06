@@ -50,7 +50,21 @@ return function(Config)
 
 	local function span()
 		local s = Config.ClumpSize
-		return s, math.ceil(Config.PileRadiusBottom / s) + 1
+		return s, math.ceil(math.max(Config.PileRadiusBottom, Config.HeapSkirt.to) / s) + 1
+	end
+
+	-- How full the heap's foot is at grid cell (gx, layer, gz), where there's no clump (0..1):
+	-- full near the heap, thinning to nothing at HeapSkirt.to, so the sides meet the ground in a
+	-- smooth slope instead of a step.
+	local function foot(gx, layer, gz)
+		local skirt, s = Config.HeapSkirt, Config.ClumpSize
+		local d = math.sqrt(gx * gx + gz * gz) * s
+		if d >= skirt.to then
+			return 0
+		end
+		local share = math.clamp((d - skirt.from) / (skirt.to - skirt.from), 0, 1)
+		local height = skirt.height * (1 - share) ^ 1.6
+		return math.clamp((height - layer * s) / s, 0, 1)
 	end
 
 	-- The whole heap, from the save's `removed` string and `partial` table.
@@ -71,6 +85,16 @@ return function(Config)
 			if amount > 0 then
 				local x, y, z = cell[1] + n + 1, cell[2] + 1, cell[3] + n + 1
 				materials[x][y][z], amounts[x][y][z] = HEAP, amount
+			end
+		end
+		for gx = -n, n do -- the foot, in cells no clump uses (so a dug-out clump never refills)
+			for gz = -n, n do
+				for layer = 0, math.ceil(Config.HeapSkirt.height / s) - 1 do
+					local amount = if Layout.lookup(gx, layer, gz) then 0 else foot(gx, layer, gz)
+					if amount > 0.05 then
+						materials[gx + n + 1][layer + 1][gz + n + 1], amounts[gx + n + 1][layer + 1][gz + n + 1] = HEAP, amount
+					end
+				end
 			end
 		end
 		local corner = o - Vector3.new(n * s + s / 2, 0, n * s + s / 2)
