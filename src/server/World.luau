@@ -1,6 +1,6 @@
 -- Hollow Creek Farm: four plots around a hub with the merchant, the Wheel of Fortune and the
--- golden door to the secret Golden Loft. Sunset light, and a wide ring of countryside (see
--- Scenery) inside the fence and tree line.
+-- golden door to the secret Golden Loft. Sunset light, and a close ring of countryside (see
+-- Scenery) packed round the plots, inside the fence and tree line.
 local Lighting = game:GetService("Lighting")
 
 local Build = require(script.Parent.Build)
@@ -10,8 +10,8 @@ local World = {}
 local terrain = workspace.Terrain
 local AUTUMN = { { 214, 120, 40 }, { 196, 72, 44 }, { 232, 176, 54 }, { 150, 150, 58 } }
 local WOOD = { 122, 86, 52 }
-local GROUND = 1000 -- the ground is GROUND x GROUND studs
-local FENCE = 480 -- the boundary fence, this far from the hub on each axis
+local GROUND = 520 -- the ground is GROUND x GROUND studs
+local FENCE = 245 -- the boundary fence, this far from the hub on each axis
 
 World.MERCHANT = Vector3.new(0, 0, -36) -- on the north road
 World.WHEEL = Vector3.new(0, 0, 36) -- on the south road
@@ -41,15 +41,18 @@ function World.ground()
 	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(30, 4, 330), Enum.Material.Ground)
 	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(330, 4, 30), Enum.Material.Ground)
 	terrain:FillCylinder(CFrame.new(0, -2, 0), 4, 22, Enum.Material.Cobblestone)
-	-- soft hills just past the edge of the ground, so the world fades into countryside
+	-- a few soft hills just past the edge of the ground, so the world fades into countryside
 	local rng = Random.new(11)
-	for i = -4, 4 do
+	for i = -2, 2 do
 		for _, side in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
-			local along = i * 150 + rng:NextNumber(-20, 20)
-			local out = GROUND / 2 + 90
-			local centre = if side[1] ~= 0 then Vector3.new(side[1] * out, -50, along) else Vector3.new(along, -50, side[2] * out)
-			terrain:FillBall(centre, rng:NextNumber(110, 130), Enum.Material.LeafyGrass)
+			local along = i * 120 + rng:NextNumber(-12, 12)
+			local out = GROUND / 2 + 45 -- low enough at the fence that it stays clear
+			local centre = if side[1] ~= 0 then Vector3.new(side[1] * out, -40, along) else Vector3.new(along, -40, side[2] * out)
+			terrain:FillBall(centre, rng:NextNumber(58, 72), Enum.Material.LeafyGrass)
 		end
+	end
+	for _, c in ipairs({ { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } }) do
+		terrain:FillBall(Vector3.new(c[1] * (GROUND / 2 + 30), -40, c[2] * (GROUND / 2 + 30)), rng:NextNumber(62, 70), Enum.Material.LeafyGrass)
 	end
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "Spawn"
@@ -101,9 +104,9 @@ local function fence(folder)
 	local gate = 14 -- a gap where the north lane leaves the farm
 	for _, side in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
 		local gated = side[2] == -1
-		local count = FENCE // 10
+		local count = math.ceil(FENCE / 10)
 		for i = -count, count do
-			local along = i * 10
+			local along = i * FENCE / count
 			if not (gated and math.abs(along) < gate) then
 				local pos = if side[1] ~= 0 then Vector3.new(side[1] * FENCE, 0, along) else Vector3.new(along, 0, side[2] * FENCE)
 				Build.part({ name = "Post", size = Vector3.new(1.2, 5, 1.2), cframe = CFrame.new(pos + Vector3.new(0, 2.5, 0)), color = WOOD, material = "Wood", parent = folder })
@@ -121,14 +124,14 @@ local function fence(folder)
 	end
 end
 
--- The tree line: a band of autumn trees just inside the fence and another just outside it.
+-- The tree line: a band of autumn trees just outside the fence, against the hills.
 local function trees(folder)
 	local rng = Random.new(7)
 	local half = GROUND / 2
-	for i = 1, 150 do
-		local depth = if i % 2 == 0 then rng:NextNumber(FENCE - 28, FENCE - 8) else rng:NextNumber(FENCE + 8, half - 4)
-		local along = rng:NextNumber(-half + 4, half - 4)
-		local side = (i // 2) % 4
+	for i = 1, 112 do
+		local depth = rng:NextNumber(FENCE + 5, half - 2)
+		local along = rng:NextNumber(-half + 2, half - 2)
+		local side = i % 4
 		local x, z = if side < 2 then (side * 2 - 1) * depth else along, if side < 2 then along else (side * 2 - 5) * depth
 		if not (z < 0 and math.abs(x) < 24) then -- keep the north lane clear
 			local base = CFrame.new(x, 0, z)

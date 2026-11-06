@@ -1,13 +1,16 @@
--- The countryside of Hollow Creek Farm, in the wide ring between the plots and the fence:
--- a farmyard (barn, silos, farmhouse) up the north lane, animal pens to the west, pumpkin and
--- corn fields to the east, a duck pond, windmill, water tower and orchard to the south.
--- All plain anchored Parts in workspace.Scenery; animals and windmill sails are animated on
--- each client (client/Animals). Nothing here goes inside the plots or on the roads.
+-- The countryside of Hollow Creek Farm, packed into the ring between the plots and the fence
+-- (about 162 to 238 studs out): a farmyard (silos, barn, farmhouse, chicken run) and the
+-- windmill to the north, animal pens to the west, pumpkin and corn fields to the east, the
+-- water tower, duck pond, a meadow and the orchard to the south, and a split-rail fence round
+-- each plot (SceneryPlots). All plain anchored Parts in workspace.Scenery; animals and windmill
+-- sails are animated on each client (client/Animals). Nothing here goes inside the plots or on
+-- the roads.
 local Build = require(script.Parent.Build)
 local Kit = require(script.Parent.SceneryKit)
 local Props = require(script.Parent.SceneryProps)
 local Nature = require(script.Parent.SceneryNature)
 local Pens = require(script.Parent.SceneryAnimals)
+local PlotFences = require(script.Parent.SceneryPlots)
 
 local Scenery = {}
 local C = Kit.C
@@ -207,13 +210,15 @@ function Scenery.build()
 	folder.Parent = workspace
 	local jobs = {
 		{ "lanes and pond", function() Nature.terrain() end },
-		{ "barn", function() barn(folder, facing(-95, -262, -95, 0)) end },
+		{ "barn", function() barn(folder, facing(-125, -205, -125, 0)) end },
 		{ "silos", function()
-			silo(folder, CFrame.new(-138, 0, -272), 16, 46)
-			silo(folder, CFrame.new(-138, 0, -250), 14, 40)
+			silo(folder, CFrame.new(-202, 0, -190), 16, 46)
+			silo(folder, CFrame.new(-202, 0, -214), 14, 40)
+			silo(folder, CFrame.new(-180, 0, -204), 12, 34)
 		end },
-		{ "farmhouse", function() farmhouse(folder, facing(85, -258, 85, 0)) end },
-		{ "windmill", function() windmill(folder, facing(112, 255, 0, 0)) end },
+		{ "farmhouse", function() farmhouse(folder, facing(60, -207, 60, 0)) end },
+		{ "windmill", function() windmill(folder, facing(210, -210, 0, 0)) end },
+		{ "plot fences", function() PlotFences.build(folder) end },
 		{ "props", function() Props.build(folder) end },
 		{ "nature", function() Nature.build(folder) end },
 		{ "animals", function() Pens.build(folder) end },

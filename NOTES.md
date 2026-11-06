@@ -264,3 +264,30 @@ The owner created the passes and products (prices: Jetpack 175, Double Machines 
 149, VIP 299; 2x Speed 49, 2x Coins 49, Lucky Charm 29, Straw Blast 99, Whistle x10 25,
 Wheel Spin 25) and their IDs are in `Config.GamePasses` / `Config.Products`. A grant that
 errors now returns NotProcessedYet so Roblox retries it instead of losing the purchase.
+
+## A closer, cosier countryside (2026-11-06)
+Your brief: the land was far too open; bring everything in close round the haystacks.
+- **World (`World.luau`):** ground 1000 x 1000 -> **520 x 520** (+/-260); boundary fence and
+  gate +/-480 -> **+/-245**; the tree line is now one band just outside the fence (112 trees,
+  was 150 in two bands); hills 36 big -> 24 smaller (radius 58-72, sunk so they rise past the
+  ground's edge and stay below the fence). Plots, hub, roads and the north road's merchant,
+  wheel and golden door are untouched.
+- **Everything else sits in the ring 162-238 studs out** (`SceneryKit.RING_IN/RING_OUT`,
+  `KEEP_CLEAR` rebuilt to match). North: three silos (-202,-190 / -202,-214 / -180,-204), the
+  barn (-125,-205), tractor and trailer (-70..-84,-196), bales (-48,-212), the north lane out
+  through the gate at z -245, the farmhouse (60,-207), a cart and mailbox, the chicken run
+  (135,-205, was a west pen) and the windmill in the north-east corner (210,-210). A dirt
+  farmyard lane runs along z -169. West: pens lined up on a lane at x -164 (pigs -194,-120;
+  cows -202,-40; sheep -198,45), then bales and a cart. South: the water tower in the south-west
+  corner (-205,205), the duck pond (-100,205, radius 24, was 30; terrain water carved there),
+  a meadow with bales, a cart and a scarecrow round (0,205), and the orchard (10 x 3 trees,
+  was 6 x 6) from x 48 to 228. East: pumpkin patch (x 175-237, z -153..-29), a meadow with
+  bales and a cart at z 0, corn rows (z 30..154), each field with a scarecrow. Lanterns line
+  the lanes; 70 trees and bushes fill whatever gaps are left.
+- **Plot fences (`SceneryPlots.luau`, new):** a low split-rail fence 1.2 studs outside each
+  plot's edge, open for 16 studs either side of the hub corner (the entrance), with a lantern
+  and three small bales there on the north/south road side. Road sides are walk-through; only
+  the sides facing the countryside are solid. Nothing is on the east/west road's middle
+  (|z| < 13), kept clear for the hub's portal arches.
+- Animals keep their PenMin/PenMax attributes from the new pens; `client/Animals` needed no
+  change (it finds the windmill and animals by name).

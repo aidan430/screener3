@@ -4060,16 +4060,19 @@ return Profile
 			<Item class="ModuleScript" referent="RBX00034">
 				<Properties>
 					<string name="Name">Scenery</string>
-					<ProtectedString name="Source"><![CDATA[-- The countryside of Hollow Creek Farm, in the wide ring between the plots and the fence:
--- a farmyard (barn, silos, farmhouse) up the north lane, animal pens to the west, pumpkin and
--- corn fields to the east, a duck pond, windmill, water tower and orchard to the south.
--- All plain anchored Parts in workspace.Scenery; animals and windmill sails are animated on
--- each client (client/Animals). Nothing here goes inside the plots or on the roads.
+					<ProtectedString name="Source"><![CDATA[-- The countryside of Hollow Creek Farm, packed into the ring between the plots and the fence
+-- (about 162 to 238 studs out): a farmyard (silos, barn, farmhouse, chicken run) and the
+-- windmill to the north, animal pens to the west, pumpkin and corn fields to the east, the
+-- water tower, duck pond, a meadow and the orchard to the south, and a split-rail fence round
+-- each plot (SceneryPlots). All plain anchored Parts in workspace.Scenery; animals and windmill
+-- sails are animated on each client (client/Animals). Nothing here goes inside the plots or on
+-- the roads.
 local Build = require(script.Parent.Build)
 local Kit = require(script.Parent.SceneryKit)
 local Props = require(script.Parent.SceneryProps)
 local Nature = require(script.Parent.SceneryNature)
 local Pens = require(script.Parent.SceneryAnimals)
+local PlotFences = require(script.Parent.SceneryPlots)
 
 local Scenery = {}
 local C = Kit.C
@@ -4269,13 +4272,15 @@ function Scenery.build()
 	folder.Parent = workspace
 	local jobs = {
 		{ "lanes and pond", function() Nature.terrain() end },
-		{ "barn", function() barn(folder, facing(-95, -262, -95, 0)) end },
+		{ "barn", function() barn(folder, facing(-125, -205, -125, 0)) end },
 		{ "silos", function()
-			silo(folder, CFrame.new(-138, 0, -272), 16, 46)
-			silo(folder, CFrame.new(-138, 0, -250), 14, 40)
+			silo(folder, CFrame.new(-202, 0, -190), 16, 46)
+			silo(folder, CFrame.new(-202, 0, -214), 14, 40)
+			silo(folder, CFrame.new(-180, 0, -204), 12, 34)
 		end },
-		{ "farmhouse", function() farmhouse(folder, facing(85, -258, 85, 0)) end },
-		{ "windmill", function() windmill(folder, facing(112, 255, 0, 0)) end },
+		{ "farmhouse", function() farmhouse(folder, facing(60, -207, 60, 0)) end },
+		{ "windmill", function() windmill(folder, facing(210, -210, 0, 0)) end },
+		{ "plot fences", function() PlotFences.build(folder) end },
 		{ "props", function() Props.build(folder) end },
 		{ "nature", function() Nature.build(folder) end },
 		{ "animals", function() Pens.build(folder) end },
@@ -4295,8 +4300,9 @@ return Scenery
 			<Item class="ModuleScript" referent="RBX00035">
 				<Properties>
 					<string name="Name">SceneryAnimals</string>
-					<ProtectedString name="Source"><![CDATA[-- Animal pens to the west of the plots and the cute blocky animals in them: cows, sheep, pigs,
--- chickens (with their coop) and ducks on the pond. The animals are anchored, walk-through
+					<ProtectedString name="Source"><![CDATA[-- Animal pens just west of the plots and the cute blocky animals in them: pigs, cows and sheep
+-- along the pens' lane, chickens (with their coop) in the farmyard to the north, and ducks on
+-- the pond to the south. The animals are anchored, walk-through
 -- Models (pivot at their feet, facing local -Z); client/Animals moves them gently. Each one
 -- carries attributes: Kind, PenMin/PenMax (where it may wander), HeadHinge/TailHinge (local
 -- points its "Head" and "Tail" parts turn about).
@@ -4492,21 +4498,22 @@ function Pens.build(folder)
 	animals.Name = "Animals"
 	animals.Parent = folder
 	local rng = Random.new(3)
-	local min, max = pen(m, -250, 0, 70, 56) -- cows
-	trough(m, CFrame.new(-280, 0, -18) * CFrame.Angles(0, math.pi / 2, 0), true)
-	trough(m, CFrame.new(-280, 0, 16) * CFrame.Angles(0, math.pi / 2, 0), false)
+	-- each pen's gate (east side) opens onto the pens' lane at x -164; their east fences line up at -170
+	local min, max = pen(m, -202, -40, 64, 60) -- cows
+	trough(m, CFrame.new(-228, 0, -58) * CFrame.Angles(0, math.pi / 2, 0), true)
+	trough(m, CFrame.new(-228, 0, -24) * CFrame.Angles(0, math.pi / 2, 0), false)
 	herd(animals, rng, 4, min, max, cow)
-	min, max = pen(m, -245, 72, 50, 40) -- sheep
-	trough(m, CFrame.new(-245, 0, 89), true)
+	min, max = pen(m, -198, 45, 56, 48) -- sheep
+	trough(m, CFrame.new(-198, 0, 63), true)
 	herd(animals, rng, 4, min, max, sheep)
-	min, max = pen(m, -240, -82, 40, 32) -- pigs, with their mud
-	trough(m, CFrame.new(-240, 0, -95), false)
+	min, max = pen(m, -194, -120, 48, 40) -- pigs, with their mud
+	trough(m, CFrame.new(-188, 0, -134), false)
 	herd(animals, rng, 3, min, max, pig)
-	min, max = pen(m, -235, 135, 40, 34) -- chickens and their coop
-	coop(m, CFrame.lookAt(Vector3.new(-249, 0, 135), Vector3.new(0, 0, 135)))
+	min, max = pen(m, 135, -205, 48, 40) -- chickens and their coop, in the farmyard
+	coop(m, CFrame.lookAt(Vector3.new(121, 0, -205), Vector3.new(160, 0, -205)))
 	herd(animals, rng, 9, min + Vector3.new(8, 0, 0), max, chicken)
-	-- ducks paddle about the pond (it is centred at -90, 268, radius 30; the dock is on its north side)
-	herd(animals, rng, 4, Vector3.new(-107, -1.1, 257), Vector3.new(-73, -1.1, 285), duck)
+	-- ducks paddle about the pond (centred at -100, 205, radius 24; the dock is on its north side)
+	herd(animals, rng, 4, Vector3.new(-114, -1.1, 198), Vector3.new(-86, -1.1, 218), duck)
 end
 
 return Pens
@@ -4542,21 +4549,32 @@ Kit.C = {
 }
 Kit.AUTUMN = { { 214, 120, 40 }, { 196, 72, 44 }, { 232, 176, 54 }, { 150, 150, 58 }, { 178, 96, 40 } }
 
+-- The countryside fills the ring between the plots (which end at 155, their fences at 156.5)
+-- and the boundary fence at 245. Nothing is built nearer the centre than RING_IN.
+Kit.RING_IN = 162
+Kit.RING_OUT = 238
+
 -- Areas kept clear of trees and bushes: the plots and hub, lanes, buildings, pens, fields.
 -- Each is { minX, minZ, maxX, maxZ }.
 Kit.KEEP_CLEAR = {
-	{ -172, -172, 172, 172 }, -- plots, roads and hub
-	{ -16, -500, 16, -160 }, -- north lane to the gate
-	{ -180, -310, 135, -195 }, -- farmyard: barn, silos, farmhouse, tractor
-	{ -300, -110, -160, 170 }, -- animal pens and their path
-	{ -215, -160, -175, -120 }, -- bales by the pens
-	{ 180, -125, 320, 135 }, -- pumpkin and corn fields
-	{ 300, -170, 340, -130 }, -- bales by the fields
-	{ -140, 215, -30, 320 }, -- duck pond
-	{ 80, 215, 145, 295 }, -- windmill
-	{ -300, 225, -240, 290 }, -- water tower
-	{ 200, 190, 410, 410 }, -- orchard
-	{ 20, 195, 60, 235 }, -- bales in the south meadow
+	{ -162, -162, 162, 162 }, -- plots, their fences, roads and hub
+	{ -14, -262, 14, -160 }, -- north lane to the gate, its lanterns and the mailbox
+	{ -195, -175, 150, -163 }, -- farmyard lane
+	{ -213, -225, -171, -179 }, -- silos
+	{ -150, -235, -100, -168 }, -- barn
+	{ -94, -203, -61, -187 }, -- tractor and trailer
+	{ -56, -224, -40, -199 }, -- bales
+	{ 38, -226, 82, -176 }, -- farmhouse
+	{ 89, -193, 103, -176 }, -- cart by the farmhouse
+	{ 108, -228, 162, -182 }, -- chicken run
+	{ 186, -234, 234, -186 }, -- windmill
+	{ -238, -146, -159, 74 }, -- pig, cow and sheep pens and their lane
+	{ -216, 100, -174, 148 }, -- bales and cart past the sheep
+	{ -216, 192, -192, 220 }, -- water tower
+	{ -134, 164, -58, 238 }, -- duck pond
+	{ -34, 184, 36, 222 }, -- south meadow: bales, cart, scarecrow
+	{ 38, 164, 240, 240 }, -- orchard
+	{ 166, -160, 240, 160 }, -- pumpkin patch, east meadow, corn rows
 }
 
 function Kit.clear(x, z, margin)
@@ -4646,7 +4664,8 @@ return Kit
 				<Properties>
 					<string name="Name">SceneryNature</string>
 					<ProtectedString name="Source"><![CDATA[-- The living countryside (see Scenery): dirt lanes, the duck pond, the pumpkin and corn
--- fields, an apple orchard, and autumn trees and bushes scattered wherever the farm is clear.
+-- fields, an apple orchard, and autumn trees and bushes filling every gap left in the ring
+-- between the plots and the fence (Kit.RING_IN to Kit.RING_OUT).
 -- Terrain Grass is never used here (it is kept for the straw heaps).
 local Kit = require(script.Parent.SceneryKit)
 
@@ -4656,8 +4675,8 @@ local part, bit = Kit.part, Kit.bit
 local terrain = workspace.Terrain
 local ORIGIN = CFrame.new()
 
-Nature.POND = Vector3.new(-90, 0, 268)
-Nature.POND_RADIUS = 30
+Nature.POND = Vector3.new(-100, 0, 205)
+Nature.POND_RADIUS = 24
 Nature.WATER_Y = -1
 
 local function dirt(x, z, sx, sz, material)
@@ -4665,15 +4684,14 @@ local function dirt(x, z, sx, sz, material)
 end
 
 function Nature.terrain()
-	dirt(0, -332.5, 16, 335) -- the north lane, from the end of the road out through the gate
-	dirt(-5, -216, 210, 12) -- the farmyard lane, barn to farmhouse
-	dirt(-95, -229, 24, 14) -- in front of the barn doors
-	dirt(85, -228.5, 6, 13) -- up to the farmhouse steps
-	dirt(-190, 0, 50, 10) -- from the west road to the pens
-	dirt(-208, 25, 8, 250) -- along the pen gates
-	dirt(250, -70, 110, 90) -- the pumpkin patch
-	dirt(250, 75, 110, 100) -- the corn rows
-	dirt(-240, -84, 16, 12, Enum.Material.Mud) -- the pigs' favourite mud
+	dirt(0, -210, 16, 100) -- the north lane, from the end of the road out through the gate
+	dirt(-22, -169, 336, 8) -- the farmyard lane, silos to chicken run
+	dirt(-125, -175.5, 20, 5) -- in front of the barn doors
+	dirt(60, -178.5, 6, 11) -- up to the farmhouse steps
+	dirt(-164, 0, 8, 290) -- the pens' lane, along their gates
+	dirt(206, -91, 62, 124) -- the pumpkin patch
+	dirt(206, 92, 62, 124) -- the corn rows
+	dirt(-200, -127, 16, 12, Enum.Material.Mud) -- the pigs' favourite mud
 	local pond = Nature.POND
 	terrain:FillCylinder(CFrame.new(pond.X, -4, pond.Z), 8, Nature.POND_RADIUS + 4, Enum.Material.Mud)
 	terrain:FillCylinder(CFrame.new(pond.X, -3, pond.Z), 6, Nature.POND_RADIUS, Enum.Material.Air)
@@ -4705,17 +4723,21 @@ local function wilds(folder)
 	local m = Kit.model(folder, "Trees")
 	local rng = Random.new(23)
 	local planted = 0
-	for _ = 1, 400 do
-		local x, z = rng:NextNumber(-445, 445), rng:NextNumber(-445, 445)
-		if planted < 80 and Kit.clear(x, z, 10) then
+	local edge = Kit.RING_OUT - 2
+	local function inRing(x, z, margin)
+		return math.max(math.abs(x), math.abs(z)) > Kit.RING_IN + margin and Kit.clear(x, z, margin)
+	end
+	for _ = 1, 700 do
+		local x, z = rng:NextNumber(-edge, edge), rng:NextNumber(-edge, edge)
+		if planted < 70 and inRing(x, z, 8) then
 			tree(m, CFrame.new(x, 0, z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), rng, rng:NextNumber(10, 18))
 			planted += 1
 		end
 	end
 	local bushes = Kit.model(folder, "Bushes")
-	for _ = 1, 300 do
-		local x, z = rng:NextNumber(-450, 450), rng:NextNumber(-450, 450)
-		if Kit.clear(x, z, 4) then
+	for _ = 1, 600 do
+		local x, z = rng:NextNumber(-edge, edge), rng:NextNumber(-edge, edge)
+		if inRing(x, z, 3) then
 			bush(bushes, CFrame.new(x, 0, z), rng)
 		end
 	end
@@ -4724,8 +4746,8 @@ end
 local function orchard(folder)
 	local m = Kit.model(folder, "Orchard")
 	local rng = Random.new(5)
-	for x = 225, 385, 32 do
-		for z = 225, 385, 32 do
+	for x = 48, 228, 20 do -- a smaller orchard: ten trees by three rows, south-east
+		for z = 182, 226, 22 do
 			local base = CFrame.new(x + rng:NextNumber(-2, 2), 0, z + rng:NextNumber(-2, 2))
 			Kit.post(m, base, "Trunk", Vector3.zero, 7, 1.6, { 104, 72, 48 }, "Wood")
 			for _, o in ipairs({ { -1.5, 8, 0, 9 }, { 1.6, 9, 0.8, 8 } }) do
@@ -4746,11 +4768,11 @@ end
 local function pumpkins(folder)
 	local m = Kit.model(folder, "PumpkinPatch")
 	local rng = Random.new(31)
-	for x = 205, 295, 11 do
-		part(m, ORIGIN, "Row", Vector3.new(3, 0.6, 84), Vector3.new(x, 0.3, -70), C.soil, "Sand", { collide = false })
-		bit(m, ORIGIN, "Vine", Vector3.new(1.4, 0.3, 82), Vector3.new(x, 0.7, -70), { 92, 118, 50 }, "Fabric")
-		for z = -108, -32, 7 do
-			local far = math.abs(x - 250) > 4 or math.abs(z + 70) > 4 -- leave room for the scarecrow
+	for x = 180, 234, 9 do
+		part(m, ORIGIN, "Row", Vector3.new(3, 0.6, 118), Vector3.new(x, 0.3, -91), C.soil, "Sand", { collide = false })
+		bit(m, ORIGIN, "Vine", Vector3.new(1.4, 0.3, 116), Vector3.new(x, 0.7, -91), { 92, 118, 50 }, "Fabric")
+		for z = -147, -35, 7 do
+			local far = math.abs(x - 207) > 4 or math.abs(z + 91) > 4 -- leave room for the scarecrow
 			if far and rng:NextNumber() < 0.75 then
 				local s = rng:NextNumber(1.8, 3.2)
 				local tone = { 232 + rng:NextInteger(-12, 12), 124 + rng:NextInteger(-20, 20), 36 }
@@ -4765,9 +4787,12 @@ end
 local function corn(folder)
 	local m = Kit.model(folder, "CornRows")
 	local rng = Random.new(41)
-	for x = 200, 296, 8 do
-		part(m, ORIGIN, "Row", Vector3.new(2.4, 0.5, 96), Vector3.new(x, 0.25, 75), C.soil, "Sand", { collide = false })
-		for z = 30, 120, 4.5 do
+	for x = 179, 235, 8 do
+		part(m, ORIGIN, "Row", Vector3.new(2.4, 0.5, 118), Vector3.new(x, 0.25, 92), C.soil, "Sand", { collide = false })
+		for z = 35, 149, 4.5 do
+			if math.abs(x - 207) < 6 and math.abs(z - 92) < 5 then
+				continue -- room for the scarecrow
+			end
 			local h = rng:NextNumber(6.5, 9)
 			local base = CFrame.new(x + rng:NextNumber(-0.4, 0.4), 0, z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0)
 			bit(m, base, "Stalk", Vector3.new(0.45, h, 0.45), Vector3.new(0, h / 2, 0), { 188, 168, 82 }, "Fabric")
@@ -4833,6 +4858,79 @@ return Nature
 				</Properties>
 			</Item>
 			<Item class="ModuleScript" referent="RBX00038">
+				<Properties>
+					<string name="Name">SceneryPlots</string>
+					<ProtectedString name="Source"><![CDATA[-- A low split-rail fence round each plot, just outside its edge, with a gap at the corner
+-- nearest the hub (the plot entrance, where players arrive). A lantern and a few small hay
+-- bales stand by the gap. Everything sits on the 1-3 stud border outside the plot, so the
+-- plot itself stays free to build on. The road sides are walk-through (step onto your plot
+-- anywhere); only the outer sides, facing the countryside, are solid. See Scenery.
+local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
+local Kit = require(script.Parent.SceneryKit)
+
+local PlotFences = {}
+local C = Kit.C
+local part, bit = Kit.part, Kit.bit
+local ORIGIN = CFrame.new()
+local OUT = 1.2 -- the fence line, this far outside the plot's edge
+local GAP = 16 -- the entrance: no fence this far along each edge from the hub corner
+local POST_STEP = 8
+
+-- One straight run of fence from a to b (world points on the ground).
+local function run(m, a, b, solid)
+	local length = (b - a).Magnitude
+	local n = math.max(1, math.floor(length / POST_STEP + 0.5))
+	for i = 0, n do
+		local at = a:Lerp(b, i / n)
+		part(m, ORIGIN, "RailPost", Vector3.new(0.6, 3.2, 0.6), at + Vector3.new(0, 1.6, 0), C.darkWood, "Wood", { collide = solid, shadow = false })
+	end
+	local mid = (a + b) / 2
+	for k, y in ipairs({ 1.2, 2.5 }) do
+		-- split rails: each one a touch askew, as if laid by hand
+		local tilt = CFrame.Angles(0, 0, math.rad(if k == 1 then 4 else -3))
+		part(m, ORIGIN, "SplitRail", Vector3.new(0.35, 0.35, length), CFrame.lookAt(mid + Vector3.new(0, y, 0), b + Vector3.new(0, y, 0)) * tilt, C.wood, "Wood", { collide = solid, shadow = false })
+	end
+end
+
+-- A small square bale lying along the border.
+local function bale(m, at, alongX, high)
+	local size = if alongX then Vector3.new(2.4, 1.3, 1.4) else Vector3.new(1.4, 1.3, 2.4)
+	part(m, ORIGIN, "SmallBale", size, at + Vector3.new(0, 0.65 + (if high then 1.3 else 0), 0), C.hay, "Fabric", { collide = false })
+	bit(m, ORIGIN, "BaleTwine", size + (if alongX then Vector3.new(-1.6, 0.05, 0.05) else Vector3.new(0.05, 0.05, -1.6)), at + Vector3.new(0, 0.65 + (if high then 1.3 else 0), 0), { 150, 104, 60 }, "Fabric")
+end
+
+local function plotFence(folder, index, centre)
+	local m = Kit.model(folder, "PlotFence" .. index)
+	local sx, sz = math.sign(centre.X), math.sign(centre.Z)
+	local half = Config.PlotSize / 2
+	local inX, outX = centre.X - sx * (half + OUT), centre.X + sx * (half + OUT) -- road side, far side
+	local inZ, outZ = centre.Z - sz * (half + OUT), centre.Z + sz * (half + OUT)
+	local cornerX, cornerZ = centre.X - sx * half, centre.Z - sz * half -- the hub corner
+	run(m, Vector3.new(inX, 0, cornerZ + sz * GAP), Vector3.new(inX, 0, outZ), false)
+	run(m, Vector3.new(cornerX + sx * GAP, 0, inZ), Vector3.new(outX, 0, inZ), false)
+	run(m, Vector3.new(outX, 0, inZ), Vector3.new(outX, 0, outZ), true)
+	run(m, Vector3.new(inX, 0, outZ), Vector3.new(outX, 0, outZ), true)
+	-- the entrance: a lantern on the last post by the north/south road, bales just past it
+	Kit.lantern(m, CFrame.new(inX, 0, cornerZ + sz * GAP), 4.5)
+	local bx = centre.X - sx * (half + 2.2)
+	bale(m, Vector3.new(bx, 0, cornerZ + sz * (GAP + 2)), false, false)
+	bale(m, Vector3.new(bx, 0, cornerZ + sz * (GAP + 4.6)), false, false)
+	bale(m, Vector3.new(bx, 0, cornerZ + sz * (GAP + 3.3)), false, true)
+	-- (nothing extra on the east/west road side: the middle of those roads, |z| < 13, stays clear)
+end
+
+function PlotFences.build(folder)
+	local m = Kit.model(folder, "PlotFences")
+	for index, c in ipairs(Config.PlotCentres) do
+		plotFence(m, index, Vector3.new(c[1], 0, c[2]))
+	end
+end
+
+return PlotFences
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00039">
 				<Properties>
 					<string name="Name">SceneryProps</string>
 					<ProtectedString name="Source"><![CDATA[-- Farm props for the countryside (see Scenery): a tractor and trailer, carts, round hay bales,
@@ -4982,7 +5080,7 @@ end
 -- The gate arch where the north lane leaves the farm, and the farm's name over it.
 local function gate(parent)
 	local m = Kit.model(parent, "FarmGate")
-	local base = facing(0, -478, 0, 0) -- the sign faces into the farm
+	local base = facing(0, -243, 0, 0) -- the sign faces into the farm
 	for _, x in ipairs({ -13, 13 }) do
 		part(m, base, "GatePost", Vector3.new(1.6, 15, 1.6), Vector3.new(x, 7.5, 0), C.darkWood, "Wood")
 		Kit.lantern(m, base * CFrame.new(x * 1.25, 0, -1), 6)
@@ -4994,29 +5092,37 @@ end
 
 function Props.build(folder)
 	local m = Kit.model(folder, "Props")
-	Props.tractor(m, facing(-40, -242, 100, -242))
-	Props.trailer(m, facing(-54, -242, 100, -242))
-	Props.cart(m, facing(116, -230, 116, 0), C.pumpkin)
-	Props.cart(m, facing(186, -6, 0, -6), C.pumpkin)
-	Props.cart(m, facing(-44, 238, 0, 0), { 196, 54, 44 })
-	for _, p in ipairs({ { -35, -284 }, { -195, -140 }, { 320, -150 }, { 40, 215 } }) do
+	-- the farmyard, north
+	Props.tractor(m, facing(-70, -196, 100, -196))
+	Props.trailer(m, facing(-84, -196, 100, -196))
+	Props.cart(m, facing(96, -186, 96, 0), C.pumpkin)
+	Props.mailbox(m, facing(11, -180, 0, -180))
+	-- the east meadow between the fields, the south meadow and the west, past the sheep
+	Props.cart(m, facing(186, 0, 0, 0), C.pumpkin)
+	Props.cart(m, facing(-26, 194, 0, 0), { 196, 54, 44 })
+	Props.cart(m, facing(-184, 140, 0, 140), C.hay)
+	for _, p in ipairs({ { -48, -212 }, { 220, 0 }, { 2, 208 }, { -205, 108 } }) do
 		Props.bales(m, facing(p[1], p[2], 0, 0))
 	end
-	Props.scarecrow(m, facing(250, -70, 0, -70))
-	Props.scarecrow(m, facing(252, 76, 0, 76))
-	Props.mailbox(m, facing(-12, -196, 0, -196))
-	Props.waterTower(m, facing(-270, 258, 0, 0))
+	Props.scarecrow(m, facing(207, -91, 0, -91))
+	Props.scarecrow(m, facing(207, 92, 0, 92))
+	Props.scarecrow(m, facing(28, 196, 0, 0))
+	Props.waterTower(m, facing(-205, 205, 0, 0))
 	gate(m)
-	for i, z in ipairs({ -180, -245, -300, -350, -400, -450 }) do
+	for i, z in ipairs({ -186, -210, -234 }) do
 		Kit.lantern(m, CFrame.new(if i % 2 == 0 then 11 else -11, 0, z), 7)
 	end
+	-- lanterns along the farmyard lane, the pens' lane and the south meadow
+	for _, p in ipairs({ { -150, -162 }, { -90, -162 }, { -30, -162 }, { 30, -162 }, { 100, -162 }, { -173, -86 }, { -173, 16 }, { -173, 78 }, { -50, 166 }, { 30, 166 }, { 168, -160 }, { 168, 160 } }) do
+		Kit.lantern(m, CFrame.new(p[1], 0, p[2]), 6)
+	end
 	for _, s in ipairs({
-		{ "Farmyard", 14, -200 },
-		{ "Pumpkin Patch", 188, -40 },
-		{ "Corn Rows", 188, 40 },
-		{ "Duck Pond", -50, 226 },
-		{ "Meadow Pens", -180, 14 },
-		{ "Orchard", 212, 204 },
+		{ "Farmyard", 19, -172 },
+		{ "Pumpkin Patch", 172, -24 },
+		{ "Corn Rows", 172, 24 },
+		{ "Duck Pond", -64, 170 },
+		{ "Meadow Pens", -180, 6 },
+		{ "Orchard", 44, 170 },
 	}) do
 		Kit.sign(m, facing(s[2], s[3], 0, 0), s[1], 10)
 	end
@@ -5026,7 +5132,7 @@ return Props
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00039">
+			<Item class="ModuleScript" referent="RBX0003A">
 				<Properties>
 					<string name="Name">Search</string>
 					<ProtectedString name="Source"><![CDATA[-- The loop: click the clump you're looking at to harvest it onto your tool, sell at the
@@ -5291,7 +5397,7 @@ return Search
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003A">
+			<Item class="ModuleScript" referent="RBX0003B">
 				<Properties>
 					<string name="Name">Shop</string>
 					<ProtectedString name="Source"><![CDATA[-- Buying with coins: tools and silos (in order), perks for the tool you hold, and
@@ -5522,7 +5628,7 @@ return Shop
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003B">
+			<Item class="ModuleScript" referent="RBX0003C">
 				<Properties>
 					<string name="Name">Stamina</string>
 					<ProtectedString name="Source"><![CDATA[-- Stamina: each harvest click spends some (Config.Stamina) and it refills all the time. Out of
@@ -5658,7 +5764,7 @@ return Stamina
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003C">
+			<Item class="ModuleScript" referent="RBX0003D">
 				<Properties>
 					<string name="Name">Structures</string>
 					<ProtectedString name="Source"><![CDATA[-- Free building on your own plot: place pieces, machines and generators you've bought, take
@@ -5844,7 +5950,7 @@ return Structures
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003D">
+			<Item class="ModuleScript" referent="RBX0003E">
 				<Properties>
 					<string name="Name">ToolLook</string>
 					<ProtectedString name="Source"><![CDATA[-- Tools that wear a model you imported in Studio (Config.Tools[n].model = its asset ID).
@@ -5902,7 +6008,7 @@ return ToolLook
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003E">
+			<Item class="ModuleScript" referent="RBX0003F">
 				<Properties>
 					<string name="Name">Tools</string>
 					<ProtectedString name="Source"><![CDATA[-- The search tools: a pitchfork-shaped Tool per level, coloured from Config.Tools.
@@ -6057,7 +6163,7 @@ return Tools
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003F">
+			<Item class="ModuleScript" referent="RBX00040">
 				<Properties>
 					<string name="Name">Wheel</string>
 					<ProtectedString name="Source"><![CDATA[-- The Wheel of Fortune: one Robux spin (the WheelSpin product) = one prize, picked here on the
@@ -6131,12 +6237,12 @@ return Wheel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00040">
+			<Item class="ModuleScript" referent="RBX00041">
 				<Properties>
 					<string name="Name">World</string>
 					<ProtectedString name="Source"><![CDATA[-- Hollow Creek Farm: four plots around a hub with the merchant, the Wheel of Fortune and the
--- golden door to the secret Golden Loft. Sunset light, and a wide ring of countryside (see
--- Scenery) inside the fence and tree line.
+-- golden door to the secret Golden Loft. Sunset light, and a close ring of countryside (see
+-- Scenery) packed round the plots, inside the fence and tree line.
 local Lighting = game:GetService("Lighting")
 
 local Build = require(script.Parent.Build)
@@ -6146,8 +6252,8 @@ local World = {}
 local terrain = workspace.Terrain
 local AUTUMN = { { 214, 120, 40 }, { 196, 72, 44 }, { 232, 176, 54 }, { 150, 150, 58 } }
 local WOOD = { 122, 86, 52 }
-local GROUND = 1000 -- the ground is GROUND x GROUND studs
-local FENCE = 480 -- the boundary fence, this far from the hub on each axis
+local GROUND = 520 -- the ground is GROUND x GROUND studs
+local FENCE = 245 -- the boundary fence, this far from the hub on each axis
 
 World.MERCHANT = Vector3.new(0, 0, -36) -- on the north road
 World.WHEEL = Vector3.new(0, 0, 36) -- on the south road
@@ -6177,15 +6283,18 @@ function World.ground()
 	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(30, 4, 330), Enum.Material.Ground)
 	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(330, 4, 30), Enum.Material.Ground)
 	terrain:FillCylinder(CFrame.new(0, -2, 0), 4, 22, Enum.Material.Cobblestone)
-	-- soft hills just past the edge of the ground, so the world fades into countryside
+	-- a few soft hills just past the edge of the ground, so the world fades into countryside
 	local rng = Random.new(11)
-	for i = -4, 4 do
+	for i = -2, 2 do
 		for _, side in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
-			local along = i * 150 + rng:NextNumber(-20, 20)
-			local out = GROUND / 2 + 90
-			local centre = if side[1] ~= 0 then Vector3.new(side[1] * out, -50, along) else Vector3.new(along, -50, side[2] * out)
-			terrain:FillBall(centre, rng:NextNumber(110, 130), Enum.Material.LeafyGrass)
+			local along = i * 120 + rng:NextNumber(-12, 12)
+			local out = GROUND / 2 + 45 -- low enough at the fence that it stays clear
+			local centre = if side[1] ~= 0 then Vector3.new(side[1] * out, -40, along) else Vector3.new(along, -40, side[2] * out)
+			terrain:FillBall(centre, rng:NextNumber(58, 72), Enum.Material.LeafyGrass)
 		end
+	end
+	for _, c in ipairs({ { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } }) do
+		terrain:FillBall(Vector3.new(c[1] * (GROUND / 2 + 30), -40, c[2] * (GROUND / 2 + 30)), rng:NextNumber(62, 70), Enum.Material.LeafyGrass)
 	end
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "Spawn"
@@ -6237,9 +6346,9 @@ local function fence(folder)
 	local gate = 14 -- a gap where the north lane leaves the farm
 	for _, side in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
 		local gated = side[2] == -1
-		local count = FENCE // 10
+		local count = math.ceil(FENCE / 10)
 		for i = -count, count do
-			local along = i * 10
+			local along = i * FENCE / count
 			if not (gated and math.abs(along) < gate) then
 				local pos = if side[1] ~= 0 then Vector3.new(side[1] * FENCE, 0, along) else Vector3.new(along, 0, side[2] * FENCE)
 				Build.part({ name = "Post", size = Vector3.new(1.2, 5, 1.2), cframe = CFrame.new(pos + Vector3.new(0, 2.5, 0)), color = WOOD, material = "Wood", parent = folder })
@@ -6257,14 +6366,14 @@ local function fence(folder)
 	end
 end
 
--- The tree line: a band of autumn trees just inside the fence and another just outside it.
+-- The tree line: a band of autumn trees just outside the fence, against the hills.
 local function trees(folder)
 	local rng = Random.new(7)
 	local half = GROUND / 2
-	for i = 1, 150 do
-		local depth = if i % 2 == 0 then rng:NextNumber(FENCE - 28, FENCE - 8) else rng:NextNumber(FENCE + 8, half - 4)
-		local along = rng:NextNumber(-half + 4, half - 4)
-		local side = (i // 2) % 4
+	for i = 1, 112 do
+		local depth = rng:NextNumber(FENCE + 5, half - 2)
+		local along = rng:NextNumber(-half + 2, half - 2)
+		local side = i % 4
 		local x, z = if side < 2 then (side * 2 - 1) * depth else along, if side < 2 then along else (side * 2 - 5) * depth
 		if not (z < 0 and math.abs(x) < 24) then -- keep the north lane clear
 			local base = CFrame.new(x, 0, z)
@@ -6348,19 +6457,19 @@ return World
 			</Item>
 		</Item>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX00041">
+	<Item class="StarterPlayer" referent="RBX00042">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX00042">
+		<Item class="StarterPlayerScripts" referent="RBX00043">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX00043">
+			<Item class="Folder" referent="RBX00044">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX00044">
+				<Item class="ModuleScript" referent="RBX00045">
 					<Properties>
 						<string name="Name">Animals</string>
 						<ProtectedString name="Source"><![CDATA[-- Brings the farm's animals to life on this screen only: each one ambles to a new spot in its
@@ -6540,7 +6649,7 @@ return Animals
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00045">
+				<Item class="ModuleScript" referent="RBX00046">
 					<Properties>
 						<string name="Name">BuildMode</string>
 						<ProtectedString name="Source"><![CDATA[-- Free building in first person. Z and C pick from your inventory bar (or press M and click
@@ -6775,7 +6884,7 @@ return BuildMode
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00046">
+				<Item class="ModuleScript" referent="RBX00047">
 					<Properties>
 						<string name="Name">Cursor</string>
 						<ProtectedString name="Source"><![CDATA[-- First person locks the mouse to the centre of the screen. Menus need a pointer, so a
@@ -6824,7 +6933,7 @@ return Cursor
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00047">
+				<Item class="ModuleScript" referent="RBX00048">
 					<Properties>
 						<string name="Name">Detector</string>
 						<ProtectedString name="Source"><![CDATA[-- The metal detector: hold Config.MetalDetector.key to sweep. The client only says "I'm
@@ -6930,7 +7039,7 @@ return Detector
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00048">
+				<Item class="ModuleScript" referent="RBX00049">
 					<Properties>
 						<string name="Name">Goals</string>
 						<ProtectedString name="Source"><![CDATA[-- The guided goal card (top left) and the coins-a-minute line under the coins counter.
@@ -7070,7 +7179,7 @@ return Goals
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00049">
+				<Item class="ModuleScript" referent="RBX0004A">
 					<Properties>
 						<string name="Name">Guide</string>
 						<ProtectedString name="Source"><![CDATA[-- When your tool and bucket are full, a soft golden line runs from you to your trader's
@@ -7132,7 +7241,7 @@ return Guide
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004A">
+				<Item class="ModuleScript" referent="RBX0004B">
 					<Properties>
 						<string name="Name">Harvest</string>
 						<ProtectedString name="Source"><![CDATA[-- Aiming in first person: the clump under the crosshair (within reach, on your own pile or the
@@ -7381,7 +7490,7 @@ return Harvest
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004B">
+				<Item class="ModuleScript" referent="RBX0004C">
 					<Properties>
 						<string name="Name">HayFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The hay you can see moving: every harvest lifts a lump off the heap onto your tool, and
@@ -7479,7 +7588,7 @@ return HayFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004C">
+				<Item class="ModuleScript" referent="RBX0004D">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: a crosshair, your pile's progress at the top, and on the left your
@@ -7623,7 +7732,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004D">
+				<Item class="ModuleScript" referent="RBX0004E">
 					<Properties>
 						<string name="Name">Jetpack</string>
 						<ProtectedString name="Source"><![CDATA[-- The Jetpack (a Robux game pass; the server sets the "PassJetpack" attribute when you own it).
@@ -7809,7 +7918,7 @@ return Jetpack
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004E">
+				<Item class="ModuleScript" referent="RBX0004F">
 					<Properties>
 						<string name="Name">Juice</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback that makes harvesting feel good: straw bursts, floating numbers, a soft camera
@@ -7997,7 +8106,7 @@ return Juice
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX0004F">
+				<Item class="LocalScript" referent="RBX00050">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- The player's side of the game: first-person harvesting, building, the menus, and all the
@@ -8300,7 +8409,7 @@ end)
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00050">
+				<Item class="ModuleScript" referent="RBX00051">
 					<Properties>
 						<string name="Name">Music</string>
 						<ProtectedString name="Source"><![CDATA[-- Soft background music: the Config.Music playlist in a loop, low and relaxing, fading gently
@@ -8443,7 +8552,7 @@ return Music
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00051">
+				<Item class="ModuleScript" referent="RBX00052">
 					<Properties>
 						<string name="Name">Notify</string>
 						<ProtectedString name="Source"><![CDATA[-- Messages: small toasts under the haystack counter, and a big banner for case news.
@@ -8546,7 +8655,7 @@ return Notify
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00052">
+				<Item class="ModuleScript" referent="RBX00053">
 					<Properties>
 						<string name="Name">Offer</string>
 						<ProtectedString name="Source"><![CDATA[-- One gentle Robux suggestion per session: after Config.OfferAfterClumps clumps harvested since
@@ -8652,7 +8761,7 @@ return Offer
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00053">
+				<Item class="ModuleScript" referent="RBX00054">
 					<Properties>
 						<string name="Name">OrderCard</string>
 						<ProtectedString name="Source"><![CDATA[-- The current delivery order, on the right of the screen: what the driver wants, how many
@@ -8699,7 +8808,7 @@ return OrderCard
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00054">
+				<Item class="ModuleScript" referent="RBX00055">
 					<Properties>
 						<string name="Name">Panels</string>
 						<ProtectedString name="Source"><![CDATA[-- The windows: Shop, secret Achievements, Finds & Skins, and the Wheel of Fortune (odds first).
@@ -8888,7 +8997,7 @@ return Panels
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00055">
+				<Item class="ModuleScript" referent="RBX00056">
 					<Properties>
 						<string name="Name">Shop</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop window: Tools, Perks, Fitness (stamina, the metal detector), Storage (buckets and
@@ -9181,7 +9290,7 @@ return Shop
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00056">
+				<Item class="ModuleScript" referent="RBX00057">
 					<Properties>
 						<string name="Name">Stamina</string>
 						<ProtectedString name="Source"><![CDATA[-- A slim stamina bar under the crosshair (the server owns stamina: attributes Stamina,
@@ -9229,7 +9338,7 @@ return StaminaBar
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00057">
+				<Item class="ModuleScript" referent="RBX00058">
 					<Properties>
 						<string name="Name">Teleport</string>
 						<ProtectedString name="Source"><![CDATA[-- The teleporter menu: standing on one of your pads, pick any of your other pads (listed by
@@ -9300,7 +9409,7 @@ return Teleport
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00058">
+				<Item class="ModuleScript" referent="RBX00059">
 					<Properties>
 						<string name="Name">Ui</string>
 						<ProtectedString name="Source"><![CDATA[-- A small UI kit: the farm colours, rounded wooden buttons and windows that scale with
@@ -9479,7 +9588,7 @@ return Ui
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00059">
+				<Item class="ModuleScript" referent="RBX0005A">
 					<Properties>
 						<string name="Name">WorldFx</string>
 						<ProtectedString name="Source"><![CDATA[-- World effects on your screen: the glowing needle clump (Wheel jackpot), the wheel turning
@@ -9600,19 +9709,19 @@ return WorldFx
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX0005A">
+	<Item class="Workspace" referent="RBX0005B">
 		<Properties>
 			<string name="Name">Workspace</string>
 			<bool name="StreamingEnabled">false</bool>
 		</Properties>
 	</Item>
-	<Item class="MaterialService" referent="RBX0005B">
+	<Item class="MaterialService" referent="RBX0005C">
 		<Properties>
 			<string name="Name">MaterialService</string>
 			<bool name="Use2022Materials">true</bool>
 			<string name="LeafyGrassName">Field</string>
 		</Properties>
-		<Item class="MaterialVariant" referent="RBX0005C">
+		<Item class="MaterialVariant" referent="RBX0005D">
 			<Properties>
 				<string name="Name">Field</string>
 				<token name="BaseMaterial">1284</token>

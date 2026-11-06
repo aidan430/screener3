@@ -1,5 +1,6 @@
 -- The living countryside (see Scenery): dirt lanes, the duck pond, the pumpkin and corn
--- fields, an apple orchard, and autumn trees and bushes scattered wherever the farm is clear.
+-- fields, an apple orchard, and autumn trees and bushes filling every gap left in the ring
+-- between the plots and the fence (Kit.RING_IN to Kit.RING_OUT).
 -- Terrain Grass is never used here (it is kept for the straw heaps).
 local Kit = require(script.Parent.SceneryKit)
 
@@ -9,8 +10,8 @@ local part, bit = Kit.part, Kit.bit
 local terrain = workspace.Terrain
 local ORIGIN = CFrame.new()
 
-Nature.POND = Vector3.new(-90, 0, 268)
-Nature.POND_RADIUS = 30
+Nature.POND = Vector3.new(-100, 0, 205)
+Nature.POND_RADIUS = 24
 Nature.WATER_Y = -1
 
 local function dirt(x, z, sx, sz, material)
@@ -18,15 +19,14 @@ local function dirt(x, z, sx, sz, material)
 end
 
 function Nature.terrain()
-	dirt(0, -332.5, 16, 335) -- the north lane, from the end of the road out through the gate
-	dirt(-5, -216, 210, 12) -- the farmyard lane, barn to farmhouse
-	dirt(-95, -229, 24, 14) -- in front of the barn doors
-	dirt(85, -228.5, 6, 13) -- up to the farmhouse steps
-	dirt(-190, 0, 50, 10) -- from the west road to the pens
-	dirt(-208, 25, 8, 250) -- along the pen gates
-	dirt(250, -70, 110, 90) -- the pumpkin patch
-	dirt(250, 75, 110, 100) -- the corn rows
-	dirt(-240, -84, 16, 12, Enum.Material.Mud) -- the pigs' favourite mud
+	dirt(0, -210, 16, 100) -- the north lane, from the end of the road out through the gate
+	dirt(-22, -169, 336, 8) -- the farmyard lane, silos to chicken run
+	dirt(-125, -175.5, 20, 5) -- in front of the barn doors
+	dirt(60, -178.5, 6, 11) -- up to the farmhouse steps
+	dirt(-164, 0, 8, 290) -- the pens' lane, along their gates
+	dirt(206, -91, 62, 124) -- the pumpkin patch
+	dirt(206, 92, 62, 124) -- the corn rows
+	dirt(-200, -127, 16, 12, Enum.Material.Mud) -- the pigs' favourite mud
 	local pond = Nature.POND
 	terrain:FillCylinder(CFrame.new(pond.X, -4, pond.Z), 8, Nature.POND_RADIUS + 4, Enum.Material.Mud)
 	terrain:FillCylinder(CFrame.new(pond.X, -3, pond.Z), 6, Nature.POND_RADIUS, Enum.Material.Air)
@@ -58,17 +58,21 @@ local function wilds(folder)
 	local m = Kit.model(folder, "Trees")
 	local rng = Random.new(23)
 	local planted = 0
-	for _ = 1, 400 do
-		local x, z = rng:NextNumber(-445, 445), rng:NextNumber(-445, 445)
-		if planted < 80 and Kit.clear(x, z, 10) then
+	local edge = Kit.RING_OUT - 2
+	local function inRing(x, z, margin)
+		return math.max(math.abs(x), math.abs(z)) > Kit.RING_IN + margin and Kit.clear(x, z, margin)
+	end
+	for _ = 1, 700 do
+		local x, z = rng:NextNumber(-edge, edge), rng:NextNumber(-edge, edge)
+		if planted < 70 and inRing(x, z, 8) then
 			tree(m, CFrame.new(x, 0, z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), rng, rng:NextNumber(10, 18))
 			planted += 1
 		end
 	end
 	local bushes = Kit.model(folder, "Bushes")
-	for _ = 1, 300 do
-		local x, z = rng:NextNumber(-450, 450), rng:NextNumber(-450, 450)
-		if Kit.clear(x, z, 4) then
+	for _ = 1, 600 do
+		local x, z = rng:NextNumber(-edge, edge), rng:NextNumber(-edge, edge)
+		if inRing(x, z, 3) then
 			bush(bushes, CFrame.new(x, 0, z), rng)
 		end
 	end
@@ -77,8 +81,8 @@ end
 local function orchard(folder)
 	local m = Kit.model(folder, "Orchard")
 	local rng = Random.new(5)
-	for x = 225, 385, 32 do
-		for z = 225, 385, 32 do
+	for x = 48, 228, 20 do -- a smaller orchard: ten trees by three rows, south-east
+		for z = 182, 226, 22 do
 			local base = CFrame.new(x + rng:NextNumber(-2, 2), 0, z + rng:NextNumber(-2, 2))
 			Kit.post(m, base, "Trunk", Vector3.zero, 7, 1.6, { 104, 72, 48 }, "Wood")
 			for _, o in ipairs({ { -1.5, 8, 0, 9 }, { 1.6, 9, 0.8, 8 } }) do
@@ -99,11 +103,11 @@ end
 local function pumpkins(folder)
 	local m = Kit.model(folder, "PumpkinPatch")
 	local rng = Random.new(31)
-	for x = 205, 295, 11 do
-		part(m, ORIGIN, "Row", Vector3.new(3, 0.6, 84), Vector3.new(x, 0.3, -70), C.soil, "Sand", { collide = false })
-		bit(m, ORIGIN, "Vine", Vector3.new(1.4, 0.3, 82), Vector3.new(x, 0.7, -70), { 92, 118, 50 }, "Fabric")
-		for z = -108, -32, 7 do
-			local far = math.abs(x - 250) > 4 or math.abs(z + 70) > 4 -- leave room for the scarecrow
+	for x = 180, 234, 9 do
+		part(m, ORIGIN, "Row", Vector3.new(3, 0.6, 118), Vector3.new(x, 0.3, -91), C.soil, "Sand", { collide = false })
+		bit(m, ORIGIN, "Vine", Vector3.new(1.4, 0.3, 116), Vector3.new(x, 0.7, -91), { 92, 118, 50 }, "Fabric")
+		for z = -147, -35, 7 do
+			local far = math.abs(x - 207) > 4 or math.abs(z + 91) > 4 -- leave room for the scarecrow
 			if far and rng:NextNumber() < 0.75 then
 				local s = rng:NextNumber(1.8, 3.2)
 				local tone = { 232 + rng:NextInteger(-12, 12), 124 + rng:NextInteger(-20, 20), 36 }
@@ -118,9 +122,12 @@ end
 local function corn(folder)
 	local m = Kit.model(folder, "CornRows")
 	local rng = Random.new(41)
-	for x = 200, 296, 8 do
-		part(m, ORIGIN, "Row", Vector3.new(2.4, 0.5, 96), Vector3.new(x, 0.25, 75), C.soil, "Sand", { collide = false })
-		for z = 30, 120, 4.5 do
+	for x = 179, 235, 8 do
+		part(m, ORIGIN, "Row", Vector3.new(2.4, 0.5, 118), Vector3.new(x, 0.25, 92), C.soil, "Sand", { collide = false })
+		for z = 35, 149, 4.5 do
+			if math.abs(x - 207) < 6 and math.abs(z - 92) < 5 then
+				continue -- room for the scarecrow
+			end
 			local h = rng:NextNumber(6.5, 9)
 			local base = CFrame.new(x + rng:NextNumber(-0.4, 0.4), 0, z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0)
 			bit(m, base, "Stalk", Vector3.new(0.45, h, 0.45), Vector3.new(0, h / 2, 0), { 188, 168, 82 }, "Fabric")
