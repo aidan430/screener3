@@ -548,3 +548,14 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   Same prizes and odds either way. Where paid random items are restricted, players now see the
   odds and get the free spin too (nothing is paid), but no Robux button. A quiet notice on
   joining says when the free spin is ready. The Robux pad's text and ROBUX_ITEMS.md mention it.
+
+## Animated skins (2026-11-06)
+- client/SkinFx animates every equipped skinned tool on every screen (the tool's "Skin"
+  attribute, set by Tools.make), from the skin's Config.Wheel entry: `flow` slides a patterned
+  skin's texture (studs a second), `pulse` swells and fades its glow over Config.SkinPulseSeconds
+  (3), `gleam` sweeps a soft shine along the handle every n seconds, taking SkinGleamSeconds (0.9).
+  `twinkle` = stars a second, a ParticleEmitter the server adds (Tools.wearSkin).
+  Rose Gold: drift + shine every 5 s. Ice: slow drift + 3 twinkles/s. Lava: cracks flow down +
+  glow pulse. Candy Cane: stripes roll. Galaxy: drift + gentle pulse + 4 twinkles/s. Diamond:
+  shine every 3 s + 2 twinkles/s. Flow needs the uploaded textures; the rest works without them.
+  Uploaded models (the trowel) can't scroll their texture, so they get the glow, shine and stars.

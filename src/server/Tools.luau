@@ -65,9 +65,20 @@ function Tools.wearSkin(tool, look, skin)
 		sparkle.Size = NumberSequence.new(0.18, 0)
 		sparkle.Parent = handle
 		local light = Instance.new("PointLight")
+		light.Name = "SkinGlow" -- client/SkinFx swells and fades it on skins with a pulse
 		light.Color, light.Range, light.Brightness = c, 6, 0.6
 		light.Parent = handle
+		if skin.twinkle then -- little stars that wink on and off along the tool
+			local star = Instance.new("ParticleEmitter")
+			star.Name = "SkinTwinkle"
+			star.Color = ColorSequence.new(Color3.new(1, 1, 1), c)
+			star.LightEmission = 1
+			star.Rate, star.Lifetime, star.Speed = skin.twinkle, NumberRange.new(0.4, 0.7), NumberRange.new(0)
+			star.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 0.22), NumberSequenceKeypoint.new(1, 0) })
+			star.Parent = handle
+		end
 	end
+	tool:SetAttribute("Skin", skin.id) -- client/SkinFx animates it
 end
 
 -- The skin (from the Wheel of Fortune) recolours the tool; "" is the plain tool.

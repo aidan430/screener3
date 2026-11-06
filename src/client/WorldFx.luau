@@ -11,6 +11,7 @@ local Layout = require(Shared:WaitForChild("Layout"))(Config)
 local Economy = require(Shared:WaitForChild("Economy"))(Config)
 local Ui = require(script.Parent.Ui)
 local Juice = require(script.Parent.Juice)
+local SkinFx = require(script.Parent.SkinFx)
 
 local player = Players.LocalPlayer
 local WorldFx = {}
@@ -108,6 +109,7 @@ end
 
 function WorldFx.start()
 	task.spawn(spinFans)
+	SkinFx.start()
 end
 
 return WorldFx

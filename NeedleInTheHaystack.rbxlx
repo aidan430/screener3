@@ -277,18 +277,18 @@ Config.VipOfflineSeconds = 3600
 -- before buying, and the wheel is hidden where paid random items aren't allowed.
 -- weight / total weight = chance. A skin you already own pays `WheelDuplicateSearches` instead.
 Config.Wheel = {
-	{ id = "rose", name = "Rose Gold skin", weight = 3000, texture = "", shaft = { 120, 70, 60 }, head = { 232, 160, 150 }, material = "Metal" },
-	{ id = "ice", name = "Ice skin", weight = 2500, texture = "", shaft = { 180, 220, 240 }, head = { 210, 240, 255 }, material = "Ice" },
-	{ id = "lava", name = "Lava skin", weight = 2000, texture = "", shaft = { 60, 30, 20 }, head = { 255, 90, 30 }, material = "Neon" },
-	{ id = "candy", name = "Candy Cane skin", weight = 1500, texture = "", shaft = { 245, 245, 245 }, head = { 230, 40, 60 }, material = "SmoothPlastic" },
-	{ id = "galaxy", name = "Galaxy skin", weight = 700, texture = "", shaft = { 30, 20, 60 }, head = { 140, 90, 255 }, material = "Neon" },
-	{ id = "diamond", name = "Diamond skin", weight = 299, texture = "", shaft = { 200, 230, 255 }, head = { 160, 220, 255 }, material = "Glass" },
+	{ id = "rose", flow = { 0.05, 0 }, gleam = 5, name = "Rose Gold skin", weight = 3000, texture = "", shaft = { 120, 70, 60 }, head = { 232, 160, 150 }, material = "Metal" },
+	{ id = "ice", flow = { 0, 0.04 }, twinkle = 3, name = "Ice skin", weight = 2500, texture = "", shaft = { 180, 220, 240 }, head = { 210, 240, 255 }, material = "Ice" },
+	{ id = "lava", flow = { 0, -0.3 }, pulse = 0.5, name = "Lava skin", weight = 2000, texture = "", shaft = { 60, 30, 20 }, head = { 255, 90, 30 }, material = "Neon" },
+	{ id = "candy", flow = { 0.4, 0 }, name = "Candy Cane skin", weight = 1500, texture = "", shaft = { 245, 245, 245 }, head = { 230, 40, 60 }, material = "SmoothPlastic" },
+	{ id = "galaxy", flow = { 0.06, 0.04 }, pulse = 0.3, twinkle = 4, name = "Galaxy skin", weight = 700, texture = "", shaft = { 30, 20, 60 }, head = { 140, 90, 255 }, material = "Neon" },
+	{ id = "diamond", gleam = 3, twinkle = 2, name = "Diamond skin", weight = 299, texture = "", shaft = { 200, 230, 255 }, head = { 160, 220, 255 }, material = "Glass" },
 	{ id = "needle", name = "NEEDLE REVEAL", weight = 1, reveal = true },
 }
+-- Skin animation (client/SkinFx): flow = pattern drift (studs/s), pulse = glow swell, gleam = s between shines, twinkle = sparkles/s
 Config.WheelDuplicateSearches = 200
 Config.WheelMinSlice = 0.004 -- the thinnest slice on the wheel's face (of a turn), so the needle reveal shows
-Config.SkinTextureStuds = 1.5 -- how many studs one copy of a patterned skin covers on the built-in forks
-
+Config.SkinTextureStuds = 1.5 -- studs one copy of a patterned skin covers on the built tools
 
 -- The Golden Loft: a secret golden haystack above the hub where straw pays 20x.
 Config.Loft = { straws = 250000, coinMultiplier = 20, needleEarliest = 0.5 }
@@ -553,6 +553,8 @@ Config.Touch = {
 	padColumns = 3,
 }
 
+Config.SkinPulseSeconds = 3 -- one slow swell and fade of an animated skin's glow
+Config.SkinGleamSeconds = 0.9 -- how long a skin's shine takes to sweep along the tool
 Config.ToolFanSpin = 9 -- radians a second the Twin Turbines' fans turn while held
 
 return Config
@@ -7621,9 +7623,20 @@ function Tools.wearSkin(tool, look, skin)
 		sparkle.Size = NumberSequence.new(0.18, 0)
 		sparkle.Parent = handle
 		local light = Instance.new("PointLight")
+		light.Name = "SkinGlow" -- client/SkinFx swells and fades it on skins with a pulse
 		light.Color, light.Range, light.Brightness = c, 6, 0.6
 		light.Parent = handle
+		if skin.twinkle then -- little stars that wink on and off along the tool
+			local star = Instance.new("ParticleEmitter")
+			star.Name = "SkinTwinkle"
+			star.Color = ColorSequence.new(Color3.new(1, 1, 1), c)
+			star.LightEmission = 1
+			star.Rate, star.Lifetime, star.Speed = skin.twinkle, NumberRange.new(0.4, 0.7), NumberRange.new(0)
+			star.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 0.22), NumberSequenceKeypoint.new(1, 0) })
+			star.Parent = handle
+		end
 	end
+	tool:SetAttribute("Skin", skin.id) -- client/SkinFx animates it
 end
 
 -- The skin (from the Wheel of Fortune) recolours the tool; "" is the plain tool.
@@ -12746,6 +12759,105 @@ return Shop
 				</Item>
 				<Item class="ModuleScript" referent="RBX00071">
 					<Properties>
+						<string name="Name">SkinFx</string>
+						<ProtectedString name="Source"><![CDATA[-- Animated skins, drawn on every screen for every equipped skinned tool (Tools.make sets the
+-- tool's "Skin" attribute). From each skin's Config.Wheel entry: `flow` slides the pattern along
+-- the tool (Lava's cracks run down it, Candy Cane's stripes roll like a barber's pole), `pulse`
+-- slowly swells and fades its glow, and `gleam` sweeps a soft shine along it every few seconds.
+-- Twinkles are particles the server adds. Everything eases; nothing flashes.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local SkinFx = {}
+local skins = {}
+for _, prize in ipairs(Config.Wheel) do
+	skins[prize.id] = prize
+end
+local cache = setmetatable({}, { __mode = "k" }) -- [tool] = its textures, glow and gleam light
+
+-- What to move on a tool, found once.
+local function parts(tool, skin)
+	local found = cache[tool]
+	if found then
+		return found
+	end
+	local handle = tool:FindFirstChild("Handle")
+	found = { textures = {}, glow = handle and handle:FindFirstChild("SkinGlow") }
+	for _, item in ipairs(tool:GetDescendants()) do
+		if item:IsA("Texture") then
+			table.insert(found.textures, item)
+		end
+	end
+	if found.glow then
+		found.base = found.glow.Brightness
+	end
+	if skin.gleam and handle then
+		local size = handle.Size -- the shine runs along the handle's longest side
+		local axis = if size.Z > size.Y then Vector3.zAxis * size.Z elseif size.X > size.Y then Vector3.xAxis * size.X else Vector3.yAxis * size.Y
+		local spot = Instance.new("Attachment")
+		spot.Name = "SkinGleam"
+		spot.Parent = handle
+		local light = Instance.new("PointLight")
+		light.Color = Color3.fromRGB(skin.head[1], skin.head[2], skin.head[3]):Lerp(Color3.new(1, 1, 1), 0.6)
+		light.Range, light.Brightness = 3, 0
+		light.Parent = spot
+		found.gleam, found.spot, found.axis = light, spot, axis
+	end
+	cache[tool] = found
+	return found
+end
+
+local function animate(tool, skin, t)
+	local p = parts(tool, skin)
+	if skin.flow and #p.textures > 0 then
+		local u = (t * skin.flow[1]) % Config.SkinTextureStuds
+		local v = (t * skin.flow[2]) % Config.SkinTextureStuds
+		for _, texture in ipairs(p.textures) do
+			texture.OffsetStudsU, texture.OffsetStudsV = u, v
+		end
+	end
+	if skin.pulse and p.glow then
+		p.glow.Brightness = p.base * (1 + skin.pulse * math.sin(t * math.pi * 2 / Config.SkinPulseSeconds))
+	end
+	if p.gleam then
+		local phase = (t % skin.gleam) / Config.SkinGleamSeconds -- 0..1 while the shine runs
+		if phase < 1 then
+			p.spot.Position = p.axis * (phase - 0.5)
+			p.gleam.Brightness = 2.5 * math.sin(phase * math.pi)
+		else
+			p.gleam.Brightness = 0
+		end
+	end
+end
+
+function SkinFx.start()
+	local wait = 0
+	RunService.RenderStepped:Connect(function(dt)
+		wait += dt
+		if wait < 1 / 30 then
+			return
+		end
+		wait = 0
+		local t = os.clock()
+		for _, player in ipairs(Players:GetPlayers()) do
+			local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
+			local skin = tool and skins[tool:GetAttribute("Skin") or ""]
+			if skin then
+				animate(tool, skin, t)
+			end
+		end
+	end)
+end
+
+return SkinFx
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX00072">
+					<Properties>
 						<string name="Name">Sprint</string>
 						<ProtectedString name="Source"><![CDATA[-- Sprinting on every device: hold Shift on a keyboard, press the left stick (L3) on a controller
 -- to toggle, or tap RUN on a touch screen to toggle. You run Config.Sprint.multiplier times
@@ -12827,7 +12939,7 @@ return Sprint
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00072">
+				<Item class="ModuleScript" referent="RBX00073">
 					<Properties>
 						<string name="Name">Stamina</string>
 						<ProtectedString name="Source"><![CDATA[-- A slim stamina bar under the crosshair (the server owns stamina: attributes Stamina,
@@ -12875,7 +12987,7 @@ return StaminaBar
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00073">
+				<Item class="ModuleScript" referent="RBX00074">
 					<Properties>
 						<string name="Name">Teleport</string>
 						<ProtectedString name="Source"><![CDATA[-- The teleporter menu: standing on one of your pads, pick any of your other pads (listed by
@@ -12946,7 +13058,7 @@ return Teleport
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00074">
+				<Item class="ModuleScript" referent="RBX00075">
 					<Properties>
 						<string name="Name">TouchAim</string>
 						<ProtectedString name="Source"><![CDATA[-- Harvesting on touch screens. In first person a finger dragged across the screen turns the
@@ -13011,7 +13123,7 @@ return TouchAim
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00075">
+				<Item class="ModuleScript" referent="RBX00076">
 					<Properties>
 						<string name="Name">TouchPad</string>
 						<ProtectedString name="Source"><![CDATA[-- The action pad on touch screens: the keyboard's shortcuts (shop, build, drop, home, tool,
@@ -13158,7 +13270,7 @@ return TouchPad
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00076">
+				<Item class="ModuleScript" referent="RBX00077">
 					<Properties>
 						<string name="Name">Ui</string>
 						<ProtectedString name="Source"><![CDATA[-- A small UI kit: the farm colours, rounded wooden buttons and windows that scale with
@@ -13397,7 +13509,7 @@ return Ui
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00077">
+				<Item class="ModuleScript" referent="RBX00078">
 					<Properties>
 						<string name="Name">WorldFx</string>
 						<ProtectedString name="Source"><![CDATA[-- World effects on your screen: the glowing needle clump (Wheel jackpot), the wheel turning
@@ -13413,6 +13525,7 @@ local Layout = require(Shared:WaitForChild("Layout"))(Config)
 local Economy = require(Shared:WaitForChild("Economy"))(Config)
 local Ui = require(script.Parent.Ui)
 local Juice = require(script.Parent.Juice)
+local SkinFx = require(script.Parent.SkinFx)
 
 local player = Players.LocalPlayer
 local WorldFx = {}
@@ -13510,13 +13623,14 @@ end
 
 function WorldFx.start()
 	task.spawn(spinFans)
+	SkinFx.start()
 end
 
 return WorldFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00078">
+				<Item class="ModuleScript" referent="RBX00079">
 					<Properties>
 						<string name="Name">Worlds</string>
 						<ProtectedString name="Source"><![CDATA[-- The portal worlds and the lobby on your own screen: each world's light (and the lobby's,
@@ -13783,19 +13897,19 @@ return Worlds
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX00079">
+	<Item class="Workspace" referent="RBX0007A">
 		<Properties>
 			<string name="Name">Workspace</string>
 			<bool name="StreamingEnabled">false</bool>
 		</Properties>
 	</Item>
-	<Item class="MaterialService" referent="RBX0007A">
+	<Item class="MaterialService" referent="RBX0007B">
 		<Properties>
 			<string name="Name">MaterialService</string>
 			<bool name="Use2022Materials">true</bool>
 			<string name="LeafyGrassName">Field</string>
 		</Properties>
-		<Item class="MaterialVariant" referent="RBX0007B">
+		<Item class="MaterialVariant" referent="RBX0007C">
 			<Properties>
 				<string name="Name">Field</string>
 				<token name="BaseMaterial">1284</token>

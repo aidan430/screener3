@@ -38,6 +38,8 @@ Config.Touch = {
 	padColumns = 3,
 }
 
+Config.SkinPulseSeconds = 3 -- one slow swell and fade of an animated skin's glow
+Config.SkinGleamSeconds = 0.9 -- how long a skin's shine takes to sweep along the tool
 Config.ToolFanSpin = 9 -- radians a second the Twin Turbines' fans turn while held
 
 return Config
