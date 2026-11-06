@@ -41,6 +41,7 @@ local Orders = require(script.Parent.Orders)
 local Goals = require(script.Parent.Goals)
 local Stamina = require(script.Parent.Stamina)
 local Detector = require(script.Parent.Detector)
+local Worlds = require(script.Parent.Worlds)
 
 StarterPlayer.CharacterMaxSlopeAngle = Config.MaxSlopeAngle -- the steep heap needs building to climb
 local Scenery = require(script.Parent.Scenery)
@@ -60,6 +61,11 @@ Haystack.build()
 local sceneryOk, sceneryError = pcall(Scenery.build)
 if not sceneryOk then
 	warn("[Start] Scenery failed to build: " .. tostring(sceneryError))
+end
+-- the portal arches on the west road and the four worlds far beyond the farm
+local worldsOk, worldsError = pcall(Worlds.build)
+if not worldsOk then
+	warn("[Start] Worlds failed to build: " .. tostring(worldsError))
 end
 
 local function toPlot(player)
@@ -127,6 +133,7 @@ local parts = {
 	{ "Detector", Detector.init },
 	{ "Plots", Plots.init },
 	{ "Monetization", Monetization.init }, -- before PlayerData, so early players get their passes checked
+	{ "Worlds", Worlds.init }, -- before PlayerData, so it hears every player load
 	{ "PlayerData", PlayerData.init },
 	{ "Achievements", Achievements.init },
 	{ "Structures", Structures.init },

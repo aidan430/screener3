@@ -62,6 +62,9 @@ local function onMyHeap(result)
 end
 
 local function harvestable(part)
+	if part ~= nil and part:GetAttribute("World") ~= nil then
+		return true -- a portal world's haystack (the server checks the portal is yours)
+	end
 	local loft = workspace:FindFirstChild("Loft")
 	return part ~= nil and loft ~= nil and part:IsDescendantOf(loft) and string.sub(part.Name, 1, 6) == "Golden" and player:GetAttribute("LoftOpen") == true
 end

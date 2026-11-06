@@ -19,6 +19,7 @@ local Achievements = require(script.Parent.Achievements)
 local Hauling = require(script.Parent.Hauling)
 local Tools = require(script.Parent.Tools)
 local Stamina = require(script.Parent.Stamina)
+local Worlds = require(script.Parent.Worlds)
 
 local Search = {}
 local lastHarvest = {}
@@ -158,6 +159,12 @@ local function harvest(player, target)
 	end
 	lastHarvest[player] = now
 	local flags = PlayerData.flags(player)
+	if isPart and target:GetAttribute("World") ~= nil then -- a portal world's haystack pays at once (Worlds.luau)
+		if not Stamina.spend(player, Config.Stamina.perHarvest) then
+			return status(player, "Catching your breath...")
+		end
+		return status(player, Worlds.harvest(player, d, target, Economy.power(d, flags.speedBoost)))
+	end
 	if room(d) <= 0 then
 		if flags.autoSell then
 			Search.sell(player, "auto")

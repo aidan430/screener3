@@ -62,6 +62,7 @@ function Profile.fresh(saved)
 		achievements = {},
 		boosts = {},
 		receipts = {},
+		worlds = {}, -- [world id] = { unlocked, searched, needleAt, needles } (Config.Worlds)
 		loft = { searched = number(saved.loft, "searched", 0), needleAt = number(saved.loft, "needleAt", 0), needles = number(saved.loft, "needles", 0) },
 	}
 	if d.needleClump < 1 or d.needleClump > Config.Clumps then
@@ -126,6 +127,12 @@ function Profile.fresh(saved)
 				table.insert(d.receipts, id)
 			end
 		end
+	end
+	for _, w in ipairs(Config.Worlds) do
+		local s = type(saved.worlds) == "table" and saved.worlds[w.id] or nil
+		local at = number(s, "needleAt", 0)
+		d.worlds[w.id] = { unlocked = type(s) == "table" and s.unlocked == true, searched = number(s, "searched", 0), needles = number(s, "needles", 0),
+			needleAt = if at > 0 then at else Economy.needleAt(w.straws, Config.WorldNeedleEarliest, rng) }
 	end
 	if d.loft.needleAt <= 0 then
 		d.loft.needleAt = Economy.needleAt(Config.Loft.straws, Config.Loft.needleEarliest, rng)

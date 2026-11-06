@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 SHARED = Path(__file__).resolve().parent.parent / "src" / "shared"
-CONFIG = "\n".join((SHARED / f).read_text() for f in ("Config.luau", "ConfigFactory.luau", "ConfigGoals.luau", "ConfigPlayer.luau"))
+CONFIG = "\n".join((SHARED / f).read_text() for f in ("Config.luau", "ConfigFactory.luau", "ConfigGoals.luau", "ConfigPlayer.luau", "ConfigWorlds.luau"))
 CLICKS_PER_SECOND = 3.0
 TRIP_SECONDS = 45.0
 BUILD_COINS = 60000  # stairs, landings and elevators bought along the way

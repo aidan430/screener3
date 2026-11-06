@@ -138,6 +138,7 @@ step("controls", function()
 	end)
 	TouchAim.start() -- touch screens: tap or hold still to harvest
 end)
+step("worlds", function() require(script.Parent:WaitForChild("Worlds")).start(gui, Notify) end)
 if not hud then
 	hud = { refresh = function() end }
 end
