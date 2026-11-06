@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT / "dev"))
 import pacing  # noqa: E402
 
 SHARED = ROOT / "src" / "shared"
-CONFIG = "\n".join((SHARED / f).read_text() for f in ("Config.luau", "ConfigFactory.luau", "ConfigGoals.luau", "ConfigPlayer.luau", "ConfigWorlds.luau"))
+CONFIG = "\n".join((SHARED / f).read_text() for f in ("Config.luau", "ConfigFactory.luau", "ConfigGoals.luau", "ConfigPlayer.luau", "ConfigWorlds.luau", "ConfigPads.luau"))
 FINDS = json.loads((SHARED / "Finds.json").read_text())
 
 

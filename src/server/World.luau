@@ -14,8 +14,8 @@ local GROUND = math.floor(520 * Config.FarmScale) -- the ground is GROUND x GROU
 local FENCE = math.floor(245 * Config.FarmScale) -- the boundary fence, this far from the middle
 
 -- The haystack stands in the middle now, so these stand round it, facing it.
-World.MERCHANT = Vector3.new(-38, 0, 84) -- just west of where you arrive
-World.WHEEL = Vector3.new(38, 0, 84) -- just east of where you arrive
+World.MERCHANT = Vector3.new(-50, 0, 62) -- west of where you arrive, clear of the Robux pads
+World.WHEEL = Vector3.new(50, 0, 62) -- east of where you arrive, clear of the Robux pads
 World.DOOR = Vector3.new(86, 0, 0) -- the golden door, on the east road
 World.LOFT = Vector3.new(0, 330, 0) -- the secret level floats high above the hub
 

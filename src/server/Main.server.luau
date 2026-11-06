@@ -42,6 +42,7 @@ local Goals = require(script.Parent.Goals)
 local Stamina = require(script.Parent.Stamina)
 local Detector = require(script.Parent.Detector)
 local Worlds = require(script.Parent.Worlds)
+local RobuxPads = require(script.Parent.RobuxPads)
 
 StarterPlayer.CharacterMaxSlopeAngle = Config.MaxSlopeAngle -- the steep heap needs building to climb
 local Scenery = require(script.Parent.Scenery)
@@ -66,6 +67,11 @@ end
 local worldsOk, worldsError = pcall(Worlds.build)
 if not worldsOk then
 	warn("[Start] Worlds failed to build: " .. tostring(worldsError))
+end
+-- the Robux corner: a pad per Robux item beside where you arrive (only offers; nothing is sold here)
+local padsOk, padsError = pcall(RobuxPads.build)
+if not padsOk then
+	warn("[Start] Robux pads failed to build: " .. tostring(padsError))
 end
 
 local function toPlot(player)
