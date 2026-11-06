@@ -47,7 +47,9 @@ function Tools.make(level, skinId)
 	tool.Name = def.name
 	tool.ToolTip = Format.commas(def.power) .. " straws a click, carries " .. Format.commas(def.capacity)
 	tool.CanBeDropped = false
-	tool.Grip = CFrame.new(0, -1, 0) -- held a little below the middle, fork up
+	-- held like the spade: straight out in front, the working end forward (the handle's +Y
+	-- points away from you and its +Z points up), the hand a little behind the middle
+	tool.Grip = CFrame.new(0, -1.5, 0) * CFrame.Angles(math.rad(90), 0, 0)
 	tool:SetAttribute("Level", level)
 	local handle = Instance.new("Part")
 	handle.Name = "Handle"
@@ -60,7 +62,8 @@ function Tools.make(level, skinId)
 	handle.Parent = tool
 	local look, length = ToolLook.make(def)
 	-- where the hay sits (its bottom, in the handle's space) and how big it can get
-	local seat, maxLoad = CFrame.new(0, 3.6, 0), Config.LoadSize
+	-- on a fork the hay rests on top of the tines (the handle's +Z is up when held)
+	local seat, maxLoad = CFrame.new(0, 3.75, 0.2) * CFrame.Angles(math.rad(90), 0, 0), Config.LoadSize
 	if look then
 		-- an imported model, held straight out in front with its working end forward and up,
 		-- like a scoop holding the hay. The handle's -Z points away from the hand.

@@ -8,11 +8,12 @@ Config.FarmName = "Hollow Creek Farm"
 -- Plots: each player gets one. All four are the SAME place, the middle of the farm, with the
 -- haystack at its centre: everyone sees and digs only their own haystack, and only their own
 -- buildings and hay (other players' are hidden and pass-through on your screen).
-Config.PlotSize = 300 -- the build area round the haystack (the countryside starts at 162)
+Config.PlotSize = 190 -- the build area round the haystack (the countryside starts at about 105)
+Config.FarmScale = 0.65 -- the countryside, fence and ground are pulled in to this share of their size
 Config.PlotCentres = { { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } }
-Config.FarmEntrance = { 0, 0, 118 } -- where you arrive: south of the haystack, facing it
-Config.TraderStart = { 0, 0, 64 } -- your trader's stall, between the haystack and where you arrive
-Config.TruckStart = { 0, 0, 150 } -- trucks drive in from the south field
+Config.FarmEntrance = { 0, 0, 80 } -- where you arrive: south of the haystack, facing it
+Config.TraderStart = { 0, 0, 58 } -- your trader's stall, between the haystack and where you arrive
+Config.TruckStart = { 0, 0, 98 } -- trucks drive in from the south meadow
 Config.BuildClear = 40 -- nothing can stand this close to the haystack's centre (it's hay)
 
 -- The heap: 5,000,000 straws in clumps, one smooth terrain haystack 80 studs (22 m) high and
@@ -69,15 +70,15 @@ Config.CoinsPerStraw = 1
 -- loadSize = how big the hay on it gets. Without a model a tool is built as a pitchfork.
 Config.Tools = {
 	{ name = "Garden Trowel", model = 139238222017221, length = 3, power = 1, capacity = 300, price = 0, shaft = { 112, 82, 58 }, head = { 128, 98, 78 }, material = "CorrodedMetal" },
-	{ name = "Wooden Pitchfork", power = 2, capacity = 1000, price = 400, shaft = { 160, 116, 72 }, head = { 176, 128, 82 }, material = "Wood" },
-	{ name = "Iron Pitchfork", power = 3, capacity = 2500, price = 2400, shaft = { 150, 108, 66 }, head = { 165, 170, 178 }, material = "Metal" },
-	{ name = "Steel Rake", power = 5, capacity = 5000, price = 10000, shaft = { 120, 84, 50 }, head = { 190, 196, 204 }, material = "Metal" },
-	{ name = "Golden Rake", power = 7, capacity = 9000, price = 40000, shaft = { 120, 84, 50 }, head = { 245, 200, 66 }, material = "Metal" },
-	{ name = "Hay Blower", power = 9, capacity = 18000, price = 120000, shaft = { 70, 72, 84 }, head = { 232, 92, 60 }, material = "SmoothPlastic" },
-	{ name = "Super Sifter", power = 12, capacity = 32000, price = 320000, shaft = { 60, 64, 78 }, head = { 90, 200, 255 }, material = "Neon" },
-	{ name = "Magnet Gloves", power = 15, capacity = 50000, price = 800000, shaft = { 200, 200, 210 }, head = { 220, 40, 40 }, material = "SmoothPlastic" },
-	{ name = "Twin Turbines", power = 19, capacity = 75000, price = 1700000, shaft = { 40, 44, 52 }, head = { 255, 170, 40 }, material = "Metal" },
-	{ name = "Needle Detector", power = 22, capacity = 100000, price = 3400000, shaft = { 40, 44, 52 }, head = { 70, 255, 150 }, material = "Neon" },
+	{ name = "Wooden Pitchfork", power = 2, capacity = 1000, price = 380, shaft = { 160, 116, 72 }, head = { 176, 128, 82 }, material = "Wood" },
+	{ name = "Iron Pitchfork", power = 3, capacity = 2500, price = 2280, shaft = { 150, 108, 66 }, head = { 165, 170, 178 }, material = "Metal" },
+	{ name = "Steel Rake", power = 5, capacity = 5000, price = 9500, shaft = { 120, 84, 50 }, head = { 190, 196, 204 }, material = "Metal" },
+	{ name = "Golden Rake", power = 7, capacity = 9000, price = 38000, shaft = { 120, 84, 50 }, head = { 245, 200, 66 }, material = "Metal" },
+	{ name = "Hay Blower", power = 9, capacity = 18000, price = 114000, shaft = { 70, 72, 84 }, head = { 232, 92, 60 }, material = "SmoothPlastic" },
+	{ name = "Super Sifter", power = 12, capacity = 32000, price = 304000, shaft = { 60, 64, 78 }, head = { 90, 200, 255 }, material = "Neon" },
+	{ name = "Magnet Gloves", power = 15, capacity = 50000, price = 760000, shaft = { 200, 200, 210 }, head = { 220, 40, 40 }, material = "SmoothPlastic" },
+	{ name = "Twin Turbines", power = 19, capacity = 75000, price = 1615000, shaft = { 40, 44, 52 }, head = { 255, 170, 40 }, material = "Metal" },
+	{ name = "Needle Detector", power = 22, capacity = 100000, price = 3230000, shaft = { 40, 44, 52 }, head = { 70, 255, 150 }, material = "Neon" },
 }
 Config.DetectorLevel = 10 -- from this tool on, the HUD shows how close the needle is
 Config.LoadSize = 2.4 -- studs across the hay on a full tool
@@ -85,54 +86,54 @@ Config.LoadSize = 2.4 -- studs across the hay on a full tool
 -- Buckets hang at your hip and carry what the tool can't: tool fills first, then the bucket.
 Config.Buckets = {
 	{ name = "No bucket", capacity = 0, price = 0, size = 0 },
-	{ name = "Tin Pail", capacity = 600, price = 1500, size = 1.2 },
-	{ name = "Hay Bucket", capacity = 2000, price = 9000, size = 1.6 },
-	{ name = "Big Tub", capacity = 6000, price = 60000, size = 2 },
-	{ name = "Hay Barrel", capacity = 20000, price = 400000, size = 2.4 },
-	{ name = "Giant Basket", capacity = 60000, price = 2500000, size = 2.8 },
+	{ name = "Tin Pail", capacity = 600, price = 1425, size = 1.2 },
+	{ name = "Hay Bucket", capacity = 2000, price = 8550, size = 1.6 },
+	{ name = "Big Tub", capacity = 6000, price = 57000, size = 2 },
+	{ name = "Hay Barrel", capacity = 20000, price = 380000, size = 2.4 },
+	{ name = "Giant Basket", capacity = 60000, price = 2375000, size = 2.8 },
 }
 
 -- The silo on your plot holds what your machines harvest until you next sell.
 Config.Silos = {
 	{ name = "Hay Shed", size = 2000, price = 0 },
-	{ name = "Small Silo", size = 10000, price = 15000 },
-	{ name = "Big Silo", size = 40000, price = 150000 },
-	{ name = "Twin Silos", size = 150000, price = 1000000 },
-	{ name = "Grain Tower", size = 500000, price = 5000000 },
+	{ name = "Small Silo", size = 10000, price = 14250 },
+	{ name = "Big Silo", size = 40000, price = 142500 },
+	{ name = "Twin Silos", size = 150000, price = 950000 },
+	{ name = "Grain Tower", size = 500000, price = 4750000 },
 }
 
 -- Machines harvest the top of your pile into the silo, while you're in the game, if your
 -- generators make enough power. rate = straws a second, draw = power used.
 Config.Machines = {
-	{ id = "hen", name = "Clockwork Hen", rate = 0.15, draw = 2, price = 1600, max = 10, size = { 4, 4, 4 }, color = { 236, 180, 70 } },
-	{ id = "sieve", name = "Sorting Sieve", rate = 0.6, draw = 6, price = 20000, max = 10, size = { 5, 5, 5 }, color = { 150, 150, 160 } },
-	{ id = "thresher", name = "Steam Thresher", rate = 1.5, draw = 12, price = 160000, max = 8, size = { 6, 6, 6 }, color = { 90, 70, 60 } },
-	{ id = "vacuum", name = "Hay Vacuum", rate = 3.6, draw = 24, price = 900000, max = 6, size = { 7, 7, 7 }, color = { 200, 80, 60 } },
-	{ id = "magnetron", name = "Needle Magnetron", rate = 7.5, draw = 45, price = 4000000, max = 4, size = { 8, 8, 8 }, color = { 70, 255, 150 } },
+	{ id = "hen", name = "Clockwork Hen", rate = 0.15, draw = 2, price = 1520, max = 10, size = { 4, 4, 4 }, color = { 236, 180, 70 } },
+	{ id = "sieve", name = "Sorting Sieve", rate = 0.6, draw = 6, price = 19000, max = 10, size = { 5, 5, 5 }, color = { 150, 150, 160 } },
+	{ id = "thresher", name = "Steam Thresher", rate = 1.5, draw = 12, price = 152000, max = 8, size = { 6, 6, 6 }, color = { 90, 70, 60 } },
+	{ id = "vacuum", name = "Hay Vacuum", rate = 3.6, draw = 24, price = 855000, max = 6, size = { 7, 7, 7 }, color = { 200, 80, 60 } },
+	{ id = "magnetron", name = "Needle Magnetron", rate = 7.5, draw = 45, price = 3800000, max = 4, size = { 8, 8, 8 }, color = { 70, 255, 150 } },
 }
 
 -- Generators power the machines. power = units made.
 Config.Generators = {
-	{ id = "crank", name = "Hand-Crank Dynamo", power = 4, price = 1200, max = 10, size = { 4, 4, 4 }, color = { 140, 110, 80 } },
-	{ id = "diesel", name = "Diesel Generator", power = 15, price = 15000, max = 10, size = { 5, 5, 6 }, color = { 90, 120, 70 } },
-	{ id = "wind", name = "Wind Turbine", power = 40, price = 110000, max = 8, size = { 4, 20, 4 }, color = { 236, 236, 230 } },
-	{ id = "steam", name = "Steam Engine", power = 100, price = 700000, max = 6, size = { 7, 8, 9 }, color = { 120, 80, 60 } },
-	{ id = "burner", name = "Hay Burner", power = 30, price = 8000, max = 6, burner = true, size = { 5, 6, 5 }, color = { 150, 80, 50 } },
-	{ id = "lightning", name = "Lightning Rod Array", power = 260, price = 4000000, max = 4, size = { 6, 24, 6 }, color = { 120, 170, 255 } },
+	{ id = "crank", name = "Hand-Crank Dynamo", power = 4, price = 1140, max = 10, size = { 4, 4, 4 }, color = { 140, 110, 80 } },
+	{ id = "diesel", name = "Diesel Generator", power = 15, price = 14250, max = 10, size = { 5, 5, 6 }, color = { 90, 120, 70 } },
+	{ id = "wind", name = "Wind Turbine", power = 40, price = 104500, max = 8, size = { 4, 20, 4 }, color = { 236, 236, 230 } },
+	{ id = "steam", name = "Steam Engine", power = 100, price = 665000, max = 6, size = { 7, 8, 9 }, color = { 120, 80, 60 } },
+	{ id = "burner", name = "Hay Burner", power = 30, price = 7600, max = 6, burner = true, size = { 5, 6, 5 }, color = { 150, 80, 50 } },
+	{ id = "lightning", name = "Lightning Rod Array", power = 260, price = 3800000, max = 4, size = { 6, 24, 6 }, color = { 120, 170, 255 } },
 }
 
 -- Building pieces for climbing your pile, placed anywhere on your plot.
 Config.Pieces = {
-	{ id = "ladder", name = "Ladder", price = 200, size = { 4, 20, 2 }, model = 111414262141412, text = "Climb 20 studs straight up. Stack them to go higher." },
-	{ id = "stairs", name = "Stairs", price = 300, size = { 8, 10, 10 }, text = "Climbs 10 studs over 10 studs." },
-	{ id = "landing", name = "Landing", price = 150, size = { 10, 1, 10 }, text = "A 10 by 10 floor to stand and turn on." },
-	{ id = "pillar", name = "Pillar", price = 100, size = { 2, 10, 2 }, text = "A 10-stud post to hold things up." },
-	{ id = "escalator", name = "Escalator", price = 4000, size = { 8, 10, 10 }, text = "Stairs that carry you up 10 studs." },
-	{ id = "elevator", name = "Elevator", price = 30000, size = { 10, 51, 10 }, text = "A 50-stud lift. Press E at the bottom or top." },
-	{ id = "teleporter", name = "Teleporter Pad", price = 25000, size = { 8, 1, 8 }, text = "Step on, press E, pick any of your other pads." },
-	{ id = "conveyor", name = "Conveyor Belt", price = 800, size = { 6, 1, 12 }, text = "Carries dropped hay (G) along, towards its arrow." },
-	{ id = "chute", name = "Conveyor Down", price = 1500, size = { 6, 10, 12 }, text = "A belt that carries hay down 10 studs, off a platform." },
-	{ id = "baler", name = "Bale Maker", price = 60000, max = 3, size = { 8, 7, 10 }, text = "Feed it hay at the back; it pushes out bales. Trucks carry bales 3x as easily." },
+	{ id = "ladder", name = "Ladder", price = 190, size = { 4, 20, 2 }, model = 111414262141412, text = "Climb 20 studs straight up. Stack them to go higher." },
+	{ id = "stairs", name = "Stairs", price = 285, size = { 8, 10, 10 }, text = "Climbs 10 studs over 10 studs." },
+	{ id = "landing", name = "Landing", price = 140, size = { 10, 1, 10 }, text = "A 10 by 10 floor to stand and turn on." },
+	{ id = "pillar", name = "Pillar", price = 95, size = { 2, 10, 2 }, text = "A 10-stud post to hold things up." },
+	{ id = "escalator", name = "Escalator", price = 3800, size = { 8, 10, 10 }, text = "Stairs that carry you up 10 studs." },
+	{ id = "elevator", name = "Elevator", price = 28500, size = { 10, 51, 10 }, text = "A 50-stud lift. Press E at the bottom or top." },
+	{ id = "teleporter", name = "Teleporter Pad", price = 23750, size = { 8, 1, 8 }, text = "Step on, press E, pick any of your other pads." },
+	{ id = "conveyor", name = "Conveyor Belt", price = 760, size = { 6, 1, 12 }, text = "Carries dropped hay (G) along, towards its arrow." },
+	{ id = "chute", name = "Conveyor Down", price = 1425, size = { 6, 10, 12 }, text = "A belt that carries hay down 10 studs, off a platform." },
+	{ id = "baler", name = "Bale Maker", price = 57000, max = 3, size = { 8, 7, 10 }, text = "Feed it hay at the back; it pushes out bales. Trucks carry bales 3x as easily." },
 	{ id = "trader", name = "Trader's Stall", price = 0, max = 1, size = { 12, 12, 8 }, text = "Your trader. Dump your hay in the basket. Move it anywhere, even up a platform." },
 }
 Config.BasketDrainSeconds = 4 -- how fast the basket's hay level eases down after a dump (just for show)
@@ -143,10 +144,10 @@ Config.BasketDrainSeconds = 4 -- how fast the basket's hay level eases down afte
 Config.TraderRate = 8
 Config.TruckTripSeconds = 40
 Config.Trucks = {
-	{ id = "van", name = "Farm Van", rate = 15, price = 8000, max = 2, size = { 6, 6, 11 }, color = { 236, 236, 228 } },
-	{ id = "mini", name = "Mini Truck", rate = 35, price = 60000, max = 2, size = { 6, 6, 13 }, color = { 70, 130, 200 } },
-	{ id = "semi", name = "Semi Truck", rate = 90, price = 500000, max = 2, size = { 8, 9, 24 }, color = { 196, 72, 56 } },
-	{ id = "big", name = "Large Truck", rate = 220, price = 3000000, max = 2, size = { 9, 10, 30 }, color = { 60, 120, 70 } },
+	{ id = "van", name = "Farm Van", rate = 15, price = 7600, max = 2, size = { 6, 6, 11 }, color = { 236, 236, 228 } },
+	{ id = "mini", name = "Mini Truck", rate = 35, price = 57000, max = 2, size = { 6, 6, 13 }, color = { 70, 130, 200 } },
+	{ id = "semi", name = "Semi Truck", rate = 90, price = 475000, max = 2, size = { 8, 9, 24 }, color = { 196, 72, 56 } },
+	{ id = "big", name = "Large Truck", rate = 220, price = 2850000, max = 2, size = { 9, 10, 30 }, color = { 60, 120, 70 } },
 }
 Config.AutoDumpRange = 9 -- walk this close to your own basket and your load dumps itself
 Config.BasketShowFull = 5000 -- straws waiting at which the basket looks full
@@ -167,9 +168,9 @@ Config.MaxPlaced = 400 -- pieces, machines and generators on one plot
 
 -- Perks are bought per tool (they reset when you buy a new tool).
 Config.Perks = {
-	{ id = "sharp", name = "Sharpened", per_level = 0.15, levels = 5, price = 120, growth = 1.6, text = "+15% straws a click per level" },
-	{ id = "swift", name = "Swift", per_level = 0.10, levels = 5, price = 120, growth = 1.6, text = "-10% cooldown per level" },
-	{ id = "lucky", name = "Lucky", per_level = 0.004, levels = 5, price = 150, growth = 1.6, text = "+0.4% chance of a lucky find per level" },
+	{ id = "sharp", name = "Sharpened", per_level = 0.15, levels = 5, price = 115, growth = 1.6, text = "+15% straws a click per level" },
+	{ id = "swift", name = "Swift", per_level = 0.10, levels = 5, price = 115, growth = 1.6, text = "-10% cooldown per level" },
+	{ id = "lucky", name = "Lucky", per_level = 0.004, levels = 5, price = 140, growth = 1.6, text = "+0.4% chance of a lucky find per level" },
 }
 
 Config.LuckyChance = 0.006

@@ -59,16 +59,38 @@ return function(Config)
 		terrain:WriteVoxels(Region3.new(corner, corner + Vector3.new((2 * n + 1) * s, Config.PileLayers * s, (2 * n + 1) * s)), s, materials, amounts)
 	end
 
-	-- One clump, after a harvest or a machine took from it.
-	function HeapTerrain.cell(terrain, o, index, left)
+	local function region(o, index)
 		local c = Layout[index]
 		if not c then
-			return
+			return nil
 		end
 		local centre = o + Vector3.new(c[1], c[2], c[3])
 		local half = Vector3.new(1, 1, 1) * (Config.ClumpSize / 2)
+		return Region3.new(centre - half, centre + half)
+	end
+
+	-- How full a clump's cell looks on this screen right now (0..1).
+	function HeapTerrain.occupancy(terrain, o, index)
+		local r = region(o, index)
+		if not r then
+			return 0
+		end
+		local _, amounts = terrain:ReadVoxels(r, Config.ClumpSize)
+		return amounts[1][1][1]
+	end
+
+	-- One clump, after a harvest or a machine took from it. `cap` (optional) keeps it from
+	-- looking fuller than it does now (the dents you've made stay; it never grows back).
+	function HeapTerrain.cell(terrain, o, index, left, cap)
+		local r = region(o, index)
+		if not r then
+			return
+		end
 		local amount = HeapTerrain.fullness(index, left)
-		terrain:WriteVoxels(Region3.new(centre - half, centre + half), Config.ClumpSize, { { { if amount > 0 then HEAP else Enum.Material.Air } } }, { { { amount } } })
+		if cap and amount > 0 then
+			amount = math.min(amount, cap)
+		end
+		terrain:WriteVoxels(r, Config.ClumpSize, { { { if amount > 0 then HEAP else Enum.Material.Air } } }, { { { amount } } })
 	end
 
 	return HeapTerrain

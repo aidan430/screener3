@@ -374,3 +374,19 @@ are still visible, walking around and digging their own copies.
   cobblestone yard is 58 across. The plot fences, signs and per-plot ground are gone.
 - Server physics (bundles, bales) doesn't see haystacks (they're only on screens), so hay
   dropped on the heap falls to the ground.
+
+## Tighter farm, sprinting, swing damage, tools held forward, 5% off (2026-11-06)
+- `FarmScale` 0.65: the countryside is laid out at full size and then pulled in (Kit.compact:
+  every model/part moves to 0.65 x its position, pens shrink to match; terrain lanes and the
+  pond are drawn at the scaled spots). Ground ±169, fence ±159, countryside ~105-155 out.
+  `PlotSize` 300 -> 190; `FarmEntrance` (0,0,80), `TraderStart` (0,0,58), `TruckStart`
+  (0,0,98); merchant (-38,84), wheel (38,84), golden door (86,0); portals at x -84.
+- Sprint (`Config.Sprint.multiplier` 1.6): hold Shift, press L3 on a controller, or tap RUN on
+  a touch screen. Client-side on top of the server's walking speed (Light Boots included).
+- Swing damage: the server sends the clump hit and what it has left; your screen carves a dent
+  there (`Config.Dent` radius 1.8, never below 0.4 of how full the clump really is) and shows
+  "This clump: N / 1,000" under the crosshair. Clumps never look fuller after an update.
+- Every built-in tool is now held like the spade: straight out in front, hay on top of the tines.
+- All coin prices for equipment x0.95 (tools, buckets, silos, perks, machines, feeders,
+  generators, pieces, trucks, belt motors, fitness, metal detector). World unlocks and Robux
+  unchanged. Needle at about 30.9 h (was 31.4).

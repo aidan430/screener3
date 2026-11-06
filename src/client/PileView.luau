@@ -28,7 +28,8 @@ function PileView.start()
 		if message.kind == "full" then
 			HeapTerrain.draw(terrain, o, message.removed, message.partial or {})
 		elseif message.kind == "cell" then
-			HeapTerrain.cell(terrain, o, message.index, message.left)
+			-- never fuller than it looks now: your dents stay until the clump is really gone
+			HeapTerrain.cell(terrain, o, message.index, message.left, HeapTerrain.occupancy(terrain, o, message.index))
 		end
 	end)
 	-- ask for the heap once we know our plot (the server's first send may have come too early)

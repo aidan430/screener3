@@ -173,6 +173,7 @@ local function harvest(player, target)
 		end
 	end
 	local power = math.min(Economy.power(d, flags.speedBoost), room(d))
+	local hitClump, clumpLeft = nil, nil -- which clump this swing dug into, and what it has left
 	local taken, hit, golden, gone = 0, false, false, false
 	local loft = workspace:FindFirstChild("Loft")
 	if isPart then
@@ -199,6 +200,7 @@ local function harvest(player, target)
 			return status(player, "Catching your breath...") -- a short rest, then carry on
 		end
 		taken, gone = Piles.take(plotIndex, d, clump, power)
+		hitClump, clumpLeft = clump, Piles.left(d, clump)
 		hit = gone and clump == d.needleClump
 		PlayerData.update(player, function(data)
 			data.carried += taken
@@ -220,7 +222,7 @@ local function harvest(player, target)
 	if not golden and d.tool >= Config.DetectorLevel and plotIndex then
 		warmth = Economy.warmth((head.Position - Piles.position(plotIndex, d.needleClump)).Magnitude)
 	end
-	Remotes.SearchFx:FireClient(player, { kind = "harvest", golden = golden, gone = gone, straws = taken, position = point, warmth = warmth, full = room(d) <= 0 })
+	Remotes.SearchFx:FireClient(player, { kind = "harvest", golden = golden, gone = gone, straws = taken, position = point, warmth = warmth, full = room(d) <= 0, clump = hitClump, left = clumpLeft })
 	if hit then
 		Search.needleFound(player, golden, point)
 	elseif rng:NextNumber() < Economy.luckyChance(d, flags.luckyCharm) then

@@ -128,6 +128,11 @@ function Piles.clear(plotIndex)
 	piles[plotIndex] = nil
 end
 
+-- Straws left in a clump.
+function Piles.left(d, clump)
+	return Profile.clumpLeft(d, clump)
+end
+
 -- Takes up to `amount` straws from a clump. Returns straws taken and whether the clump
 -- (and so maybe the needle) is now gone.
 function Piles.take(plotIndex, d, clump, amount)

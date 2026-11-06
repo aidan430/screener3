@@ -21,7 +21,7 @@ Config.WorldHaystackSize = 30 -- the haystack's main ball (studs)
 -- The portal arches on the west road: their x positions (the road runs along negative x) and
 -- their z (the south half of the road, leaving the north half as a walking lane).
 -- the portal arches stand in a row west of the haystack, facing it
-Config.WorldPortals = { spots = { { -118, -51 }, { -118, -17 }, { -118, 17 }, { -118, 51 } }, holdSeconds = 0.8, cooldown = 2 }
+Config.WorldPortals = { spots = { { -84, -51 }, { -84, -17 }, { -84, 17 }, { -84, 51 } }, holdSeconds = 0.8, cooldown = 2 }
 
 -- Moon gravity: an upward push cancelling this share of normal gravity while you're there.
 Config.MoonLift = 0.7

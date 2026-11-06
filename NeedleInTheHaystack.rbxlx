@@ -20,11 +20,12 @@ Config.FarmName = "Hollow Creek Farm"
 -- Plots: each player gets one. All four are the SAME place, the middle of the farm, with the
 -- haystack at its centre: everyone sees and digs only their own haystack, and only their own
 -- buildings and hay (other players' are hidden and pass-through on your screen).
-Config.PlotSize = 300 -- the build area round the haystack (the countryside starts at 162)
+Config.PlotSize = 190 -- the build area round the haystack (the countryside starts at about 105)
+Config.FarmScale = 0.65 -- the countryside, fence and ground are pulled in to this share of their size
 Config.PlotCentres = { { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } }
-Config.FarmEntrance = { 0, 0, 118 } -- where you arrive: south of the haystack, facing it
-Config.TraderStart = { 0, 0, 64 } -- your trader's stall, between the haystack and where you arrive
-Config.TruckStart = { 0, 0, 150 } -- trucks drive in from the south field
+Config.FarmEntrance = { 0, 0, 80 } -- where you arrive: south of the haystack, facing it
+Config.TraderStart = { 0, 0, 58 } -- your trader's stall, between the haystack and where you arrive
+Config.TruckStart = { 0, 0, 98 } -- trucks drive in from the south meadow
 Config.BuildClear = 40 -- nothing can stand this close to the haystack's centre (it's hay)
 
 -- The heap: 5,000,000 straws in clumps, one smooth terrain haystack 80 studs (22 m) high and
@@ -81,15 +82,15 @@ Config.CoinsPerStraw = 1
 -- loadSize = how big the hay on it gets. Without a model a tool is built as a pitchfork.
 Config.Tools = {
 	{ name = "Garden Trowel", model = 139238222017221, length = 3, power = 1, capacity = 300, price = 0, shaft = { 112, 82, 58 }, head = { 128, 98, 78 }, material = "CorrodedMetal" },
-	{ name = "Wooden Pitchfork", power = 2, capacity = 1000, price = 400, shaft = { 160, 116, 72 }, head = { 176, 128, 82 }, material = "Wood" },
-	{ name = "Iron Pitchfork", power = 3, capacity = 2500, price = 2400, shaft = { 150, 108, 66 }, head = { 165, 170, 178 }, material = "Metal" },
-	{ name = "Steel Rake", power = 5, capacity = 5000, price = 10000, shaft = { 120, 84, 50 }, head = { 190, 196, 204 }, material = "Metal" },
-	{ name = "Golden Rake", power = 7, capacity = 9000, price = 40000, shaft = { 120, 84, 50 }, head = { 245, 200, 66 }, material = "Metal" },
-	{ name = "Hay Blower", power = 9, capacity = 18000, price = 120000, shaft = { 70, 72, 84 }, head = { 232, 92, 60 }, material = "SmoothPlastic" },
-	{ name = "Super Sifter", power = 12, capacity = 32000, price = 320000, shaft = { 60, 64, 78 }, head = { 90, 200, 255 }, material = "Neon" },
-	{ name = "Magnet Gloves", power = 15, capacity = 50000, price = 800000, shaft = { 200, 200, 210 }, head = { 220, 40, 40 }, material = "SmoothPlastic" },
-	{ name = "Twin Turbines", power = 19, capacity = 75000, price = 1700000, shaft = { 40, 44, 52 }, head = { 255, 170, 40 }, material = "Metal" },
-	{ name = "Needle Detector", power = 22, capacity = 100000, price = 3400000, shaft = { 40, 44, 52 }, head = { 70, 255, 150 }, material = "Neon" },
+	{ name = "Wooden Pitchfork", power = 2, capacity = 1000, price = 380, shaft = { 160, 116, 72 }, head = { 176, 128, 82 }, material = "Wood" },
+	{ name = "Iron Pitchfork", power = 3, capacity = 2500, price = 2280, shaft = { 150, 108, 66 }, head = { 165, 170, 178 }, material = "Metal" },
+	{ name = "Steel Rake", power = 5, capacity = 5000, price = 9500, shaft = { 120, 84, 50 }, head = { 190, 196, 204 }, material = "Metal" },
+	{ name = "Golden Rake", power = 7, capacity = 9000, price = 38000, shaft = { 120, 84, 50 }, head = { 245, 200, 66 }, material = "Metal" },
+	{ name = "Hay Blower", power = 9, capacity = 18000, price = 114000, shaft = { 70, 72, 84 }, head = { 232, 92, 60 }, material = "SmoothPlastic" },
+	{ name = "Super Sifter", power = 12, capacity = 32000, price = 304000, shaft = { 60, 64, 78 }, head = { 90, 200, 255 }, material = "Neon" },
+	{ name = "Magnet Gloves", power = 15, capacity = 50000, price = 760000, shaft = { 200, 200, 210 }, head = { 220, 40, 40 }, material = "SmoothPlastic" },
+	{ name = "Twin Turbines", power = 19, capacity = 75000, price = 1615000, shaft = { 40, 44, 52 }, head = { 255, 170, 40 }, material = "Metal" },
+	{ name = "Needle Detector", power = 22, capacity = 100000, price = 3230000, shaft = { 40, 44, 52 }, head = { 70, 255, 150 }, material = "Neon" },
 }
 Config.DetectorLevel = 10 -- from this tool on, the HUD shows how close the needle is
 Config.LoadSize = 2.4 -- studs across the hay on a full tool
@@ -97,54 +98,54 @@ Config.LoadSize = 2.4 -- studs across the hay on a full tool
 -- Buckets hang at your hip and carry what the tool can't: tool fills first, then the bucket.
 Config.Buckets = {
 	{ name = "No bucket", capacity = 0, price = 0, size = 0 },
-	{ name = "Tin Pail", capacity = 600, price = 1500, size = 1.2 },
-	{ name = "Hay Bucket", capacity = 2000, price = 9000, size = 1.6 },
-	{ name = "Big Tub", capacity = 6000, price = 60000, size = 2 },
-	{ name = "Hay Barrel", capacity = 20000, price = 400000, size = 2.4 },
-	{ name = "Giant Basket", capacity = 60000, price = 2500000, size = 2.8 },
+	{ name = "Tin Pail", capacity = 600, price = 1425, size = 1.2 },
+	{ name = "Hay Bucket", capacity = 2000, price = 8550, size = 1.6 },
+	{ name = "Big Tub", capacity = 6000, price = 57000, size = 2 },
+	{ name = "Hay Barrel", capacity = 20000, price = 380000, size = 2.4 },
+	{ name = "Giant Basket", capacity = 60000, price = 2375000, size = 2.8 },
 }
 
 -- The silo on your plot holds what your machines harvest until you next sell.
 Config.Silos = {
 	{ name = "Hay Shed", size = 2000, price = 0 },
-	{ name = "Small Silo", size = 10000, price = 15000 },
-	{ name = "Big Silo", size = 40000, price = 150000 },
-	{ name = "Twin Silos", size = 150000, price = 1000000 },
-	{ name = "Grain Tower", size = 500000, price = 5000000 },
+	{ name = "Small Silo", size = 10000, price = 14250 },
+	{ name = "Big Silo", size = 40000, price = 142500 },
+	{ name = "Twin Silos", size = 150000, price = 950000 },
+	{ name = "Grain Tower", size = 500000, price = 4750000 },
 }
 
 -- Machines harvest the top of your pile into the silo, while you're in the game, if your
 -- generators make enough power. rate = straws a second, draw = power used.
 Config.Machines = {
-	{ id = "hen", name = "Clockwork Hen", rate = 0.15, draw = 2, price = 1600, max = 10, size = { 4, 4, 4 }, color = { 236, 180, 70 } },
-	{ id = "sieve", name = "Sorting Sieve", rate = 0.6, draw = 6, price = 20000, max = 10, size = { 5, 5, 5 }, color = { 150, 150, 160 } },
-	{ id = "thresher", name = "Steam Thresher", rate = 1.5, draw = 12, price = 160000, max = 8, size = { 6, 6, 6 }, color = { 90, 70, 60 } },
-	{ id = "vacuum", name = "Hay Vacuum", rate = 3.6, draw = 24, price = 900000, max = 6, size = { 7, 7, 7 }, color = { 200, 80, 60 } },
-	{ id = "magnetron", name = "Needle Magnetron", rate = 7.5, draw = 45, price = 4000000, max = 4, size = { 8, 8, 8 }, color = { 70, 255, 150 } },
+	{ id = "hen", name = "Clockwork Hen", rate = 0.15, draw = 2, price = 1520, max = 10, size = { 4, 4, 4 }, color = { 236, 180, 70 } },
+	{ id = "sieve", name = "Sorting Sieve", rate = 0.6, draw = 6, price = 19000, max = 10, size = { 5, 5, 5 }, color = { 150, 150, 160 } },
+	{ id = "thresher", name = "Steam Thresher", rate = 1.5, draw = 12, price = 152000, max = 8, size = { 6, 6, 6 }, color = { 90, 70, 60 } },
+	{ id = "vacuum", name = "Hay Vacuum", rate = 3.6, draw = 24, price = 855000, max = 6, size = { 7, 7, 7 }, color = { 200, 80, 60 } },
+	{ id = "magnetron", name = "Needle Magnetron", rate = 7.5, draw = 45, price = 3800000, max = 4, size = { 8, 8, 8 }, color = { 70, 255, 150 } },
 }
 
 -- Generators power the machines. power = units made.
 Config.Generators = {
-	{ id = "crank", name = "Hand-Crank Dynamo", power = 4, price = 1200, max = 10, size = { 4, 4, 4 }, color = { 140, 110, 80 } },
-	{ id = "diesel", name = "Diesel Generator", power = 15, price = 15000, max = 10, size = { 5, 5, 6 }, color = { 90, 120, 70 } },
-	{ id = "wind", name = "Wind Turbine", power = 40, price = 110000, max = 8, size = { 4, 20, 4 }, color = { 236, 236, 230 } },
-	{ id = "steam", name = "Steam Engine", power = 100, price = 700000, max = 6, size = { 7, 8, 9 }, color = { 120, 80, 60 } },
-	{ id = "burner", name = "Hay Burner", power = 30, price = 8000, max = 6, burner = true, size = { 5, 6, 5 }, color = { 150, 80, 50 } },
-	{ id = "lightning", name = "Lightning Rod Array", power = 260, price = 4000000, max = 4, size = { 6, 24, 6 }, color = { 120, 170, 255 } },
+	{ id = "crank", name = "Hand-Crank Dynamo", power = 4, price = 1140, max = 10, size = { 4, 4, 4 }, color = { 140, 110, 80 } },
+	{ id = "diesel", name = "Diesel Generator", power = 15, price = 14250, max = 10, size = { 5, 5, 6 }, color = { 90, 120, 70 } },
+	{ id = "wind", name = "Wind Turbine", power = 40, price = 104500, max = 8, size = { 4, 20, 4 }, color = { 236, 236, 230 } },
+	{ id = "steam", name = "Steam Engine", power = 100, price = 665000, max = 6, size = { 7, 8, 9 }, color = { 120, 80, 60 } },
+	{ id = "burner", name = "Hay Burner", power = 30, price = 7600, max = 6, burner = true, size = { 5, 6, 5 }, color = { 150, 80, 50 } },
+	{ id = "lightning", name = "Lightning Rod Array", power = 260, price = 3800000, max = 4, size = { 6, 24, 6 }, color = { 120, 170, 255 } },
 }
 
 -- Building pieces for climbing your pile, placed anywhere on your plot.
 Config.Pieces = {
-	{ id = "ladder", name = "Ladder", price = 200, size = { 4, 20, 2 }, model = 111414262141412, text = "Climb 20 studs straight up. Stack them to go higher." },
-	{ id = "stairs", name = "Stairs", price = 300, size = { 8, 10, 10 }, text = "Climbs 10 studs over 10 studs." },
-	{ id = "landing", name = "Landing", price = 150, size = { 10, 1, 10 }, text = "A 10 by 10 floor to stand and turn on." },
-	{ id = "pillar", name = "Pillar", price = 100, size = { 2, 10, 2 }, text = "A 10-stud post to hold things up." },
-	{ id = "escalator", name = "Escalator", price = 4000, size = { 8, 10, 10 }, text = "Stairs that carry you up 10 studs." },
-	{ id = "elevator", name = "Elevator", price = 30000, size = { 10, 51, 10 }, text = "A 50-stud lift. Press E at the bottom or top." },
-	{ id = "teleporter", name = "Teleporter Pad", price = 25000, size = { 8, 1, 8 }, text = "Step on, press E, pick any of your other pads." },
-	{ id = "conveyor", name = "Conveyor Belt", price = 800, size = { 6, 1, 12 }, text = "Carries dropped hay (G) along, towards its arrow." },
-	{ id = "chute", name = "Conveyor Down", price = 1500, size = { 6, 10, 12 }, text = "A belt that carries hay down 10 studs, off a platform." },
-	{ id = "baler", name = "Bale Maker", price = 60000, max = 3, size = { 8, 7, 10 }, text = "Feed it hay at the back; it pushes out bales. Trucks carry bales 3x as easily." },
+	{ id = "ladder", name = "Ladder", price = 190, size = { 4, 20, 2 }, model = 111414262141412, text = "Climb 20 studs straight up. Stack them to go higher." },
+	{ id = "stairs", name = "Stairs", price = 285, size = { 8, 10, 10 }, text = "Climbs 10 studs over 10 studs." },
+	{ id = "landing", name = "Landing", price = 140, size = { 10, 1, 10 }, text = "A 10 by 10 floor to stand and turn on." },
+	{ id = "pillar", name = "Pillar", price = 95, size = { 2, 10, 2 }, text = "A 10-stud post to hold things up." },
+	{ id = "escalator", name = "Escalator", price = 3800, size = { 8, 10, 10 }, text = "Stairs that carry you up 10 studs." },
+	{ id = "elevator", name = "Elevator", price = 28500, size = { 10, 51, 10 }, text = "A 50-stud lift. Press E at the bottom or top." },
+	{ id = "teleporter", name = "Teleporter Pad", price = 23750, size = { 8, 1, 8 }, text = "Step on, press E, pick any of your other pads." },
+	{ id = "conveyor", name = "Conveyor Belt", price = 760, size = { 6, 1, 12 }, text = "Carries dropped hay (G) along, towards its arrow." },
+	{ id = "chute", name = "Conveyor Down", price = 1425, size = { 6, 10, 12 }, text = "A belt that carries hay down 10 studs, off a platform." },
+	{ id = "baler", name = "Bale Maker", price = 57000, max = 3, size = { 8, 7, 10 }, text = "Feed it hay at the back; it pushes out bales. Trucks carry bales 3x as easily." },
 	{ id = "trader", name = "Trader's Stall", price = 0, max = 1, size = { 12, 12, 8 }, text = "Your trader. Dump your hay in the basket. Move it anywhere, even up a platform." },
 }
 Config.BasketDrainSeconds = 4 -- how fast the basket's hay level eases down after a dump (just for show)
@@ -155,10 +156,10 @@ Config.BasketDrainSeconds = 4 -- how fast the basket's hay level eases down afte
 Config.TraderRate = 8
 Config.TruckTripSeconds = 40
 Config.Trucks = {
-	{ id = "van", name = "Farm Van", rate = 15, price = 8000, max = 2, size = { 6, 6, 11 }, color = { 236, 236, 228 } },
-	{ id = "mini", name = "Mini Truck", rate = 35, price = 60000, max = 2, size = { 6, 6, 13 }, color = { 70, 130, 200 } },
-	{ id = "semi", name = "Semi Truck", rate = 90, price = 500000, max = 2, size = { 8, 9, 24 }, color = { 196, 72, 56 } },
-	{ id = "big", name = "Large Truck", rate = 220, price = 3000000, max = 2, size = { 9, 10, 30 }, color = { 60, 120, 70 } },
+	{ id = "van", name = "Farm Van", rate = 15, price = 7600, max = 2, size = { 6, 6, 11 }, color = { 236, 236, 228 } },
+	{ id = "mini", name = "Mini Truck", rate = 35, price = 57000, max = 2, size = { 6, 6, 13 }, color = { 70, 130, 200 } },
+	{ id = "semi", name = "Semi Truck", rate = 90, price = 475000, max = 2, size = { 8, 9, 24 }, color = { 196, 72, 56 } },
+	{ id = "big", name = "Large Truck", rate = 220, price = 2850000, max = 2, size = { 9, 10, 30 }, color = { 60, 120, 70 } },
 }
 Config.AutoDumpRange = 9 -- walk this close to your own basket and your load dumps itself
 Config.BasketShowFull = 5000 -- straws waiting at which the basket looks full
@@ -179,9 +180,9 @@ Config.MaxPlaced = 400 -- pieces, machines and generators on one plot
 
 -- Perks are bought per tool (they reset when you buy a new tool).
 Config.Perks = {
-	{ id = "sharp", name = "Sharpened", per_level = 0.15, levels = 5, price = 120, growth = 1.6, text = "+15% straws a click per level" },
-	{ id = "swift", name = "Swift", per_level = 0.10, levels = 5, price = 120, growth = 1.6, text = "-10% cooldown per level" },
-	{ id = "lucky", name = "Lucky", per_level = 0.004, levels = 5, price = 150, growth = 1.6, text = "+0.4% chance of a lucky find per level" },
+	{ id = "sharp", name = "Sharpened", per_level = 0.15, levels = 5, price = 115, growth = 1.6, text = "+15% straws a click per level" },
+	{ id = "swift", name = "Swift", per_level = 0.10, levels = 5, price = 115, growth = 1.6, text = "-10% cooldown per level" },
+	{ id = "lucky", name = "Lucky", per_level = 0.004, levels = 5, price = 140, growth = 1.6, text = "+0.4% chance of a lucky find per level" },
 }
 
 Config.LuckyChance = 0.006
@@ -319,18 +320,18 @@ local Config = {}
 
 -- More pieces for the Build tab: belt corners and splitters, and the processing machines.
 Config.Pieces = {
-	{ id = "corner", name = "Belt Corner", price = 300, size = { 6, 1, 6 }, text = "Turns hay on a belt to the side. Press R until the arrows point the way you want." },
-	{ id = "splitter", name = "Belt Splitter", price = 2500, size = { 6, 1, 6 }, text = "Sends hay left, then right, then left: feed two lines from one." },
-	{ id = "wrapper", name = "Bale Wrapper", price = 150000, max = 3, size = { 8, 6, 10 }, text = "Bales in at the back, wrapped bales out: worth more, and orders ask for them." },
-	{ id = "press", name = "Pellet Press", price = 400000, max = 3, size = { 8, 7, 10 }, text = "Bundles in at the back, sacks of hay pellets out: worth more again." },
+	{ id = "corner", name = "Belt Corner", price = 285, size = { 6, 1, 6 }, text = "Turns hay on a belt to the side. Press R until the arrows point the way you want." },
+	{ id = "splitter", name = "Belt Splitter", price = 2375, size = { 6, 1, 6 }, text = "Sends hay left, then right, then left: feed two lines from one." },
+	{ id = "wrapper", name = "Bale Wrapper", price = 142500, max = 3, size = { 8, 6, 10 }, text = "Bales in at the back, wrapped bales out: worth more, and orders ask for them." },
+	{ id = "press", name = "Pellet Press", price = 380000, max = 3, size = { 8, 7, 10 }, text = "Bundles in at the back, sacks of hay pellets out: worth more again." },
 }
 
 -- Feeders take hay from your heap by themselves and put it on your belts as bundles, using
 -- power like machines. amount = straws a go, every = seconds between goes, draw = power,
 -- throw = how far a thrower flings its bundle forward (studs).
 Config.Feeders = {
-	{ id = "arm", name = "Hay Arm", amount = 8, every = 4, draw = 6, price = 50000, max = 8, size = { 4, 7, 4 } },
-	{ id = "thrower", name = "Hay Thrower", amount = 30, every = 4, draw = 30, price = 900000, max = 6, size = { 5, 4, 6 }, throw = 22 },
+	{ id = "arm", name = "Hay Arm", amount = 8, every = 4, draw = 6, price = 47500, max = 8, size = { 4, 7, 4 } },
+	{ id = "thrower", name = "Hay Thrower", amount = 30, every = 4, draw = 30, price = 855000, max = 6, size = { 5, 4, 6 }, throw = 22 },
 }
 Config.FeederReach = 30 -- a feeder only takes hay if your heap is this close (studs from its base)
 
@@ -340,9 +341,9 @@ Config.BurnerSecondsPerStraw = 0.25 -- 1,000 straws keep a burner going for abou
 -- Belt motors: every belt you own runs at the speed of your level (bought in Logistics).
 Config.BeltSpeeds = {
 	{ speed = 10, price = 0 },
-	{ speed = 14, price = 20000 },
-	{ speed = 19, price = 120000 },
-	{ speed = 25, price = 700000 },
+	{ speed = 14, price = 19000 },
+	{ speed = 19, price = 114000 },
+	{ speed = 25, price = 665000 },
 }
 
 -- Processing: what each product is worth, as a multiple of the straws in it, and how tightly
@@ -410,18 +411,25 @@ return Config
 -- them as Config.Stamina, Config.Fitness, Config.MetalDetector).
 local Config = {}
 
+-- Each swing carves a dent this big where you hit (on your screen), down to `floor` of how full
+-- the clump really is, so you see the damage without the heap looking emptier than it is.
+Config.Dent = { radius = 1.8, floor = 0.4 }
+
+-- Sprinting (Shift / L3 / RUN): this many times your walking speed.
+Config.Sprint = { multiplier = 1.6 }
+
 -- Stamina: each harvest click spends perHarvest; it refills regenPerSecond all the time. Out of
 -- breath (0), you rest regenDelay seconds, then until it's back to `recover`. Fitness upgrades
 -- it (coins; level n costs price x growth^(n-1); stat: max, regen or walk = Humanoid.WalkSpeed).
 Config.Stamina = { max = 100, perHarvest = 1, regenPerSecond = 2.5, regenDelay = 1, recover = 15, walkSpeed = 16 }
 Config.Fitness = {
-	{ id = "arms", name = "Stronger Arms", stat = "max", per_level = 50, levels = 5, price = 300, growth = 3, text = "+50 stamina per level" },
-	{ id = "breath", name = "Second Wind", stat = "regen", per_level = 0.25, levels = 4, price = 500, growth = 3, text = "+0.25 stamina a second per level" },
-	{ id = "boots", name = "Light Boots", stat = "walk", per_level = 1.5, levels = 4, price = 600, growth = 3, text = "+1.5 walking speed per level" },
+	{ id = "arms", name = "Stronger Arms", stat = "max", per_level = 50, levels = 5, price = 285, growth = 3, text = "+50 stamina per level" },
+	{ id = "breath", name = "Second Wind", stat = "regen", per_level = 0.25, levels = 4, price = 475, growth = 3, text = "+0.25 stamina a second per level" },
+	{ id = "boots", name = "Light Boots", stat = "walk", per_level = 1.5, levels = 4, price = 570, growth = 3, text = "+1.5 walking speed per level" },
 }
 -- Metal detector (bought once): hold `key` to sweep. Within `range` studs of your needle's clump
 -- it beeps, faster and higher the closer your head is (signal 1-5; beep = seconds per signal).
-Config.MetalDetector = { price = 900, range = 30, levels = 5, pollSeconds = 0.25, key = "V", beep = { 1.2, 0.9, 0.65, 0.45, 0.28 } }
+Config.MetalDetector = { price = 855, range = 30, levels = 5, pollSeconds = 0.25, key = "V", beep = { 1.2, 0.9, 0.65, 0.45, 0.28 } }
 
 -- Touch screens (phones, tablets). A touch that stays within dragPixels and lifts before
 -- holdSeconds harvests once at the crosshair; one held still longer keeps harvesting; one that
@@ -469,7 +477,7 @@ Config.WorldHaystackSize = 30 -- the haystack's main ball (studs)
 -- The portal arches on the west road: their x positions (the road runs along negative x) and
 -- their z (the south half of the road, leaving the north half as a walking lane).
 -- the portal arches stand in a row west of the haystack, facing it
-Config.WorldPortals = { spots = { { -118, -51 }, { -118, -17 }, { -118, 17 }, { -118, 51 } }, holdSeconds = 0.8, cooldown = 2 }
+Config.WorldPortals = { spots = { { -84, -51 }, { -84, -17 }, { -84, 17 }, { -84, 51 } }, holdSeconds = 0.8, cooldown = 2 }
 
 -- Moon gravity: an upward push cancelling this share of normal gravity while you're there.
 Config.MoonLift = 0.7
@@ -931,16 +939,38 @@ return function(Config)
 		terrain:WriteVoxels(Region3.new(corner, corner + Vector3.new((2 * n + 1) * s, Config.PileLayers * s, (2 * n + 1) * s)), s, materials, amounts)
 	end
 
-	-- One clump, after a harvest or a machine took from it.
-	function HeapTerrain.cell(terrain, o, index, left)
+	local function region(o, index)
 		local c = Layout[index]
 		if not c then
-			return
+			return nil
 		end
 		local centre = o + Vector3.new(c[1], c[2], c[3])
 		local half = Vector3.new(1, 1, 1) * (Config.ClumpSize / 2)
+		return Region3.new(centre - half, centre + half)
+	end
+
+	-- How full a clump's cell looks on this screen right now (0..1).
+	function HeapTerrain.occupancy(terrain, o, index)
+		local r = region(o, index)
+		if not r then
+			return 0
+		end
+		local _, amounts = terrain:ReadVoxels(r, Config.ClumpSize)
+		return amounts[1][1][1]
+	end
+
+	-- One clump, after a harvest or a machine took from it. `cap` (optional) keeps it from
+	-- looking fuller than it does now (the dents you've made stay; it never grows back).
+	function HeapTerrain.cell(terrain, o, index, left, cap)
+		local r = region(o, index)
+		if not r then
+			return
+		end
 		local amount = HeapTerrain.fullness(index, left)
-		terrain:WriteVoxels(Region3.new(centre - half, centre + half), Config.ClumpSize, { { { if amount > 0 then HEAP else Enum.Material.Air } } }, { { { amount } } })
+		if cap and amount > 0 then
+			amount = math.min(amount, cap)
+		end
+		terrain:WriteVoxels(r, Config.ClumpSize, { { { if amount > 0 then HEAP else Enum.Material.Air } } }, { { { amount } } })
 	end
 
 	return HeapTerrain
@@ -3473,6 +3503,11 @@ function Piles.clear(plotIndex)
 	piles[plotIndex] = nil
 end
 
+-- Straws left in a clump.
+function Piles.left(d, clump)
+	return Profile.clumpLeft(d, clump)
+end
+
 -- Takes up to `amount` straws from a clump. Returns straws taken and whether the clump
 -- (and so maybe the needle) is now gone.
 function Piles.take(plotIndex, d, clump, amount)
@@ -4263,7 +4298,7 @@ return Profile
 -- (about 162 to 238 studs out): a farmyard (silos, barn, farmhouse, chicken run) and the
 -- windmill to the north, animal pens to the west, pumpkin and corn fields to the east, the
 -- water tower, duck pond, a meadow and the orchard to the south, and a split-rail fence round
--- each plot (SceneryPlots). All plain anchored Parts in workspace.Scenery; animals and windmill
+-- the farm. All plain anchored Parts in workspace.Scenery; animals and windmill
 -- sails are animated on each client (client/Animals). Nothing here goes inside the plots or on
 -- the roads.
 local Build = require(script.Parent.Build)
@@ -4488,6 +4523,7 @@ function Scenery.build()
 			warn("[Scenery] " .. job[1] .. " failed: " .. tostring(err))
 		end
 	end
+	Kit.compact(folder) -- laid out at full size, then pulled in close round the haystack
 end
 
 return Scenery
@@ -4725,6 +4761,33 @@ return Pens
 local Build = require(script.Parent.Build)
 
 local Kit = {}
+Kit.SCALE = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config")).FarmScale
+
+-- Pulls everything built under `root` towards the middle by Kit.SCALE: each model and loose part
+-- keeps its size and turn and moves to SCALE x its position (heights stay), and animals' pens
+-- shrink to match. The countryside is laid out at full size and then pulled in this way.
+function Kit.compact(root)
+	local k = Kit.SCALE
+	local function pull(v)
+		return Vector3.new(v.X * k, v.Y, v.Z * k)
+	end
+	for _, child in ipairs(root:GetChildren()) do
+		if child:IsA("Folder") then
+			Kit.compact(child)
+		elseif child:IsA("Model") then
+			local pivot = child:GetPivot()
+			child:PivotTo(pivot - pivot.Position + pull(pivot.Position))
+			for _, name in ipairs({ "PenMin", "PenMax" }) do
+				local v = child:GetAttribute(name)
+				if typeof(v) == "Vector3" then
+					child:SetAttribute(name, pull(v))
+				end
+			end
+		elseif child:IsA("BasePart") then
+			child.CFrame = child.CFrame - child.Position + pull(child.Position)
+		end
+	end
+end
 
 Kit.C = {
 	red = { 168, 52, 42 },
@@ -4876,8 +4939,10 @@ Nature.POND = Vector3.new(-100, 0, 205)
 Nature.POND_RADIUS = 24
 Nature.WATER_Y = -1
 
+-- (terrain is pulled in by Config.FarmScale here; the parts are pulled in after building)
 local function dirt(x, z, sx, sz, material)
-	terrain:FillBlock(CFrame.new(x, -2, z), Vector3.new(sx, 4, sz), material or Enum.Material.Ground)
+	local k = Kit.SCALE
+	terrain:FillBlock(CFrame.new(x * k, -2, z * k), Vector3.new(sx * k, 4, sz * k), material or Enum.Material.Ground)
 end
 
 function Nature.terrain()
@@ -4889,10 +4954,11 @@ function Nature.terrain()
 	dirt(206, -91, 62, 124) -- the pumpkin patch
 	dirt(206, 92, 62, 124) -- the corn rows
 	dirt(-200, -127, 16, 12, Enum.Material.Mud) -- the pigs' favourite mud
-	local pond = Nature.POND
-	terrain:FillCylinder(CFrame.new(pond.X, -4, pond.Z), 8, Nature.POND_RADIUS + 4, Enum.Material.Mud)
-	terrain:FillCylinder(CFrame.new(pond.X, -3, pond.Z), 6, Nature.POND_RADIUS, Enum.Material.Air)
-	terrain:FillCylinder(CFrame.new(pond.X, -3.5, pond.Z), 5, Nature.POND_RADIUS, Enum.Material.Water)
+	local k = Kit.SCALE
+	local pond, r = Nature.POND * k, Nature.POND_RADIUS * k
+	terrain:FillCylinder(CFrame.new(pond.X, -4, pond.Z), 8, r + 4, Enum.Material.Mud)
+	terrain:FillCylinder(CFrame.new(pond.X, -3, pond.Z), 6, r, Enum.Material.Air)
+	terrain:FillCylinder(CFrame.new(pond.X, -3.5, pond.Z), 5, r, Enum.Material.Water)
 	terrain.WaterColor = Color3.fromRGB(86, 124, 112)
 	terrain.WaterWaveSize = 0.05
 	terrain.WaterWaveSpeed = 4
@@ -5434,6 +5500,7 @@ local function harvest(player, target)
 		end
 	end
 	local power = math.min(Economy.power(d, flags.speedBoost), room(d))
+	local hitClump, clumpLeft = nil, nil -- which clump this swing dug into, and what it has left
 	local taken, hit, golden, gone = 0, false, false, false
 	local loft = workspace:FindFirstChild("Loft")
 	if isPart then
@@ -5452,7 +5519,7 @@ local function harvest(player, target)
 		end
 		local clump = Plots.contains(plotIndex, point, 0) and Piles.clumpAt(plotIndex, d, point)
 		if not clump then
-			return nope(player, "That's not your heap. Yours is on the farm marked YOUR FARM.")
+			return nope(player, "That isn't part of your haystack. Aim at the hay in the middle of the farm.")
 		elseif (head.Position - Piles.position(plotIndex, clump)).Magnitude > Config.Reach + 6 then
 			return nope(player, "Too far away. Step closer to the hay.")
 		end
@@ -5460,6 +5527,7 @@ local function harvest(player, target)
 			return status(player, "Catching your breath...") -- a short rest, then carry on
 		end
 		taken, gone = Piles.take(plotIndex, d, clump, power)
+		hitClump, clumpLeft = clump, Piles.left(d, clump)
 		hit = gone and clump == d.needleClump
 		PlayerData.update(player, function(data)
 			data.carried += taken
@@ -5481,7 +5549,7 @@ local function harvest(player, target)
 	if not golden and d.tool >= Config.DetectorLevel and plotIndex then
 		warmth = Economy.warmth((head.Position - Piles.position(plotIndex, d.needleClump)).Magnitude)
 	end
-	Remotes.SearchFx:FireClient(player, { kind = "harvest", golden = golden, gone = gone, straws = taken, position = point, warmth = warmth, full = room(d) <= 0 })
+	Remotes.SearchFx:FireClient(player, { kind = "harvest", golden = golden, gone = gone, straws = taken, position = point, warmth = warmth, full = room(d) <= 0, clump = hitClump, left = clumpLeft })
 	if hit then
 		Search.needleFound(player, golden, point)
 	elseif rng:NextNumber() < Economy.luckyChance(d, flags.luckyCharm) then
@@ -6208,7 +6276,9 @@ function Tools.make(level, skinId)
 	tool.Name = def.name
 	tool.ToolTip = Format.commas(def.power) .. " straws a click, carries " .. Format.commas(def.capacity)
 	tool.CanBeDropped = false
-	tool.Grip = CFrame.new(0, -1, 0) -- held a little below the middle, fork up
+	-- held like the spade: straight out in front, the working end forward (the handle's +Y
+	-- points away from you and its +Z points up), the hand a little behind the middle
+	tool.Grip = CFrame.new(0, -1.5, 0) * CFrame.Angles(math.rad(90), 0, 0)
 	tool:SetAttribute("Level", level)
 	local handle = Instance.new("Part")
 	handle.Name = "Handle"
@@ -6221,7 +6291,8 @@ function Tools.make(level, skinId)
 	handle.Parent = tool
 	local look, length = ToolLook.make(def)
 	-- where the hay sits (its bottom, in the handle's space) and how big it can get
-	local seat, maxLoad = CFrame.new(0, 3.6, 0), Config.LoadSize
+	-- on a fork the hay rests on top of the tines (the handle's +Z is up when held)
+	local seat, maxLoad = CFrame.new(0, 3.75, 0.2) * CFrame.Angles(math.rad(90), 0, 0), Config.LoadSize
 	if look then
 		-- an imported model, held straight out in front with its working end forward and up,
 		-- like a scoop holding the hay. The handle's -Z points away from the hand.
@@ -6400,13 +6471,13 @@ local World = {}
 local terrain = workspace.Terrain
 local AUTUMN = { { 214, 120, 40 }, { 196, 72, 44 }, { 232, 176, 54 }, { 150, 150, 58 } }
 local WOOD = { 122, 86, 52 }
-local GROUND = 520 -- the ground is GROUND x GROUND studs
-local FENCE = 245 -- the boundary fence, this far from the hub on each axis
+local GROUND = math.floor(520 * Config.FarmScale) -- the ground is GROUND x GROUND studs
+local FENCE = math.floor(245 * Config.FarmScale) -- the boundary fence, this far from the middle
 
 -- The haystack stands in the middle now, so these stand round it, facing it.
-World.MERCHANT = Vector3.new(-42, 0, 100) -- just west of where you arrive
-World.WHEEL = Vector3.new(42, 0, 100) -- just east of where you arrive
-World.DOOR = Vector3.new(112, 0, 0) -- the golden door, on the east road
+World.MERCHANT = Vector3.new(-38, 0, 84) -- just west of where you arrive
+World.WHEEL = Vector3.new(38, 0, 84) -- just east of where you arrive
+World.DOOR = Vector3.new(86, 0, 0) -- the golden door, on the east road
 World.LOFT = Vector3.new(0, 330, 0) -- the secret level floats high above the hub
 
 local function prompt(parent, action, text, object, key)
@@ -6429,8 +6500,8 @@ function World.ground()
 	terrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(124, 94, 62))
 	terrain:SetMaterialColor(Enum.Material.Cobblestone, Color3.fromRGB(152, 138, 120))
 	terrain:FillBlock(CFrame.new(0, -8, 0), Vector3.new(GROUND, 16, GROUND), Enum.Material.LeafyGrass)
-	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(30, 4, 330), Enum.Material.Ground)
-	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(330, 4, 30), Enum.Material.Ground)
+	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(24, 4, FENCE * 2), Enum.Material.Ground)
+	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(FENCE * 2, 4, 24), Enum.Material.Ground)
 	terrain:FillCylinder(CFrame.new(0, -2, 0), 4, 58, Enum.Material.Cobblestone) -- the yard the haystack stands in
 	-- a few soft hills just past the edge of the ground, so the world fades into countryside
 	local rng = Random.new(11)
@@ -8097,6 +8168,84 @@ return Cursor
 				</Item>
 				<Item class="ModuleScript" referent="RBX00051">
 					<Properties>
+						<string name="Name">Dents</string>
+						<ProtectedString name="Source"><![CDATA[-- Every swing leaves its mark: a dent carved in your haystack where you hit (on your screen;
+-- never deeper than Config.Dent.floor of how full that clump really is), a little shudder of
+-- straw, and a bar under the crosshair showing how much of that clump is left.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Format = require(Shared:WaitForChild("Format"))
+local HeapTerrain = require(Shared:WaitForChild("HeapTerrain"))(Config)
+local Ui = require(script.Parent.Ui)
+local Juice = require(script.Parent.Juice)
+
+local player = Players.LocalPlayer
+local Dents = {}
+local PER_CLUMP = Config.TotalStraws // Config.Clumps
+local bar, fill, text
+local token = 0
+
+local function origin()
+	local plot = player:GetAttribute("Plot")
+	local centre = plot and Config.PlotCentres[plot]
+	return centre and HeapTerrain.origin(centre[1], centre[2])
+end
+
+local function mountBar()
+	local gui = Ui.make("ScreenGui", { Name = "ClumpBar", ResetOnSpawn = false, IgnoreGuiInset = true, Parent = player:WaitForChild("PlayerGui") })
+	bar = Ui.make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.5, 54), Size = UDim2.fromOffset(170, 30), BackgroundTransparency = 1, Visible = false, Parent = gui })
+	text = Ui.label({ Size = UDim2.new(1, 0, 0, 16), Parent = bar }, 14)
+	local track = Ui.make("Frame", { Position = UDim2.fromOffset(0, 18), Size = UDim2.new(1, 0, 0, 8), BackgroundColor3 = Ui.colors.woodDark, BackgroundTransparency = 0.2, Parent = bar }, { Ui.corner(4) })
+	fill = Ui.make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Ui.colors.hay, Parent = track }, { Ui.corner(4) })
+end
+
+-- Shows what's left in the clump you just hit, then fades away when you stop.
+local function show(left)
+	if not bar then
+		mountBar()
+	end
+	token += 1
+	local mine = token
+	bar.Visible = true
+	text.Text = if left > 0 then "This clump: " .. Format.commas(left) .. " / " .. Format.commas(PER_CLUMP) else "Clump cleared!"
+	Juice.ease(fill, 0.15, { Size = UDim2.fromScale(math.clamp(left / PER_CLUMP, 0, 1), 1) })
+	task.delay(1.6, function()
+		if token == mine then
+			bar.Visible = false
+		end
+	end)
+end
+
+-- A swing landed at `point` in clump `clump`, which has `left` straws left.
+function Dents.hit(point, clump, left)
+	if not clump or not left then
+		return
+	end
+	show(left)
+	local o = origin()
+	if not o or left <= 0 then
+		return -- a cleared clump is redrawn as empty by the server's update
+	end
+	local terrain = workspace.Terrain
+	local floor = HeapTerrain.fullness(clump, left) * Config.Dent.floor
+	if HeapTerrain.occupancy(terrain, o, clump) > floor + 0.02 then
+		terrain:FillBall(point, Config.Dent.radius, Enum.Material.Air)
+		if HeapTerrain.occupancy(terrain, o, clump) < floor then -- not deeper than the hay really goes
+			HeapTerrain.cell(terrain, o, clump, left, floor)
+		end
+	end
+	Juice.burst(point, 10, false)
+end
+
+return Dents
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX00052">
+					<Properties>
 						<string name="Name">Detector</string>
 						<ProtectedString name="Source"><![CDATA[-- The metal detector: hold Config.MetalDetector.key to sweep. The client only says "I'm
 -- detecting" (Remotes.Detect); the server answers a coarse signal, 0 to `levels`. Higher
@@ -8217,7 +8366,7 @@ return Detector
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00052">
+				<Item class="ModuleScript" referent="RBX00053">
 					<Properties>
 						<string name="Name">Goals</string>
 						<ProtectedString name="Source"><![CDATA[-- The guided goal card (top left) and the coins-a-minute line under the coins counter.
@@ -8357,7 +8506,7 @@ return Goals
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00053">
+				<Item class="ModuleScript" referent="RBX00054">
 					<Properties>
 						<string name="Name">Guide</string>
 						<ProtectedString name="Source"><![CDATA[-- When your tool and bucket are full, a soft golden line runs from you to your trader's
@@ -8419,7 +8568,7 @@ return Guide
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00054">
+				<Item class="ModuleScript" referent="RBX00055">
 					<Properties>
 						<string name="Name">Harvest</string>
 						<ProtectedString name="Source"><![CDATA[-- Aiming in first person: the clump under the crosshair (within reach, on your own pile or the
@@ -8548,7 +8697,7 @@ function Harvest.miss()
 		if onMyHeap(result) and far > Config.Reach then
 			Harvest.onMiss("Too far: " .. math.floor(far) .. " studs. Get within " .. Config.Reach .. ".")
 		elseif not onMyHeap(result) then
-			Harvest.onMiss("That's not your heap. Yours is on the farm marked YOUR FARM.")
+			Harvest.onMiss("That isn't part of your haystack. Aim at the hay in the middle of the farm.")
 		end
 	else
 		Harvest.onMiss("That's " .. (if result.Instance == workspace.Terrain then "the ground" else result.Instance.Name) .. ", not hay. Aim the dot at your heap.")
@@ -8687,7 +8836,7 @@ return Harvest
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00055">
+				<Item class="ModuleScript" referent="RBX00056">
 					<Properties>
 						<string name="Name">HayFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The hay you can see moving: every harvest lifts a lump off the heap onto your tool, and
@@ -8785,7 +8934,7 @@ return HayFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00056">
+				<Item class="ModuleScript" referent="RBX00057">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: a crosshair, your pile's progress at the top, and on the left your
@@ -8937,7 +9086,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00057">
+				<Item class="ModuleScript" referent="RBX00058">
 					<Properties>
 						<string name="Name">Jetpack</string>
 						<ProtectedString name="Source"><![CDATA[-- The Jetpack (a Robux game pass; the server sets the "PassJetpack" attribute when you own it).
@@ -9119,7 +9268,7 @@ return Jetpack
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00058">
+				<Item class="ModuleScript" referent="RBX00059">
 					<Properties>
 						<string name="Name">Juice</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback that makes harvesting feel good: straw bursts, floating numbers, a soft camera
@@ -9308,7 +9457,7 @@ return Juice
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX00059">
+				<Item class="LocalScript" referent="RBX0005A">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- The player's side of the game: first-person harvesting, building, the menus, and all the
@@ -9450,7 +9599,7 @@ step("controls", function()
 			panels.open(name)
 		end
 	end)
-	TouchAim.start() -- touch screens: tap or hold still to harvest
+	TouchAim.start(); require(script.Parent:WaitForChild("Sprint")).start() -- touch harvesting; sprint (Shift, L3, RUN)
 end)
 step("worlds", function() require(script.Parent:WaitForChild("Worlds")).start(gui, Notify) end)
 if not hud then
@@ -9523,7 +9672,7 @@ end)
 Remotes.SearchFx.OnClientEvent:Connect(function(message)
 	if message.kind == "harvest" then
 		Juice.hit()
-		HayFx.lift(message.position, message.golden)
+		HayFx.lift(message.position, message.golden); require(script.Parent:WaitForChild("Dents")).hit(message.position, message.clump, message.left)
 		Juice.float(message.position + Vector3.new(0, 2, 0), "+" .. message.straws, if message.golden then Ui.colors.hay else Ui.colors.cream)
 		if message.gone then -- you cleared a clump: it pops
 			Juice.pop(message.position, message.golden)
@@ -9612,7 +9761,7 @@ end)
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005A">
+				<Item class="ModuleScript" referent="RBX0005B">
 					<Properties>
 						<string name="Name">Music</string>
 						<ProtectedString name="Source"><![CDATA[-- Soft background music: the Config.Music playlist in a loop, low and relaxing, fading gently
@@ -9755,7 +9904,7 @@ return Music
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005B">
+				<Item class="ModuleScript" referent="RBX0005C">
 					<Properties>
 						<string name="Name">Notify</string>
 						<ProtectedString name="Source"><![CDATA[-- Messages: small toasts under the haystack counter, and a big banner for case news.
@@ -9861,7 +10010,7 @@ return Notify
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005C">
+				<Item class="ModuleScript" referent="RBX0005D">
 					<Properties>
 						<string name="Name">Offer</string>
 						<ProtectedString name="Source"><![CDATA[-- One gentle Robux suggestion per session: after Config.OfferAfterClumps clumps harvested since
@@ -9967,7 +10116,7 @@ return Offer
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005D">
+				<Item class="ModuleScript" referent="RBX0005E">
 					<Properties>
 						<string name="Name">OnlyMine</string>
 						<ProtectedString name="Source"><![CDATA[-- Every player's farm shares the middle of the map, so on your screen other players' buildings,
@@ -10056,7 +10205,7 @@ return OnlyMine
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005E">
+				<Item class="ModuleScript" referent="RBX0005F">
 					<Properties>
 						<string name="Name">OrderCard</string>
 						<ProtectedString name="Source"><![CDATA[-- The current delivery order, on the right of the screen: what the driver wants, how many
@@ -10110,7 +10259,7 @@ return OrderCard
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005F">
+				<Item class="ModuleScript" referent="RBX00060">
 					<Properties>
 						<string name="Name">Panels</string>
 						<ProtectedString name="Source"><![CDATA[-- The windows: Shop, secret Achievements, Finds & Skins, and the Wheel of Fortune (odds first).
@@ -10315,7 +10464,7 @@ return Panels
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00060">
+				<Item class="ModuleScript" referent="RBX00061">
 					<Properties>
 						<string name="Name">PileView</string>
 						<ProtectedString name="Source"><![CDATA[-- Draws your own haystack on your screen. Every player's haystack stands in the same place in
@@ -10348,7 +10497,8 @@ function PileView.start()
 		if message.kind == "full" then
 			HeapTerrain.draw(terrain, o, message.removed, message.partial or {})
 		elseif message.kind == "cell" then
-			HeapTerrain.cell(terrain, o, message.index, message.left)
+			-- never fuller than it looks now: your dents stay until the clump is really gone
+			HeapTerrain.cell(terrain, o, message.index, message.left, HeapTerrain.occupancy(terrain, o, message.index))
 		end
 	end)
 	-- ask for the heap once we know our plot (the server's first send may have come too early)
@@ -10365,7 +10515,7 @@ return PileView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00061">
+				<Item class="ModuleScript" referent="RBX00062">
 					<Properties>
 						<string name="Name">Shop</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop window: Tools, Perks, Fitness (stamina, the metal detector), Storage (buckets and
@@ -10669,7 +10819,90 @@ return Shop
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00062">
+				<Item class="ModuleScript" referent="RBX00063">
+					<Properties>
+						<string name="Name">Sprint</string>
+						<ProtectedString name="Source"><![CDATA[-- Sprinting on every device: hold Shift on a keyboard, press the left stick (L3) on a controller
+-- to toggle, or tap RUN on a touch screen to toggle. You run Config.Sprint.multiplier times
+-- your walking speed (Light Boots included); letting go or tapping again walks.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Ui = require(script.Parent.Ui)
+local TouchPad = require(script.Parent.TouchPad)
+
+local player = Players.LocalPlayer
+local Sprint = {}
+local running, base, humanoid = false, nil, nil
+
+local function apply()
+	if humanoid and base then
+		humanoid.WalkSpeed = if running then base * Config.Sprint.multiplier else base
+	end
+end
+
+local function set(on)
+	if running ~= on then
+		running = on
+		apply()
+	end
+end
+
+local function track(character)
+	humanoid = character:WaitForChild("Humanoid", 10)
+	if not humanoid then
+		return
+	end
+	base = humanoid.WalkSpeed
+	-- the server sets the walking speed (Light Boots): remember it whenever we aren't sprinting
+	humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+		local speed = humanoid.WalkSpeed
+		if not running then
+			base = speed
+		elseif base and math.abs(speed - base * Config.Sprint.multiplier) > 0.01 then
+			base = speed -- the server changed it mid-run: take that as the new walking speed
+			apply()
+		end
+	end)
+	apply()
+end
+
+function Sprint.start()
+	player.CharacterAdded:Connect(function(character)
+		running = false
+		track(character)
+	end)
+	if player.Character then
+		task.spawn(track, player.Character)
+	end
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then
+			set(true) -- even if a text box isn't focused, Shift is never typed on its own
+		elseif not processed and input.KeyCode == Enum.KeyCode.ButtonL3 then
+			set(not running)
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then
+			set(false)
+		end
+	end)
+	local button
+	button = TouchPad.add({ order = 0, text = "RUN", colour = Ui.colors.green, tap = function()
+		set(not running)
+		if button then
+			button.Text = if running then "WALK" else "RUN"
+		end
+	end })
+end
+
+return Sprint
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX00064">
 					<Properties>
 						<string name="Name">Stamina</string>
 						<ProtectedString name="Source"><![CDATA[-- A slim stamina bar under the crosshair (the server owns stamina: attributes Stamina,
@@ -10717,7 +10950,7 @@ return StaminaBar
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00063">
+				<Item class="ModuleScript" referent="RBX00065">
 					<Properties>
 						<string name="Name">Teleport</string>
 						<ProtectedString name="Source"><![CDATA[-- The teleporter menu: standing on one of your pads, pick any of your other pads (listed by
@@ -10788,7 +11021,7 @@ return Teleport
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00064">
+				<Item class="ModuleScript" referent="RBX00066">
 					<Properties>
 						<string name="Name">TouchAim</string>
 						<ProtectedString name="Source"><![CDATA[-- Harvesting on touch screens. In first person a finger dragged across the screen turns the
@@ -10853,7 +11086,7 @@ return TouchAim
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00065">
+				<Item class="ModuleScript" referent="RBX00067">
 					<Properties>
 						<string name="Name">TouchPad</string>
 						<ProtectedString name="Source"><![CDATA[-- The action pad on touch screens: the keyboard's shortcuts (shop, build, drop, home, tool,
@@ -11000,7 +11233,7 @@ return TouchPad
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00066">
+				<Item class="ModuleScript" referent="RBX00068">
 					<Properties>
 						<string name="Name">Ui</string>
 						<ProtectedString name="Source"><![CDATA[-- A small UI kit: the farm colours, rounded wooden buttons and windows that scale with
@@ -11239,7 +11472,7 @@ return Ui
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00067">
+				<Item class="ModuleScript" referent="RBX00069">
 					<Properties>
 						<string name="Name">WorldFx</string>
 						<ProtectedString name="Source"><![CDATA[-- World effects on your screen: the glowing needle clump (Wheel jackpot), the wheel turning
@@ -11334,30 +11567,15 @@ local function spinFans()
 	end)
 end
 
-local function markFarm()
-	local plot = myPlot()
-	local sign = plot and plot:WaitForChild("PlotSign", 30)
-	if sign then
-		local board = Ui.make("BillboardGui", { Adornee = sign, Size = UDim2.fromScale(16, 3), StudsOffset = Vector3.new(0, 6, 0), LightInfluence = 0, MaxDistance = 600, ResetOnSpawn = false, Parent = player:WaitForChild("PlayerGui") })
-		Ui.label({ Text = "YOUR FARM", Size = UDim2.fromScale(1, 1), TextColor3 = Ui.colors.hay, Parent = board }, 48)
-	end
-end
-
 function WorldFx.start()
 	task.spawn(spinFans)
-	task.spawn(function()
-		while not player:GetAttribute("Plot") do
-			player:GetAttributeChangedSignal("Plot"):Wait()
-		end
-		markFarm()
-	end)
 end
 
 return WorldFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00068">
+				<Item class="ModuleScript" referent="RBX0006A">
 					<Properties>
 						<string name="Name">Worlds</string>
 						<ProtectedString name="Source"><![CDATA[-- The portal worlds on your own screen: each world's light eased in on arrival (and the farm's
@@ -11633,19 +11851,19 @@ return Worlds
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX00069">
+	<Item class="Workspace" referent="RBX0006B">
 		<Properties>
 			<string name="Name">Workspace</string>
 			<bool name="StreamingEnabled">false</bool>
 		</Properties>
 	</Item>
-	<Item class="MaterialService" referent="RBX0006A">
+	<Item class="MaterialService" referent="RBX0006C">
 		<Properties>
 			<string name="Name">MaterialService</string>
 			<bool name="Use2022Materials">true</bool>
 			<string name="LeafyGrassName">Field</string>
 		</Properties>
-		<Item class="MaterialVariant" referent="RBX0006B">
+		<Item class="MaterialVariant" referent="RBX0006D">
 			<Properties>
 				<string name="Name">Field</string>
 				<token name="BaseMaterial">1284</token>

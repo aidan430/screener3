@@ -4,18 +4,18 @@ local Config = {}
 
 -- More pieces for the Build tab: belt corners and splitters, and the processing machines.
 Config.Pieces = {
-	{ id = "corner", name = "Belt Corner", price = 300, size = { 6, 1, 6 }, text = "Turns hay on a belt to the side. Press R until the arrows point the way you want." },
-	{ id = "splitter", name = "Belt Splitter", price = 2500, size = { 6, 1, 6 }, text = "Sends hay left, then right, then left: feed two lines from one." },
-	{ id = "wrapper", name = "Bale Wrapper", price = 150000, max = 3, size = { 8, 6, 10 }, text = "Bales in at the back, wrapped bales out: worth more, and orders ask for them." },
-	{ id = "press", name = "Pellet Press", price = 400000, max = 3, size = { 8, 7, 10 }, text = "Bundles in at the back, sacks of hay pellets out: worth more again." },
+	{ id = "corner", name = "Belt Corner", price = 285, size = { 6, 1, 6 }, text = "Turns hay on a belt to the side. Press R until the arrows point the way you want." },
+	{ id = "splitter", name = "Belt Splitter", price = 2375, size = { 6, 1, 6 }, text = "Sends hay left, then right, then left: feed two lines from one." },
+	{ id = "wrapper", name = "Bale Wrapper", price = 142500, max = 3, size = { 8, 6, 10 }, text = "Bales in at the back, wrapped bales out: worth more, and orders ask for them." },
+	{ id = "press", name = "Pellet Press", price = 380000, max = 3, size = { 8, 7, 10 }, text = "Bundles in at the back, sacks of hay pellets out: worth more again." },
 }
 
 -- Feeders take hay from your heap by themselves and put it on your belts as bundles, using
 -- power like machines. amount = straws a go, every = seconds between goes, draw = power,
 -- throw = how far a thrower flings its bundle forward (studs).
 Config.Feeders = {
-	{ id = "arm", name = "Hay Arm", amount = 8, every = 4, draw = 6, price = 50000, max = 8, size = { 4, 7, 4 } },
-	{ id = "thrower", name = "Hay Thrower", amount = 30, every = 4, draw = 30, price = 900000, max = 6, size = { 5, 4, 6 }, throw = 22 },
+	{ id = "arm", name = "Hay Arm", amount = 8, every = 4, draw = 6, price = 47500, max = 8, size = { 4, 7, 4 } },
+	{ id = "thrower", name = "Hay Thrower", amount = 30, every = 4, draw = 30, price = 855000, max = 6, size = { 5, 4, 6 }, throw = 22 },
 }
 Config.FeederReach = 30 -- a feeder only takes hay if your heap is this close (studs from its base)
 
@@ -25,9 +25,9 @@ Config.BurnerSecondsPerStraw = 0.25 -- 1,000 straws keep a burner going for abou
 -- Belt motors: every belt you own runs at the speed of your level (bought in Logistics).
 Config.BeltSpeeds = {
 	{ speed = 10, price = 0 },
-	{ speed = 14, price = 20000 },
-	{ speed = 19, price = 120000 },
-	{ speed = 25, price = 700000 },
+	{ speed = 14, price = 19000 },
+	{ speed = 19, price = 114000 },
+	{ speed = 25, price = 665000 },
 }
 
 -- Processing: what each product is worth, as a multiple of the straws in it, and how tightly

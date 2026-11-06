@@ -14,8 +14,10 @@ Nature.POND = Vector3.new(-100, 0, 205)
 Nature.POND_RADIUS = 24
 Nature.WATER_Y = -1
 
+-- (terrain is pulled in by Config.FarmScale here; the parts are pulled in after building)
 local function dirt(x, z, sx, sz, material)
-	terrain:FillBlock(CFrame.new(x, -2, z), Vector3.new(sx, 4, sz), material or Enum.Material.Ground)
+	local k = Kit.SCALE
+	terrain:FillBlock(CFrame.new(x * k, -2, z * k), Vector3.new(sx * k, 4, sz * k), material or Enum.Material.Ground)
 end
 
 function Nature.terrain()
@@ -27,10 +29,11 @@ function Nature.terrain()
 	dirt(206, -91, 62, 124) -- the pumpkin patch
 	dirt(206, 92, 62, 124) -- the corn rows
 	dirt(-200, -127, 16, 12, Enum.Material.Mud) -- the pigs' favourite mud
-	local pond = Nature.POND
-	terrain:FillCylinder(CFrame.new(pond.X, -4, pond.Z), 8, Nature.POND_RADIUS + 4, Enum.Material.Mud)
-	terrain:FillCylinder(CFrame.new(pond.X, -3, pond.Z), 6, Nature.POND_RADIUS, Enum.Material.Air)
-	terrain:FillCylinder(CFrame.new(pond.X, -3.5, pond.Z), 5, Nature.POND_RADIUS, Enum.Material.Water)
+	local k = Kit.SCALE
+	local pond, r = Nature.POND * k, Nature.POND_RADIUS * k
+	terrain:FillCylinder(CFrame.new(pond.X, -4, pond.Z), 8, r + 4, Enum.Material.Mud)
+	terrain:FillCylinder(CFrame.new(pond.X, -3, pond.Z), 6, r, Enum.Material.Air)
+	terrain:FillCylinder(CFrame.new(pond.X, -3.5, pond.Z), 5, r, Enum.Material.Water)
 	terrain.WaterColor = Color3.fromRGB(86, 124, 112)
 	terrain.WaterWaveSize = 0.05
 	terrain.WaterWaveSpeed = 4

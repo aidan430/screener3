@@ -10,13 +10,13 @@ local World = {}
 local terrain = workspace.Terrain
 local AUTUMN = { { 214, 120, 40 }, { 196, 72, 44 }, { 232, 176, 54 }, { 150, 150, 58 } }
 local WOOD = { 122, 86, 52 }
-local GROUND = 520 -- the ground is GROUND x GROUND studs
-local FENCE = 245 -- the boundary fence, this far from the hub on each axis
+local GROUND = math.floor(520 * Config.FarmScale) -- the ground is GROUND x GROUND studs
+local FENCE = math.floor(245 * Config.FarmScale) -- the boundary fence, this far from the middle
 
 -- The haystack stands in the middle now, so these stand round it, facing it.
-World.MERCHANT = Vector3.new(-42, 0, 100) -- just west of where you arrive
-World.WHEEL = Vector3.new(42, 0, 100) -- just east of where you arrive
-World.DOOR = Vector3.new(112, 0, 0) -- the golden door, on the east road
+World.MERCHANT = Vector3.new(-38, 0, 84) -- just west of where you arrive
+World.WHEEL = Vector3.new(38, 0, 84) -- just east of where you arrive
+World.DOOR = Vector3.new(86, 0, 0) -- the golden door, on the east road
 World.LOFT = Vector3.new(0, 330, 0) -- the secret level floats high above the hub
 
 local function prompt(parent, action, text, object, key)
@@ -39,8 +39,8 @@ function World.ground()
 	terrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(124, 94, 62))
 	terrain:SetMaterialColor(Enum.Material.Cobblestone, Color3.fromRGB(152, 138, 120))
 	terrain:FillBlock(CFrame.new(0, -8, 0), Vector3.new(GROUND, 16, GROUND), Enum.Material.LeafyGrass)
-	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(30, 4, 330), Enum.Material.Ground)
-	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(330, 4, 30), Enum.Material.Ground)
+	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(24, 4, FENCE * 2), Enum.Material.Ground)
+	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(FENCE * 2, 4, 24), Enum.Material.Ground)
 	terrain:FillCylinder(CFrame.new(0, -2, 0), 4, 58, Enum.Material.Cobblestone) -- the yard the haystack stands in
 	-- a few soft hills just past the edge of the ground, so the world fades into countryside
 	local rng = Random.new(11)

@@ -3,6 +3,33 @@
 local Build = require(script.Parent.Build)
 
 local Kit = {}
+Kit.SCALE = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config")).FarmScale
+
+-- Pulls everything built under `root` towards the middle by Kit.SCALE: each model and loose part
+-- keeps its size and turn and moves to SCALE x its position (heights stay), and animals' pens
+-- shrink to match. The countryside is laid out at full size and then pulled in this way.
+function Kit.compact(root)
+	local k = Kit.SCALE
+	local function pull(v)
+		return Vector3.new(v.X * k, v.Y, v.Z * k)
+	end
+	for _, child in ipairs(root:GetChildren()) do
+		if child:IsA("Folder") then
+			Kit.compact(child)
+		elseif child:IsA("Model") then
+			local pivot = child:GetPivot()
+			child:PivotTo(pivot - pivot.Position + pull(pivot.Position))
+			for _, name in ipairs({ "PenMin", "PenMax" }) do
+				local v = child:GetAttribute(name)
+				if typeof(v) == "Vector3" then
+					child:SetAttribute(name, pull(v))
+				end
+			end
+		elseif child:IsA("BasePart") then
+			child.CFrame = child.CFrame - child.Position + pull(child.Position)
+		end
+	end
+end
 
 Kit.C = {
 	red = { 168, 52, 42 },

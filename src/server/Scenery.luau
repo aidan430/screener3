@@ -227,6 +227,7 @@ function Scenery.build()
 			warn("[Scenery] " .. job[1] .. " failed: " .. tostring(err))
 		end
 	end
+	Kit.compact(folder) -- laid out at full size, then pulled in close round the haystack
 end
 
 return Scenery

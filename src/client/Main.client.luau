@@ -137,7 +137,7 @@ step("controls", function()
 			panels.open(name)
 		end
 	end)
-	TouchAim.start() -- touch screens: tap or hold still to harvest
+	TouchAim.start(); require(script.Parent:WaitForChild("Sprint")).start() -- touch harvesting; sprint (Shift, L3, RUN)
 end)
 step("worlds", function() require(script.Parent:WaitForChild("Worlds")).start(gui, Notify) end)
 if not hud then
@@ -210,7 +210,7 @@ end)
 Remotes.SearchFx.OnClientEvent:Connect(function(message)
 	if message.kind == "harvest" then
 		Juice.hit()
-		HayFx.lift(message.position, message.golden)
+		HayFx.lift(message.position, message.golden); require(script.Parent:WaitForChild("Dents")).hit(message.position, message.clump, message.left)
 		Juice.float(message.position + Vector3.new(0, 2, 0), "+" .. message.straws, if message.golden then Ui.colors.hay else Ui.colors.cream)
 		if message.gone then -- you cleared a clump: it pops
 			Juice.pop(message.position, message.golden)
