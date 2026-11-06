@@ -274,6 +274,7 @@ Config.Wheel = {
 	{ id = "needle", name = "NEEDLE REVEAL", weight = 1, reveal = true },
 }
 Config.WheelDuplicateSearches = 200
+Config.WheelMinSlice = 0.004 -- the thinnest slice on the wheel's face (of a turn), so the needle reveal shows
 Config.SkinTextureStuds = 1.5 -- how many studs one copy of a patterned skin covers on the built-in forks
 
 

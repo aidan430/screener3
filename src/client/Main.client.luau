@@ -266,7 +266,7 @@ Remotes.Announce.OnClientEvent:Connect(function(message)
 		Juice.confetti()
 		Notify.banner("THE NEEDLE IS REVEALED!", "Its clump glows gold on your pile. Climb up and harvest it!", 10)
 	elseif message.kind == "wheel" then
-		WorldFx.spin(message.index, #Config.Wheel)
+		WorldFx.spin(message.index)
 		task.delay(4.3, function()
 			Juice.confetti()
 			Notify.banner("WHEEL OF FORTUNE: " .. message.name, message.text, 7)

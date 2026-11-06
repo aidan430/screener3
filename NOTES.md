@@ -535,3 +535,8 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   between them, a gold hub, and each prize's name and odds along its slice, never upside down.
   The needle reveal's slice is dark navy with gold text. Prize positions are unchanged, so spins
   still stop on the prize they won.
+- Slices are now sized by their odds (Economy.wheelSlice, mirrored in test_rules): Rose Gold 30%
+  of the face down to Diamond 3%. The 1-in-10,000 needle reveal is a bright gold line kept at
+  Config.WheelMinSlice = 0.004 of a turn (so it can be seen at all; still far thinner than any
+  skin), named on the sign under the wheel. The spin stops at a random point inside the winning
+  slice (the middle 60%).

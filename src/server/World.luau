@@ -181,7 +181,7 @@ local function wheel(folder)
 	Build.part({ name = "WheelPointer", size = Vector3.new(1, 2.4, 0.6), cframe = cf * CFrame.new(0, 21.6, -0.6), color = { 200, 50, 50 }, material = "Neon", parent = folder })
 	WheelFace.draw(disc)
 	local sign = Build.part({ name = "WheelSign", size = Vector3.new(14, 2.4, 0.4), cframe = cf * CFrame.new(0, 2.4, -1), color = { 246, 234, 204 }, material = "WoodPlanks", parent = folder })
-	Build.text(sign, Enum.NormalId.Front, "WHEEL OF FORTUNE: odds shown before you spin")
+	Build.text(sign, Enum.NormalId.Front, "WHEEL OF FORTUNE: slices sized by their odds. Gold line: needle reveal, 1 in 10,000")
 	prompt(disc, "wheel", "See the wheel", "Wheel of Fortune")
 end
 

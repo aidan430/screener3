@@ -101,6 +101,17 @@ class Pile(unittest.TestCase):
 
 
 class Wheel(unittest.TestCase):
+    def test_slices_are_sized_by_their_odds(self):
+        """Mirrors Economy.wheelSlice: share of the face by weight, the smallest kept visible."""
+        prizes, least = pacing.rows("Wheel"), pacing.number("WheelMinSlice")
+        total = sum(p["weight"] for p in prizes)
+        small = [p["weight"] for p in prizes if p["weight"] / total < least]
+        spare = 1 - least * len(small)
+        sizes = [least if p["weight"] / total < least else p["weight"] / (total - sum(small)) * spare for p in prizes]
+        self.assertAlmostEqual(sum(sizes), 1)
+        for p, size in zip(prizes, sizes):
+            self.assertLess(abs(size - p["weight"] / total), 0.005, p["name"])
+
     def test_every_spin_wins_and_the_reveal_is_one_in_ten_thousand(self):
         prizes = pacing.rows("Wheel")
         total = sum(p["weight"] for p in prizes)

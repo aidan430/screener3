@@ -8,6 +8,7 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Layout = require(Shared:WaitForChild("Layout"))(Config)
+local Economy = require(Shared:WaitForChild("Economy"))(Config)
 local Ui = require(script.Parent.Ui)
 local Juice = require(script.Parent.Juice)
 
@@ -47,7 +48,7 @@ function WorldFx.reveal(clump)
 end
 
 -- Turns the wheel a few times and eases it to a stop on the prize's slice.
-function WorldFx.spin(index, slices)
+function WorldFx.spin(index)
 	local farm = workspace:FindFirstChild("Farm")
 	local disc = farm and farm:FindFirstChild("WheelDisc")
 	if not disc then
@@ -60,10 +61,12 @@ function WorldFx.spin(index, slices)
 		rest = disc.CFrame
 		disc:SetAttribute("RestCFrame", rest)
 	end
-	local turns = math.pi * 2 * 5 + (index - 0.5) / slices * math.pi * 2
+	local start, size = Economy.wheelSlice(index) -- stop somewhere inside the winning slice
+	local stop = (start + size * (0.2 + 0.6 * math.random())) * math.pi * 2
 	local angle = Instance.new("NumberValue")
 	angle.Value = disc:GetAttribute("RestAngle") or 0
-	disc:SetAttribute("RestAngle", (index - 0.5) / slices * math.pi * 2)
+	disc:SetAttribute("RestAngle", stop)
+	local turns = math.pi * 2 * 5 + stop
 	angle.Changed:Connect(function(a)
 		disc.CFrame = rest * CFrame.Angles(a, 0, 0)
 	end)

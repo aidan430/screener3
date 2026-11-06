@@ -185,5 +185,32 @@ return function(Config)
 		return #Config.Wheel, Config.Wheel[#Config.Wheel]
 	end
 
+	-- Where prize i sits on the wheel's face: its slice starts `start` turns clockwise from the
+	-- top and takes up `size` turns (0..1), in proportion to its chance. The smallest prizes still
+	-- get Config.WheelMinSlice of a turn so the pointer can stop on them.
+	function Economy.wheelSlice(i)
+		local total, sizes = 0, {}
+		for n, prize in ipairs(Config.Wheel) do
+			sizes[n] = prize.weight
+			total += prize.weight
+		end
+		local spare, small = 1, 0
+		for n, w in ipairs(sizes) do
+			if w / total < Config.WheelMinSlice then
+				spare -= Config.WheelMinSlice
+				small += w
+			end
+		end
+		local start, size = 0, 0
+		for n, w in ipairs(sizes) do
+			size = if w / total < Config.WheelMinSlice then Config.WheelMinSlice else w / (total - small) * spare
+			if n == i then
+				return start, size
+			end
+			start += size
+		end
+		return 0, 0
+	end
+
 	return Economy
 end
