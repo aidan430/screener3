@@ -134,7 +134,8 @@ function Juice.coins(amount)
 		return
 	end
 	local count = math.clamp(math.floor(math.log10(math.max(amount, 1)) * 3), 3, 14)
-	local target = coinTarget.AbsolutePosition + coinTarget.AbsoluteSize / 2
+	local origin = if gui:IsA("GuiBase2d") then gui.AbsolutePosition else Vector2.zero -- inside a phone's safe area
+	local target = coinTarget.AbsolutePosition + coinTarget.AbsoluteSize / 2 - origin
 	for i = 1, count do
 		task.delay(i * 0.04, function()
 			local coin = Ui.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(18, 18), Position = UDim2.new(0.5, math.random(-60, 60), 0.5, math.random(-40, 40)), BackgroundColor3 = Color3.fromRGB(255, 206, 70), Parent = gui }, { Ui.corner(9), Ui.stroke(Color3.fromRGB(190, 130, 30), 2) })

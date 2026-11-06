@@ -13,6 +13,13 @@ local OrderCard = {}
 function OrderCard.mount(gui)
 	local card = Ui.make("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.38, 0), Size = UDim2.fromOffset(230, 86), BackgroundColor3 = Ui.colors.wood, BackgroundTransparency = 0.1, Visible = false, Parent = gui }, { Ui.corner(12), Ui.stroke(Ui.colors.woodDark, 3) })
 	Ui.autoScale(card)
+	Ui.onLayout(function() -- touch: top right under the music button, clear of the action pad
+		if Ui.touch() then
+			card.AnchorPoint, card.Position = Vector2.new(1, 0), UDim2.new(1, -10, 0, 56)
+		else
+			card.AnchorPoint, card.Position = Vector2.new(1, 0.5), UDim2.new(1, -10, 0.38, 0)
+		end
+	end)
 	local title = Ui.label({ Text = "DELIVERY ORDER", Size = UDim2.new(1, -16, 0, 20), Position = UDim2.fromOffset(8, 4), TextColor3 = Ui.colors.hay, Parent = card }, 16)
 	local text = Ui.label({ Size = UDim2.new(1, -16, 0, 34), Position = UDim2.fromOffset(8, 24), TextWrapped = true, Parent = card }, 14)
 	local track = Ui.make("Frame", { Size = UDim2.new(1, -16, 0, 10), Position = UDim2.fromOffset(8, 66), BackgroundColor3 = Ui.colors.woodDark, Parent = card }, { Ui.corner(5) })

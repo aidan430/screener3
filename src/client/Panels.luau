@@ -126,6 +126,22 @@ function Panels.mount(gui, notify, actions)
 		end
 	end
 
+	-- Menu: on touch screens the HUD's side buttons fold away; the pad's MENU opens these
+	local menu, menuBody = Ui.window(gui, "Menu")
+	windows.Menu = menu
+	Ui.fit(menu, 420, 330)
+	local open, whistleButton
+	for i, b in ipairs({ { "ACHIEVEMENTS", "Achievements", Ui.colors.blue }, { "FINDS & SKINS", "Finds", Ui.colors.purple }, { "WHISTLE: SELL HERE", "Whistle", Ui.colors.red } }) do
+		local button = Ui.button(b[1], b[3], { LayoutOrder = i, Size = UDim2.new(1, 0, 0, 56), Parent = menuBody })
+		button.Activated:Connect(function()
+			open(b[2])
+		end)
+		whistleButton = button
+	end
+	refreshers.Menu = function()
+		whistleButton.Visible = (player:GetAttribute("Whistles") or 0) > 0
+	end
+
 	local function anyOpen()
 		for _, frame in pairs(windows) do
 			if frame.Visible then
@@ -135,7 +151,7 @@ function Panels.mount(gui, notify, actions)
 		return false
 	end
 
-	local function open(name)
+	open = function(name)
 		if name == "Build" or name == "Whistle" then
 			for _, frame in pairs(windows) do
 				frame.Visible = false

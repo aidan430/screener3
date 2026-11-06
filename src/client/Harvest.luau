@@ -166,8 +166,25 @@ local function hookTool(tool)
 	end
 	hooked[tool] = true
 	tool.Activated:Connect(function()
-		swing(tool)
+		-- on touch screens Harvest.use (client/TouchAim.luau) handles taps, so a drag to look
+		-- around can never swing
+		if UserInputService:GetLastInputType() ~= Enum.UserInputType.Touch then
+			swing(tool)
+		end
 	end)
+end
+
+-- A click or tap: swing the tool you hold, or say how to get it out. `held`: the button or
+-- finger is still down (keep harvesting quietly; no hints).
+function Harvest.use(held)
+	local tool = heldTool()
+	if tool then
+		if not held or aim() ~= nil then
+			swing(tool)
+		end
+	elseif not held and Harvest.onMiss and player.Character and not (Harvest.isBuilding and Harvest.isBuilding()) then
+		Harvest.onMiss(if UserInputService:GetLastInputType() == Enum.UserInputType.Touch then "Hold your tool to harvest: tap TOOL." else "Hold your tool to harvest: press 1.")
+	end
 end
 
 function Harvest.start()
@@ -181,18 +198,14 @@ function Harvest.start()
 		if processed and not locked then
 			return
 		end
-		local tool = heldTool()
-		if tool then
-			swing(tool)
-		elseif Harvest.onMiss and player.Character and not (Harvest.isBuilding and Harvest.isBuilding()) then
-			Harvest.onMiss("Hold your tool to harvest: press 1.")
-		end
+		Harvest.use(false)
 	end)
 	RunService.RenderStepped:Connect(function()
 		local part, _, cell = aim()
 		target = part
 		-- hold the button to keep harvesting (the swing waits for the tool's cooldown itself)
-		if part ~= nil and UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+		local mouse = UserInputService:GetLastInputType() ~= Enum.UserInputType.Touch
+		if part ~= nil and mouse and UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
 			local tool = heldTool()
 			if tool then
 				swing(tool)

@@ -15,4 +15,20 @@ Config.Fitness = {
 -- it beeps, faster and higher the closer your head is (signal 1-5; beep = seconds per signal).
 Config.MetalDetector = { price = 900, range = 30, levels = 5, pollSeconds = 0.25, key = "V", beep = { 1.2, 0.9, 0.65, 0.45, 0.28 } }
 
+-- Touch screens (phones, tablets). A touch that stays within dragPixels and lifts before
+-- holdSeconds harvests once at the crosshair; one held still longer keeps harvesting; one that
+-- moves further is looking around and never harvests. Touches starting in the bottom-left
+-- stickArea (share of the screen's width, and of its height from the top) belong to the
+-- thumbstick. minScale: the smallest UI scale on touch screens, so text stays readable and
+-- buttons tappable. The action pad (right side, above the jump button): button size, gap, columns.
+Config.Touch = {
+	holdSeconds = 0.35,
+	dragPixels = 14,
+	stickArea = { 0.4, 1 / 3 },
+	minScale = 0.68,
+	padButton = { 76, 50 },
+	padGap = 6,
+	padColumns = 3,
+}
+
 return Config

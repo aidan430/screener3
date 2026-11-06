@@ -419,6 +419,22 @@ Config.Fitness = {
 -- it beeps, faster and higher the closer your head is (signal 1-5; beep = seconds per signal).
 Config.MetalDetector = { price = 900, range = 30, levels = 5, pollSeconds = 0.25, key = "V", beep = { 1.2, 0.9, 0.65, 0.45, 0.28 } }
 
+-- Touch screens (phones, tablets). A touch that stays within dragPixels and lifts before
+-- holdSeconds harvests once at the crosshair; one held still longer keeps harvesting; one that
+-- moves further is looking around and never harvests. Touches starting in the bottom-left
+-- stickArea (share of the screen's width, and of its height from the top) belong to the
+-- thumbstick. minScale: the smallest UI scale on touch screens, so text stays readable and
+-- buttons tappable. The action pad (right side, above the jump button): button size, gap, columns.
+Config.Touch = {
+	holdSeconds = 0.35,
+	dragPixels = 14,
+	stickArea = { 0.4, 1 / 3 },
+	minScale = 0.68,
+	padButton = { 76, 50 },
+	padGap = 6,
+	padColumns = 3,
+}
+
 return Config
 ]]></ProtectedString>
 				</Properties>
@@ -6656,6 +6672,7 @@ return Animals
 						<string name="Name">BuildMode</string>
 						<ProtectedString name="Source"><![CDATA[-- Free building in first person. Z and C pick from your inventory bar (or press M and click
 -- it), aim with the crosshair, R to turn it, click (or PLACE) to build. X takes things back.
+-- Touch screens: tap an item in the bar, then PLACE, TURN, TAKE BACK, NEXT/PREV on the pad.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -6668,6 +6685,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local Ui = require(script.Parent.Ui)
 local Cursor = require(script.Parent.Cursor)
 local Juice = require(script.Parent.Juice)
+local TouchPad = require(script.Parent.TouchPad)
 
 local player = Players.LocalPlayer
 local BuildMode = {}
@@ -6731,11 +6749,44 @@ local function refreshBar()
 	end
 end
 
+-- The help line, worded for keys or for the touch pad.
+local function say(keys, touch)
+	status.Text = if Ui.touch() then touch else keys
+end
+
 local function select(id)
 	selected, removing = id, false
 	makeGhost(Economy.item(id).def)
-	status.Text = Economy.item(id).def.name .. ": aim, R to turn, click to place. Z/C: other items. X: take back. B: done."
+	local name = Economy.item(id).def.name
+	say(name .. ": aim, R to turn, click to place. Z/C: other items. X: take back. B: done.", name .. ": aim the dot, TURN, then PLACE. Tap DONE when finished.")
 	refreshBar()
+end
+
+-- Z / C (PREV / NEXT): the previous or next thing you own to build.
+local function cycle(step)
+	local owned = {}
+	for _, def in ipairs(ALL) do
+		if (player:GetAttribute("Inv_" .. def.id) or 0) > 0 then
+			table.insert(owned, def.id)
+		end
+	end
+	if #owned == 0 then
+		say("Nothing to build yet: buy pieces in the Shop (Q).", "Nothing to build yet: buy pieces in the SHOP.")
+		return
+	end
+	local at = table.find(owned, selected) or 0
+	at = if step > 0 then at % #owned + 1 elseif at <= 1 then #owned else at - 1
+	select(owned[at])
+end
+
+local function toggleRemove()
+	removing, selected = not removing, nil
+	clearGhost()
+	if removing then
+		say("Click something you built to take it back into your inventory.", "Aim the dot at something you built (it glows red) and tap TAKE BACK.")
+	else
+		say("Pick something to build.", "Pick something to build from the bar.")
+	end
 end
 
 local snappedBase = nil
@@ -6772,13 +6823,14 @@ end
 function BuildMode.toggle(on)
 	active = if on == nil then not active else on
 	bar.Visible, status.Visible = active, active
+	BuildMode.layout()
 	if active then
 		Cursor.need("key", false) -- opened from the HUD button: lock the mouse again so clicks place
 		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 		if humanoid then
 			humanoid:UnequipTools()
 		end
-		status.Text = "Z/C to pick something to build (buy more in the Shop). B when done."
+		say("Z/C to pick something to build (buy more in the Shop). B when done.", "Tap something in the bar to build it (buy more in the SHOP). DONE when finished.")
 		refreshBar()
 	else
 		selected, removing, hovered = nil, false, nil
@@ -6795,6 +6847,22 @@ function BuildMode.toggle(on)
 	end
 end
 
+-- The item bar: along the bottom with a mouse; on touch screens between the thumbstick and
+-- the action pad, above Roblox's tool bar.
+function BuildMode.layout()
+	if not bar then
+		return
+	end
+	if Ui.touch() then
+		local right = TouchPad.width() + 30
+		bar.AnchorPoint, bar.Position, bar.Size = Vector2.new(0, 1), UDim2.new(0.36, 0, 1, -76), UDim2.new(0.64, -right, 0, 64)
+		status.Position, status.Size = UDim2.new(0.5, 0, 1, -146), UDim2.new(0.6, 0, 0, 40)
+	else
+		bar.AnchorPoint, bar.Position, bar.Size = Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -12), UDim2.new(0.9, 0, 0, 64)
+		status.Position, status.Size = UDim2.new(0.5, 0, 1, -84), UDim2.fromOffset(560, 26)
+	end
+end
+
 function BuildMode.mount(gui, notifier)
 	notify = notifier
 	bar = Ui.make("ScrollingFrame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Size = UDim2.new(0.9, 0, 0, 64), CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.X, ScrollingDirection = Enum.ScrollingDirection.X, BackgroundTransparency = 1, ScrollBarThickness = 4, Visible = false, Parent = gui }, {
@@ -6808,11 +6876,38 @@ function BuildMode.mount(gui, notifier)
 		end)
 		buttons[def.id] = button
 	end
-	local touchRow = Ui.make("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.55, 0), Size = UDim2.fromOffset(120, 180), BackgroundTransparency = 1, Parent = gui }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6) }) })
-	touchRow.Visible = false
-	for _, b in ipairs({ { "PLACE", place }, { "TURN", function() rotation = (rotation + 45) % 360 end }, { "TAKE BACK", function() if removing then takeBack() else removing = true; selected = nil; clearGhost() end end } }) do
-		Ui.button(b[1], Ui.colors.wood, { Size = UDim2.fromOffset(120, 52), Parent = touchRow }).Activated:Connect(b[2])
+	-- touch: the pad's build set (PLACE sits next to the thumb)
+	for i, b in ipairs({
+		{ "PLACE", function()
+			if removing then
+				takeBack()
+			else
+				place()
+			end
+		end, Ui.colors.green },
+		{ "TURN", function()
+			rotation = (rotation + 45) % 360
+		end },
+		{ "TAKE BACK", function()
+			if removing and hovered then
+				takeBack()
+			else
+				toggleRemove()
+			end
+		end, Ui.colors.red },
+		{ "NEXT", function()
+			cycle(1)
+		end },
+		{ "PREV", function()
+			cycle(-1)
+		end },
+		{ "DONE", function()
+			BuildMode.toggle(false)
+		end, Ui.colors.blue },
+	}) do
+		TouchPad.add({ order = i, text = b[1], colour = b[3], tap = b[2], build = true })
 	end
+	Ui.onLayout(BuildMode.layout)
 	player.AttributeChanged:Connect(function(name)
 		if active and string.sub(name, 1, 4) == "Inv_" then
 			refreshBar()
@@ -6825,25 +6920,12 @@ function BuildMode.mount(gui, notifier)
 		if not active or processed then
 			return
 		end
-		touchRow.Visible = UserInputService.TouchEnabled
 		if input.KeyCode == Enum.KeyCode.Z or input.KeyCode == Enum.KeyCode.C then
-			local owned = {}
-			for _, def in ipairs(ALL) do
-				if (player:GetAttribute("Inv_" .. def.id) or 0) > 0 then
-					table.insert(owned, def.id)
-				end
-			end
-			if #owned > 0 then
-				local at = table.find(owned, selected) or 0
-				at = if input.KeyCode == Enum.KeyCode.C then at % #owned + 1 elseif at <= 1 then #owned else at - 1
-				select(owned[at])
-			end
+			cycle(if input.KeyCode == Enum.KeyCode.C then 1 else -1)
 		elseif input.KeyCode == Enum.KeyCode.R then
 			rotation = (rotation + (if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then 15 else 45)) % 360
 		elseif input.KeyCode == Enum.KeyCode.X then
-			removing, selected = not removing, nil
-			clearGhost()
-			status.Text = if removing then "Click something you built to take it back into your inventory." else "Pick something to build."
+			toggleRemove()
 		elseif input.UserInputType == Enum.UserInputType.MouseButton1 and not Cursor.isFree() or input.KeyCode == Enum.KeyCode.F then
 			if removing then
 				takeBack()
@@ -6856,7 +6938,6 @@ function BuildMode.mount(gui, notifier)
 		if not active then
 			return
 		end
-		touchRow.Visible = UserInputService.TouchEnabled
 		local hit = aimPoint()
 		local centre, index = myPlot()
 		if removing then
@@ -6888,9 +6969,99 @@ return BuildMode
 				</Item>
 				<Item class="ModuleScript" referent="RBX00047">
 					<Properties>
+						<string name="Name">Controls</string>
+						<ProtectedString name="Source"><![CDATA[-- The shortcuts: Q shop, T home, G drop hay (or put down a bale), and on touch screens the
+-- same as buttons on the action pad (client/TouchPad.luau), plus BUILD, MENU (achievements,
+-- finds, the whistle) and TOOL (the 1 key: take out your fork). Tap anywhere else to harvest
+-- (client/TouchAim.luau).
+local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local Ui = require(script.Parent.Ui)
+local TouchPad = require(script.Parent.TouchPad)
+local BuildMode = require(script.Parent.BuildMode)
+local Teleport = require(script.Parent.Teleport)
+
+local player = Players.LocalPlayer
+local Controls = {}
+
+local function holdingTool()
+	local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
+	return tool ~= nil and tool:GetAttribute("Level") ~= nil
+end
+
+-- Take out your harvesting tool (leaving build mode does that by itself).
+local function equip()
+	if BuildMode.active() then
+		BuildMode.toggle(false)
+		return
+	end
+	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	for _, tool in ipairs(backpack and backpack:GetChildren() or {}) do
+		if humanoid and tool:IsA("Tool") and tool:GetAttribute("Level") ~= nil then
+			humanoid:EquipTool(tool)
+			return
+		end
+	end
+end
+
+function Controls.start(open)
+	local function home()
+		Remotes.GoHome:FireServer() -- back to the entrance of your own farm
+	end
+	local function drop()
+		Remotes.DropHay:FireServer() -- drop your load as a bundle (or put down a bale)
+	end
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if processed then
+			return
+		elseif input.KeyCode == Enum.KeyCode.Q then
+			open("Shop")
+		elseif input.KeyCode == Enum.KeyCode[Config.HomeKey] then
+			home()
+		elseif input.KeyCode == Enum.KeyCode[Config.DropKey] then
+			drop()
+		end
+	end)
+	-- prompts (E, or tap the prompt's button on a touch screen) that open a menu here
+	ProximityPromptService.PromptTriggered:Connect(function(prompt)
+		if prompt:GetAttribute("Action") == "wheel" then
+			open("Wheel")
+		elseif prompt:GetAttribute("Action") == "teleport" then
+			Teleport.open(prompt:FindFirstAncestorOfClass("Model"))
+		end
+	end)
+	TouchPad.add({ order = 4, text = "DROP", tap = drop })
+	TouchPad.add({ order = 5, text = "HOME", tap = home })
+	TouchPad.add({ order = 6, text = "TOOL", colour = Ui.colors.green, tap = equip, show = function()
+		return not holdingTool()
+	end })
+	TouchPad.add({ order = 7, text = "SHOP", colour = Ui.colors.green, tap = function()
+		open("Shop")
+	end })
+	TouchPad.add({ order = 8, text = "BUILD", tap = function()
+		open("Build")
+	end })
+	TouchPad.add({ order = 9, text = "MENU", colour = Ui.colors.purple, tap = function()
+		open("Menu")
+	end })
+end
+
+return Controls
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX00048">
+					<Properties>
 						<string name="Name">Cursor</string>
 						<ProtectedString name="Source"><![CDATA[-- First person locks the mouse to the centre of the screen. Menus need a pointer, so a
--- hidden "modal" button frees the mouse while a menu is open or while you hold M.
+-- hidden "modal" button frees the mouse while a menu is open or while you hold M. Touch
+-- screens have no mouse to free (taps reach buttons anyway), so there it stays hidden.
 local UserInputService = game:GetService("UserInputService")
 
 local Ui = require(script.Parent.Ui)
@@ -6898,16 +7069,18 @@ local Ui = require(script.Parent.Ui)
 local Cursor = {}
 local modal = nil
 local reasons = {}
+local free = false
 
 local function apply()
-	local free = false
+	free = false
 	for _, on in pairs(reasons) do
 		free = free or on
 	end
+	local touch = Ui.touch()
 	if modal then
-		modal.Visible = free
+		modal.Visible = free and not touch
 	end
-	UserInputService.MouseIconEnabled = free
+	UserInputService.MouseIconEnabled = free and not touch
 end
 
 function Cursor.mount(gui)
@@ -6918,7 +7091,7 @@ function Cursor.mount(gui)
 			apply()
 		end
 	end)
-	apply()
+	Ui.onLayout(apply) -- switching between touch and mouse
 end
 
 -- Something (a window, build mode) wants the mouse free (true) or no longer needs it (false).
@@ -6928,19 +7101,20 @@ function Cursor.need(reason, on)
 end
 
 function Cursor.isFree()
-	return modal ~= nil and modal.Visible
+	return free
 end
 
 return Cursor
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00048">
+				<Item class="ModuleScript" referent="RBX00049">
 					<Properties>
 						<string name="Name">Detector</string>
 						<ProtectedString name="Source"><![CDATA[-- The metal detector: hold Config.MetalDetector.key to sweep. The client only says "I'm
 -- detecting" (Remotes.Detect); the server answers a coarse signal, 0 to `levels`. Higher
 -- signal: faster, higher beeps, more meter bars lit and a soft pulse. Calm, no flashing.
+-- Touch screens hold the DETECT button on the action pad instead.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -6949,6 +7123,7 @@ local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Co
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local Ui = require(script.Parent.Ui)
 local Juice = require(script.Parent.Juice)
+local TouchPad = require(script.Parent.TouchPad)
 
 local player = Players.LocalPlayer
 local Detector = {}
@@ -7013,35 +7188,49 @@ function Detector.start(gui, notify)
 		end
 	end)
 
-	local key = Enum.KeyCode[cfg.key]
-	UserInputService.InputBegan:Connect(function(input, processed)
-		if processed or input.KeyCode ~= key or holding then
+	local function begin()
+		if holding then
 			return
 		end
 		if player:GetAttribute("Detector") ~= true then
 			if time() - lastHint > 4 and notify then
 				lastHint = time()
-				notify.toast("A metal detector beeps near the needle. Find it in the shop (Q), under Fitness.", Ui.colors.wood)
+				notify.toast("A metal detector beeps near the needle. Find it in the shop, under Fitness.", Ui.colors.wood)
 			end
 			return
 		end
 		holding = true
 		show(true)
 		task.spawn(sweep)
-	end)
-	UserInputService.InputEnded:Connect(function(input)
-		if input.KeyCode == key and holding then
+	end
+	local function finish()
+		if holding then
 			holding = false
 			show(false)
 		end
+	end
+
+	local key = Enum.KeyCode[cfg.key]
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if not processed and input.KeyCode == key then
+			begin()
+		end
 	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if input.KeyCode == key then
+			finish()
+		end
+	end)
+	TouchPad.add({ order = 3, text = "DETECT", colour = Color3.fromRGB(70, 150, 140), down = begin, up = finish, show = function()
+		return player:GetAttribute("Detector") == true
+	end })
 end
 
 return Detector
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00049">
+				<Item class="ModuleScript" referent="RBX0004A">
 					<Properties>
 						<string name="Name">Goals</string>
 						<ProtectedString name="Source"><![CDATA[-- The guided goal card (top left) and the coins-a-minute line under the coins counter.
@@ -7181,7 +7370,7 @@ return Goals
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004A">
+				<Item class="ModuleScript" referent="RBX0004B">
 					<Properties>
 						<string name="Name">Guide</string>
 						<ProtectedString name="Source"><![CDATA[-- When your tool and bucket are full, a soft golden line runs from you to your trader's
@@ -7243,7 +7432,7 @@ return Guide
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004B">
+				<Item class="ModuleScript" referent="RBX0004C">
 					<Properties>
 						<string name="Name">Harvest</string>
 						<ProtectedString name="Source"><![CDATA[-- Aiming in first person: the clump under the crosshair (within reach, on your own pile or the
@@ -7414,8 +7603,25 @@ local function hookTool(tool)
 	end
 	hooked[tool] = true
 	tool.Activated:Connect(function()
-		swing(tool)
+		-- on touch screens Harvest.use (client/TouchAim.luau) handles taps, so a drag to look
+		-- around can never swing
+		if UserInputService:GetLastInputType() ~= Enum.UserInputType.Touch then
+			swing(tool)
+		end
 	end)
+end
+
+-- A click or tap: swing the tool you hold, or say how to get it out. `held`: the button or
+-- finger is still down (keep harvesting quietly; no hints).
+function Harvest.use(held)
+	local tool = heldTool()
+	if tool then
+		if not held or aim() ~= nil then
+			swing(tool)
+		end
+	elseif not held and Harvest.onMiss and player.Character and not (Harvest.isBuilding and Harvest.isBuilding()) then
+		Harvest.onMiss(if UserInputService:GetLastInputType() == Enum.UserInputType.Touch then "Hold your tool to harvest: tap TOOL." else "Hold your tool to harvest: press 1.")
+	end
 end
 
 function Harvest.start()
@@ -7429,18 +7635,14 @@ function Harvest.start()
 		if processed and not locked then
 			return
 		end
-		local tool = heldTool()
-		if tool then
-			swing(tool)
-		elseif Harvest.onMiss and player.Character and not (Harvest.isBuilding and Harvest.isBuilding()) then
-			Harvest.onMiss("Hold your tool to harvest: press 1.")
-		end
+		Harvest.use(false)
 	end)
 	RunService.RenderStepped:Connect(function()
 		local part, _, cell = aim()
 		target = part
 		-- hold the button to keep harvesting (the swing waits for the tool's cooldown itself)
-		if part ~= nil and UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+		local mouse = UserInputService:GetLastInputType() ~= Enum.UserInputType.Touch
+		if part ~= nil and mouse and UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
 			local tool = heldTool()
 			if tool then
 				swing(tool)
@@ -7492,7 +7694,7 @@ return Harvest
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004C">
+				<Item class="ModuleScript" referent="RBX0004D">
 					<Properties>
 						<string name="Name">HayFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The hay you can see moving: every harvest lifts a lump off the heap onto your tool, and
@@ -7590,7 +7792,7 @@ return HayFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004D">
+				<Item class="ModuleScript" referent="RBX0004E">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: a crosshair, your pile's progress at the top, and on the left your
@@ -7648,23 +7850,23 @@ function Hud.mount(gui, open)
 		b.Activated:Connect(onClick)
 		return b
 	end
-	button(2, "SHOP  (Q)", Ui.colors.green, function()
+	local shopButton = button(2, "SHOP  (Q)", Ui.colors.green, function()
 		open("Shop")
 	end)
-	button(3, "BUILD  (B)", Ui.colors.wood, function()
+	local buildButton = button(3, "BUILD  (B)", Ui.colors.wood, function()
 		open("Build")
 	end)
 	local achievementsButton = button(4, "ACHIEVEMENTS", Ui.colors.blue, function()
 		open("Achievements")
 	end)
-	button(5, "FINDS & SKINS", Ui.colors.purple, function()
+	local findsButton = button(5, "FINDS & SKINS", Ui.colors.purple, function()
 		open("Finds")
 	end)
 	local whistle = button(6, "WHISTLE: SELL HERE", Ui.colors.red, function()
 		open("Whistle")
 	end)
 	local boosts = Ui.label({ LayoutOrder = 7, Size = UDim2.fromOffset(220, 50), TextColor3 = Ui.colors.hay, TextYAlignment = Enum.TextYAlignment.Top, Parent = left }, 14)
-	Ui.label({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.fromOffset(560, 18), Text = "M: mouse & menus   Q: shop   B: build   E: use   " .. Config.DropKey .. ": drop hay   " .. Config.HomeKey .. ": home", TextTransparency = 0.3, Parent = gui }, 15)
+	local keys = Ui.label({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.fromOffset(560, 18), Text = "M: mouse & menus   Q: shop   B: build   E: use   " .. Config.DropKey .. ": drop hay   " .. Config.HomeKey .. ": home", TextTransparency = 0.3, Parent = gui }, 15)
 
 	local function refresh()
 		left.Position = UDim2.new(0, 10, 0, 60 + 74 * Ui.screenScale()) -- just under the goal card
@@ -7702,7 +7904,14 @@ function Hud.mount(gui, open)
 		bonusLabel.Text = "Basket " .. Format.short(waiting) .. ", sells " .. Format.short(player:GetAttribute("HaulRate") or Config.TraderRate) .. "/s"
 		rateLabel.Text ..= "  x" .. string.format("%.2f", player:GetAttribute("Multiplier") or 1)
 		achievementsButton.Text = "ACHIEVEMENTS " .. (player:GetAttribute("Achievements") or 0) .. "/" .. #Config.Achievements
-		whistle.Visible = (player:GetAttribute("Whistles") or 0) > 0
+		-- touch screens: the menu buttons and key list fold away (the action pad and its MENU
+		-- have them), so nothing sits over the thumbstick
+		local touch = Ui.touch()
+		for _, b in ipairs({ shopButton, buildButton, achievementsButton, findsButton }) do
+			b.Visible = not touch
+		end
+		keys.Visible = not touch
+		whistle.Visible = not touch and (player:GetAttribute("Whistles") or 0) > 0
 		local lines, now = {}, os.time()
 		for name, label in pairs({ SpeedBoost = "2x speed", CoinBoost = "2x coins", LuckyCharm = "Lucky charm" }) do
 			local until_ = player:GetAttribute("Boost_" .. name) or 0
@@ -7714,6 +7923,7 @@ function Hud.mount(gui, open)
 	end
 
 	player.AttributeChanged:Connect(refresh)
+	Ui.onLayout(refresh)
 	task.spawn(function()
 		while true do
 			refresh()
@@ -7734,7 +7944,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004E">
+				<Item class="ModuleScript" referent="RBX0004F">
 					<Properties>
 						<string name="Name">Jetpack</string>
 						<ProtectedString name="Source"><![CDATA[-- The Jetpack (a Robux game pass; the server sets the "PassJetpack" attribute when you own it).
@@ -7750,6 +7960,7 @@ local UserInputService = game:GetService("UserInputService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Ui = require(script.Parent.Ui)
+local TouchPad = require(script.Parent.TouchPad)
 
 local Jetpack = {}
 local player = Players.LocalPlayer
@@ -7758,7 +7969,6 @@ local rig = nil -- { root, humanoid, lift, flame } for the current character
 local flying, hover, touchHeld = false, false, false
 local speed = 0
 local fuel = cfg.fuelSeconds or 0
-local touchRow = nil
 
 local function owned()
 	return player:GetAttribute("PassJetpack") == true
@@ -7820,9 +8030,6 @@ local function wantsUp()
 end
 
 local function step(dt)
-	if touchRow then
-		touchRow.Visible = owned() and UserInputService.TouchEnabled
-	end
 	if not rig or not rig.root.Parent then
 		return
 	end
@@ -7886,30 +8093,29 @@ function Jetpack.start(gui, notify)
 		end
 	end)
 
-	-- touch screens: hold FLY to rise, tap HOVER to stay put
-	touchRow = Ui.make("Frame", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -16, 1, -190), Size = UDim2.fromOffset(100, 110), BackgroundTransparency = 1, Visible = false, Parent = gui }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6) }) })
-	local fly = Ui.button("FLY", Ui.colors.blue, { Size = UDim2.fromOffset(100, 52), Parent = touchRow })
-	fly.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-			touchHeld = true
+	-- touch screens: hold FLY (on the action pad) to rise, tap HOVER to stay put
+	TouchPad.add({ order = 1, text = "FLY", colour = Ui.colors.blue, show = owned, down = function()
+		touchHeld = true
+		if rig and rig.humanoid.FloorMaterial ~= Enum.Material.Air and owned() then
+			rig.humanoid.Jump = true -- take off from the ground: no need to reach for jump too
 		end
-	end)
-	fly.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-			touchHeld = false
-		end
-	end)
-	Ui.button("HOVER", Ui.colors.wood, { Size = UDim2.fromOffset(100, 52), Parent = touchRow }).Activated:Connect(function()
+	end, up = function()
+		touchHeld = false
+	end })
+	TouchPad.add({ order = 2, text = "HOVER", colour = Ui.colors.blue, show = owned, tap = function()
 		if rig and rig.humanoid.FloorMaterial == Enum.Material.Air then
 			hover = not hover
+			if notify then
+				notify.toast(if hover then "Jetpack: hovering." else "Jetpack: drifting down.", Ui.colors.blue)
+			end
 		end
-	end)
+	end })
 
 	local told = false
 	local function tell()
 		if owned() and not told and notify then
 			told = true
-			notify.toast("Jetpack ready! In the air, hold Space to fly up, " .. (cfg.hoverKey or "H") .. " to hover.", Ui.colors.blue)
+			notify.toast(if Ui.touch() then "Jetpack ready! Jump, then hold FLY to fly up and tap HOVER to stay put." else "Jetpack ready! In the air, hold Space to fly up, " .. (cfg.hoverKey or "H") .. " to hover.", Ui.colors.blue)
 		end
 	end
 	player:GetAttributeChangedSignal("PassJetpack"):Connect(tell)
@@ -7920,7 +8126,7 @@ return Jetpack
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004F">
+				<Item class="ModuleScript" referent="RBX00050">
 					<Properties>
 						<string name="Name">Juice</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback that makes harvesting feel good: straw bursts, floating numbers, a soft camera
@@ -8059,7 +8265,8 @@ function Juice.coins(amount)
 		return
 	end
 	local count = math.clamp(math.floor(math.log10(math.max(amount, 1)) * 3), 3, 14)
-	local target = coinTarget.AbsolutePosition + coinTarget.AbsoluteSize / 2
+	local origin = if gui:IsA("GuiBase2d") then gui.AbsolutePosition else Vector2.zero -- inside a phone's safe area
+	local target = coinTarget.AbsolutePosition + coinTarget.AbsoluteSize / 2 - origin
 	for i = 1, count do
 		task.delay(i * 0.04, function()
 			local coin = Ui.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(18, 18), Position = UDim2.new(0.5, math.random(-60, 60), 0.5, math.random(-40, 40)), BackgroundColor3 = Color3.fromRGB(255, 206, 70), Parent = gui }, { Ui.corner(9), Ui.stroke(Color3.fromRGB(190, 130, 30), 2) })
@@ -8108,15 +8315,13 @@ return Juice
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX00050">
+				<Item class="LocalScript" referent="RBX00051">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- The player's side of the game: first-person harvesting, building, the menus, and all the
 -- feedback that makes it feel good. The server decides everything that matters.
 local Players = game:GetService("Players")
-local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
@@ -8143,9 +8348,15 @@ local Animals = require(script.Parent:WaitForChild("Animals"))
 local Goals = require(script.Parent:WaitForChild("Goals"))
 local StaminaBar = require(script.Parent:WaitForChild("Stamina"))
 local Detector = require(script.Parent:WaitForChild("Detector"))
+local TouchPad = require(script.Parent:WaitForChild("TouchPad"))
+local TouchAim = require(script.Parent:WaitForChild("TouchAim"))
+local Controls = require(script.Parent:WaitForChild("Controls"))
 
 local player = Players.LocalPlayer
 local gui = Ui.make("ScreenGui", { Name = "HaystackUi", ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
+pcall(function() -- under the top bar like before, but clear of a phone's notch and rounded corners
+	gui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
+end)
 
 -- Errors show on screen (red, top right) so a broken part can be reported without the
 -- Output window. Each part starts on its own, so one failing can't stop harvesting.
@@ -8166,6 +8377,9 @@ end
 local panels, hud
 step("messages", function()
 	Notify.mount(gui)
+end)
+step("touch pad", function()
+	TouchPad.mount(gui) -- before the parts that add buttons to it
 end)
 step("harvesting", function()
 	Harvest.onMiss = function(text)
@@ -8189,6 +8403,7 @@ end)
 step("building", function()
 	BuildMode.mount(gui, Notify)
 	Harvest.isBuilding = BuildMode.active
+	TouchPad.isBuilding = BuildMode.active
 end)
 step("menus", function()
 	panels = Panels.mount(gui, Notify, {
@@ -8235,27 +8450,17 @@ end)
 step("metal detector", function()
 	Detector.start(gui, Notify)
 end)
+step("controls", function()
+	Controls.start(function(name)
+		if panels then
+			panels.open(name)
+		end
+	end)
+	TouchAim.start() -- touch screens: tap or hold still to harvest
+end)
 if not hud then
 	hud = { refresh = function() end }
 end
-
-UserInputService.InputBegan:Connect(function(input, processed)
-	if not processed and input.KeyCode == Enum.KeyCode.Q and panels then
-		panels.open("Shop")
-	elseif not processed and input.KeyCode == Enum.KeyCode[Config.HomeKey] then
-		Remotes.GoHome:FireServer() -- back to the entrance of your own farm
-	elseif not processed and input.KeyCode == Enum.KeyCode[Config.DropKey] then
-		Remotes.DropHay:FireServer() -- drop your load as a bundle (or put down a bale)
-	end
-end)
-
-ProximityPromptService.PromptTriggered:Connect(function(prompt)
-	if prompt:GetAttribute("Action") == "wheel" and panels then
-		panels.open("Wheel")
-	elseif prompt:GetAttribute("Action") == "teleport" then
-		Teleport.open(prompt:FindFirstAncestorOfClass("Model"))
-	end
-end)
 
 -- What the server said about your last click, just under the crosshair. If a click gets no
 -- answer at all, say so: that means the server's harvesting isn't running (see Output).
@@ -8404,14 +8609,15 @@ task.delay(3, function()
 	Notify.banner(
 		"Welcome to " .. Config.FarmName .. "!",
 		"This is your farm. Your heap holds " .. Format.commas(Config.TotalStraws) .. " straws and one needle, hidden deep in the upper heap. "
-			.. "Aim at the heap and click to lift hay onto your fork, then dump it in your trader's basket (E). Buy tools, buckets, stairs, lifts and machines (Q) and build them (B).",
+			.. (if Ui.touch() then "Aim the dot at the heap and tap (or hold) to lift hay onto your fork, then dump it in your trader's basket (tap its button). SHOP and BUILD are on the right."
+				else "Aim at the heap and click to lift hay onto your fork, then dump it in your trader's basket (E). Buy tools, buckets, stairs, lifts and machines (Q) and build them (B)."),
 		12
 	)
 end)
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00051">
+				<Item class="ModuleScript" referent="RBX00052">
 					<Properties>
 						<string name="Name">Music</string>
 						<ProtectedString name="Source"><![CDATA[-- Soft background music: the Config.Music playlist in a loop, low and relaxing, fading gently
@@ -8554,7 +8760,7 @@ return Music
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00052">
+				<Item class="ModuleScript" referent="RBX00053">
 					<Properties>
 						<string name="Name">Notify</string>
 						<ProtectedString name="Source"><![CDATA[-- Messages: small toasts under the haystack counter, and a big banner for case news.
@@ -8569,12 +8775,14 @@ function Notify.mount(gui)
 	stack = Ui.make("Frame", {
 		Name = "Toasts",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 6 + 92 * Ui.screenScale()), -- just under the top bar
 		Size = UDim2.fromOffset(460, 220),
 		BackgroundTransparency = 1,
 		Parent = gui,
 	}, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }) })
 	Ui.autoScale(stack)
+	Ui.onLayout(function()
+		stack.Position = UDim2.new(0.5, 0, 0, 6 + 92 * Ui.screenScale()) -- just under the top bar
+	end)
 
 	banner = Ui.make("Frame", {
 		Name = "Banner",
@@ -8584,6 +8792,7 @@ function Notify.mount(gui)
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundColor3 = Ui.colors.wood,
 		Visible = false,
+		Active = true, -- a tap that dismisses it doesn't also harvest
 		Parent = gui,
 	}, {
 		Ui.corner(18),
@@ -8657,7 +8866,7 @@ return Notify
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00053">
+				<Item class="ModuleScript" referent="RBX00054">
 					<Properties>
 						<string name="Name">Offer</string>
 						<ProtectedString name="Source"><![CDATA[-- One gentle Robux suggestion per session: after Config.OfferAfterClumps clumps harvested since
@@ -8763,7 +8972,7 @@ return Offer
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00054">
+				<Item class="ModuleScript" referent="RBX00055">
 					<Properties>
 						<string name="Name">OrderCard</string>
 						<ProtectedString name="Source"><![CDATA[-- The current delivery order, on the right of the screen: what the driver wants, how many
@@ -8781,6 +8990,13 @@ local OrderCard = {}
 function OrderCard.mount(gui)
 	local card = Ui.make("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.38, 0), Size = UDim2.fromOffset(230, 86), BackgroundColor3 = Ui.colors.wood, BackgroundTransparency = 0.1, Visible = false, Parent = gui }, { Ui.corner(12), Ui.stroke(Ui.colors.woodDark, 3) })
 	Ui.autoScale(card)
+	Ui.onLayout(function() -- touch: top right under the music button, clear of the action pad
+		if Ui.touch() then
+			card.AnchorPoint, card.Position = Vector2.new(1, 0), UDim2.new(1, -10, 0, 56)
+		else
+			card.AnchorPoint, card.Position = Vector2.new(1, 0.5), UDim2.new(1, -10, 0.38, 0)
+		end
+	end)
 	local title = Ui.label({ Text = "DELIVERY ORDER", Size = UDim2.new(1, -16, 0, 20), Position = UDim2.fromOffset(8, 4), TextColor3 = Ui.colors.hay, Parent = card }, 16)
 	local text = Ui.label({ Size = UDim2.new(1, -16, 0, 34), Position = UDim2.fromOffset(8, 24), TextWrapped = true, Parent = card }, 14)
 	local track = Ui.make("Frame", { Size = UDim2.new(1, -16, 0, 10), Position = UDim2.fromOffset(8, 66), BackgroundColor3 = Ui.colors.woodDark, Parent = card }, { Ui.corner(5) })
@@ -8810,7 +9026,7 @@ return OrderCard
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00055">
+				<Item class="ModuleScript" referent="RBX00056">
 					<Properties>
 						<string name="Name">Panels</string>
 						<ProtectedString name="Source"><![CDATA[-- The windows: Shop, secret Achievements, Finds & Skins, and the Wheel of Fortune (odds first).
@@ -8941,6 +9157,22 @@ function Panels.mount(gui, notify, actions)
 		end
 	end
 
+	-- Menu: on touch screens the HUD's side buttons fold away; the pad's MENU opens these
+	local menu, menuBody = Ui.window(gui, "Menu")
+	windows.Menu = menu
+	Ui.fit(menu, 420, 330)
+	local open, whistleButton
+	for i, b in ipairs({ { "ACHIEVEMENTS", "Achievements", Ui.colors.blue }, { "FINDS & SKINS", "Finds", Ui.colors.purple }, { "WHISTLE: SELL HERE", "Whistle", Ui.colors.red } }) do
+		local button = Ui.button(b[1], b[3], { LayoutOrder = i, Size = UDim2.new(1, 0, 0, 56), Parent = menuBody })
+		button.Activated:Connect(function()
+			open(b[2])
+		end)
+		whistleButton = button
+	end
+	refreshers.Menu = function()
+		whistleButton.Visible = (player:GetAttribute("Whistles") or 0) > 0
+	end
+
 	local function anyOpen()
 		for _, frame in pairs(windows) do
 			if frame.Visible then
@@ -8950,7 +9182,7 @@ function Panels.mount(gui, notify, actions)
 		return false
 	end
 
-	local function open(name)
+	open = function(name)
 		if name == "Build" or name == "Whistle" then
 			for _, frame in pairs(windows) do
 				frame.Visible = false
@@ -8999,7 +9231,7 @@ return Panels
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00056">
+				<Item class="ModuleScript" referent="RBX00057">
 					<Properties>
 						<string name="Name">Shop</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop window: Tools, Perks, Fitness (stamina, the metal detector), Storage (buckets and
@@ -9027,7 +9259,7 @@ local ROBUX = {
 	{ kind = "pass", key = "AutoSell", title = "Auto Sell", text = "When you're full, your load goes to your basket by itself." },
 	{ kind = "pass", key = "DoubleMachines", title = "Double Machines", text = "Every machine harvests twice as fast, on the same power." },
 	{ kind = "pass", key = "VIP", title = "VIP", text = "+25% coins, and machines keep working up to 1 hour while you're away." },
-	{ kind = "pass", key = "Jetpack", title = "Jetpack", text = "Hold Space in the air to fly up and hover over your pile." },
+	{ kind = "pass", key = "Jetpack", title = "Jetpack", text = "Hold Space (or FLY) in the air to fly up and hover over your pile." },
 }
 
 local Shop = {}
@@ -9063,9 +9295,18 @@ end
 function Shop.mount(gui, notify)
 	local body
 	frame, body = Ui.window(gui, "Shop")
-	frame.Size = UDim2.fromOffset(640, 540)
-	local tabs = Ui.make("Frame", { Size = UDim2.new(1, -24, 0, 38), Position = UDim2.fromOffset(12, 64), BackgroundTransparency = 1, Parent = frame }, { Ui.make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }) })
-	body.Position, body.Size = UDim2.fromOffset(12, 108), UDim2.new(1, -24, 1, -116)
+	Ui.fit(frame, 640, 540)
+	-- tabs share the width with a mouse; on touch screens they stay tappable and scroll sideways
+	local tabs = Ui.make("ScrollingFrame", { Size = UDim2.new(1, -24, 0, 40), Position = UDim2.fromOffset(12, 64), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 0, CanvasSize = UDim2.new(), Parent = frame }, { Ui.make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }) })
+	local tabButtons = {}
+	Ui.onLayout(function()
+		local touch = Ui.touch()
+		tabs.AutomaticCanvasSize, tabs.CanvasSize = if touch then Enum.AutomaticSize.X else Enum.AutomaticSize.None, UDim2.new()
+		for _, b in ipairs(tabButtons) do
+			b.Size = if touch then UDim2.fromOffset(104, 40) else UDim2.new(1 / 9, -4, 1, 0)
+		end
+	end)
+	body.Position, body.Size = UDim2.fromOffset(12, 110), UDim2.new(1, -24, 1, -118)
 	local pages, refreshers, order = {}, {}, 0
 	Shop.refreshers = refreshers
 
@@ -9085,7 +9326,9 @@ function Shop.mount(gui, notify)
 		order += 1
 		local list = Ui.make("Frame", { Name = name, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Visible = false, Parent = body }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
 		pages[name], refreshers[name] = list, build(list)
-		Ui.button(name, colour, { LayoutOrder = order, Size = UDim2.new(1 / 9, -4, 1, 0), Parent = tabs }).Activated:Connect(function()
+		local tab = Ui.button(name, colour, { LayoutOrder = order, Size = if Ui.touch() then UDim2.fromOffset(104, 40) else UDim2.new(1 / 9, -4, 1, 0), Parent = tabs })
+		table.insert(tabButtons, tab)
+		tab.Activated:Connect(function()
 			for key, p in pairs(pages) do
 				p.Visible = key == name
 			end
@@ -9139,7 +9382,7 @@ function Shop.mount(gui, notify)
 				buy("fitness", i, rows[i])
 			end)
 		end
-		local detector = row(list, 50, "Metal Detector", "Hold " .. Config.MetalDetector.key .. " near your heap: it beeps faster the closer the needle is (within " .. Config.MetalDetector.range .. " studs).")
+		local detector = row(list, 50, "Metal Detector", "Hold " .. Config.MetalDetector.key .. " (or DETECT) near your heap: it beeps faster the closer the needle is (within " .. Config.MetalDetector.range .. " studs).")
 		detector.Activated:Connect(function()
 			buy("detector", 1, detector)
 		end)
@@ -9292,7 +9535,7 @@ return Shop
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00057">
+				<Item class="ModuleScript" referent="RBX00058">
 					<Properties>
 						<string name="Name">Stamina</string>
 						<ProtectedString name="Source"><![CDATA[-- A slim stamina bar under the crosshair (the server owns stamina: attributes Stamina,
@@ -9340,7 +9583,7 @@ return StaminaBar
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00058">
+				<Item class="ModuleScript" referent="RBX00059">
 					<Properties>
 						<string name="Name">Teleport</string>
 						<ProtectedString name="Source"><![CDATA[-- The teleporter menu: standing on one of your pads, pick any of your other pads (listed by
@@ -9367,7 +9610,7 @@ function Teleport.mount(gui)
 	window, body = Ui.window(gui, "Teleport", function()
 		Cursor.need("teleport", false)
 	end)
-	window.Size = UDim2.fromOffset(420, 420)
+	Ui.fit(window, 420, 420)
 end
 
 -- Opens the menu for the pad `from` (a Model on your plot).
@@ -9393,7 +9636,7 @@ function Teleport.open(from)
 		return a:GetPivot().Position.Y < b:GetPivot().Position.Y
 	end)
 	if #pads == 0 then
-		Ui.paragraph("This is your only pad. Buy another Teleporter Pad (Q, Build) and put it somewhere else, like high up on a platform.", { LayoutOrder = 1, Parent = body })
+		Ui.paragraph("This is your only pad. Buy another Teleporter Pad (Shop, Build) and put it somewhere else, like high up on a platform.", { LayoutOrder = 1, Parent = body })
 	end
 	for i, pad in ipairs(pads) do
 		local height = math.floor(pad:GetPivot().Position.Y + 0.5)
@@ -9411,11 +9654,223 @@ return Teleport
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00059">
+				<Item class="ModuleScript" referent="RBX0005A">
+					<Properties>
+						<string name="Name">TouchAim</string>
+						<ProtectedString name="Source"><![CDATA[-- Harvesting on touch screens. In first person a finger dragged across the screen turns the
+-- camera, so only a touch that stays put counts: lift it quickly for one swing at the
+-- crosshair, or hold it still to keep harvesting (like holding the mouse button). Touches on
+-- buttons (the game's, the jump button, prompts) and on the thumbstick never harvest, and
+-- neither do taps while a menu is open or in build mode (that has its own PLACE button).
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Harvest = require(script.Parent.Harvest)
+local Cursor = require(script.Parent.Cursor)
+local TouchPad = require(script.Parent.TouchPad)
+
+local cfg = Config.Touch
+local TouchAim = {}
+local touches = {} -- [InputObject] = { start = Vector2, at = time(), moved = bool }
+
+local function blocked()
+	return Cursor.isFree() or TouchPad.isBuilding()
+end
+
+function TouchAim.start()
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if processed or input.UserInputType ~= Enum.UserInputType.Touch then
+			return
+		end
+		local start = Vector2.new(input.Position.X, input.Position.Y)
+		if TouchPad.onStick(start) then
+			return
+		end
+		touches[input] = { start = start, at = time(), moved = false }
+	end)
+	UserInputService.InputChanged:Connect(function(input)
+		local t = touches[input]
+		if t and not t.moved and (Vector2.new(input.Position.X, input.Position.Y) - t.start).Magnitude > cfg.dragPixels then
+			t.moved = true -- looking around from now on
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		local t = touches[input]
+		touches[input] = nil
+		if t and not t.moved and time() - t.at < cfg.holdSeconds and not blocked() then
+			Harvest.use(false) -- a tap
+		end
+	end)
+	RunService.RenderStepped:Connect(function()
+		for input, t in pairs(touches) do
+			local state = input.UserInputState
+			if state == Enum.UserInputState.End or state == Enum.UserInputState.Cancel then
+				touches[input] = nil -- an end we missed
+			elseif not t.moved and time() - t.at >= cfg.holdSeconds and not blocked() then
+				Harvest.use(true) -- held still: keep harvesting (the tool's cooldown paces it)
+			end
+		end
+	end)
+end
+
+return TouchAim
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX0005B">
+					<Properties>
+						<string name="Name">TouchPad</string>
+						<ProtectedString name="Source"><![CDATA[-- The action pad on touch screens: the keyboard's shortcuts (shop, build, drop, home, tool,
+-- detector, jetpack) as big buttons in a tidy grid on the right, just above Roblox's jump
+-- button, clear of the thumbstick (bottom left). Only shown while a touch screen is in use.
+-- Hidden while a menu is open. Other parts add their own buttons with TouchPad.add; build
+-- mode shows its own set.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Ui = require(script.Parent.Ui)
+local Cursor = require(script.Parent.Cursor)
+
+local player = Players.LocalPlayer
+local cfg = Config.Touch
+local TouchPad = {}
+TouchPad.isBuilding = function()
+	return false
+end
+
+local pad, scale, screen = nil, nil, nil
+local entries = {} -- { button, show, build }
+local camera = workspace.CurrentCamera
+
+-- The jump button's top and right edges, in pixels inside our ScreenGui: Roblox's TouchGui
+-- when it's there (measured against our ScreenGui, so the top bar and a phone's notch don't
+-- matter), else where the default touch controls put it.
+local function jumpEdges()
+	local size = screen.AbsoluteSize
+	local small = math.min(size.X, size.Y) <= 500
+	local top, right = size.Y - (if small then 90 else 210), size.X - (if small then 25 else 50)
+	local touchGui = player:FindFirstChild("PlayerGui") and player.PlayerGui:FindFirstChild("TouchGui")
+	local frame = touchGui and touchGui:FindFirstChild("TouchControlFrame")
+	local jump = frame and frame:FindFirstChild("JumpButton")
+	if jump and jump:IsA("GuiObject") and jump.Visible and jump.AbsoluteSize.Y > 0 then
+		local origin = screen.AbsolutePosition
+		top = jump.AbsolutePosition.Y - origin.Y
+		right = jump.AbsolutePosition.X + jump.AbsoluteSize.X - origin.X
+	end
+	return top, right
+end
+
+-- True if a touch at `position` (an InputObject's Position, below Roblox's top bar) started
+-- where the thumbstick lives: the bottom-left of the screen.
+function TouchPad.onStick(position)
+	local view = camera.ViewportSize
+	local y = position.Y + Ui.topInset()
+	return position.X < view.X * cfg.stickArea[1] and y > view.Y * cfg.stickArea[2]
+end
+
+local function place()
+	if not pad then
+		return
+	end
+	local top, right = jumpEdges()
+	local w, h, rows = cfg.padButton[1], cfg.padButton[2], 3
+	local fullW = cfg.padColumns * w + (cfg.padColumns - 1) * cfg.padGap
+	local fullH = rows * h + (rows - 1) * cfg.padGap
+	-- the room between the order card (top right, under the music button) and the jump button
+	local room = top - 8 - (56 + 86 * Ui.screenScale() + 10)
+	scale.Scale = math.clamp(room / fullH, 0.6, 1.2)
+	pad.Size = UDim2.fromOffset(fullW, fullH)
+	pad.Position = UDim2.fromOffset(right, top - 8)
+end
+
+-- The pad's width on screen in pixels (build mode keeps its item bar clear of it).
+function TouchPad.width()
+	return if pad and scale then pad.Size.X.Offset * scale.Scale else 0
+end
+
+function TouchPad.mount(gui)
+	screen = gui
+	pad = Ui.make("Frame", { Name = "TouchPad", AnchorPoint = Vector2.new(1, 1), BackgroundTransparency = 1, Visible = false, Parent = gui }, {
+		Ui.make("UIGridLayout", {
+			CellSize = UDim2.fromOffset(cfg.padButton[1], cfg.padButton[2]),
+			CellPadding = UDim2.fromOffset(cfg.padGap, cfg.padGap),
+			StartCorner = Enum.StartCorner.BottomRight,
+			FillDirection = Enum.FillDirection.Horizontal,
+			HorizontalAlignment = Enum.HorizontalAlignment.Right,
+			VerticalAlignment = Enum.VerticalAlignment.Bottom,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+	})
+	scale = Ui.make("UIScale", { Parent = pad })
+	Ui.onLayout(place)
+	task.spawn(function()
+		while true do
+			local touch = Ui.touch()
+			pad.Visible = touch and not Cursor.isFree() -- a menu open has the screen to itself
+			if touch then
+				place() -- the jump button can move (or appear late)
+				local building = TouchPad.isBuilding()
+				for _, e in ipairs(entries) do
+					e.button.Visible = (e.build == building) and (e.show == nil or e.show())
+				end
+			end
+			task.wait(0.25)
+		end
+	end)
+end
+
+-- Adds a button. spec: order (1 sits next to the thumb, bottom right), text, colour, and
+-- either tap() or down()/up() for a button you hold; show() decides when it appears;
+-- build = true puts it in build mode's set instead of the normal one.
+function TouchPad.add(spec)
+	if not pad then
+		return nil
+	end
+	local button = Ui.button(spec.text, spec.colour or Ui.colors.wood, { Name = spec.text, LayoutOrder = spec.order, Visible = false, Parent = pad })
+	if spec.tap then
+		button.Activated:Connect(spec.tap)
+	end
+	if spec.down then
+		-- held: follow this one touch until it lifts, even if the finger slides off the button
+		local holding = nil
+		local function release(input)
+			if holding and input == holding then
+				holding = nil
+				spec.up()
+			end
+		end
+		button.InputBegan:Connect(function(input)
+			if holding == nil and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) then
+				holding = input
+				spec.down()
+			end
+		end)
+		button.InputEnded:Connect(release)
+		UserInputService.InputEnded:Connect(release)
+		button:GetPropertyChangedSignal("Visible"):Connect(function()
+			if not button.Visible and holding then
+				holding = nil
+				spec.up()
+			end
+		end)
+	end
+	table.insert(entries, { button = button, show = spec.show, build = spec.build == true })
+	return button
+end
+
+return TouchPad
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX0005C">
 					<Properties>
 						<string name="Name">Ui</string>
 						<ProtectedString name="Source"><![CDATA[-- A small UI kit: the farm colours, rounded wooden buttons and windows that scale with
--- the screen (phones get a smaller UI, big monitors a larger one).
+-- the screen, and helpers for touch screens.
 local Ui = {}
 
 Ui.colors = {
@@ -9435,16 +9890,55 @@ Ui.colors = {
 Ui.font = Enum.Font.FredokaOne
 Ui.body = Enum.Font.GothamMedium
 
-local camera = workspace.CurrentCamera or workspace:WaitForChild("Camera")
-local scales = {}
+local GuiService = game:GetService("GuiService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 
-local function screenScale()
-	return math.clamp(camera.ViewportSize.Y / 760, 0.55, 1.15)
+local camera = workspace.CurrentCamera or workspace:WaitForChild("Camera")
+local scales, layouts = {}, {}
+
+-- A touch screen in use: a phone or tablet (no keyboard), or a touch laptop last touched.
+function Ui.touch()
+	if not UserInputService.TouchEnabled then
+		return false
+	end
+	return not UserInputService.KeyboardEnabled or UserInputService:GetLastInputType() == Enum.UserInputType.Touch
 end
 
-camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+-- Phones get a smaller UI, big monitors a larger one; touch screens never so small that text
+-- can't be read or buttons can't be tapped.
+local function screenScale()
+	return math.clamp(camera.ViewportSize.Y / 760, if Ui.touch() then Config.Touch.minScale else 0.55, 1.15)
+end
+
+-- The height of Roblox's own top bar (its menu and chat buttons), in pixels.
+function Ui.topInset()
+	local ok, inset = pcall(GuiService.GetGuiInset, GuiService)
+	return if ok and typeof(inset) == "Vector2" then inset.Y else 36
+end
+
+-- Runs fn now and again whenever the screen changes size (a phone turning) or the player
+-- switches between touch and mouse.
+function Ui.onLayout(fn)
+	table.insert(layouts, fn)
+	task.spawn(fn)
+end
+
+local function relayout()
 	for _, scale in ipairs(scales) do
 		scale.Scale = screenScale()
+	end
+	for _, fn in ipairs(layouts) do
+		task.spawn(fn)
+	end
+end
+camera:GetPropertyChangedSignal("ViewportSize"):Connect(relayout)
+local wasTouch = Ui.touch()
+UserInputService.LastInputTypeChanged:Connect(function()
+	if Ui.touch() ~= wasTouch then
+		wasTouch = Ui.touch()
+		relayout()
 	end
 end)
 
@@ -9486,6 +9980,26 @@ function Ui.autoScale(frame)
 	local scale = Ui.make("UIScale", { Scale = screenScale(), Parent = frame })
 	table.insert(scales, scale)
 	return scale
+end
+
+-- Sizes a scaled window to width x height, shrunk to fit the screen under Roblox's top bar
+-- (on a phone the window fills most of the screen; its body scrolls).
+local fitted = setmetatable({}, { __mode = "k" })
+function Ui.fit(frame, width, height)
+	frame:SetAttribute("FitW", width)
+	frame:SetAttribute("FitH", height)
+	if fitted[frame] then
+		fitted[frame]() -- a new size for a window already fitted (the shop is bigger)
+		return
+	end
+	fitted[frame] = function()
+		local s, view, inset = screenScale(), camera.ViewportSize, Ui.topInset()
+		local w = math.min(frame:GetAttribute("FitW"), (view.X - 24) / s)
+		local h = math.min(frame:GetAttribute("FitH"), (view.Y - inset - 16) / s)
+		frame.Size = UDim2.fromOffset(w, h)
+		frame.Position = UDim2.new(0.5, 0, 0.5, inset / 2)
+	end
+	Ui.onLayout(fitted[frame])
 end
 
 -- A text label. `maxSize` caps the scaled text size.
@@ -9540,6 +10054,7 @@ function Ui.window(parent, title, onClose)
 		Parent = parent,
 	}, { Ui.corner(18), Ui.stroke(Ui.colors.wood, 5) })
 	Ui.autoScale(frame)
+	Ui.fit(frame, 540, 480)
 	Ui.make("Frame", { Name = "Header", Size = UDim2.new(1, 0, 0, 58), BackgroundColor3 = Ui.colors.wood, Parent = frame }, { Ui.corner(16) })
 	Ui.label({ Text = title, Size = UDim2.new(1, -120, 0, 46), Position = UDim2.fromOffset(20, 6), TextXAlignment = Enum.TextXAlignment.Left, Parent = frame }, 34)
 	local close = Ui.button("X", Ui.colors.red, { Size = UDim2.fromOffset(46, 42), Position = UDim2.new(1, -56, 0, 8), Parent = frame })
@@ -9590,7 +10105,7 @@ return Ui
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005A">
+				<Item class="ModuleScript" referent="RBX0005D">
 					<Properties>
 						<string name="Name">WorldFx</string>
 						<ProtectedString name="Source"><![CDATA[-- World effects on your screen: the glowing needle clump (Wheel jackpot), the wheel turning
@@ -9711,19 +10226,19 @@ return WorldFx
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX0005B">
+	<Item class="Workspace" referent="RBX0005E">
 		<Properties>
 			<string name="Name">Workspace</string>
 			<bool name="StreamingEnabled">false</bool>
 		</Properties>
 	</Item>
-	<Item class="MaterialService" referent="RBX0005C">
+	<Item class="MaterialService" referent="RBX0005F">
 		<Properties>
 			<string name="Name">MaterialService</string>
 			<bool name="Use2022Materials">true</bool>
 			<string name="LeafyGrassName">Field</string>
 		</Properties>
-		<Item class="MaterialVariant" referent="RBX0005D">
+		<Item class="MaterialVariant" referent="RBX00060">
 			<Properties>
 				<string name="Name">Field</string>
 				<token name="BaseMaterial">1284</token>

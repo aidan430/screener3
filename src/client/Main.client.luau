@@ -1,9 +1,7 @@
 -- The player's side of the game: first-person harvesting, building, the menus, and all the
 -- feedback that makes it feel good. The server decides everything that matters.
 local Players = game:GetService("Players")
-local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
@@ -30,9 +28,15 @@ local Animals = require(script.Parent:WaitForChild("Animals"))
 local Goals = require(script.Parent:WaitForChild("Goals"))
 local StaminaBar = require(script.Parent:WaitForChild("Stamina"))
 local Detector = require(script.Parent:WaitForChild("Detector"))
+local TouchPad = require(script.Parent:WaitForChild("TouchPad"))
+local TouchAim = require(script.Parent:WaitForChild("TouchAim"))
+local Controls = require(script.Parent:WaitForChild("Controls"))
 
 local player = Players.LocalPlayer
 local gui = Ui.make("ScreenGui", { Name = "HaystackUi", ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
+pcall(function() -- under the top bar like before, but clear of a phone's notch and rounded corners
+	gui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
+end)
 
 -- Errors show on screen (red, top right) so a broken part can be reported without the
 -- Output window. Each part starts on its own, so one failing can't stop harvesting.
@@ -53,6 +57,9 @@ end
 local panels, hud
 step("messages", function()
 	Notify.mount(gui)
+end)
+step("touch pad", function()
+	TouchPad.mount(gui) -- before the parts that add buttons to it
 end)
 step("harvesting", function()
 	Harvest.onMiss = function(text)
@@ -76,6 +83,7 @@ end)
 step("building", function()
 	BuildMode.mount(gui, Notify)
 	Harvest.isBuilding = BuildMode.active
+	TouchPad.isBuilding = BuildMode.active
 end)
 step("menus", function()
 	panels = Panels.mount(gui, Notify, {
@@ -122,27 +130,17 @@ end)
 step("metal detector", function()
 	Detector.start(gui, Notify)
 end)
+step("controls", function()
+	Controls.start(function(name)
+		if panels then
+			panels.open(name)
+		end
+	end)
+	TouchAim.start() -- touch screens: tap or hold still to harvest
+end)
 if not hud then
 	hud = { refresh = function() end }
 end
-
-UserInputService.InputBegan:Connect(function(input, processed)
-	if not processed and input.KeyCode == Enum.KeyCode.Q and panels then
-		panels.open("Shop")
-	elseif not processed and input.KeyCode == Enum.KeyCode[Config.HomeKey] then
-		Remotes.GoHome:FireServer() -- back to the entrance of your own farm
-	elseif not processed and input.KeyCode == Enum.KeyCode[Config.DropKey] then
-		Remotes.DropHay:FireServer() -- drop your load as a bundle (or put down a bale)
-	end
-end)
-
-ProximityPromptService.PromptTriggered:Connect(function(prompt)
-	if prompt:GetAttribute("Action") == "wheel" and panels then
-		panels.open("Wheel")
-	elseif prompt:GetAttribute("Action") == "teleport" then
-		Teleport.open(prompt:FindFirstAncestorOfClass("Model"))
-	end
-end)
 
 -- What the server said about your last click, just under the crosshair. If a click gets no
 -- answer at all, say so: that means the server's harvesting isn't running (see Output).
@@ -291,7 +289,8 @@ task.delay(3, function()
 	Notify.banner(
 		"Welcome to " .. Config.FarmName .. "!",
 		"This is your farm. Your heap holds " .. Format.commas(Config.TotalStraws) .. " straws and one needle, hidden deep in the upper heap. "
-			.. "Aim at the heap and click to lift hay onto your fork, then dump it in your trader's basket (E). Buy tools, buckets, stairs, lifts and machines (Q) and build them (B).",
+			.. (if Ui.touch() then "Aim the dot at the heap and tap (or hold) to lift hay onto your fork, then dump it in your trader's basket (tap its button). SHOP and BUILD are on the right."
+				else "Aim at the heap and click to lift hay onto your fork, then dump it in your trader's basket (E). Buy tools, buckets, stairs, lifts and machines (Q) and build them (B)."),
 		12
 	)
 end)

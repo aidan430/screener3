@@ -298,3 +298,37 @@ Your brief: the land was far too open; bring everything in close round the hayst
   (|z| < 13), kept clear for the hub's portal arches.
 - Animals keep their PenMin/PenMax attributes from the new pens; `client/Animals` needed no
   change (it finds the windmill and animals by name).
+## Phones and tablets (2026-11-06)
+The owner said the game wasn't mobile compatible. Every client file was checked for touch.
+New tunables: `Config.Touch` (in `ConfigPlayer.luau`): `holdSeconds` 0.35, `dragPixels` 14,
+`stickArea` {0.4, 1/3}, `minScale` 0.68, `padButton` {76, 50}, `padGap` 6, `padColumns` 3.
+- **Harvesting by touch** (`client/TouchAim.luau`): a touch that stays within 14 px and lifts
+  before 0.35 s swings once at the crosshair; held still longer it keeps harvesting (paced by
+  the tool's cooldown, like holding the mouse). A touch that moves is looking around and never
+  harvests. Touches on buttons, prompts, the jump button or the thumbstick area (bottom left)
+  don't harvest, nor do taps while a menu is open or in build mode. The tool's own Activated
+  is ignored on touch (it could fire on a camera drag). `Harvest.use` is the shared click/tap.
+- **Action pad** (`client/TouchPad.luau`, `client/Controls.luau`): on touch screens a 3x3 grid
+  of buttons sits on the right just above Roblox's jump button (measured from the TouchGui, or
+  where Roblox puts it), clear of the thumbstick: DROP (G), HOME (T), TOOL (1, only when the
+  fork isn't out), SHOP (Q), BUILD (B), MENU (achievements, finds & skins, whistle), and when
+  owned DETECT (hold, V), FLY (hold; takes off from the ground too) and HOVER (H). In build mode
+  the pad swaps to PLACE, TURN, TAKE BACK, NEXT, PREV (Z/C), DONE. Hidden while a menu is open.
+  Shown when the device has touch and no keyboard, or a touch laptop was last touched.
+  The keyboard shortcuts Q/T/G and the prompt handling moved from Main into Controls.
+- **Fixed:** build mode's old touch buttons stayed on screen after leaving build mode, and
+  overlapped the jetpack's; the jetpack's FLY/HOVER sat over the order card; the M "free the
+  mouse" button and the key list don't apply to touch (hidden there); the left HUD column's
+  buttons sat over the thumbstick (on touch they fold away: the pad and MENU have them; the
+  stats stay); at the 0.55 UI scale phones got 8 px text and 22 px buttons (touch screens now
+  never go below `minScale` 0.68); windows (shop 640x540) were taller than a phone screen (all
+  windows now fit under the top bar, `Ui.fit`, and their bodies scroll); the shop's 9 tabs were
+  37 px wide on a phone (touch: 104 px tabs in a sideways-scrolling row); the order card moves
+  to the top right on touch; the build bar sits between the thumbstick and the pad on touch;
+  the HUD stays inside the device safe area (ScreenInsets DeviceSafeInsets: notches); a tap to
+  dismiss a banner doesn't also harvest; help texts say DETECT / FLY / TOOL / tap on touch.
+- ProximityPrompts: nothing hides them or turns off ClickablePrompt, so on touch Roblox shows
+  their tap button; taps on them are game-processed, so they never harvest.
+- Needs checking in Studio's device emulator and on a real phone: the pad's position against
+  the jump button (iPhone with notch, small Android, iPad), that a camera drag never harvests
+  and a still hold does, the shop on a 390 px tall screen, and the jetpack's FLY take-off.

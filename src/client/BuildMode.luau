@@ -1,5 +1,6 @@
 -- Free building in first person. Z and C pick from your inventory bar (or press M and click
 -- it), aim with the crosshair, R to turn it, click (or PLACE) to build. X takes things back.
+-- Touch screens: tap an item in the bar, then PLACE, TURN, TAKE BACK, NEXT/PREV on the pad.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -12,6 +13,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local Ui = require(script.Parent.Ui)
 local Cursor = require(script.Parent.Cursor)
 local Juice = require(script.Parent.Juice)
+local TouchPad = require(script.Parent.TouchPad)
 
 local player = Players.LocalPlayer
 local BuildMode = {}
@@ -75,11 +77,44 @@ local function refreshBar()
 	end
 end
 
+-- The help line, worded for keys or for the touch pad.
+local function say(keys, touch)
+	status.Text = if Ui.touch() then touch else keys
+end
+
 local function select(id)
 	selected, removing = id, false
 	makeGhost(Economy.item(id).def)
-	status.Text = Economy.item(id).def.name .. ": aim, R to turn, click to place. Z/C: other items. X: take back. B: done."
+	local name = Economy.item(id).def.name
+	say(name .. ": aim, R to turn, click to place. Z/C: other items. X: take back. B: done.", name .. ": aim the dot, TURN, then PLACE. Tap DONE when finished.")
 	refreshBar()
+end
+
+-- Z / C (PREV / NEXT): the previous or next thing you own to build.
+local function cycle(step)
+	local owned = {}
+	for _, def in ipairs(ALL) do
+		if (player:GetAttribute("Inv_" .. def.id) or 0) > 0 then
+			table.insert(owned, def.id)
+		end
+	end
+	if #owned == 0 then
+		say("Nothing to build yet: buy pieces in the Shop (Q).", "Nothing to build yet: buy pieces in the SHOP.")
+		return
+	end
+	local at = table.find(owned, selected) or 0
+	at = if step > 0 then at % #owned + 1 elseif at <= 1 then #owned else at - 1
+	select(owned[at])
+end
+
+local function toggleRemove()
+	removing, selected = not removing, nil
+	clearGhost()
+	if removing then
+		say("Click something you built to take it back into your inventory.", "Aim the dot at something you built (it glows red) and tap TAKE BACK.")
+	else
+		say("Pick something to build.", "Pick something to build from the bar.")
+	end
 end
 
 local snappedBase = nil
@@ -116,13 +151,14 @@ end
 function BuildMode.toggle(on)
 	active = if on == nil then not active else on
 	bar.Visible, status.Visible = active, active
+	BuildMode.layout()
 	if active then
 		Cursor.need("key", false) -- opened from the HUD button: lock the mouse again so clicks place
 		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 		if humanoid then
 			humanoid:UnequipTools()
 		end
-		status.Text = "Z/C to pick something to build (buy more in the Shop). B when done."
+		say("Z/C to pick something to build (buy more in the Shop). B when done.", "Tap something in the bar to build it (buy more in the SHOP). DONE when finished.")
 		refreshBar()
 	else
 		selected, removing, hovered = nil, false, nil
@@ -139,6 +175,22 @@ function BuildMode.toggle(on)
 	end
 end
 
+-- The item bar: along the bottom with a mouse; on touch screens between the thumbstick and
+-- the action pad, above Roblox's tool bar.
+function BuildMode.layout()
+	if not bar then
+		return
+	end
+	if Ui.touch() then
+		local right = TouchPad.width() + 30
+		bar.AnchorPoint, bar.Position, bar.Size = Vector2.new(0, 1), UDim2.new(0.36, 0, 1, -76), UDim2.new(0.64, -right, 0, 64)
+		status.Position, status.Size = UDim2.new(0.5, 0, 1, -146), UDim2.new(0.6, 0, 0, 40)
+	else
+		bar.AnchorPoint, bar.Position, bar.Size = Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -12), UDim2.new(0.9, 0, 0, 64)
+		status.Position, status.Size = UDim2.new(0.5, 0, 1, -84), UDim2.fromOffset(560, 26)
+	end
+end
+
 function BuildMode.mount(gui, notifier)
 	notify = notifier
 	bar = Ui.make("ScrollingFrame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Size = UDim2.new(0.9, 0, 0, 64), CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.X, ScrollingDirection = Enum.ScrollingDirection.X, BackgroundTransparency = 1, ScrollBarThickness = 4, Visible = false, Parent = gui }, {
@@ -152,11 +204,38 @@ function BuildMode.mount(gui, notifier)
 		end)
 		buttons[def.id] = button
 	end
-	local touchRow = Ui.make("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.55, 0), Size = UDim2.fromOffset(120, 180), BackgroundTransparency = 1, Parent = gui }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6) }) })
-	touchRow.Visible = false
-	for _, b in ipairs({ { "PLACE", place }, { "TURN", function() rotation = (rotation + 45) % 360 end }, { "TAKE BACK", function() if removing then takeBack() else removing = true; selected = nil; clearGhost() end end } }) do
-		Ui.button(b[1], Ui.colors.wood, { Size = UDim2.fromOffset(120, 52), Parent = touchRow }).Activated:Connect(b[2])
+	-- touch: the pad's build set (PLACE sits next to the thumb)
+	for i, b in ipairs({
+		{ "PLACE", function()
+			if removing then
+				takeBack()
+			else
+				place()
+			end
+		end, Ui.colors.green },
+		{ "TURN", function()
+			rotation = (rotation + 45) % 360
+		end },
+		{ "TAKE BACK", function()
+			if removing and hovered then
+				takeBack()
+			else
+				toggleRemove()
+			end
+		end, Ui.colors.red },
+		{ "NEXT", function()
+			cycle(1)
+		end },
+		{ "PREV", function()
+			cycle(-1)
+		end },
+		{ "DONE", function()
+			BuildMode.toggle(false)
+		end, Ui.colors.blue },
+	}) do
+		TouchPad.add({ order = i, text = b[1], colour = b[3], tap = b[2], build = true })
 	end
+	Ui.onLayout(BuildMode.layout)
 	player.AttributeChanged:Connect(function(name)
 		if active and string.sub(name, 1, 4) == "Inv_" then
 			refreshBar()
@@ -169,25 +248,12 @@ function BuildMode.mount(gui, notifier)
 		if not active or processed then
 			return
 		end
-		touchRow.Visible = UserInputService.TouchEnabled
 		if input.KeyCode == Enum.KeyCode.Z or input.KeyCode == Enum.KeyCode.C then
-			local owned = {}
-			for _, def in ipairs(ALL) do
-				if (player:GetAttribute("Inv_" .. def.id) or 0) > 0 then
-					table.insert(owned, def.id)
-				end
-			end
-			if #owned > 0 then
-				local at = table.find(owned, selected) or 0
-				at = if input.KeyCode == Enum.KeyCode.C then at % #owned + 1 elseif at <= 1 then #owned else at - 1
-				select(owned[at])
-			end
+			cycle(if input.KeyCode == Enum.KeyCode.C then 1 else -1)
 		elseif input.KeyCode == Enum.KeyCode.R then
 			rotation = (rotation + (if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then 15 else 45)) % 360
 		elseif input.KeyCode == Enum.KeyCode.X then
-			removing, selected = not removing, nil
-			clearGhost()
-			status.Text = if removing then "Click something you built to take it back into your inventory." else "Pick something to build."
+			toggleRemove()
 		elseif input.UserInputType == Enum.UserInputType.MouseButton1 and not Cursor.isFree() or input.KeyCode == Enum.KeyCode.F then
 			if removing then
 				takeBack()
@@ -200,7 +266,6 @@ function BuildMode.mount(gui, notifier)
 		if not active then
 			return
 		end
-		touchRow.Visible = UserInputService.TouchEnabled
 		local hit = aimPoint()
 		local centre, index = myPlot()
 		if removing then
