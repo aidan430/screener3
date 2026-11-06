@@ -47,7 +47,8 @@ src/server/  -> ServerScriptService.Server: Main (Script), World, Scenery, Build
                 PiecesBelts, PiecesFactory, Monetization
 src/client/  -> StarterPlayerScripts.Client: Main (LocalScript), Ui, Cursor, Juice, Hud, Shop,
                 Panels, Harvest, HayFx, Teleport, Guide, OrderCard, Goals, Stamina, Detector,
-                BuildMode, Notify, WorldFx, Music, Jetpack, Offer, Animals
+                BuildMode, Notify, WorldFx, Music, Jetpack, Offer, Animals, Controls,
+                TouchPad, TouchAim (phones and tablets)
 dev/         -> build.py, luau.py (checker), test_rules.py, pacing.py (keep in step with Economy)
 assets/hay/  the hay texture and the simplified hay model, for the owner to import in Studio
 NeedleInTheHaystack.rbxlx   the built place file (committed)

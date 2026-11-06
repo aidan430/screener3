@@ -23,7 +23,7 @@ local ROBUX = {
 	{ kind = "pass", key = "AutoSell", title = "Auto Sell", text = "When you're full, your load goes to your basket by itself." },
 	{ kind = "pass", key = "DoubleMachines", title = "Double Machines", text = "Every machine harvests twice as fast, on the same power." },
 	{ kind = "pass", key = "VIP", title = "VIP", text = "+25% coins, and machines keep working up to 1 hour while you're away." },
-	{ kind = "pass", key = "Jetpack", title = "Jetpack", text = "Hold Space in the air to fly up and hover over your pile." },
+	{ kind = "pass", key = "Jetpack", title = "Jetpack", text = "Hold Space (or FLY) in the air to fly up and hover over your pile." },
 }
 
 local Shop = {}
@@ -59,9 +59,18 @@ end
 function Shop.mount(gui, notify)
 	local body
 	frame, body = Ui.window(gui, "Shop")
-	frame.Size = UDim2.fromOffset(640, 540)
-	local tabs = Ui.make("Frame", { Size = UDim2.new(1, -24, 0, 38), Position = UDim2.fromOffset(12, 64), BackgroundTransparency = 1, Parent = frame }, { Ui.make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }) })
-	body.Position, body.Size = UDim2.fromOffset(12, 108), UDim2.new(1, -24, 1, -116)
+	Ui.fit(frame, 640, 540)
+	-- tabs share the width with a mouse; on touch screens they stay tappable and scroll sideways
+	local tabs = Ui.make("ScrollingFrame", { Size = UDim2.new(1, -24, 0, 40), Position = UDim2.fromOffset(12, 64), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 0, CanvasSize = UDim2.new(), Parent = frame }, { Ui.make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }) })
+	local tabButtons = {}
+	Ui.onLayout(function()
+		local touch = Ui.touch()
+		tabs.AutomaticCanvasSize, tabs.CanvasSize = if touch then Enum.AutomaticSize.X else Enum.AutomaticSize.None, UDim2.new()
+		for _, b in ipairs(tabButtons) do
+			b.Size = if touch then UDim2.fromOffset(104, 40) else UDim2.new(1 / 9, -4, 1, 0)
+		end
+	end)
+	body.Position, body.Size = UDim2.fromOffset(12, 110), UDim2.new(1, -24, 1, -118)
 	local pages, refreshers, order = {}, {}, 0
 	Shop.refreshers = refreshers
 
@@ -81,7 +90,9 @@ function Shop.mount(gui, notify)
 		order += 1
 		local list = Ui.make("Frame", { Name = name, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Visible = false, Parent = body }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
 		pages[name], refreshers[name] = list, build(list)
-		Ui.button(name, colour, { LayoutOrder = order, Size = UDim2.new(1 / 9, -4, 1, 0), Parent = tabs }).Activated:Connect(function()
+		local tab = Ui.button(name, colour, { LayoutOrder = order, Size = if Ui.touch() then UDim2.fromOffset(104, 40) else UDim2.new(1 / 9, -4, 1, 0), Parent = tabs })
+		table.insert(tabButtons, tab)
+		tab.Activated:Connect(function()
 			for key, p in pairs(pages) do
 				p.Visible = key == name
 			end
@@ -135,7 +146,7 @@ function Shop.mount(gui, notify)
 				buy("fitness", i, rows[i])
 			end)
 		end
-		local detector = row(list, 50, "Metal Detector", "Hold " .. Config.MetalDetector.key .. " near your heap: it beeps faster the closer the needle is (within " .. Config.MetalDetector.range .. " studs).")
+		local detector = row(list, 50, "Metal Detector", "Hold " .. Config.MetalDetector.key .. " (or DETECT) near your heap: it beeps faster the closer the needle is (within " .. Config.MetalDetector.range .. " studs).")
 		detector.Activated:Connect(function()
 			buy("detector", 1, detector)
 		end)

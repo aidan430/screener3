@@ -10,12 +10,14 @@ function Notify.mount(gui)
 	stack = Ui.make("Frame", {
 		Name = "Toasts",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 6 + 92 * Ui.screenScale()), -- just under the top bar
 		Size = UDim2.fromOffset(460, 220),
 		BackgroundTransparency = 1,
 		Parent = gui,
 	}, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }) })
 	Ui.autoScale(stack)
+	Ui.onLayout(function()
+		stack.Position = UDim2.new(0.5, 0, 0, 6 + 92 * Ui.screenScale()) -- just under the top bar
+	end)
 
 	banner = Ui.make("Frame", {
 		Name = "Banner",
@@ -25,6 +27,7 @@ function Notify.mount(gui)
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundColor3 = Ui.colors.wood,
 		Visible = false,
+		Active = true, -- a tap that dismisses it doesn't also harvest
 		Parent = gui,
 	}, {
 		Ui.corner(18),

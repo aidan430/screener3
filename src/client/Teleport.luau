@@ -22,7 +22,7 @@ function Teleport.mount(gui)
 	window, body = Ui.window(gui, "Teleport", function()
 		Cursor.need("teleport", false)
 	end)
-	window.Size = UDim2.fromOffset(420, 420)
+	Ui.fit(window, 420, 420)
 end
 
 -- Opens the menu for the pad `from` (a Model on your plot).
@@ -48,7 +48,7 @@ function Teleport.open(from)
 		return a:GetPivot().Position.Y < b:GetPivot().Position.Y
 	end)
 	if #pads == 0 then
-		Ui.paragraph("This is your only pad. Buy another Teleporter Pad (Q, Build) and put it somewhere else, like high up on a platform.", { LayoutOrder = 1, Parent = body })
+		Ui.paragraph("This is your only pad. Buy another Teleporter Pad (Shop, Build) and put it somewhere else, like high up on a platform.", { LayoutOrder = 1, Parent = body })
 	end
 	for i, pad in ipairs(pads) do
 		local height = math.floor(pad:GetPivot().Position.Y + 0.5)

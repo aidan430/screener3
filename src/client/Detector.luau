@@ -1,6 +1,7 @@
 -- The metal detector: hold Config.MetalDetector.key to sweep. The client only says "I'm
 -- detecting" (Remotes.Detect); the server answers a coarse signal, 0 to `levels`. Higher
 -- signal: faster, higher beeps, more meter bars lit and a soft pulse. Calm, no flashing.
+-- Touch screens hold the DETECT button on the action pad instead.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -9,6 +10,7 @@ local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Co
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local Ui = require(script.Parent.Ui)
 local Juice = require(script.Parent.Juice)
+local TouchPad = require(script.Parent.TouchPad)
 
 local player = Players.LocalPlayer
 local Detector = {}
@@ -73,28 +75,42 @@ function Detector.start(gui, notify)
 		end
 	end)
 
-	local key = Enum.KeyCode[cfg.key]
-	UserInputService.InputBegan:Connect(function(input, processed)
-		if processed or input.KeyCode ~= key or holding then
+	local function begin()
+		if holding then
 			return
 		end
 		if player:GetAttribute("Detector") ~= true then
 			if time() - lastHint > 4 and notify then
 				lastHint = time()
-				notify.toast("A metal detector beeps near the needle. Find it in the shop (Q), under Fitness.", Ui.colors.wood)
+				notify.toast("A metal detector beeps near the needle. Find it in the shop, under Fitness.", Ui.colors.wood)
 			end
 			return
 		end
 		holding = true
 		show(true)
 		task.spawn(sweep)
-	end)
-	UserInputService.InputEnded:Connect(function(input)
-		if input.KeyCode == key and holding then
+	end
+	local function finish()
+		if holding then
 			holding = false
 			show(false)
 		end
+	end
+
+	local key = Enum.KeyCode[cfg.key]
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if not processed and input.KeyCode == key then
+			begin()
+		end
 	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if input.KeyCode == key then
+			finish()
+		end
+	end)
+	TouchPad.add({ order = 3, text = "DETECT", colour = Color3.fromRGB(70, 150, 140), down = begin, up = finish, show = function()
+		return player:GetAttribute("Detector") == true
+	end })
 end
 
 return Detector

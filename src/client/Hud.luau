@@ -53,23 +53,23 @@ function Hud.mount(gui, open)
 		b.Activated:Connect(onClick)
 		return b
 	end
-	button(2, "SHOP  (Q)", Ui.colors.green, function()
+	local shopButton = button(2, "SHOP  (Q)", Ui.colors.green, function()
 		open("Shop")
 	end)
-	button(3, "BUILD  (B)", Ui.colors.wood, function()
+	local buildButton = button(3, "BUILD  (B)", Ui.colors.wood, function()
 		open("Build")
 	end)
 	local achievementsButton = button(4, "ACHIEVEMENTS", Ui.colors.blue, function()
 		open("Achievements")
 	end)
-	button(5, "FINDS & SKINS", Ui.colors.purple, function()
+	local findsButton = button(5, "FINDS & SKINS", Ui.colors.purple, function()
 		open("Finds")
 	end)
 	local whistle = button(6, "WHISTLE: SELL HERE", Ui.colors.red, function()
 		open("Whistle")
 	end)
 	local boosts = Ui.label({ LayoutOrder = 7, Size = UDim2.fromOffset(220, 50), TextColor3 = Ui.colors.hay, TextYAlignment = Enum.TextYAlignment.Top, Parent = left }, 14)
-	Ui.label({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.fromOffset(560, 18), Text = "M: mouse & menus   Q: shop   B: build   E: use   " .. Config.DropKey .. ": drop hay   " .. Config.HomeKey .. ": home", TextTransparency = 0.3, Parent = gui }, 15)
+	local keys = Ui.label({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.fromOffset(560, 18), Text = "M: mouse & menus   Q: shop   B: build   E: use   " .. Config.DropKey .. ": drop hay   " .. Config.HomeKey .. ": home", TextTransparency = 0.3, Parent = gui }, 15)
 
 	local function refresh()
 		left.Position = UDim2.new(0, 10, 0, 60 + 74 * Ui.screenScale()) -- just under the goal card
@@ -107,7 +107,14 @@ function Hud.mount(gui, open)
 		bonusLabel.Text = "Basket " .. Format.short(waiting) .. ", sells " .. Format.short(player:GetAttribute("HaulRate") or Config.TraderRate) .. "/s"
 		rateLabel.Text ..= "  x" .. string.format("%.2f", player:GetAttribute("Multiplier") or 1)
 		achievementsButton.Text = "ACHIEVEMENTS " .. (player:GetAttribute("Achievements") or 0) .. "/" .. #Config.Achievements
-		whistle.Visible = (player:GetAttribute("Whistles") or 0) > 0
+		-- touch screens: the menu buttons and key list fold away (the action pad and its MENU
+		-- have them), so nothing sits over the thumbstick
+		local touch = Ui.touch()
+		for _, b in ipairs({ shopButton, buildButton, achievementsButton, findsButton }) do
+			b.Visible = not touch
+		end
+		keys.Visible = not touch
+		whistle.Visible = not touch and (player:GetAttribute("Whistles") or 0) > 0
 		local lines, now = {}, os.time()
 		for name, label in pairs({ SpeedBoost = "2x speed", CoinBoost = "2x coins", LuckyCharm = "Lucky charm" }) do
 			local until_ = player:GetAttribute("Boost_" .. name) or 0
@@ -119,6 +126,7 @@ function Hud.mount(gui, open)
 	end
 
 	player.AttributeChanged:Connect(refresh)
+	Ui.onLayout(refresh)
 	task.spawn(function()
 		while true do
 			refresh()

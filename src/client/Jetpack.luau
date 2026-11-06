@@ -11,6 +11,7 @@ local UserInputService = game:GetService("UserInputService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Ui = require(script.Parent.Ui)
+local TouchPad = require(script.Parent.TouchPad)
 
 local Jetpack = {}
 local player = Players.LocalPlayer
@@ -19,7 +20,6 @@ local rig = nil -- { root, humanoid, lift, flame } for the current character
 local flying, hover, touchHeld = false, false, false
 local speed = 0
 local fuel = cfg.fuelSeconds or 0
-local touchRow = nil
 
 local function owned()
 	return player:GetAttribute("PassJetpack") == true
@@ -81,9 +81,6 @@ local function wantsUp()
 end
 
 local function step(dt)
-	if touchRow then
-		touchRow.Visible = owned() and UserInputService.TouchEnabled
-	end
 	if not rig or not rig.root.Parent then
 		return
 	end
@@ -147,30 +144,29 @@ function Jetpack.start(gui, notify)
 		end
 	end)
 
-	-- touch screens: hold FLY to rise, tap HOVER to stay put
-	touchRow = Ui.make("Frame", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -16, 1, -190), Size = UDim2.fromOffset(100, 110), BackgroundTransparency = 1, Visible = false, Parent = gui }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6) }) })
-	local fly = Ui.button("FLY", Ui.colors.blue, { Size = UDim2.fromOffset(100, 52), Parent = touchRow })
-	fly.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-			touchHeld = true
+	-- touch screens: hold FLY (on the action pad) to rise, tap HOVER to stay put
+	TouchPad.add({ order = 1, text = "FLY", colour = Ui.colors.blue, show = owned, down = function()
+		touchHeld = true
+		if rig and rig.humanoid.FloorMaterial ~= Enum.Material.Air and owned() then
+			rig.humanoid.Jump = true -- take off from the ground: no need to reach for jump too
 		end
-	end)
-	fly.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-			touchHeld = false
-		end
-	end)
-	Ui.button("HOVER", Ui.colors.wood, { Size = UDim2.fromOffset(100, 52), Parent = touchRow }).Activated:Connect(function()
+	end, up = function()
+		touchHeld = false
+	end })
+	TouchPad.add({ order = 2, text = "HOVER", colour = Ui.colors.blue, show = owned, tap = function()
 		if rig and rig.humanoid.FloorMaterial == Enum.Material.Air then
 			hover = not hover
+			if notify then
+				notify.toast(if hover then "Jetpack: hovering." else "Jetpack: drifting down.", Ui.colors.blue)
+			end
 		end
-	end)
+	end })
 
 	local told = false
 	local function tell()
 		if owned() and not told and notify then
 			told = true
-			notify.toast("Jetpack ready! In the air, hold Space to fly up, " .. (cfg.hoverKey or "H") .. " to hover.", Ui.colors.blue)
+			notify.toast(if Ui.touch() then "Jetpack ready! Jump, then hold FLY to fly up and tap HOVER to stay put." else "Jetpack ready! In the air, hold Space to fly up, " .. (cfg.hoverKey or "H") .. " to hover.", Ui.colors.blue)
 		end
 	end
 	player:GetAttributeChangedSignal("PassJetpack"):Connect(tell)

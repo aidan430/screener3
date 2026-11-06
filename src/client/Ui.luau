@@ -1,5 +1,5 @@
 -- A small UI kit: the farm colours, rounded wooden buttons and windows that scale with
--- the screen (phones get a smaller UI, big monitors a larger one).
+-- the screen, and helpers for touch screens.
 local Ui = {}
 
 Ui.colors = {
@@ -19,16 +19,55 @@ Ui.colors = {
 Ui.font = Enum.Font.FredokaOne
 Ui.body = Enum.Font.GothamMedium
 
-local camera = workspace.CurrentCamera or workspace:WaitForChild("Camera")
-local scales = {}
+local GuiService = game:GetService("GuiService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 
-local function screenScale()
-	return math.clamp(camera.ViewportSize.Y / 760, 0.55, 1.15)
+local camera = workspace.CurrentCamera or workspace:WaitForChild("Camera")
+local scales, layouts = {}, {}
+
+-- A touch screen in use: a phone or tablet (no keyboard), or a touch laptop last touched.
+function Ui.touch()
+	if not UserInputService.TouchEnabled then
+		return false
+	end
+	return not UserInputService.KeyboardEnabled or UserInputService:GetLastInputType() == Enum.UserInputType.Touch
 end
 
-camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+-- Phones get a smaller UI, big monitors a larger one; touch screens never so small that text
+-- can't be read or buttons can't be tapped.
+local function screenScale()
+	return math.clamp(camera.ViewportSize.Y / 760, if Ui.touch() then Config.Touch.minScale else 0.55, 1.15)
+end
+
+-- The height of Roblox's own top bar (its menu and chat buttons), in pixels.
+function Ui.topInset()
+	local ok, inset = pcall(GuiService.GetGuiInset, GuiService)
+	return if ok and typeof(inset) == "Vector2" then inset.Y else 36
+end
+
+-- Runs fn now and again whenever the screen changes size (a phone turning) or the player
+-- switches between touch and mouse.
+function Ui.onLayout(fn)
+	table.insert(layouts, fn)
+	task.spawn(fn)
+end
+
+local function relayout()
 	for _, scale in ipairs(scales) do
 		scale.Scale = screenScale()
+	end
+	for _, fn in ipairs(layouts) do
+		task.spawn(fn)
+	end
+end
+camera:GetPropertyChangedSignal("ViewportSize"):Connect(relayout)
+local wasTouch = Ui.touch()
+UserInputService.LastInputTypeChanged:Connect(function()
+	if Ui.touch() ~= wasTouch then
+		wasTouch = Ui.touch()
+		relayout()
 	end
 end)
 
@@ -70,6 +109,26 @@ function Ui.autoScale(frame)
 	local scale = Ui.make("UIScale", { Scale = screenScale(), Parent = frame })
 	table.insert(scales, scale)
 	return scale
+end
+
+-- Sizes a scaled window to width x height, shrunk to fit the screen under Roblox's top bar
+-- (on a phone the window fills most of the screen; its body scrolls).
+local fitted = setmetatable({}, { __mode = "k" })
+function Ui.fit(frame, width, height)
+	frame:SetAttribute("FitW", width)
+	frame:SetAttribute("FitH", height)
+	if fitted[frame] then
+		fitted[frame]() -- a new size for a window already fitted (the shop is bigger)
+		return
+	end
+	fitted[frame] = function()
+		local s, view, inset = screenScale(), camera.ViewportSize, Ui.topInset()
+		local w = math.min(frame:GetAttribute("FitW"), (view.X - 24) / s)
+		local h = math.min(frame:GetAttribute("FitH"), (view.Y - inset - 16) / s)
+		frame.Size = UDim2.fromOffset(w, h)
+		frame.Position = UDim2.new(0.5, 0, 0.5, inset / 2)
+	end
+	Ui.onLayout(fitted[frame])
 end
 
 -- A text label. `maxSize` caps the scaled text size.
@@ -124,6 +183,7 @@ function Ui.window(parent, title, onClose)
 		Parent = parent,
 	}, { Ui.corner(18), Ui.stroke(Ui.colors.wood, 5) })
 	Ui.autoScale(frame)
+	Ui.fit(frame, 540, 480)
 	Ui.make("Frame", { Name = "Header", Size = UDim2.new(1, 0, 0, 58), BackgroundColor3 = Ui.colors.wood, Parent = frame }, { Ui.corner(16) })
 	Ui.label({ Text = title, Size = UDim2.new(1, -120, 0, 46), Position = UDim2.fromOffset(20, 6), TextXAlignment = Enum.TextXAlignment.Left, Parent = frame }, 34)
 	local close = Ui.button("X", Ui.colors.red, { Size = UDim2.fromOffset(46, 42), Position = UDim2.new(1, -56, 0, 8), Parent = frame })
