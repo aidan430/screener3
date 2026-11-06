@@ -40,13 +40,12 @@ Config.PileRadiusTop = 4
 -- radius at height share t: top + (bottom - top) x (1 - t ^ PileDome) ^ PileCurve
 Config.PileDome = 2.5 -- above 1: the sides stay wide for longer, then round over
 Config.PileCurve = 0.7 -- below 1: a fuller, rounder top
-Config.HeapColour = { 232, 198, 86 } -- straw gold (the terrain Grass material is the heap)
+Config.HeapColour = { 238, 196, 66 } -- golden yellow
+Config.HeapMaterial = "Limestone" -- the heap's own terrain material (nothing else uses it): pale, so it takes the gold well
 Config.HeapLumpiness = 0.45 -- 0 = a smooth dome; higher = a lumpier, more hay-like surface
 -- Your hay texture: upload garden-hay.jpg (and its normal map) in Studio (Asset Manager > Import),
 -- paste the IDs here ("rbxassetid://123"), rebuild. The heap, the hay on tools and the bundles
 -- then wear it. Empty = plain straw-gold Grass.
--- (92326825877863, the first upload, was too dark: from a distance it read as dirt. Upload
--- assets/hay/garden-hay-golden.jpg and put its ID here.)
 Config.HayTexture = ""
 Config.HayNormal = ""
 Config.HayTextureStuds = 5 -- how many studs one copy of the texture covers
@@ -1026,10 +1025,28 @@ end
 return function(Config)
 	local Layout = require(script.Parent.Layout)(Config)
 	local HeapTerrain = {}
-	local HEAP = Enum.Material.Grass -- recoloured to straw; its grass blades read as loose straw
+	local HEAP = Enum.Material[Config.HeapMaterial] -- its own material, coloured gold by paint()
 	local STEPS = 8 -- a clump shrinks in this many visible steps as it's harvested
 	local PER_CLUMP = Config.TotalStraws // Config.Clumps
 	HeapTerrain.MATERIAL = HEAP
+
+	-- Colours the heap's material golden and drops any old material override left in the place
+	-- (an earlier build's texture once turned the heap pink). Safe to call again and again.
+	function HeapTerrain.paint(terrain)
+		local c = if Config.HayTexture ~= "" then Config.HayTint else Config.HeapColour
+		pcall(function()
+			terrain:SetMaterialColor(HEAP, Color3.fromRGB(c[1], c[2], c[3]))
+		end)
+		if Config.HayTexture == "" then
+			local materials = game:GetService("MaterialService")
+			pcall(function()
+				materials:SetBaseMaterialOverride(HEAP, HEAP.Name)
+			end)
+			pcall(function()
+				materials[HEAP.Name .. "Name"] = HEAP.Name
+			end)
+		end
+	end
 
 	function HeapTerrain.origin(centreX, centreZ)
 		local x, z = Layout.origin(centreX, centreZ)
@@ -4196,16 +4213,11 @@ local Piles = {}
 local piles = {} -- [plot index] = { folder, origin = Vector3 }
 local cursor = setmetatable({}, { __mode = "k" }) -- [data] = where the machines got to in machineOrder
 local terrain = workspace.Terrain
-local HEAP = Enum.Material.Grass -- recoloured to straw; its grass blades read as loose straw
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local HeapTerrain = require(Shared:WaitForChild("HeapTerrain"))(Config)
 
 local function setup()
-	local c = if Config.HayTexture ~= "" then Config.HayTint else Config.HeapColour
-	terrain:SetMaterialColor(HEAP, Color3.fromRGB(c[1], c[2], c[3]))
-	pcall(function()
-		terrain.Decoration = true -- the grass blades: individual straws on the heap
-	end)
+	HeapTerrain.paint(terrain)
 end
 
 local function origin(plotIndex)
@@ -10116,7 +10128,7 @@ local lastSwing = 0
 local hooked = setmetatable({}, { __mode = "k" })
 
 local Layout = require(Shared:WaitForChild("Layout"))(Config)
-local HEAP = Enum.Material.Grass
+local HEAP = Enum.Material[Config.HeapMaterial] -- the heap (shared/HeapTerrain)
 
 -- The heap is terrain, so a see-through box marks the clump you're aiming at.
 local marker = Instance.new("Part")
@@ -12177,11 +12189,7 @@ function PileView.start()
 	local terrain = workspace.Terrain
 	-- the heap is drawn here on your screen, so its straw colour is set here too (the server's
 	-- setting may never reach your screen's terrain)
-	local c = if Config.HayTexture ~= "" then Config.HayTint else Config.HeapColour
-	pcall(function()
-		terrain:SetMaterialColor(HeapTerrain.MATERIAL, Color3.fromRGB(c[1], c[2], c[3]))
-		terrain.Decoration = true
-	end)
+	HeapTerrain.paint(terrain)
 	Remotes.PileSync.OnClientEvent:Connect(function(message)
 		local o = origin()
 		if not o then
@@ -12189,6 +12197,7 @@ function PileView.start()
 		end
 		if message.kind == "full" then
 			HeapTerrain.draw(terrain, o, message.removed, message.partial or {})
+			HeapTerrain.paint(terrain) -- again, in case the place's settings arrived after the first
 		elseif message.kind == "cell" then
 			-- never fuller than it looks now: your dents stay until the clump is really gone
 			HeapTerrain.cell(terrain, o, message.index, message.left, HeapTerrain.occupancy(terrain, o, message.index))

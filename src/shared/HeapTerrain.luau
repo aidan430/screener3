@@ -4,10 +4,28 @@
 return function(Config)
 	local Layout = require(script.Parent.Layout)(Config)
 	local HeapTerrain = {}
-	local HEAP = Enum.Material.Grass -- recoloured to straw; its grass blades read as loose straw
+	local HEAP = Enum.Material[Config.HeapMaterial] -- its own material, coloured gold by paint()
 	local STEPS = 8 -- a clump shrinks in this many visible steps as it's harvested
 	local PER_CLUMP = Config.TotalStraws // Config.Clumps
 	HeapTerrain.MATERIAL = HEAP
+
+	-- Colours the heap's material golden and drops any old material override left in the place
+	-- (an earlier build's texture once turned the heap pink). Safe to call again and again.
+	function HeapTerrain.paint(terrain)
+		local c = if Config.HayTexture ~= "" then Config.HayTint else Config.HeapColour
+		pcall(function()
+			terrain:SetMaterialColor(HEAP, Color3.fromRGB(c[1], c[2], c[3]))
+		end)
+		if Config.HayTexture == "" then
+			local materials = game:GetService("MaterialService")
+			pcall(function()
+				materials:SetBaseMaterialOverride(HEAP, HEAP.Name)
+			end)
+			pcall(function()
+				materials[HEAP.Name .. "Name"] = HEAP.Name
+			end)
+		end
+	end
 
 	function HeapTerrain.origin(centreX, centreZ)
 		local x, z = Layout.origin(centreX, centreZ)

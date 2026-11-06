@@ -565,3 +565,14 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   Config.ToolScale = 0.5 shrinks every built tool (shapes, grip point, hay seat and hay size
   together; ToolParts.scaled); the fork's tines now end about 3 studs past the hand, roughly an
   arm's length. The trowel model keeps its own `length` (3).
+
+## Golden haystack: its own terrain material (2026-11-06)
+- The heap kept showing pink in the owner's Studio screenshots, while hay parts of the same
+  Grass material looked gold, so something in the place (most likely a leftover material
+  override from an earlier build) was changing the terrain's Grass. The heap now uses its own
+  terrain material, Config.HeapMaterial = "Limestone" (pale, so it takes the colour well; nothing
+  else in the game uses it, and a test keeps it that way), coloured Config.HeapColour =
+  {238, 196, 66}, golden yellow. HeapTerrain.paint sets the colour and resets any override of
+  that material, on the server and on each screen after every full draw. When a hay texture is
+  uploaded (Config.HayTexture), the place file now gets a variant for the heap's material too.
+  The Grass terrain's straw "blades" are gone with it.

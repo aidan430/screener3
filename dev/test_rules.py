@@ -100,6 +100,14 @@ class Pile(unittest.TestCase):
             self.assertTrue(f["name"] and f["story"])
 
 
+class Heap(unittest.TestCase):
+    def test_the_heap_has_its_own_material_and_the_place_file_matches(self):
+        material = re.search(r'^Config\.HeapMaterial = "(\w+)"', CONFIG, re.M).group(1)
+        self.assertIn(f'"{material}Name"', (ROOT / "dev" / "build.py").read_text())
+        used = re.findall(r"Enum\.Material\.(\w+)", "".join(p.read_text() for p in (ROOT / "src").rglob("*.luau")))
+        self.assertNotIn(material, used, "something else uses the heap's terrain material")
+
+
 class Wheel(unittest.TestCase):
     def test_slices_are_sized_by_their_odds(self):
         """Mirrors Economy.wheelSlice: share of the face by weight, the smallest kept visible."""

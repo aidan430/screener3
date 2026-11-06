@@ -195,7 +195,8 @@ def xml(node: Node, ids: dict, depth: int = 1) -> str:
 # Uploaded textures that replace a built-in material, from Config: (prefix, variant name,
 # the MaterialService property that names the override, the material's enum value).
 TEXTURES = [
-    ("Hay", "Hay", "GrassName", 1280),  # Enum.Material.Grass: the haystacks and all loose hay
+    ("Hay", "Hay", "GrassName", 1280),  # Enum.Material.Grass: the loose hay, bundles and bales
+    ("Hay", "HayHeap", "LimestoneName", 820),  # Enum.Material.Limestone: the haystack (Config.HeapMaterial)
     ("Ground", "Field", "LeafyGrassName", 1284),  # Enum.Material.LeafyGrass: fields and plot floors
 ]
 

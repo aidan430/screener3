@@ -15,16 +15,11 @@ local Piles = {}
 local piles = {} -- [plot index] = { folder, origin = Vector3 }
 local cursor = setmetatable({}, { __mode = "k" }) -- [data] = where the machines got to in machineOrder
 local terrain = workspace.Terrain
-local HEAP = Enum.Material.Grass -- recoloured to straw; its grass blades read as loose straw
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local HeapTerrain = require(Shared:WaitForChild("HeapTerrain"))(Config)
 
 local function setup()
-	local c = if Config.HayTexture ~= "" then Config.HayTint else Config.HeapColour
-	terrain:SetMaterialColor(HEAP, Color3.fromRGB(c[1], c[2], c[3]))
-	pcall(function()
-		terrain.Decoration = true -- the grass blades: individual straws on the heap
-	end)
+	HeapTerrain.paint(terrain)
 end
 
 local function origin(plotIndex)

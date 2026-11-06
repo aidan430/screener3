@@ -22,11 +22,7 @@ function PileView.start()
 	local terrain = workspace.Terrain
 	-- the heap is drawn here on your screen, so its straw colour is set here too (the server's
 	-- setting may never reach your screen's terrain)
-	local c = if Config.HayTexture ~= "" then Config.HayTint else Config.HeapColour
-	pcall(function()
-		terrain:SetMaterialColor(HeapTerrain.MATERIAL, Color3.fromRGB(c[1], c[2], c[3]))
-		terrain.Decoration = true
-	end)
+	HeapTerrain.paint(terrain)
 	Remotes.PileSync.OnClientEvent:Connect(function(message)
 		local o = origin()
 		if not o then
@@ -34,6 +30,7 @@ function PileView.start()
 		end
 		if message.kind == "full" then
 			HeapTerrain.draw(terrain, o, message.removed, message.partial or {})
+			HeapTerrain.paint(terrain) -- again, in case the place's settings arrived after the first
 		elseif message.kind == "cell" then
 			-- never fuller than it looks now: your dents stay until the clump is really gone
 			HeapTerrain.cell(terrain, o, message.index, message.left, HeapTerrain.occupancy(terrain, o, message.index))

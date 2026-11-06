@@ -17,7 +17,7 @@ local lastSwing = 0
 local hooked = setmetatable({}, { __mode = "k" })
 
 local Layout = require(Shared:WaitForChild("Layout"))(Config)
-local HEAP = Enum.Material.Grass
+local HEAP = Enum.Material[Config.HeapMaterial] -- the heap (shared/HeapTerrain)
 
 -- The heap is terrain, so a see-through box marks the clump you're aiming at.
 local marker = Instance.new("Part")
