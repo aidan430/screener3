@@ -21,7 +21,7 @@ local RobuxPads = {}
 
 -- What each item gives: the same words as the shop's Robux tab (client/RobuxItems.luau).
 local ITEMS = {
-	WheelSpin = { "Wheel of Fortune Spin", "One spin, one prize. Step on to see the exact odds first." },
+	WheelSpin = { "Wheel of Fortune Spin", "Your first spin each day is free. Step on to see the exact odds." },
 }
 for _, item in ipairs(require(script.Parent.RobuxItems)) do
 	ITEMS[item.key] = { item.title, item.text }

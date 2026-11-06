@@ -1,6 +1,8 @@
--- The Wheel of Fortune: one Robux spin (the WheelSpin product) = one prize, picked here on the
--- server by weight. Every spin wins something. Where paid random items are restricted the
--- wheel is hidden on the client, and a spin that slips through is replaced by a fixed prize.
+-- The Wheel of Fortune: every player gets one free spin a day (a new day starts at midnight UTC);
+-- more spins are the WheelSpin Robux product. One spin = one prize, picked here on the server by
+-- weight; every spin wins something. Where paid random items are restricted only the free spin
+-- is offered, and a paid spin that slips through is replaced by a fixed prize.
+local Players = game:GetService("Players")
 local PolicyService = game:GetService("PolicyService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -21,11 +23,20 @@ function Wheel.restricted(player)
 	return not ok or info.ArePaidRandomItemsRestricted == true -- unknown counts as restricted
 end
 
--- Grants one spin. Returns a message for the player.
-function Wheel.spin(player)
+-- Today, as whole days since 1970 (UTC): the free spin comes back when this goes up.
+local function today()
+	return math.floor(os.time() / 86400)
+end
+
+-- Grants one spin (`free` for the daily one, which no region restricts: nothing is paid).
+-- Returns a message for the player.
+function Wheel.spin(player, free)
 	local d = PlayerData.get(player)
+	if not d then
+		return "Your farm is still loading."
+	end
 	local coins = Economy.coinsFor(Economy.power(d, false) * Config.WheelDuplicateSearches, false, 1)
-	if Wheel.restricted(player) then
+	if not free and Wheel.restricted(player) then
 		PlayerData.update(player, function(data)
 			data.coins += coins
 		end)
@@ -55,7 +66,20 @@ function Wheel.spin(player)
 	return message
 end
 
--- Tells a player on joining where their needle is, if they won the reveal for this pile.
+-- The daily free spin, if it hasn't been used today.
+local function freeSpin(player)
+	local d = PlayerData.get(player)
+	if not d or d.freeSpinDay >= today() then
+		return
+	end
+	PlayerData.update(player, function(data)
+		data.freeSpinDay = today()
+	end)
+	Wheel.spin(player, true)
+end
+
+-- On joining: where their needle is, if they won the reveal for this pile, and a quiet note
+-- when today's free spin is waiting.
 function Wheel.remind(player)
 	local d = PlayerData.get(player)
 	if d and d.revealed then
@@ -63,6 +87,17 @@ function Wheel.remind(player)
 			Remotes.Announce:FireClient(player, { kind = "reveal", clump = d.needleClump })
 		end)
 	end
+	if d and d.freeSpinDay < today() then
+		task.delay(14, function()
+			if player.Parent == Players then
+				Remotes.Announce:FireClient(player, { kind = "notice", text = "Your free spin on the Wheel of Fortune is ready." })
+			end
+		end)
+	end
+end
+
+function Wheel.init()
+	Remotes.FreeSpin.OnServerEvent:Connect(freeSpin)
 end
 
 return Wheel

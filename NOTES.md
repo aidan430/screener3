@@ -540,3 +540,11 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   Config.WheelMinSlice = 0.004 of a turn (so it can be seen at all; still far thinner than any
   skin), named on the sign under the wheel. The spin stops at a random point inside the winning
   slice (the middle 60%).
+
+## One free wheel spin a day (2026-11-06)
+- Every player gets one free Wheel of Fortune spin per day (UTC days; saved as freeSpinDay).
+  The wheel window shows FREE SPIN while it's waiting (Remotes.FreeSpin; the server checks the
+  day), then "SPIN AGAIN (Robux)" (the WheelSpin product) with a countdown to the next free one.
+  Same prizes and odds either way. Where paid random items are restricted, players now see the
+  odds and get the free spin too (nothing is paid), but no Robux button. A quiet notice on
+  joining says when the free spin is ready. The Robux pad's text and ROBUX_ITEMS.md mention it.

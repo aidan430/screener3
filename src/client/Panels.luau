@@ -106,25 +106,36 @@ function Panels.mount(gui, notify, actions)
 				child:Destroy()
 			end
 		end
-		if restricted then
-			Ui.paragraph("The Wheel of Fortune isn't available where you live.", { Parent = wheelBody })
-			return
-		end
 		Ui.paragraph("Every spin wins a prize. These are the exact odds of each:", { LayoutOrder = 1, Font = Ui.font, TextSize = 20, Parent = wheelBody })
 		local odds = Economy.wheelOdds()
 		for i, prize in ipairs(Config.Wheel) do
 			Ui.paragraph(prize.name .. ":  " .. pct(odds[i]) .. (if prize.reveal then "  (shows the clump the needle is in)" else ""), { LayoutOrder = 1 + i, TextColor3 = if prize.reveal then Ui.colors.red else Ui.colors.ink, Parent = wheelBody })
 		end
 		Ui.paragraph("A skin you already have pays coins instead.", { LayoutOrder = 50, TextColor3 = Ui.colors.grey, Parent = wheelBody })
+		-- one free spin a day; after that, more spins are Robux (never where that's restricted)
+		local now = workspace:GetServerTimeNow()
+		if (player:GetAttribute("FreeSpinDay") or 0) < math.floor(now / 86400) then
+			Ui.button("FREE SPIN (1 a day)", Ui.colors.green, { LayoutOrder = 60, Size = UDim2.new(1, 0, 0, 52), Parent = wheelBody }).Activated:Connect(function()
+				Remotes.FreeSpin:FireServer()
+			end)
+			return
+		end
+		local left = 86400 - now % 86400
+		Ui.paragraph(string.format("Today's free spin is used. The next one comes in %dh %02dm.", left // 3600, left % 3600 // 60), { LayoutOrder = 55, TextColor3 = Ui.colors.grey, Parent = wheelBody })
 		local id = Config.Products.WheelSpin
-		if id and id ~= 0 then
-			Ui.button("SPIN (Robux)", Ui.colors.blue, { LayoutOrder = 60, Size = UDim2.new(1, 0, 0, 52), Parent = wheelBody }).Activated:Connect(function()
+		if restricted then
+			Ui.paragraph("Extra spins can't be bought where you live.", { LayoutOrder = 60, TextColor3 = Ui.colors.grey, Parent = wheelBody })
+		elseif id and id ~= 0 then
+			Ui.button("SPIN AGAIN (Robux)", Ui.colors.blue, { LayoutOrder = 60, Size = UDim2.new(1, 0, 0, 52), Parent = wheelBody }).Activated:Connect(function()
 				MarketplaceService:PromptProductPurchase(player, id)
 			end)
-		else
-			Ui.paragraph("Spins open once the game is published and the WheelSpin product is created.", { LayoutOrder = 60, TextColor3 = Ui.colors.grey, Parent = wheelBody })
 		end
 	end
+	player:GetAttributeChangedSignal("FreeSpinDay"):Connect(function()
+		if wheel.Visible then
+			refreshers.Wheel()
+		end
+	end)
 
 	-- Menu: on touch screens the HUD's side buttons fold away; the pad's MENU opens these
 	local menu, menuBody = Ui.window(gui, "Menu")

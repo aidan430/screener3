@@ -17,6 +17,9 @@
         "Announce": {
           "$className": "RemoteEvent"
         },
+        "FreeSpin": {
+          "$className": "RemoteEvent"
+        },
         "Achievement": {
           "$className": "RemoteEvent"
         },

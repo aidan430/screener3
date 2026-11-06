@@ -161,6 +161,7 @@ local parts = {
 	{ "Structures", Structures.init },
 	{ "Machines", Machines.init },
 	{ "Shop", Shop.init },
+	{ "Wheel", Wheel.init },
 	{ "Loft", Loft.init },
 	{ "Carry", Carry.init },
 	{ "Hauling", Hauling.init },

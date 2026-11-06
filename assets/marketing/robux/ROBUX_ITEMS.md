@@ -30,7 +30,7 @@ Product. Upload the icon, enter the name, description and price, Create. Copy it
 | luckycharm.png | Lucky Charm (1 hour) | 5x the chance of a lucky find while you harvest, for 1 hour. | 29 | Products.LuckyCharm |
 | strawblast.png | Straw Blast | 100,000 straws come off the outside of your haystack straight into your basket. | 99 | Products.StrawBlast |
 | whistle.png | Merchant's Whistle x10 | Send your load to your basket from anywhere, 10 times. | 25 | Products.MerchantWhistle |
-| wheelspin.png | Wheel of Fortune Spin | One spin: a tool skin, or (1 in 10,000) the needle's location. Odds shown in game before you buy. | 25 | Products.WheelSpin |
+| wheelspin.png | Wheel of Fortune Spin | One extra spin (everyone gets one free spin a day): a tool skin, or (1 in 10,000) the needle's location. Odds shown in game before you buy. | 25 | Products.WheelSpin |
 
 The Wheel is a paid random reward. The game shows the exact odds before buying and hides the
 wheel where the player's region restricts paid random items (PolicyService). Check Roblox's
