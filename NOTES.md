@@ -258,3 +258,9 @@ Owner's request: the depth of a factory-style needle game, with original systems
   build mode; toasts sit under the top bar at every screen size; stale "sell at the merchant"
   wording.
 - Not changed: the splitter's sideways push vs the belt's own motion needs checking in Studio.
+
+## Robux items switched on (2026-11-06)
+The owner created the passes and products (prices: Jetpack 175, Double Machines 249, Auto Sell
+149, VIP 299; 2x Speed 49, 2x Coins 49, Lucky Charm 29, Straw Blast 99, Whistle x10 25,
+Wheel Spin 25) and their IDs are in `Config.GamePasses` / `Config.Products`. A grant that
+errors now returns NotProcessedYet so Roblox retries it instead of losing the purchase.

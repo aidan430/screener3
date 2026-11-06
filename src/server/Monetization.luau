@@ -40,28 +40,28 @@ end
 
 local grants = {}
 
-local function boost(name)
+local function boost(name, title)
 	return function(player)
 		PlayerData.update(player, function(d)
 			d.boosts[name] = math.max(d.boosts[name] or 0, os.time()) + Config.BoostSeconds
 		end)
-		return "Your " .. name .. " is on for an hour."
+		return "Thank you! " .. title .. " is on for an hour (buying again adds another hour)."
 	end
 end
-grants.SpeedBoost = boost("SpeedBoost")
-grants.CoinBoost = boost("CoinBoost")
-grants.LuckyCharm = boost("LuckyCharm")
+grants.SpeedBoost = boost("SpeedBoost", "2x Speed")
+grants.CoinBoost = boost("CoinBoost", "2x Coins")
+grants.LuckyCharm = boost("LuckyCharm", "Your Lucky Charm")
 
 function grants.MerchantWhistle(player)
 	PlayerData.update(player, function(d)
 		d.whistles += Config.WhistleUses
 	end)
-	return "You have " .. Config.WhistleUses .. " more Merchant's Whistles: sell your bag anywhere."
+	return "Thank you! " .. Config.WhistleUses .. " more Merchant's Whistles: send your load to your basket from anywhere."
 end
 
 function grants.StrawBlast(player)
 	local blasted = Machines.blast(player, Config.StrawBlastAmount) or 0
-	return "Straw Blast! " .. Format.commas(blasted) .. " straws blasted off the top of your pile and sold."
+	return "Straw Blast! " .. Format.commas(blasted) .. " straws went off your haystack into your basket."
 end
 
 function grants.WheelSpin(player)
@@ -86,7 +86,11 @@ local function processReceipt(info)
 		warn("[Monetization] unknown product " .. tostring(info.ProductId))
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
-	local message = grant(player)
+	local ok, message = pcall(grant, player)
+	if not ok then
+		warn("[Monetization] couldn't grant " .. name .. ", Roblox will retry: " .. tostring(message))
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
 	PlayerData.addReceipt(player, info.PurchaseId)
 	PlayerData.save(player)
 	Remotes.Announce:FireClient(player, { kind = "notice", text = message })
