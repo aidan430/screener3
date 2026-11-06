@@ -53,6 +53,7 @@ Config.GroundTint = { 230, 236, 210 } -- the ground's colour with the texture on
 -- Models the owner uploaded (0 / {} = the built-in look). Turn = degrees to spin a model so
 -- its front faces the right way.
 Config.TraderModel = { id = 108636101057161, width = 12, turn = 0 } -- the Barraca stall: every Trader's Stall
+Config.TruckModel = { id = 0, turn = 0 } -- the owner's truck model: every truck wears it, scaled to its length
 Config.TreeModels = { 132180459559700, 124134724279082, 115582622540743, 137807887477417 } -- white birches
 Config.HeapMounds = 16 -- loose hay mounds round the foot of each heap (just for looks) -- the heap's colour with the texture on (white = the image as is)
 Config.MaxSlopeAngle = 46 -- players can't walk up anything steeper: they build to climb

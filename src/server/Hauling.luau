@@ -14,6 +14,7 @@ local PlayerData = require(script.Parent.PlayerData)
 local Plots = require(script.Parent.Plots)
 local Achievements = require(script.Parent.Achievements)
 local Build = require(script.Parent.Build)
+local Assets = require(script.Parent.Assets)
 
 local Hauling = {}
 local earned = {} -- [player] = coins paid since the last coin shower on their screen
@@ -81,7 +82,35 @@ local function sell(player)
 end
 
 -- A truck model: cab, box and wheels, welded to an anchored base so one tween moves it.
+-- The owner's truck model (Config.TruckModel), scaled to this truck's length and welded to one
+-- invisible anchored base so a single tween drives it. nil if there's none or it won't load.
+local function customTruck(def)
+	local spec = Config.TruckModel
+	local look = spec and spec.id ~= 0 and Assets.place(spec.id, CFrame.Angles(0, math.rad(spec.turn or 0), 0), def.size[3], nil, true)
+	if not look then
+		return nil
+	end
+	local model = Instance.new("Model")
+	model.Name = def.name
+	local base = Build.part({ name = "Base", size = Vector3.new(1, 1, 1), cframe = CFrame.new(), collide = false, transparency = 1, parent = model })
+	for _, part in ipairs(look:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.Anchored, part.CanCollide, part.CanQuery = false, false, false
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0, weld.Part1 = base, part
+			weld.Parent = part
+		end
+	end
+	look.Parent = model
+	model.PrimaryPart = base
+	return model
+end
+
 local function makeTruck(def)
+	local custom = customTruck(def)
+	if custom then
+		return custom
+	end
 	local model = Instance.new("Model")
 	model.Name = def.name
 	local w, h, l = def.size[1], def.size[2], def.size[3]
