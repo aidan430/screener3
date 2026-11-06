@@ -139,7 +139,7 @@ step("controls", function()
 	end)
 	TouchAim.start(); require(script.Parent:WaitForChild("Sprint")).start() -- touch harvesting; sprint (Shift, L3, RUN)
 end)
-step("worlds", function() require(script.Parent:WaitForChild("Worlds")).start(gui, Notify) end)
+step("worlds", function() require(script.Parent:WaitForChild("Worlds")).start(gui, Notify); require(script.Parent:WaitForChild("Lobby")).start(gui) end)
 if not hud then
 	hud = { refresh = function() end }
 end

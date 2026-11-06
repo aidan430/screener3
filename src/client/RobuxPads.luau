@@ -19,19 +19,13 @@ local Ui = require(script.Parent.Ui)
 local player = Players.LocalPlayer
 local RobuxPads = {}
 
--- What each item gives, word for word as in the shop's Robux tab (client/Shop.luau).
+-- What each item gives: the same words as the shop's Robux tab (client/RobuxItems.luau).
 local ITEMS = {
-	SpeedBoost = { "2x Speed (1 hour)", "Every click lifts twice the hay, for 1 hour." },
-	CoinBoost = { "2x Coins (1 hour)", "All the hay you sell pays double, for 1 hour." },
-	LuckyCharm = { "Lucky Charm (1 hour)", "5x the chance of a lucky find, for 1 hour." },
-	StrawBlast = { "Straw Blast", "100,000 straws come off your haystack straight into your basket." },
-	MerchantWhistle = { "Merchant's Whistle x10", "Send your load to your basket from anywhere, 10 times." },
-	AutoSell = { "Auto Sell", "When you're full, your load goes to your basket by itself." },
-	DoubleMachines = { "Double Machines", "Every machine harvests twice as fast, on the same power." },
-	VIP = { "VIP", "+25% coins, and machines keep working up to 1 hour while you're away." },
-	Jetpack = { "Jetpack", "Hold Space (or FLY) in the air to fly up and hover over your pile." },
 	WheelSpin = { "Wheel of Fortune Spin", "One spin, one prize. Step on to see the exact odds first." },
 }
+for _, item in ipairs(require(script.Parent.RobuxItems)) do
+	ITEMS[item.key] = { item.title, item.text }
+end
 
 local pads = {} -- model -> { ring, glow, armed, phase }
 local lastOffer = -math.huge

@@ -1,7 +1,7 @@
--- The portal worlds on your own screen: each world's light eased in on arrival (and the farm's
--- eased back on return), its name on screen, low gravity on the Moon, the lava's gentle nudge
--- back to the bank, the fish of Bubble City, the portal prompts' words and the stadium
--- scoreboard. The server decides unlocking, travel and every coin (server/Worlds.luau).
+-- The portal worlds and the lobby on your own screen: each world's light (and the lobby's,
+-- Config.LobbyMood) eased in on arrival and the farm's eased back on return, the place's name
+-- on screen, low gravity on the Moon, the lava's gentle nudge back to the bank, the fish of
+-- Bubble City and the stadium scoreboard. The server decides unlocking, travel and every coin (server/Worlds.luau).
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -35,7 +35,7 @@ local function read()
 end
 
 local function mood(id)
-	local m = Config.WorldMoods[id]
+	local m = if id == "lobby" then Config.LobbyMood else Config.WorldMoods[id]
 	return { clock = m.clock, brightness = m.brightness, ambient = rgb(m.ambient), outdoor = rgb(m.outdoor), shift = rgb(m.shift), density = m.density, color = rgb(m.color), decay = rgb(m.decay), haze = m.haze, glare = m.glare }
 end
 
@@ -63,7 +63,12 @@ local function fadeTo(target, done)
 	fade = { from = read(), to = target, start = os.clock(), done = done }
 end
 
+local LOBBY = { id = "lobby", name = Config.LobbyName }
 local function worldAt(position)
+	local l = Config.Lobby
+	if Vector3.new(position.X - l.x, 0, position.Z - l.z).Magnitude < Config.LobbyInside then
+		return LOBBY
+	end
 	for _, w in ipairs(Config.Worlds) do
 		local flat = Vector3.new(position.X - w.x, 0, position.Z - w.z)
 		if flat.Magnitude < Config.WorldInside then
@@ -144,16 +149,6 @@ local function swim(folder)
 	end
 end
 
--- The portal prompts say "Travel" once open, or the price until then.
-local function promptWords(root)
-	for _, prompt in ipairs(root:GetDescendants()) do
-		local w = prompt:IsA("ProximityPrompt") and prompt:GetAttribute("Action") == "portal" and byId[prompt:GetAttribute("World")]
-		if w then
-			prompt.ActionText = if player:GetAttribute("World_" .. w.id) then "Travel" else "Open for " .. Format.short(w.price) .. " coins"
-		end
-	end
-end
-
 local function scoreText(root)
 	local label = root:FindFirstChild("field") and root.field:FindFirstChild("ScoreText", true)
 	if label and label:IsA("TextLabel") then
@@ -187,17 +182,9 @@ function Worlds.start(gui, notify)
 	task.spawn(function() -- (never hold up the other parts of the screen while waiting)
 		root = root or workspace:WaitForChild("Worlds", 60)
 		if root then
-			promptWords(root)
 			scoreText(root)
 		end
 	end)
-	for _, w in ipairs(Config.Worlds) do
-		player:GetAttributeChangedSignal("World_" .. w.id):Connect(function()
-			if root then
-				promptWords(root)
-			end
-		end)
-	end
 	for _, name in ipairs({ "WorldNeedles_field", "WorldStraws_field" }) do
 		player:GetAttributeChangedSignal(name):Connect(function()
 			if root then
@@ -231,7 +218,11 @@ function Worlds.start(gui, notify)
 			if here then
 				farm = farm or read()
 				fadeTo(mood(here.id))
-				showTitle(here.name, "Hay pays " .. here.multiplier .. "x here. Find this world's own needle!")
+				if here == LOBBY then
+					showTitle(here.name, "Walk into an arch to travel. T takes you to your farm.")
+				else
+					showTitle(here.name, "Hay pays " .. here.multiplier .. "x here. Find this world's own needle!")
+				end
 			elseif farm then
 				fadeTo(farm, function()
 					farm = nil

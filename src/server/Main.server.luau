@@ -43,6 +43,7 @@ local Stamina = require(script.Parent.Stamina)
 local Detector = require(script.Parent.Detector)
 local Worlds = require(script.Parent.Worlds)
 local RobuxPads = require(script.Parent.RobuxPads)
+local Lobby = require(script.Parent.Lobby)
 
 StarterPlayer.CharacterMaxSlopeAngle = Config.MaxSlopeAngle -- the steep heap needs building to climb
 local Scenery = require(script.Parent.Scenery)
@@ -66,18 +67,23 @@ end
 pcall(function() -- the hidden golden straw (a secret achievement)
 	require(script.Parent.Secrets).build()
 end)
--- the portal arches on the west road and the four worlds far beyond the farm
+-- the four worlds far beyond the farm, and the lobby with their arches (where you arrive)
 local worldsOk, worldsError = pcall(Worlds.build)
 if not worldsOk then
 	warn("[Start] Worlds failed to build: " .. tostring(worldsError))
 end
--- the Robux corner: a pad per Robux item beside where you arrive (only offers; nothing is sold here)
+local lobbyOk, lobbyError = pcall(Lobby.build)
+if not lobbyOk then
+	warn("[Start] The lobby failed to build: " .. tostring(lobbyError))
+end
+-- the Robux corner: a pad per Robux item in the lobby (only offers; nothing is sold here)
 local padsOk, padsError = pcall(RobuxPads.build)
 if not padsOk then
 	warn("[Start] Robux pads failed to build: " .. tostring(padsError))
 end
 
 local function toPlot(player)
+	Lobby.leave(player) -- (respawns now go to the farm too)
 	local plotIndex = Plots.of(player)
 	local root = player.Character and player.Character:WaitForChild("HumanoidRootPart", 10)
 	if plotIndex and root then
@@ -119,11 +125,16 @@ PlayerData.onLoaded(function(player, saveable)
 	Carry.show(player)
 	Orders.publish(player)
 	Wheel.remind(player)
-	toPlot(player)
-	-- after every spawn: back to your plot, and make sure the tool arrived (it comes from StarterGear)
+	Lobby.arrive(player, nil, true) -- everyone arrives in the lobby
+	-- after every spawn: back where you were (the lobby, or your farm's entrance), and make sure
+	-- the tool arrived (it comes from StarterGear)
 	player.CharacterAdded:Connect(function()
 		task.wait(1)
-		toPlot(player)
+		if Lobby.isIn(player) then
+			Lobby.arrive(player, nil, true)
+		else
+			toPlot(player)
+		end
 		local current = PlayerData.get(player)
 		if current and player.Parent and not Tools.has(player) then
 			Tools.give(player, current.tool, current.skin)
@@ -144,6 +155,7 @@ local parts = {
 	{ "Plots", Plots.init },
 	{ "Monetization", Monetization.init }, -- before PlayerData, so early players get their passes checked
 	{ "Worlds", Worlds.init }, -- before PlayerData, so it hears every player load
+	{ "Lobby", function() Lobby.init(toPlot) end },
 	{ "PlayerData", PlayerData.init },
 	{ "Achievements", Achievements.init },
 	{ "Structures", Structures.init },

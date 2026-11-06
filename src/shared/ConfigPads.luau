@@ -1,25 +1,31 @@
--- The Robux corner: one holographic pad per Robux item, near where you arrive (Config.luau
+-- The Robux corner: one holographic pad per Robux item, in the lobby (Config.luau
 -- merges this file in: read and tune them as Config.RobuxPads and the other Config.RobuxPad*).
 -- Stepping on a pad only offers its item; closing Roblox's prompt costs nothing.
 local Config = {}
 
 -- One row per pad. kind "pass" = Config.GamePasses[key], "product" = Config.Products[key]; a pad
--- whose ID is 0 isn't built. at = { x, z } studs from Config.FarmEntrance (the arrival point;
--- +z is behind you as you arrive facing the haystack), so the pads move when the entrance does.
--- Two arcs of 5, 32 studs round the arrival point, off the 30-stud road (|x| > 15).
+-- whose ID is 0 isn't built. at = { x, z } studs from the lobby's centre (Config.Lobby; -z is
+-- north, towards the portal arches), so the pads move with the lobby.
+-- An arc of 10 along the lobby's east and south-east rim and 4 on the west rim, 56 studs out,
+-- 10 degrees apart, clear of the arches (north) and of the arrival path (south).
 Config.RobuxPads = {
-	{ kind = "pass", key = "AutoSell", at = { -18.8, 25.9 } },
-	{ kind = "pass", key = "DoubleMachines", at = { -25.2, 19.7 } },
-	{ kind = "pass", key = "VIP", at = { -29.7, 12 } },
-	{ kind = "pass", key = "Jetpack", at = { -31.8, 3.3 } },
-	{ kind = "product", key = "MerchantWhistle", at = { -31.5, -5.6 } },
-	{ kind = "product", key = "SpeedBoost", at = { 18.8, 25.9 } },
-	{ kind = "product", key = "CoinBoost", at = { 25.2, 19.7 } },
-	{ kind = "product", key = "LuckyCharm", at = { 29.7, 12 } },
-	{ kind = "product", key = "StrawBlast", at = { 31.8, 3.3 } },
-	{ kind = "product", key = "WheelSpin", at = { 31.5, -5.6 } }, -- opens the wheel's odds, never a prompt
+	{ kind = "pass", key = "AutoSell", at = { 55.7, -5.9 } },
+	{ kind = "pass", key = "DoubleMachines", at = { 55.9, 3.9 } },
+	{ kind = "pass", key = "VIP", at = { 54.3, 13.5 } },
+	{ kind = "pass", key = "Jetpack", at = { 51.2, 22.8 } },
+	{ kind = "product", key = "MerchantWhistle", at = { 46.4, 31.3 } },
+	{ kind = "product", key = "SpeedBoost", at = { 40.3, 38.9 } },
+	{ kind = "product", key = "CoinBoost", at = { 32.9, 45.3 } },
+	{ kind = "product", key = "LuckyCharm", at = { 24.5, 50.3 } },
+	{ kind = "product", key = "StrawBlast", at = { 15.4, 53.8 } },
+	{ kind = "product", key = "WheelSpin", at = { 5.9, 55.7 } }, -- opens the wheel's odds, never a prompt
+	-- the extras and the just-for-fun passes, mirrored on the west rim
+	{ kind = "pass", key = "SuperTool", at = { -55.7, -5.9 } },
+	{ kind = "pass", key = "HayTornado", at = { -55.9, 3.9 } },
+	{ kind = "pass", key = "RainbowHay", at = { -54.3, 13.5 } },
+	{ kind = "pass", key = "SparkleTrail", at = { -51.2, 22.8 } },
 }
-Config.RobuxPadFacing = { 0, 0 } -- every pad faces this point ({ x, z } from Config.FarmEntrance)
+Config.RobuxPadFacing = { 0, 0 } -- every pad faces this point ({ x, z } from the lobby's centre)
 Config.RobuxPadSize = 7 -- studs across a pad
 Config.RobuxPadPanelHeight = 7.5 -- studs from the ground to the middle of the floating panel
 Config.RobuxPadHueSeconds = 24 -- the ring's colour takes this long to drift once round the rainbow

@@ -1,11 +1,11 @@
 -- The four portal worlds (Config.luau merges this file in: read and tune them as Config.Worlds,
--- Config.WorldPortals, Config.WorldMoods and the other Config.World* numbers).
+-- Config.WorldMoods and the other Config.World* numbers).
 local Config = {}
 
 -- One row per world, in unlock order. price = coins to open its portal once (saved);
 -- multiplier = coins per straw there, times the normal straw value (and your coin multiplier);
 -- straws = how many straws its haystack holds before a fresh one (with a new needle) grows;
--- x, z = the world's centre (studs; the farm reaches about 500 from the hub, so stay far out).
+-- x, z = the world's centre (studs; stay far from the farm and from the lobby, Config.Lobby).
 Config.Worlds = {
 	{ id = "moon", name = "The Moon", price = 250000, multiplier = 3, straws = 60000, x = 0, z = 2500 },
 	{ id = "lava", name = "Ember Lands", price = 2000000, multiplier = 6, straws = 120000, x = 2500, z = 0 },
@@ -18,10 +18,7 @@ Config.WorldNeedleEarliest = 0.25 -- a world's needle hides after this share of 
 Config.WorldNeedleSearches = 5000 -- the needle pays this many clicks of straw at that world's rate
 Config.WorldHaystackSize = 30 -- the haystack's main ball (studs)
 
--- The portal arches on the west road: their x positions (the road runs along negative x) and
--- their z (the south half of the road, leaving the north half as a walking lane).
--- the portal arches stand in a row west of the haystack, facing it
-Config.WorldPortals = { spots = { { -84, -51 }, { -84, -17 }, { -84, 17 }, { -84, 51 } }, holdSeconds = 0.8, cooldown = 2 }
+-- The portal arches stand in the lobby (ConfigLobby.luau: Config.LobbyPortals).
 
 -- Moon gravity: an upward push cancelling this share of normal gravity while you're there.
 Config.MoonLift = 0.7

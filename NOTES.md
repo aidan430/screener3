@@ -434,3 +434,48 @@ arc Speed, Coins, Lucky Charm, Straw Blast, Wheel Spin), `RobuxPadFacing` {0, 0}
 - Secret achievement "Hidden Straw": a softly glowing golden straw at `SecretStraw`
   (behind the water tower). Achievements moved to ConfigGoals.luau; `LoftAchievements` 10:
   any ten of the eleven open the Golden Loft, so nobody who had it loses it.
+## The lobby, Sky Meadow (2026-11-06)
+Everyone now arrives in a lobby: a floating meadow island 140 studs across at (1300, 0, 1300),
+far from the farm and the worlds. Numbers in `src/shared/ConfigLobby.luau` (merged into Config):
+`LobbyName` "Sky Meadow", `Lobby` {x 1300, floor 0, z 1300}, `LobbyRadius` 70, `LobbyInside`
+130 (counts as "in the lobby" for its light and name), `LobbyArrival` {0, 40} (south of the
+fountain, facing the arches), `LobbyPortals`, `LobbyFarmColour`, `LobbyFarmPortal` {x -26,
+past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `LobbyNudge`
+{back 26, up 12}, `LobbyFallBelow` -60, `LobbyMood` (a bright soft-sky afternoon).
+- **Island** (`server/LobbyIsland.luau`): grass deck with a stone lip, a rocky underside in
+  shrinking layers, clouds and little floating islets round it, a low stone wall with an
+  invisible rail on the rim, a cobbled plaza with a fountain (a glowing straw-gold ball, water
+  spilling softly), paths to every arch, four benches round the fountain, a lily pond with
+  reeds and two benches, nine lanterns round the rim and two by the arrival path, nine flower
+  boxes, two stacks of hay bales, a welcome sign and the Robux Corner's sign.
+- **Arches** (`server/Lobby.luau`): five in a semicircle 48 studs north of the centre, facing
+  it, left to right: The Moon, Ember Lands, Hollow Creek Farm (free, always open), Bubble City,
+  Haystack Stadium. Walking into an arch's glow travels (a Touched trigger tagged "WalkPortal",
+  `WorldsKit.trigger`; no prompt): the server checks and moves you after a 0.35 s soft fade on
+  your screen. A locked world's arch doesn't move you: your screen eases you back out and shows
+  "Open the Moon for 250,000 coins? [Open] [Not now]" (`client/Lobby.luau`); Open asks the
+  server (Remotes.Portal "open"), which checks and takes the coins (`Worlds.open`, the old
+  unlock logic) and sends you straight in. The arches' signs show the price, or "Open: walk in!"
+  once you've opened that world.
+- **Ways back**: each world's return arch is now walk-in too and lands you in front of that
+  world's arch in the lobby. On the farm a new arch ("Sky Meadow") stands just past the south
+  edge of the build area, west of the arrival road: z = max(PlotSize/2 + 8, FarmEntrance.z + 14),
+  x = -26, facing the haystack (at the current sizes: (-26, 103)). T still takes you to your
+  farm's entrance from anywhere.
+- **Removed:** the row of four world arches west of the haystack (`Config.WorldPortals`) and
+  the portal ProximityPrompts.
+- **Robux pads moved** to the lobby: one arc of 10 along its east and south-east rim (56 studs
+  out, 10 degrees apart), facing the fountain; `RobuxPads` `at` and `RobuxPadFacing` are now
+  from the lobby's centre.
+- **Spawning**: a woven SpawnLocation at the lobby's arrival point; each player's
+  RespawnLocation is the lobby's until they leave it, then the farm's (`workspace.Spawn`, still
+  built by World.luau). After loading, `Main` sends you to the lobby (not the farm); later
+  respawns go back to the lobby if you never left it, otherwise to your farm entrance as before.
+  The plot is still claimed and the Plot attribute set at load, so your haystack syncs as before.
+  Anyone who drifts off the island (below y -60) is set back on it.
+- **Your screen** (`client/Worlds.luau`): the lobby has its own light, eased in like a world's,
+  and its name with "Walk into an arch to travel"; the farm's light comes back on the farm.
+- **Check in Studio:** that Touched fires walking through the 2-stud trigger (and not when you
+  stand next to it), the locked-arch nudge (client velocity + a 2.5-stud step back), that
+  RespawnLocation picks the lobby pad on joining, the fade timing over a slow connection, and
+  how the island and clouds look from the arrival point.
