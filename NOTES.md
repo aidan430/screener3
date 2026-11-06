@@ -491,3 +491,5 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
 - Fix: Kit.compact moved big groups (all the trees, the bushes, field rows) as one block, so
   they stayed out at full size (some past the fence) after the farm was pulled in. Groups wider
   than 70 studs now have each piece pulled in.
+- `Config.TruckModel` { id = 116817249965623 (the owner's "farm_truck"), turn = 0 }: every truck
+  wears it, scaled to that truck's length (van 11 ... large 30), welded to an invisible base.
