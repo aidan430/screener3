@@ -13,9 +13,10 @@ local WOOD = { 122, 86, 52 }
 local GROUND = 520 -- the ground is GROUND x GROUND studs
 local FENCE = 245 -- the boundary fence, this far from the hub on each axis
 
-World.MERCHANT = Vector3.new(0, 0, -36) -- on the north road
-World.WHEEL = Vector3.new(0, 0, 36) -- on the south road
-World.DOOR = Vector3.new(36, 0, 0) -- the golden door, on the east road
+-- The haystack stands in the middle now, so these stand round it, facing it.
+World.MERCHANT = Vector3.new(-42, 0, 100) -- just west of where you arrive
+World.WHEEL = Vector3.new(42, 0, 100) -- just east of where you arrive
+World.DOOR = Vector3.new(112, 0, 0) -- the golden door, on the east road
 World.LOFT = Vector3.new(0, 330, 0) -- the secret level floats high above the hub
 
 local function prompt(parent, action, text, object, key)
@@ -40,7 +41,7 @@ function World.ground()
 	terrain:FillBlock(CFrame.new(0, -8, 0), Vector3.new(GROUND, 16, GROUND), Enum.Material.LeafyGrass)
 	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(30, 4, 330), Enum.Material.Ground)
 	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(330, 4, 30), Enum.Material.Ground)
-	terrain:FillCylinder(CFrame.new(0, -2, 0), 4, 22, Enum.Material.Cobblestone)
+	terrain:FillCylinder(CFrame.new(0, -2, 0), 4, 58, Enum.Material.Cobblestone) -- the yard the haystack stands in
 	-- a few soft hills just past the edge of the ground, so the world fades into countryside
 	local rng = Random.new(11)
 	for i = -2, 2 do
@@ -58,7 +59,7 @@ function World.ground()
 	spawn.Name = "Spawn"
 	spawn.Anchored = true
 	spawn.Size = Vector3.new(10, 1, 10)
-	spawn.CFrame = CFrame.new(0, 0.5, 0)
+	spawn.CFrame = CFrame.new(Config.FarmEntrance[1], 0.5, Config.FarmEntrance[3] + 10) -- south of the haystack
 	spawn.Color = Color3.fromRGB(196, 150, 92)
 	spawn.Material = Enum.Material.WoodPlanks
 	spawn.Duration = 0
@@ -198,9 +199,9 @@ function World.build()
 	merchant(farm)
 	wheel(farm)
 	door(farm)
-	for i = 0, 3 do
-		local a = i / 4 * math.pi * 2 + math.pi / 4
-		local base = CFrame.new(math.cos(a) * 19, 0, math.sin(a) * 19)
+	for i = 0, 7 do -- lamps in a ring round the haystack
+		local a = i / 8 * math.pi * 2 + math.pi / 8
+		local base = CFrame.new(math.cos(a) * 62, 0, math.sin(a) * 62)
 		Build.post({ name = "LampPost", color = { 52, 48, 46 }, material = "Metal", parent = farm }, base, 9, 0.6)
 		local lamp = Build.part({ name = "Lamp", size = Vector3.new(1.6, 1.6, 1.6), cframe = base * CFrame.new(0, 9.6, 0), color = { 255, 196, 110 }, material = "Neon", parent = farm })
 		local light = Instance.new("PointLight")

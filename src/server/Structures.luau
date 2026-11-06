@@ -44,17 +44,31 @@ local function spawnPiece(plotIndex, entry, slot)
 	return model
 end
 
--- Everyone has a trader: one stall, placed between the hub and the heap on the first visit.
+-- Everyone has a trader: one stall, between the haystack and where you arrive, facing you.
 -- Players can take it back (X) and put it anywhere, even up on a platform.
-local function ensureTrader(plotIndex, d)
+local function ensureTrader(_, d)
 	if Economy.owned(d, "trader") > 0 then
 		return
 	end
-	local centre = Plots.centre(plotIndex)
-	local toHub = -centre.Unit
-	local rel = toHub * Config.TraderDistance
-	local turn = math.deg(math.atan2(-toHub.X, -toHub.Z)) -- the stall's front faces the hub
-	table.insert(d.placed, { k = "trader", x = math.floor(rel.X * 10 + 0.5) / 10, y = 0, z = math.floor(rel.Z * 10 + 0.5) / 10, r = turn % 360 })
+	local t = Config.TraderStart
+	table.insert(d.placed, { k = "trader", x = t[1], y = t[2], z = t[3], r = 180 }) -- front (-Z) turned to face south
+end
+
+-- True if a spot is inside the haystack (where nothing can be built).
+local function inHaystack(rel)
+	return Vector3.new(rel.X, 0, rel.Z).Magnitude < Config.BuildClear
+end
+
+-- Things placed where the haystack now stands (old saves, from when plots were elsewhere) go
+-- back into the player's inventory, to be built again.
+local function clearHaystack(d)
+	for i = #d.placed, 1, -1 do
+		local e = d.placed[i]
+		if inHaystack(Vector3.new(e.x, e.y, e.z)) then
+			table.remove(d.placed, i)
+			d.inventory[e.k] = (d.inventory[e.k] or 0) + 1
+		end
+	end
 end
 
 -- Rebuilds everything the player has placed (on joining).
@@ -62,6 +76,7 @@ function Structures.build(plotIndex, d)
 	local owner = Plots.owner(plotIndex)
 	if owner then
 		PlayerData.update(owner, function(data)
+			clearHaystack(data)
 			ensureTrader(plotIndex, data)
 		end)
 	end
@@ -91,7 +106,9 @@ local function place(player, id, position, rotation)
 		return false, "Can't build there."
 	end
 	if not Plots.contains(plotIndex, position, 1) then
-		return false, "You can only build on your own plot."
+		return false, "You can only build on your farm."
+	elseif inHaystack(position - Plots.centre(plotIndex)) then
+		return false, "That's inside the haystack: build next to it."
 	end
 	if #d.placed >= Config.MaxPlaced then
 		return false, "Your plot is full (" .. Config.MaxPlaced .. " things)."

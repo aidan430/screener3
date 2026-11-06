@@ -17,9 +17,15 @@ local Config = {}
 Config.Title = "Needle in the Haystack"
 Config.FarmName = "Hollow Creek Farm"
 
--- Plots: each player gets one, with their own pile. Four per server, around the hub.
-Config.PlotSize = 140
-Config.PlotCentres = { { 85, 85 }, { -85, 85 }, { -85, -85 }, { 85, -85 } }
+-- Plots: each player gets one. All four are the SAME place, the middle of the farm, with the
+-- haystack at its centre: everyone sees and digs only their own haystack, and only their own
+-- buildings and hay (other players' are hidden and pass-through on your screen).
+Config.PlotSize = 300 -- the build area round the haystack (the countryside starts at 162)
+Config.PlotCentres = { { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } }
+Config.FarmEntrance = { 0, 0, 118 } -- where you arrive: south of the haystack, facing it
+Config.TraderStart = { 0, 0, 64 } -- your trader's stall, between the haystack and where you arrive
+Config.TruckStart = { 0, 0, 150 } -- trucks drive in from the south field
+Config.BuildClear = 40 -- nothing can stand this close to the haystack's centre (it's hay)
 
 -- The heap: 5,000,000 straws in clumps, one smooth terrain haystack 80 studs (22 m) high and
 -- 88 across: steep sides and a rounded top, like a beehive haystack.
@@ -64,7 +70,6 @@ Config.NeedleHeight = { 0.5, 0.8 }
 Config.NeedleCore = 0.4
 Config.Reach = 18 -- studs from your head to a clump you can harvest
 Config.SearchCooldown = 0.3 -- seconds between harvests (the Swift perk shortens it)
-Config.MerchantRange = 16
 
 Config.CoinsPerStraw = 1
 
@@ -142,7 +147,6 @@ Config.Pieces = {
 	{ id = "baler", name = "Bale Maker", price = 60000, max = 3, size = { 8, 7, 10 }, text = "Feed it hay at the back; it pushes out bales. Trucks carry bales 3x as easily." },
 	{ id = "trader", name = "Trader's Stall", price = 0, max = 1, size = { 12, 12, 8 }, text = "Your trader. Dump your hay in the basket. Move it anywhere, even up a platform." },
 }
-Config.TraderDistance = 57 -- your trader's stall starts this far from your plot's centre, towards the hub
 Config.BasketDrainSeconds = 4 -- how fast the basket's hay level eases down after a dump (just for show)
 
 -- Hauling: what you dump waits in your trader's basket. The trader himself buys TraderRate
@@ -464,7 +468,8 @@ Config.WorldHaystackSize = 30 -- the haystack's main ball (studs)
 
 -- The portal arches on the west road: their x positions (the road runs along negative x) and
 -- their z (the south half of the road, leaving the north half as a walking lane).
-Config.WorldPortals = { xs = { -42, -70, -98, -126 }, z = 10, holdSeconds = 0.8, cooldown = 2 }
+-- the portal arches stand in a row west of the haystack, facing it
+Config.WorldPortals = { spots = { { -118, -51 }, { -118, -17 }, { -118, 17 }, { -118, 51 } }, holdSeconds = 0.8, cooldown = 2 }
 
 -- Moon gravity: an upward push cancelling this share of normal gravity while you're there.
 Config.MoonLift = 0.7
@@ -864,6 +869,87 @@ end
 			</Item>
 			<Item class="ModuleScript" referent="RBX0000B">
 				<Properties>
+					<string name="Name">HeapTerrain</string>
+					<ProtectedString name="Source"><![CDATA[-- Draws a player's haystack as terrain from their save. Each player's screen draws only its own
+-- haystack (they all stand in the same place), so this runs on the client; the server keeps
+-- the save and checks every harvest against it. Usage: require(HeapTerrain)(Config).
+return function(Config)
+	local Layout = require(script.Parent.Layout)(Config)
+	local HeapTerrain = {}
+	local HEAP = Enum.Material.Grass -- recoloured to straw; its grass blades read as loose straw
+	local STEPS = 8 -- a clump shrinks in this many visible steps as it's harvested
+	local PER_CLUMP = Config.TotalStraws // Config.Clumps
+	HeapTerrain.MATERIAL = HEAP
+
+	function HeapTerrain.origin(centreX, centreZ)
+		local x, z = Layout.origin(centreX, centreZ)
+		return Vector3.new(x, 0, z)
+	end
+
+	-- How full a clump's cell looks: the heap's rounded outside, shrinking as it's harvested.
+	function HeapTerrain.fullness(index, left)
+		if left <= 0 then
+			return 0
+		end
+		local step = math.ceil(left / PER_CLUMP * STEPS) / STEPS
+		return Layout.shape[index] * (0.3 + 0.7 * step)
+	end
+
+	local function leftOf(removed, partial, index)
+		if string.sub(removed, index, index) == "1" then
+			return 0
+		end
+		return partial[tostring(index)] or PER_CLUMP
+	end
+
+	local function span()
+		local s = Config.ClumpSize
+		return s, math.ceil(Config.PileRadiusBottom / s) + 1
+	end
+
+	-- The whole heap, from the save's `removed` string and `partial` table.
+	function HeapTerrain.draw(terrain, o, removed, partial)
+		local s, n = span()
+		local materials, amounts = {}, {}
+		for x = 1, 2 * n + 1 do
+			materials[x], amounts[x] = {}, {}
+			for y = 1, Config.PileLayers do
+				materials[x][y], amounts[x][y] = {}, {}
+				for z = 1, 2 * n + 1 do
+					materials[x][y][z], amounts[x][y][z] = Enum.Material.Air, 0
+				end
+			end
+		end
+		for index, cell in ipairs(Layout.cell) do
+			local amount = HeapTerrain.fullness(index, leftOf(removed, partial, index))
+			if amount > 0 then
+				local x, y, z = cell[1] + n + 1, cell[2] + 1, cell[3] + n + 1
+				materials[x][y][z], amounts[x][y][z] = HEAP, amount
+			end
+		end
+		local corner = o - Vector3.new(n * s + s / 2, 0, n * s + s / 2)
+		terrain:WriteVoxels(Region3.new(corner, corner + Vector3.new((2 * n + 1) * s, Config.PileLayers * s, (2 * n + 1) * s)), s, materials, amounts)
+	end
+
+	-- One clump, after a harvest or a machine took from it.
+	function HeapTerrain.cell(terrain, o, index, left)
+		local c = Layout[index]
+		if not c then
+			return
+		end
+		local centre = o + Vector3.new(c[1], c[2], c[3])
+		local half = Vector3.new(1, 1, 1) * (Config.ClumpSize / 2)
+		local amount = HeapTerrain.fullness(index, left)
+		terrain:WriteVoxels(Region3.new(centre - half, centre + half), Config.ClumpSize, { { { if amount > 0 then HEAP else Enum.Material.Air } } }, { { { amount } } })
+	end
+
+	return HeapTerrain
+end
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX0000C">
+				<Properties>
 					<string name="Name">Layout</string>
 					<ProtectedString name="Source"><![CDATA[-- Where each clump sits in the heap: one cell of the 4-stud terrain grid each, in
 -- Config.PileLayers layers that taper from PileRadiusBottom to a rounded top (PileDome, PileCurve), trimmed
@@ -973,91 +1059,96 @@ end
 				</Properties>
 			</Item>
 		</Item>
-		<Item class="Folder" referent="RBX0000C">
+		<Item class="Folder" referent="RBX0000D">
 			<Properties>
 				<string name="Name">Remotes</string>
 			</Properties>
-			<Item class="RemoteEvent" referent="RBX0000D">
+			<Item class="RemoteEvent" referent="RBX0000E">
 				<Properties>
 					<string name="Name">Harvest</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0000E">
+			<Item class="RemoteEvent" referent="RBX0000F">
 				<Properties>
 					<string name="Name">SearchFx</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0000F">
+			<Item class="RemoteEvent" referent="RBX00010">
 				<Properties>
 					<string name="Name">Announce</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00010">
+			<Item class="RemoteEvent" referent="RBX00011">
 				<Properties>
 					<string name="Name">Achievement</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00011">
-				<Properties>
-					<string name="Name">GoHome</string>
-				</Properties>
-			</Item>
 			<Item class="RemoteEvent" referent="RBX00012">
 				<Properties>
-					<string name="Name">DropHay</string>
+					<string name="Name">PileSync</string>
 				</Properties>
 			</Item>
 			<Item class="RemoteEvent" referent="RBX00013">
 				<Properties>
+					<string name="Name">GoHome</string>
+				</Properties>
+			</Item>
+			<Item class="RemoteEvent" referent="RBX00014">
+				<Properties>
+					<string name="Name">DropHay</string>
+				</Properties>
+			</Item>
+			<Item class="RemoteEvent" referent="RBX00015">
+				<Properties>
 					<string name="Name">Teleport</string>
-				</Properties>
-			</Item>
-			<Item class="RemoteFunction" referent="RBX00014">
-				<Properties>
-					<string name="Name">Whistle</string>
-				</Properties>
-			</Item>
-			<Item class="RemoteFunction" referent="RBX00015">
-				<Properties>
-					<string name="Name">Buy</string>
 				</Properties>
 			</Item>
 			<Item class="RemoteFunction" referent="RBX00016">
 				<Properties>
-					<string name="Name">Place</string>
+					<string name="Name">Whistle</string>
 				</Properties>
 			</Item>
 			<Item class="RemoteFunction" referent="RBX00017">
 				<Properties>
-					<string name="Name">TakeBack</string>
+					<string name="Name">Buy</string>
 				</Properties>
 			</Item>
 			<Item class="RemoteFunction" referent="RBX00018">
 				<Properties>
-					<string name="Name">EquipSkin</string>
+					<string name="Name">Place</string>
 				</Properties>
 			</Item>
 			<Item class="RemoteFunction" referent="RBX00019">
 				<Properties>
-					<string name="Name">GetAchievements</string>
+					<string name="Name">TakeBack</string>
 				</Properties>
 			</Item>
 			<Item class="RemoteFunction" referent="RBX0001A">
+				<Properties>
+					<string name="Name">EquipSkin</string>
+				</Properties>
+			</Item>
+			<Item class="RemoteFunction" referent="RBX0001B">
+				<Properties>
+					<string name="Name">GetAchievements</string>
+				</Properties>
+			</Item>
+			<Item class="RemoteFunction" referent="RBX0001C">
 				<Properties>
 					<string name="Name">Detect</string>
 				</Properties>
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerScriptService" referent="RBX0001B">
+	<Item class="ServerScriptService" referent="RBX0001D">
 		<Properties>
 			<string name="Name">ServerScriptService</string>
 		</Properties>
-		<Item class="Folder" referent="RBX0001C">
+		<Item class="Folder" referent="RBX0001E">
 			<Properties>
 				<string name="Name">Server</string>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX0001D">
+			<Item class="ModuleScript" referent="RBX0001F">
 				<Properties>
 					<string name="Name">Achievements</string>
 					<ProtectedString name="Source"><![CDATA[-- The ten achievements, secret until earned. Each watches one number; all ten open the Golden Loft.
@@ -1145,7 +1236,7 @@ return Achievements
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001E">
+			<Item class="ModuleScript" referent="RBX00020">
 				<Properties>
 					<string name="Name">Assets</string>
 					<ProtectedString name="Source"><![CDATA[-- Things the owner imported in Studio and uploaded, loaded by asset ID: a saved Model (via
@@ -1220,7 +1311,7 @@ return Assets
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001F">
+			<Item class="ModuleScript" referent="RBX00021">
 				<Properties>
 					<string name="Name">Build</string>
 					<ProtectedString name="Source"><![CDATA[-- Helpers for building the world out of simple anchored parts.
@@ -1302,7 +1393,7 @@ return Build
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00020">
+			<Item class="ModuleScript" referent="RBX00022">
 				<Properties>
 					<string name="Name">Carry</string>
 					<ProtectedString name="Source"><![CDATA[-- What you carry, where everyone can see it: the hay on your tool grows with every harvest,
@@ -1316,6 +1407,7 @@ local Economy = require(Shared:WaitForChild("Economy"))(Config)
 local HayLook = require(Shared:WaitForChild("HayLook"))(Config)
 
 local PlayerData = require(script.Parent.PlayerData)
+local Plots = require(script.Parent.Plots)
 local Build = require(script.Parent.Build)
 
 local Carry = {}
@@ -1352,6 +1444,10 @@ local function makeBucket(player, root, level)
 		part.Anchored = false
 		part.Massless = true
 		weld(root, part)
+	end
+	model:SetAttribute("Owner", player.UserId)
+	if Plots.of(player) then
+		Plots.tag(model, Plots.of(player))
 	end
 	model.Parent = gear
 	return model
@@ -1459,7 +1555,7 @@ return Carry
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00021">
+			<Item class="ModuleScript" referent="RBX00023">
 				<Properties>
 					<string name="Name">Detector</string>
 					<ProtectedString name="Source"><![CDATA[-- The metal detector (Config.MetalDetector), bought once in the shop. While the player holds
@@ -1517,7 +1613,7 @@ return Detector
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00022">
+			<Item class="ModuleScript" referent="RBX00024">
 				<Properties>
 					<string name="Name">Factory</string>
 					<ProtectedString name="Source"><![CDATA[-- The factory line, ticking: Hay Arms and Throwers take hay from your heap and put bundles on
@@ -1648,7 +1744,7 @@ return Factory
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00023">
+			<Item class="ModuleScript" referent="RBX00025">
 				<Properties>
 					<string name="Name">Goals</string>
 					<ProtectedString name="Source"><![CDATA[-- Guided goals: a step-by-step list (Config.Goals) that teaches the game. The server checks the
@@ -1766,7 +1862,7 @@ return Goals
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00024">
+			<Item class="ModuleScript" referent="RBX00026">
 				<Properties>
 					<string name="Name">Hauling</string>
 					<ProtectedString name="Source"><![CDATA[-- Hauling: everything you dump waits in your trader's basket. Every second the trader buys
@@ -1911,11 +2007,12 @@ local function visit(player, def)
 	end
 	local pivot = stall:GetPivot()
 	local stop = Vector3.new(pivot.Position.X, 1.2, pivot.Position.Z) + pivot.LookVector * Vector3.new(1, 0, 1) * 14
-	local outward = Plots.centre(plotIndex).Unit
-	local entrance = Plots.entrance(plotIndex)
-	local road = Vector3.new(entrance.X, 1.2, entrance.Z) - outward * 26
+	local start = Config.TruckStart
+	local road = Plots.centre(plotIndex) + Vector3.new(start[1], 1.2, start[3])
 	local truck = makeTruck(def)
 	truck.PrimaryPart.CFrame = CFrame.lookAt(road, stop)
+	truck:SetAttribute("Owner", player.UserId) -- other players' screens hide it
+	Plots.tag(truck, plotIndex)
 	truck.Parent = trucks
 	local seconds = math.clamp((stop - road).Magnitude / 16, 2, 8)
 	local arrive = TweenService:Create(truck.PrimaryPart, TweenInfo.new(seconds, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), { CFrame = CFrame.lookAt(stop, stop + (stop - road)) })
@@ -1967,7 +2064,7 @@ return Hauling
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00025">
+			<Item class="ModuleScript" referent="RBX00027">
 				<Properties>
 					<string name="Name">HayItems</string>
 					<ProtectedString name="Source"><![CDATA[-- Every physical bit of hay lying on a plot: bundles (loose hay), bales, wrapped bales and
@@ -2099,7 +2196,7 @@ return HayItems
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00026">
+			<Item class="ModuleScript" referent="RBX00028">
 				<Properties>
 					<string name="Name">Haystack</string>
 					<ProtectedString name="Source"><![CDATA[-- The Golden Loft: the secret level in the clouds above the hub, with its golden haystack.
@@ -2160,7 +2257,7 @@ return Haystack
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00027">
+			<Item class="ModuleScript" referent="RBX00029">
 				<Properties>
 					<string name="Name">Loft</string>
 					<ProtectedString name="Source"><![CDATA[-- The Golden Loft: the secret level above the hub, open only to players with all ten
@@ -2201,7 +2298,7 @@ return Loft
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00028">
+			<Item class="ModuleScript" referent="RBX0002A">
 				<Properties>
 					<string name="Name">LooseHay</string>
 					<ProtectedString name="Source"><![CDATA[-- You and loose hay: press G to drop what you carry as a bundle; E picks up a bale, wrapped
@@ -2321,7 +2418,7 @@ return LooseHay
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00029">
+			<Item class="ModuleScript" referent="RBX0002B">
 				<Properties>
 					<string name="Name">Machines</string>
 					<ProtectedString name="Source"><![CDATA[-- Machines harvest the top of your pile into your silo every second, if your generators make
@@ -2477,7 +2574,7 @@ return Machines
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Script" referent="RBX0002A">
+			<Item class="Script" referent="RBX0002C">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Starts the game. The ground and spawn point are built first, so nobody spawns into the void.
@@ -2611,6 +2708,7 @@ end)
 -- Each part starts on its own: if one breaks, its error shows in Output and the rest still run.
 local parts = {
 	{ "Search", Search.init }, -- harvesting first: it matters most
+	{ "Piles", Piles.init }, -- each screen asks for its own haystack
 	{ "Stamina", Stamina.init }, -- before PlayerData, so it hears every player load
 	{ "Detector", Detector.init },
 	{ "Plots", Plots.init },
@@ -2638,7 +2736,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002B">
+			<Item class="ModuleScript" referent="RBX0002D">
 				<Properties>
 					<string name="Name">Monetization</string>
 					<ProtectedString name="Source"><![CDATA[-- Robux items. Every ID in Config.GamePasses and Config.Products starts at 0 (switched off);
@@ -2756,7 +2854,7 @@ return Monetization
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002C">
+			<Item class="ModuleScript" referent="RBX0002E">
 				<Properties>
 					<string name="Name">Orders</string>
 					<ProtectedString name="Source"><![CDATA[-- Delivery orders: one at a time, a truck driver asks for straws of one kind (bundles, bales,
@@ -2824,7 +2922,7 @@ return Orders
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002D">
+			<Item class="ModuleScript" referent="RBX0002F">
 				<Properties>
 					<string name="Name">Pieces</string>
 					<ProtectedString name="Source"><![CDATA[-- What each buildable item looks like, built from parts around `cf`: the base centre on the
@@ -3058,7 +3156,7 @@ return Pieces
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002E">
+			<Item class="ModuleScript" referent="RBX00030">
 				<Properties>
 					<string name="Name">PiecesBelts</string>
 					<ProtectedString name="Source"><![CDATA[-- Conveyor belts, the conveyor down off a platform, and the bale maker. Belts move anything
@@ -3131,7 +3229,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002F">
+			<Item class="ModuleScript" referent="RBX00031">
 				<Properties>
 					<string name="Name">PiecesFactory</string>
 					<ProtectedString name="Source"><![CDATA[-- The factory line's pieces: belt corners and splitters, Hay Arms and Hay Throwers that feed
@@ -3242,7 +3340,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00030">
+			<Item class="ModuleScript" referent="RBX00032">
 				<Properties>
 					<string name="Name">Piles</string>
 					<ProtectedString name="Source"><![CDATA[-- Each player's 70 m pile: 5,000 clumps of 1,000 straws on their plot, built from their save
@@ -3263,7 +3361,8 @@ local piles = {} -- [plot index] = { folder, origin = Vector3 }
 local cursor = setmetatable({}, { __mode = "k" }) -- [data] = where the machines got to in machineOrder
 local terrain = workspace.Terrain
 local HEAP = Enum.Material.Grass -- recoloured to straw; its grass blades read as loose straw
-local STEPS = 8 -- a clump shrinks in this many visible steps as you harvest it
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local HeapTerrain = require(Shared:WaitForChild("HeapTerrain"))(Config)
 
 local function setup()
 	local c = if Config.HayTexture ~= "" then Config.HayTint else Config.HeapColour
@@ -3279,24 +3378,24 @@ local function origin(plotIndex)
 	return Vector3.new(x, 0, z)
 end
 
--- How full a clump's terrain cell looks: the heap's rounded outside, shrinking as it's harvested.
-local function fullness(index, left)
-	if left <= 0 then
-		return 0
+-- Every player's haystack stands in the same place, so each player's screen draws only its own
+-- (client/PileView.luau): the server sends it the whole heap on joining and each changed clump.
+local function send(plotIndex, message)
+	local owner = Plots.owner(plotIndex)
+	if owner then
+		Remotes.PileSync:FireClient(owner, message)
 	end
-	local step = math.ceil(left / Economy.STRAWS_PER_CLUMP * STEPS) / STEPS
-	return Layout.shape[index] * (0.3 + 0.7 * step)
+end
+
+function Piles.sync(plotIndex)
+	local pile = piles[plotIndex]
+	if pile and pile.data then
+		send(plotIndex, { kind = "full", removed = pile.data.removed, partial = pile.data.partial })
+	end
 end
 
 local function writeCell(plotIndex, index, left)
-	local o = piles[plotIndex] and piles[plotIndex].origin
-	if not o then
-		return
-	end
-	local c = o + Vector3.new(Layout[index][1], Layout[index][2], Layout[index][3])
-	local half = Vector3.new(1, 1, 1) * (Config.ClumpSize / 2)
-	local amount = fullness(index, left)
-	terrain:WriteVoxels(Region3.new(c - half, c + half), Config.ClumpSize, { { { if amount > 0 then HEAP else Enum.Material.Air } } }, { { { amount } } })
+	send(plotIndex, { kind = "cell", index = index, left = left })
 end
 
 function Piles.position(plotIndex, clump)
@@ -3353,27 +3452,9 @@ function Piles.build(plotIndex, d)
 	folder.Parent = Plots.folder(plotIndex)
 	local o = origin(plotIndex)
 	piles[plotIndex] = { folder = folder, origin = o }
-	local s = Config.ClumpSize
-	local n = math.ceil(Config.PileRadiusBottom / s) + 1
-	local materials, amounts = {}, {}
-	for x = 1, 2 * n + 1 do
-		materials[x], amounts[x] = {}, {}
-		for y = 1, Config.PileLayers do
-			materials[x][y], amounts[x][y] = {}, {}
-			for z = 1, 2 * n + 1 do
-				materials[x][y][z], amounts[x][y][z] = Enum.Material.Air, 0
-			end
-		end
-	end
-	for index, cell in ipairs(Layout.cell) do
-		local amount = fullness(index, Profile.clumpLeft(d, index))
-		if amount > 0 then
-			local x, y, z = cell[1] + n + 1, cell[2] + 1, cell[3] + n + 1
-			materials[x][y][z], amounts[x][y][z] = HEAP, amount
-		end
-	end
-	local corner = o - Vector3.new(n * s + s / 2, 0, n * s + s / 2)
-	terrain:WriteVoxels(Region3.new(corner, corner + Vector3.new((2 * n + 1) * s, Config.PileLayers * s, (2 * n + 1) * s)), s, materials, amounts)
+	folder:SetAttribute("Owner", Plots.owner(plotIndex) and Plots.owner(plotIndex).UserId or 0)
+	piles[plotIndex].data = d
+	Piles.sync(plotIndex)
 	-- loose hay mounds spilled round the foot of the heap, so it sits in its own straw
 	local rng = Random.new(plotIndex)
 	for i = 1, Config.HeapMounds do
@@ -3387,11 +3468,8 @@ function Piles.build(plotIndex, d)
 	return piles[plotIndex]
 end
 
--- Clears a plot's heap from the terrain (when its player leaves).
+-- Forgets a plot's heap (when its player leaves; their screen drew it, nobody else's did).
 function Piles.clear(plotIndex)
-	local o = origin(plotIndex)
-	local reach = (math.ceil(Config.PileRadiusBottom / Config.ClumpSize) + 1) * Config.ClumpSize + Config.ClumpSize / 2
-	terrain:FillBlock(CFrame.new(o + Vector3.new(0, Config.PileLayers * Config.ClumpSize / 2, 0)), Vector3.new(reach * 2, Config.PileLayers * Config.ClumpSize, reach * 2), Enum.Material.Air)
 	piles[plotIndex] = nil
 end
 
@@ -3404,13 +3482,22 @@ function Piles.take(plotIndex, d, clump, amount)
 		return 0, false
 	end
 	Profile.setClumpLeft(d, clump, left - taken)
-	if fullness(clump, left - taken) ~= fullness(clump, left) then
+	if HeapTerrain.fullness(clump, left - taken) ~= HeapTerrain.fullness(clump, left) then
 		writeCell(plotIndex, clump, left - taken)
 	end
 	return taken, left - taken <= 0
 end
 
 -- The next clump for the machines: they peel the heap from the outside in, bottom first.
+function Piles.init()
+	Remotes.PileSync.OnServerEvent:Connect(function(player) -- the screen asks once it's ready
+		local plotIndex = Plots.of(player)
+		if plotIndex then
+			Piles.sync(plotIndex)
+		end
+	end)
+end
+
 function Piles.next(d)
 	local order = Layout.machineOrder
 	local i = cursor[d] or 1
@@ -3443,7 +3530,7 @@ return Piles
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00031">
+			<Item class="ModuleScript" referent="RBX00033">
 				<Properties>
 					<string name="Name">PlayerData</string>
 					<ProtectedString name="Source"><![CDATA[-- Each player's saved progress and the leaderboard. If the DataStore can't be read (Studio
@@ -3728,23 +3815,24 @@ return PlayerData
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00032">
+			<Item class="ModuleScript" referent="RBX00034">
 				<Properties>
 					<string name="Name">Plots</string>
-					<ProtectedString name="Source"><![CDATA[-- The four plots around the hub. A player gets a free plot when they join and gives it
--- back when they leave; their pile and buildings are rebuilt from their save each visit.
+					<ProtectedString name="Source"><![CDATA[-- The four plots. They all share the middle of the farm: a player gets a free plot (an index)
+-- when they join and gives it back when they leave; their haystack and buildings are rebuilt
+-- from their save each visit. Each plot has a collision group, and groups don't collide with
+-- each other, so players' buildings, hay and characters pass through other players' (each
+-- player's screen also hides other players' plots: see client/OnlyMine.luau).
+local PhysicsService = game:GetService("PhysicsService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 
-local Build = require(script.Parent.Build)
-
 local Plots = {}
 local owners = {} -- [plot index] = player
 local byPlayer = {} -- [player] = plot index
-local signs = {} -- [plot index] = TextLabel
 
 function Plots.centre(index)
 	local c = Config.PlotCentres[index]
@@ -3769,10 +3857,29 @@ function Plots.contains(index, position, margin)
 	return math.abs(position.X - centre.X) <= half and math.abs(position.Z - centre.Z) <= half and position.Y >= -2 and position.Y <= 320
 end
 
--- Where a player arrives on their plot: the corner nearest the hub.
+-- Where a player arrives: south of the haystack, facing it.
 function Plots.entrance(index)
-	local centre = Plots.centre(index)
-	return centre - centre.Unit * (Config.PlotSize / 2 - 3) + Vector3.new(0, 4, 0)
+	local e = Config.FarmEntrance
+	return Plots.centre(index) + Vector3.new(e[1], e[2] + 4, e[3])
+end
+
+function Plots.group(index)
+	return "Plot" .. index
+end
+
+-- Puts a part (and everything later added under `root`) in the plot's collision group.
+function Plots.tag(root, index)
+	local group = Plots.group(index)
+	local function set(part)
+		if part:IsA("BasePart") then
+			part.CollisionGroup = group
+		end
+	end
+	set(root)
+	for _, part in ipairs(root:GetDescendants()) do
+		set(part)
+	end
+	return root.DescendantAdded:Connect(set)
 end
 
 function Plots.build()
@@ -3780,23 +3887,21 @@ function Plots.build()
 	root.Name = "Plots"
 	root.Parent = workspace
 	for index in ipairs(Config.PlotCentres) do
+		pcall(function()
+			PhysicsService:RegisterCollisionGroup(Plots.group(index))
+		end)
+	end
+	for index in ipairs(Config.PlotCentres) do
+		for other in ipairs(Config.PlotCentres) do
+			if other ~= index then
+				PhysicsService:CollisionGroupSetCollidable(Plots.group(index), Plots.group(other), false)
+			end
+		end
 		local folder = Instance.new("Folder")
 		folder.Name = "Plot" .. index
 		folder:SetAttribute("Index", index)
 		folder.Parent = root
-		local centre = Plots.centre(index)
-		local half = Config.PlotSize / 2
-		Build.part({ name = "Ground", size = Vector3.new(Config.PlotSize, 1, Config.PlotSize), cframe = CFrame.new(centre + Vector3.new(0, -0.45, 0)), color = { 124, 140, 66 }, material = "LeafyGrass", parent = folder })
-		for _, side in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
-			local edge = centre + Vector3.new(side[1] * half, 0.3, side[2] * half)
-			local size = if side[1] ~= 0 then Vector3.new(1, 0.6, Config.PlotSize) else Vector3.new(Config.PlotSize, 0.6, 1)
-			Build.part({ name = "Edge", size = size, cframe = CFrame.new(edge), color = { 150, 110, 70 }, material = "WoodPlanks", parent = folder })
-		end
-		local corner = centre - centre.Unit * (half - 2)
-		local sign = Build.part({ name = "PlotSign", size = Vector3.new(12, 3, 0.4), cframe = CFrame.lookAt(corner + Vector3.new(0, 7, 0), Vector3.new(0, 7, 0)), color = { 246, 234, 204 }, material = "WoodPlanks", parent = folder })
-		Build.post({ name = "SignPost", color = { 122, 86, 52 }, material = "Wood", parent = folder }, CFrame.new(corner), 5.5, 0.6)
-		signs[index] = Build.text(sign, Enum.NormalId.Front, "FREE PLOT")
-		Build.text(sign, Enum.NormalId.Back, "PLOT " .. index)
+		Plots.tag(folder, index)
 	end
 end
 
@@ -3806,7 +3911,18 @@ function Plots.claim(player)
 		if not owners[index] then
 			owners[index] = player
 			byPlayer[player] = index
-			signs[index].Text = player.DisplayName .. "'s farm"
+			-- the player's character goes in their plot's group, every time it spawns
+			local function tagCharacter(character)
+				Plots.tag(character, index)
+			end
+			if player.Character then
+				tagCharacter(player.Character)
+			end
+			player.CharacterAdded:Connect(function(character)
+				if byPlayer[player] == index then
+					tagCharacter(character)
+				end
+			end)
 			return index
 		end
 	end
@@ -3822,7 +3938,6 @@ function Plots.release(player)
 		end
 		owners[index] = nil
 		byPlayer[player] = nil
-		signs[index].Text = "FREE PLOT"
 		for _, child in ipairs(Plots.folder(index):GetChildren()) do
 			if child.Name == "Pile" or child.Name == "Built" or child.Name == "Loose" then -- loose straws are saved
 				child:Destroy()
@@ -3839,7 +3954,7 @@ return Plots
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00033">
+			<Item class="ModuleScript" referent="RBX00035">
 				<Properties>
 					<string name="Name">Processing</string>
 					<ProtectedString name="Source"><![CDATA[-- What happens when loose hay touches a machine's sensor on its owner's plot: the trader's
@@ -3970,7 +4085,7 @@ return Processing
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00034">
+			<Item class="ModuleScript" referent="RBX00036">
 				<Properties>
 					<string name="Name">Profile</string>
 					<ProtectedString name="Source"><![CDATA[-- A player's data model: what is saved, with its defaults. Anything missing or of the
@@ -4141,7 +4256,7 @@ return Profile
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00035">
+			<Item class="ModuleScript" referent="RBX00037">
 				<Properties>
 					<string name="Name">Scenery</string>
 					<ProtectedString name="Source"><![CDATA[-- The countryside of Hollow Creek Farm, packed into the ring between the plots and the fence
@@ -4156,7 +4271,6 @@ local Kit = require(script.Parent.SceneryKit)
 local Props = require(script.Parent.SceneryProps)
 local Nature = require(script.Parent.SceneryNature)
 local Pens = require(script.Parent.SceneryAnimals)
-local PlotFences = require(script.Parent.SceneryPlots)
 
 local Scenery = {}
 local C = Kit.C
@@ -4364,7 +4478,6 @@ function Scenery.build()
 		end },
 		{ "farmhouse", function() farmhouse(folder, facing(60, -207, 60, 0)) end },
 		{ "windmill", function() windmill(folder, facing(210, -210, 0, 0)) end },
-		{ "plot fences", function() PlotFences.build(folder) end },
 		{ "props", function() Props.build(folder) end },
 		{ "nature", function() Nature.build(folder) end },
 		{ "animals", function() Pens.build(folder) end },
@@ -4381,7 +4494,7 @@ return Scenery
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00036">
+			<Item class="ModuleScript" referent="RBX00038">
 				<Properties>
 					<string name="Name">SceneryAnimals</string>
 					<ProtectedString name="Source"><![CDATA[-- Animal pens just west of the plots and the cute blocky animals in them: pigs, cows and sheep
@@ -4604,7 +4717,7 @@ return Pens
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00037">
+			<Item class="ModuleScript" referent="RBX00039">
 				<Properties>
 					<string name="Name">SceneryKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Shared helpers for the countryside around the plots (see Scenery): a part maker that works
@@ -4744,7 +4857,7 @@ return Kit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00038">
+			<Item class="ModuleScript" referent="RBX0003A">
 				<Properties>
 					<string name="Name">SceneryNature</string>
 					<ProtectedString name="Source"><![CDATA[-- The living countryside (see Scenery): dirt lanes, the duck pond, the pumpkin and corn
@@ -4941,80 +5054,7 @@ return Nature
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00039">
-				<Properties>
-					<string name="Name">SceneryPlots</string>
-					<ProtectedString name="Source"><![CDATA[-- A low split-rail fence round each plot, just outside its edge, with a gap at the corner
--- nearest the hub (the plot entrance, where players arrive). A lantern and a few small hay
--- bales stand by the gap. Everything sits on the 1-3 stud border outside the plot, so the
--- plot itself stays free to build on. The road sides are walk-through (step onto your plot
--- anywhere); only the outer sides, facing the countryside, are solid. See Scenery.
-local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
-local Kit = require(script.Parent.SceneryKit)
-
-local PlotFences = {}
-local C = Kit.C
-local part, bit = Kit.part, Kit.bit
-local ORIGIN = CFrame.new()
-local OUT = 1.2 -- the fence line, this far outside the plot's edge
-local GAP = 16 -- the entrance: no fence this far along each edge from the hub corner
-local POST_STEP = 8
-
--- One straight run of fence from a to b (world points on the ground).
-local function run(m, a, b, solid)
-	local length = (b - a).Magnitude
-	local n = math.max(1, math.floor(length / POST_STEP + 0.5))
-	for i = 0, n do
-		local at = a:Lerp(b, i / n)
-		part(m, ORIGIN, "RailPost", Vector3.new(0.6, 3.2, 0.6), at + Vector3.new(0, 1.6, 0), C.darkWood, "Wood", { collide = solid, shadow = false })
-	end
-	local mid = (a + b) / 2
-	for k, y in ipairs({ 1.2, 2.5 }) do
-		-- split rails: each one a touch askew, as if laid by hand
-		local tilt = CFrame.Angles(0, 0, math.rad(if k == 1 then 4 else -3))
-		part(m, ORIGIN, "SplitRail", Vector3.new(0.35, 0.35, length), CFrame.lookAt(mid + Vector3.new(0, y, 0), b + Vector3.new(0, y, 0)) * tilt, C.wood, "Wood", { collide = solid, shadow = false })
-	end
-end
-
--- A small square bale lying along the border.
-local function bale(m, at, alongX, high)
-	local size = if alongX then Vector3.new(2.4, 1.3, 1.4) else Vector3.new(1.4, 1.3, 2.4)
-	part(m, ORIGIN, "SmallBale", size, at + Vector3.new(0, 0.65 + (if high then 1.3 else 0), 0), C.hay, "Fabric", { collide = false })
-	bit(m, ORIGIN, "BaleTwine", size + (if alongX then Vector3.new(-1.6, 0.05, 0.05) else Vector3.new(0.05, 0.05, -1.6)), at + Vector3.new(0, 0.65 + (if high then 1.3 else 0), 0), { 150, 104, 60 }, "Fabric")
-end
-
-local function plotFence(folder, index, centre)
-	local m = Kit.model(folder, "PlotFence" .. index)
-	local sx, sz = math.sign(centre.X), math.sign(centre.Z)
-	local half = Config.PlotSize / 2
-	local inX, outX = centre.X - sx * (half + OUT), centre.X + sx * (half + OUT) -- road side, far side
-	local inZ, outZ = centre.Z - sz * (half + OUT), centre.Z + sz * (half + OUT)
-	local cornerX, cornerZ = centre.X - sx * half, centre.Z - sz * half -- the hub corner
-	run(m, Vector3.new(inX, 0, cornerZ + sz * GAP), Vector3.new(inX, 0, outZ), false)
-	run(m, Vector3.new(cornerX + sx * GAP, 0, inZ), Vector3.new(outX, 0, inZ), false)
-	run(m, Vector3.new(outX, 0, inZ), Vector3.new(outX, 0, outZ), true)
-	run(m, Vector3.new(inX, 0, outZ), Vector3.new(outX, 0, outZ), true)
-	-- the entrance: a lantern on the last post by the north/south road, bales just past it
-	Kit.lantern(m, CFrame.new(inX, 0, cornerZ + sz * GAP), 4.5)
-	local bx = centre.X - sx * (half + 2.2)
-	bale(m, Vector3.new(bx, 0, cornerZ + sz * (GAP + 2)), false, false)
-	bale(m, Vector3.new(bx, 0, cornerZ + sz * (GAP + 4.6)), false, false)
-	bale(m, Vector3.new(bx, 0, cornerZ + sz * (GAP + 3.3)), false, true)
-	-- (nothing extra on the east/west road side: the middle of those roads, |z| < 13, stays clear)
-end
-
-function PlotFences.build(folder)
-	local m = Kit.model(folder, "PlotFences")
-	for index, c in ipairs(Config.PlotCentres) do
-		plotFence(m, index, Vector3.new(c[1], 0, c[2]))
-	end
-end
-
-return PlotFences
-]]></ProtectedString>
-				</Properties>
-			</Item>
-			<Item class="ModuleScript" referent="RBX0003A">
+			<Item class="ModuleScript" referent="RBX0003B">
 				<Properties>
 					<string name="Name">SceneryProps</string>
 					<ProtectedString name="Source"><![CDATA[-- Farm props for the countryside (see Scenery): a tractor and trailer, carts, round hay bales,
@@ -5216,7 +5256,7 @@ return Props
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003B">
+			<Item class="ModuleScript" referent="RBX0003C">
 				<Properties>
 					<string name="Name">Search</string>
 					<ProtectedString name="Source"><![CDATA[-- The loop: click the clump you're looking at to harvest it onto your tool, sell at the
@@ -5488,7 +5528,7 @@ return Search
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003C">
+			<Item class="ModuleScript" referent="RBX0003D">
 				<Properties>
 					<string name="Name">Shop</string>
 					<ProtectedString name="Source"><![CDATA[-- Buying with coins: tools and silos (in order), perks for the tool you hold, and
@@ -5719,7 +5759,7 @@ return Shop
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003D">
+			<Item class="ModuleScript" referent="RBX0003E">
 				<Properties>
 					<string name="Name">Stamina</string>
 					<ProtectedString name="Source"><![CDATA[-- Stamina: each harvest click spends some (Config.Stamina) and it refills all the time. Out of
@@ -5855,7 +5895,7 @@ return Stamina
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003E">
+			<Item class="ModuleScript" referent="RBX0003F">
 				<Properties>
 					<string name="Name">Structures</string>
 					<ProtectedString name="Source"><![CDATA[-- Free building on your own plot: place pieces, machines and generators you've bought, take
@@ -5904,17 +5944,31 @@ local function spawnPiece(plotIndex, entry, slot)
 	return model
 end
 
--- Everyone has a trader: one stall, placed between the hub and the heap on the first visit.
+-- Everyone has a trader: one stall, between the haystack and where you arrive, facing you.
 -- Players can take it back (X) and put it anywhere, even up on a platform.
-local function ensureTrader(plotIndex, d)
+local function ensureTrader(_, d)
 	if Economy.owned(d, "trader") > 0 then
 		return
 	end
-	local centre = Plots.centre(plotIndex)
-	local toHub = -centre.Unit
-	local rel = toHub * Config.TraderDistance
-	local turn = math.deg(math.atan2(-toHub.X, -toHub.Z)) -- the stall's front faces the hub
-	table.insert(d.placed, { k = "trader", x = math.floor(rel.X * 10 + 0.5) / 10, y = 0, z = math.floor(rel.Z * 10 + 0.5) / 10, r = turn % 360 })
+	local t = Config.TraderStart
+	table.insert(d.placed, { k = "trader", x = t[1], y = t[2], z = t[3], r = 180 }) -- front (-Z) turned to face south
+end
+
+-- True if a spot is inside the haystack (where nothing can be built).
+local function inHaystack(rel)
+	return Vector3.new(rel.X, 0, rel.Z).Magnitude < Config.BuildClear
+end
+
+-- Things placed where the haystack now stands (old saves, from when plots were elsewhere) go
+-- back into the player's inventory, to be built again.
+local function clearHaystack(d)
+	for i = #d.placed, 1, -1 do
+		local e = d.placed[i]
+		if inHaystack(Vector3.new(e.x, e.y, e.z)) then
+			table.remove(d.placed, i)
+			d.inventory[e.k] = (d.inventory[e.k] or 0) + 1
+		end
+	end
 end
 
 -- Rebuilds everything the player has placed (on joining).
@@ -5922,6 +5976,7 @@ function Structures.build(plotIndex, d)
 	local owner = Plots.owner(plotIndex)
 	if owner then
 		PlayerData.update(owner, function(data)
+			clearHaystack(data)
 			ensureTrader(plotIndex, data)
 		end)
 	end
@@ -5951,7 +6006,9 @@ local function place(player, id, position, rotation)
 		return false, "Can't build there."
 	end
 	if not Plots.contains(plotIndex, position, 1) then
-		return false, "You can only build on your own plot."
+		return false, "You can only build on your farm."
+	elseif inHaystack(position - Plots.centre(plotIndex)) then
+		return false, "That's inside the haystack: build next to it."
 	end
 	if #d.placed >= Config.MaxPlaced then
 		return false, "Your plot is full (" .. Config.MaxPlaced .. " things)."
@@ -6041,7 +6098,7 @@ return Structures
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003F">
+			<Item class="ModuleScript" referent="RBX00040">
 				<Properties>
 					<string name="Name">ToolLook</string>
 					<ProtectedString name="Source"><![CDATA[-- Tools that wear a model you imported in Studio (Config.Tools[n].model = its asset ID).
@@ -6099,7 +6156,7 @@ return ToolLook
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00040">
+			<Item class="ModuleScript" referent="RBX00041">
 				<Properties>
 					<string name="Name">Tools</string>
 					<ProtectedString name="Source"><![CDATA[-- The search tools: a pitchfork-shaped Tool per level, coloured from Config.Tools.
@@ -6254,7 +6311,7 @@ return Tools
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00041">
+			<Item class="ModuleScript" referent="RBX00042">
 				<Properties>
 					<string name="Name">Wheel</string>
 					<ProtectedString name="Source"><![CDATA[-- The Wheel of Fortune: one Robux spin (the WheelSpin product) = one prize, picked here on the
@@ -6328,7 +6385,7 @@ return Wheel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00042">
+			<Item class="ModuleScript" referent="RBX00043">
 				<Properties>
 					<string name="Name">World</string>
 					<ProtectedString name="Source"><![CDATA[-- Hollow Creek Farm: four plots around a hub with the merchant, the Wheel of Fortune and the
@@ -6346,9 +6403,10 @@ local WOOD = { 122, 86, 52 }
 local GROUND = 520 -- the ground is GROUND x GROUND studs
 local FENCE = 245 -- the boundary fence, this far from the hub on each axis
 
-World.MERCHANT = Vector3.new(0, 0, -36) -- on the north road
-World.WHEEL = Vector3.new(0, 0, 36) -- on the south road
-World.DOOR = Vector3.new(36, 0, 0) -- the golden door, on the east road
+-- The haystack stands in the middle now, so these stand round it, facing it.
+World.MERCHANT = Vector3.new(-42, 0, 100) -- just west of where you arrive
+World.WHEEL = Vector3.new(42, 0, 100) -- just east of where you arrive
+World.DOOR = Vector3.new(112, 0, 0) -- the golden door, on the east road
 World.LOFT = Vector3.new(0, 330, 0) -- the secret level floats high above the hub
 
 local function prompt(parent, action, text, object, key)
@@ -6373,7 +6431,7 @@ function World.ground()
 	terrain:FillBlock(CFrame.new(0, -8, 0), Vector3.new(GROUND, 16, GROUND), Enum.Material.LeafyGrass)
 	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(30, 4, 330), Enum.Material.Ground)
 	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(330, 4, 30), Enum.Material.Ground)
-	terrain:FillCylinder(CFrame.new(0, -2, 0), 4, 22, Enum.Material.Cobblestone)
+	terrain:FillCylinder(CFrame.new(0, -2, 0), 4, 58, Enum.Material.Cobblestone) -- the yard the haystack stands in
 	-- a few soft hills just past the edge of the ground, so the world fades into countryside
 	local rng = Random.new(11)
 	for i = -2, 2 do
@@ -6391,7 +6449,7 @@ function World.ground()
 	spawn.Name = "Spawn"
 	spawn.Anchored = true
 	spawn.Size = Vector3.new(10, 1, 10)
-	spawn.CFrame = CFrame.new(0, 0.5, 0)
+	spawn.CFrame = CFrame.new(Config.FarmEntrance[1], 0.5, Config.FarmEntrance[3] + 10) -- south of the haystack
 	spawn.Color = Color3.fromRGB(196, 150, 92)
 	spawn.Material = Enum.Material.WoodPlanks
 	spawn.Duration = 0
@@ -6531,9 +6589,9 @@ function World.build()
 	merchant(farm)
 	wheel(farm)
 	door(farm)
-	for i = 0, 3 do
-		local a = i / 4 * math.pi * 2 + math.pi / 4
-		local base = CFrame.new(math.cos(a) * 19, 0, math.sin(a) * 19)
+	for i = 0, 7 do -- lamps in a ring round the haystack
+		local a = i / 8 * math.pi * 2 + math.pi / 8
+		local base = CFrame.new(math.cos(a) * 62, 0, math.sin(a) * 62)
 		Build.post({ name = "LampPost", color = { 52, 48, 46 }, material = "Metal", parent = farm }, base, 9, 0.6)
 		local lamp = Build.part({ name = "Lamp", size = Vector3.new(1.6, 1.6, 1.6), cframe = base * CFrame.new(0, 9.6, 0), color = { 255, 196, 110 }, material = "Neon", parent = farm })
 		local light = Instance.new("PointLight")
@@ -6548,7 +6606,7 @@ return World
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00043">
+			<Item class="ModuleScript" referent="RBX00044">
 				<Properties>
 					<string name="Name">Worlds</string>
 					<ProtectedString name="Source"><![CDATA[-- The portal worlds: four arches on the hub's west road lead to the Moon, the Ember Lands,
@@ -6598,8 +6656,8 @@ function Worlds.publish(player)
 end
 
 local function hubSpot(w)
-	local x = Config.WorldPortals.xs[indexOf[w.id]]
-	return CFrame.lookAt(Vector3.new(x, 4, 0), Vector3.new(0, 4, 0))
+	local spot = Config.WorldPortals.spots[indexOf[w.id]]
+	return CFrame.lookAt(Vector3.new(spot[1] + 10, 4, spot[2]), Vector3.new(0, 4, spot[2])) -- just in front of its arch
 end
 
 local function teleport(player, cf)
@@ -6687,8 +6745,8 @@ function Worlds.build()
 	local root = Kit.folder("Worlds", workspace)
 	local portals = Kit.folder("Portals", root)
 	for i, w in ipairs(Config.Worlds) do
-		local x = Config.WorldPortals.xs[i]
-		local cf = CFrame.lookAt(Vector3.new(x, 0, Config.WorldPortals.z), Vector3.new(x, 0, 0))
+		local spot = Config.WorldPortals.spots[i]
+		local cf = CFrame.lookAt(Vector3.new(spot[1], 0, spot[2]), Vector3.new(0, 0, spot[2]))
 		local membrane = Kit.arch(cf, Config.WorldHay[w.id][1], portals, w.name, "Open: " .. Format.short(w.price) .. " coins")
 		Kit.prompt(membrane, "portal", "Travel", w.name, w.id, Config.WorldPortals.holdSeconds)
 	end
@@ -6732,7 +6790,7 @@ return Worlds
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00044">
+			<Item class="ModuleScript" referent="RBX00045">
 				<Properties>
 					<string name="Name">WorldsAtlantis</string>
 					<ProtectedString name="Source"><![CDATA[-- Bubble City: a domed city on the sea floor inside a great air bubble. Sand, coral, kelp,
@@ -6872,7 +6930,7 @@ return Atlantis
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00045">
+			<Item class="ModuleScript" referent="RBX00046">
 				<Properties>
 					<string name="Name">WorldsField</string>
 					<ProtectedString name="Source"><![CDATA[-- Haystack Stadium: a striped grass pitch with its lines and two goals, stands of seats on three
@@ -7011,7 +7069,7 @@ return Field
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00046">
+			<Item class="ModuleScript" referent="RBX00047">
 				<Properties>
 					<string name="Name">WorldsKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Shared pieces for the portal worlds: the arches, signs, lights, embers and each world's
@@ -7147,7 +7205,7 @@ return Kit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00047">
+			<Item class="ModuleScript" referent="RBX00048">
 				<Properties>
 					<string name="Name">WorldsLava</string>
 					<ProtectedString name="Source"><![CDATA[-- The Ember Lands: dark basalt, a smoking volcano, glowing lava rivers with stone bridges,
@@ -7274,7 +7332,7 @@ return Lava
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00048">
+			<Item class="ModuleScript" referent="RBX00049">
 				<Properties>
 					<string name="Name">WorldsMoon</string>
 					<ProtectedString name="Source"><![CDATA[-- The Moon: grey dust with craters and boulders, a little landed lander with its flag (a
@@ -7401,19 +7459,19 @@ return Moon
 			</Item>
 		</Item>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX00049">
+	<Item class="StarterPlayer" referent="RBX0004A">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX0004A">
+		<Item class="StarterPlayerScripts" referent="RBX0004B">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX0004B">
+			<Item class="Folder" referent="RBX0004C">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX0004C">
+				<Item class="ModuleScript" referent="RBX0004D">
 					<Properties>
 						<string name="Name">Animals</string>
 						<ProtectedString name="Source"><![CDATA[-- Brings the farm's animals to life on this screen only: each one ambles to a new spot in its
@@ -7593,7 +7651,7 @@ return Animals
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004D">
+				<Item class="ModuleScript" referent="RBX0004E">
 					<Properties>
 						<string name="Name">BuildMode</string>
 						<ProtectedString name="Source"><![CDATA[-- Free building in first person. Z and C pick from your inventory bar (or press M and click
@@ -7640,6 +7698,9 @@ local function aimPoint()
 	local camera = workspace.CurrentCamera
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
+	if player:GetAttribute("Plot") then -- pass through other players' hidden buildings and hay
+		params.CollisionGroup = "Plot" .. player:GetAttribute("Plot")
+	end
 	local ignore = {}
 	local things = { player.Character, ghost, workspace:FindFirstChild("MyEffects") }
 	for i = 1, 3 do
@@ -7893,7 +7954,7 @@ return BuildMode
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004E">
+				<Item class="ModuleScript" referent="RBX0004F">
 					<Properties>
 						<string name="Name">Controls</string>
 						<ProtectedString name="Source"><![CDATA[-- The shortcuts: Q shop, T home, G drop hay (or put down a bale), and on touch screens the
@@ -7982,7 +8043,7 @@ return Controls
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004F">
+				<Item class="ModuleScript" referent="RBX00050">
 					<Properties>
 						<string name="Name">Cursor</string>
 						<ProtectedString name="Source"><![CDATA[-- First person locks the mouse to the centre of the screen. Menus need a pointer, so a
@@ -8034,7 +8095,7 @@ return Cursor
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00050">
+				<Item class="ModuleScript" referent="RBX00051">
 					<Properties>
 						<string name="Name">Detector</string>
 						<ProtectedString name="Source"><![CDATA[-- The metal detector: hold Config.MetalDetector.key to sweep. The client only says "I'm
@@ -8156,7 +8217,7 @@ return Detector
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00051">
+				<Item class="ModuleScript" referent="RBX00052">
 					<Properties>
 						<string name="Name">Goals</string>
 						<ProtectedString name="Source"><![CDATA[-- The guided goal card (top left) and the coins-a-minute line under the coins counter.
@@ -8296,7 +8357,7 @@ return Goals
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00052">
+				<Item class="ModuleScript" referent="RBX00053">
 					<Properties>
 						<string name="Name">Guide</string>
 						<ProtectedString name="Source"><![CDATA[-- When your tool and bucket are full, a soft golden line runs from you to your trader's
@@ -8358,7 +8419,7 @@ return Guide
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00053">
+				<Item class="ModuleScript" referent="RBX00054">
 					<Properties>
 						<string name="Name">Harvest</string>
 						<ProtectedString name="Source"><![CDATA[-- Aiming in first person: the clump under the crosshair (within reach, on your own pile or the
@@ -8440,6 +8501,9 @@ local function cast(distance, ignoreEffects)
 	end
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
+	if player:GetAttribute("Plot") then -- pass through other players' hidden buildings and hay
+		params.CollisionGroup = "Plot" .. player:GetAttribute("Plot")
+	end
 	params.FilterDescendantsInstances = if ignoreEffects then { character, workspace:FindFirstChild("MyEffects") } else { character }
 	return workspace:Raycast(camera.CFrame.Position, camera.CFrame.LookVector * distance, params)
 end
@@ -8623,7 +8687,7 @@ return Harvest
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00054">
+				<Item class="ModuleScript" referent="RBX00055">
 					<Properties>
 						<string name="Name">HayFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The hay you can see moving: every harvest lifts a lump off the heap onto your tool, and
@@ -8721,7 +8785,7 @@ return HayFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00055">
+				<Item class="ModuleScript" referent="RBX00056">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: a crosshair, your pile's progress at the top, and on the left your
@@ -8873,7 +8937,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00056">
+				<Item class="ModuleScript" referent="RBX00057">
 					<Properties>
 						<string name="Name">Jetpack</string>
 						<ProtectedString name="Source"><![CDATA[-- The Jetpack (a Robux game pass; the server sets the "PassJetpack" attribute when you own it).
@@ -9055,7 +9119,7 @@ return Jetpack
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00057">
+				<Item class="ModuleScript" referent="RBX00058">
 					<Properties>
 						<string name="Name">Juice</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback that makes harvesting feel good: straw bursts, floating numbers, a soft camera
@@ -9244,7 +9308,7 @@ return Juice
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX00058">
+				<Item class="LocalScript" referent="RBX00059">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- The player's side of the game: first-person harvesting, building, the menus, and all the
@@ -9310,6 +9374,7 @@ end)
 step("touch pad", function()
 	TouchPad.mount(gui) -- before the parts that add buttons to it
 end)
+step("your haystack", function() require(script.Parent:WaitForChild("PileView")).start(); require(script.Parent:WaitForChild("OnlyMine")).start() end)
 step("harvesting", function()
 	Harvest.onMiss = function(text)
 		Notify.toast(text, Ui.colors.wood)
@@ -9547,7 +9612,7 @@ end)
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00059">
+				<Item class="ModuleScript" referent="RBX0005A">
 					<Properties>
 						<string name="Name">Music</string>
 						<ProtectedString name="Source"><![CDATA[-- Soft background music: the Config.Music playlist in a loop, low and relaxing, fading gently
@@ -9690,7 +9755,7 @@ return Music
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005A">
+				<Item class="ModuleScript" referent="RBX0005B">
 					<Properties>
 						<string name="Name">Notify</string>
 						<ProtectedString name="Source"><![CDATA[-- Messages: small toasts under the haystack counter, and a big banner for case news.
@@ -9796,7 +9861,7 @@ return Notify
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005B">
+				<Item class="ModuleScript" referent="RBX0005C">
 					<Properties>
 						<string name="Name">Offer</string>
 						<ProtectedString name="Source"><![CDATA[-- One gentle Robux suggestion per session: after Config.OfferAfterClumps clumps harvested since
@@ -9902,7 +9967,96 @@ return Offer
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005C">
+				<Item class="ModuleScript" referent="RBX0005D">
+					<Properties>
+						<string name="Name">OnlyMine</string>
+						<ProtectedString name="Source"><![CDATA[-- Every player's farm shares the middle of the map, so on your screen other players' buildings,
+-- loose hay, trucks and buckets are hidden (they can't touch you either: their plot's collision
+-- group doesn't collide with yours). Other players themselves stay visible, farming their own.
+local Players = game:GetService("Players")
+
+local player = Players.LocalPlayer
+local OnlyMine = {}
+
+local function hide(inst)
+	if inst:IsA("BasePart") then
+		inst.LocalTransparencyModifier = 1
+	elseif inst:IsA("ProximityPrompt") or inst:IsA("BillboardGui") or inst:IsA("SurfaceGui") or inst:IsA("ParticleEmitter") or inst:IsA("Beam") or inst:IsA("Light") or inst:IsA("Decal") then
+		pcall(function()
+			inst.Enabled = false
+		end)
+		if inst:IsA("Decal") then
+			inst.Transparency = 1
+		end
+	end
+end
+
+-- Hides everything under `root` now and whatever is added later.
+local function hideAll(root)
+	hide(root)
+	for _, inst in ipairs(root:GetDescendants()) do
+		hide(inst)
+	end
+	root.DescendantAdded:Connect(hide)
+end
+
+local function notMine(inst)
+	local owner = inst:GetAttribute("Owner")
+	return owner ~= nil and owner ~= player.UserId
+end
+
+function OnlyMine.start()
+	local hidden = setmetatable({}, { __mode = "k" })
+	local function once(root)
+		if not hidden[root] then
+			hidden[root] = true
+			hideAll(root)
+		end
+	end
+	local function plots()
+		local mine = player:GetAttribute("Plot")
+		local folder = workspace:FindFirstChild("Plots")
+		for _, plot in ipairs(folder and folder:GetChildren() or {}) do
+			if mine and plot:GetAttribute("Index") ~= mine then
+				once(plot)
+			end
+		end
+	end
+	player:GetAttributeChangedSignal("Plot"):Connect(plots)
+	task.spawn(function()
+		local folder = workspace:WaitForChild("Plots", 30)
+		if folder then
+			folder.ChildAdded:Connect(plots)
+		end
+		plots()
+	end)
+	-- trucks and buckets live outside the plots: hide the ones that aren't yours
+	for _, name in ipairs({ "Trucks", "Gear" }) do
+		task.spawn(function()
+			local folder = workspace:WaitForChild(name, 30)
+			if not folder then
+				return
+			end
+			local function check(child)
+				task.defer(function() -- the Owner attribute arrives with the model
+					if notMine(child) then
+						once(child)
+					end
+				end)
+			end
+			folder.ChildAdded:Connect(check)
+			for _, child in ipairs(folder:GetChildren()) do
+				check(child)
+			end
+		end)
+	end
+end
+
+return OnlyMine
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX0005E">
 					<Properties>
 						<string name="Name">OrderCard</string>
 						<ProtectedString name="Source"><![CDATA[-- The current delivery order, on the right of the screen: what the driver wants, how many
@@ -9956,7 +10110,7 @@ return OrderCard
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005D">
+				<Item class="ModuleScript" referent="RBX0005F">
 					<Properties>
 						<string name="Name">Panels</string>
 						<ProtectedString name="Source"><![CDATA[-- The windows: Shop, secret Achievements, Finds & Skins, and the Wheel of Fortune (odds first).
@@ -10161,7 +10315,57 @@ return Panels
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005E">
+				<Item class="ModuleScript" referent="RBX00060">
+					<Properties>
+						<string name="Name">PileView</string>
+						<ProtectedString name="Source"><![CDATA[-- Draws your own haystack on your screen. Every player's haystack stands in the same place in
+-- the middle of the farm, so each screen draws only its owner's, from what the server sends:
+-- the whole heap when you join (or a new needle grows a fresh one), then each changed clump.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local HeapTerrain = require(Shared:WaitForChild("HeapTerrain"))(Config)
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local player = Players.LocalPlayer
+local PileView = {}
+
+local function origin()
+	local plot = player:GetAttribute("Plot")
+	local centre = plot and Config.PlotCentres[plot]
+	return centre and HeapTerrain.origin(centre[1], centre[2])
+end
+
+function PileView.start()
+	local terrain = workspace.Terrain
+	Remotes.PileSync.OnClientEvent:Connect(function(message)
+		local o = origin()
+		if not o then
+			return
+		end
+		if message.kind == "full" then
+			HeapTerrain.draw(terrain, o, message.removed, message.partial or {})
+		elseif message.kind == "cell" then
+			HeapTerrain.cell(terrain, o, message.index, message.left)
+		end
+	end)
+	-- ask for the heap once we know our plot (the server's first send may have come too early)
+	local function ask()
+		if player:GetAttribute("Plot") then
+			Remotes.PileSync:FireServer()
+		end
+	end
+	player:GetAttributeChangedSignal("Plot"):Connect(ask)
+	ask()
+end
+
+return PileView
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX00061">
 					<Properties>
 						<string name="Name">Shop</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop window: Tools, Perks, Fitness (stamina, the metal detector), Storage (buckets and
@@ -10465,7 +10669,7 @@ return Shop
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005F">
+				<Item class="ModuleScript" referent="RBX00062">
 					<Properties>
 						<string name="Name">Stamina</string>
 						<ProtectedString name="Source"><![CDATA[-- A slim stamina bar under the crosshair (the server owns stamina: attributes Stamina,
@@ -10513,7 +10717,7 @@ return StaminaBar
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00060">
+				<Item class="ModuleScript" referent="RBX00063">
 					<Properties>
 						<string name="Name">Teleport</string>
 						<ProtectedString name="Source"><![CDATA[-- The teleporter menu: standing on one of your pads, pick any of your other pads (listed by
@@ -10584,7 +10788,7 @@ return Teleport
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00061">
+				<Item class="ModuleScript" referent="RBX00064">
 					<Properties>
 						<string name="Name">TouchAim</string>
 						<ProtectedString name="Source"><![CDATA[-- Harvesting on touch screens. In first person a finger dragged across the screen turns the
@@ -10649,7 +10853,7 @@ return TouchAim
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00062">
+				<Item class="ModuleScript" referent="RBX00065">
 					<Properties>
 						<string name="Name">TouchPad</string>
 						<ProtectedString name="Source"><![CDATA[-- The action pad on touch screens: the keyboard's shortcuts (shop, build, drop, home, tool,
@@ -10796,7 +11000,7 @@ return TouchPad
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00063">
+				<Item class="ModuleScript" referent="RBX00066">
 					<Properties>
 						<string name="Name">Ui</string>
 						<ProtectedString name="Source"><![CDATA[-- A small UI kit: the farm colours, rounded wooden buttons and windows that scale with
@@ -11035,7 +11239,7 @@ return Ui
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00064">
+				<Item class="ModuleScript" referent="RBX00067">
 					<Properties>
 						<string name="Name">WorldFx</string>
 						<ProtectedString name="Source"><![CDATA[-- World effects on your screen: the glowing needle clump (Wheel jackpot), the wheel turning
@@ -11153,7 +11357,7 @@ return WorldFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00065">
+				<Item class="ModuleScript" referent="RBX00068">
 					<Properties>
 						<string name="Name">Worlds</string>
 						<ProtectedString name="Source"><![CDATA[-- The portal worlds on your own screen: each world's light eased in on arrival (and the farm's
@@ -11429,19 +11633,19 @@ return Worlds
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX00066">
+	<Item class="Workspace" referent="RBX00069">
 		<Properties>
 			<string name="Name">Workspace</string>
 			<bool name="StreamingEnabled">false</bool>
 		</Properties>
 	</Item>
-	<Item class="MaterialService" referent="RBX00067">
+	<Item class="MaterialService" referent="RBX0006A">
 		<Properties>
 			<string name="Name">MaterialService</string>
 			<bool name="Use2022Materials">true</bool>
 			<string name="LeafyGrassName">Field</string>
 		</Properties>
-		<Item class="MaterialVariant" referent="RBX00068">
+		<Item class="MaterialVariant" referent="RBX0006B">
 			<Properties>
 				<string name="Name">Field</string>
 				<token name="BaseMaterial">1284</token>

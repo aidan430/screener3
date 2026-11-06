@@ -45,8 +45,8 @@ function Worlds.publish(player)
 end
 
 local function hubSpot(w)
-	local x = Config.WorldPortals.xs[indexOf[w.id]]
-	return CFrame.lookAt(Vector3.new(x, 4, 0), Vector3.new(0, 4, 0))
+	local spot = Config.WorldPortals.spots[indexOf[w.id]]
+	return CFrame.lookAt(Vector3.new(spot[1] + 10, 4, spot[2]), Vector3.new(0, 4, spot[2])) -- just in front of its arch
 end
 
 local function teleport(player, cf)
@@ -134,8 +134,8 @@ function Worlds.build()
 	local root = Kit.folder("Worlds", workspace)
 	local portals = Kit.folder("Portals", root)
 	for i, w in ipairs(Config.Worlds) do
-		local x = Config.WorldPortals.xs[i]
-		local cf = CFrame.lookAt(Vector3.new(x, 0, Config.WorldPortals.z), Vector3.new(x, 0, 0))
+		local spot = Config.WorldPortals.spots[i]
+		local cf = CFrame.lookAt(Vector3.new(spot[1], 0, spot[2]), Vector3.new(0, 0, spot[2]))
 		local membrane = Kit.arch(cf, Config.WorldHay[w.id][1], portals, w.name, "Open: " .. Format.short(w.price) .. " coins")
 		Kit.prompt(membrane, "portal", "Travel", w.name, w.id, Config.WorldPortals.holdSeconds)
 	end

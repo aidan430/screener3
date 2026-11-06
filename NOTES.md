@@ -356,3 +356,21 @@ and needle. Numbers in `src/shared/ConfigWorlds.luau` (merged into Config).
   your needles and straws there.
 - **Check in Studio:** the bubble's Glass may not show from inside (parts are one-sided); the
   lava hop strength; how far away the worlds can be seen from the farm.
+
+## One haystack in the middle (owner's request, 2026-11-06)
+All four plots now share the middle of the farm (`PlotCentres` all {0, 0}, `PlotSize` 300).
+Each player's haystack is drawn only on their own screen (server sends `PileSync` "full" /
+"cell"; client/PileView + shared/HeapTerrain), so everyone digs their own copy in the same
+spot. Each plot is a collision group (Plot1..Plot4) that doesn't collide with the others;
+players' characters, buildings, loose hay, buckets and trucks are in their plot's group, and
+client/OnlyMine hides other players' plots, trucks and buckets. Client raycasts (aiming,
+building) use your plot's group, so they pass through other players' things. Other players
+are still visible, walking around and digging their own copies.
+- New settings: `FarmEntrance` {0,0,118} (arrival), `TraderStart` {0,0,64} (your stall, facing
+  south), `TruckStart` {0,0,150}, `BuildClear` 40 (nothing can be built within 40 studs of the
+  haystack's centre; old placements there go back to the inventory on joining).
+- The merchant (-42,100), wheel (42,100) and golden door (112,0) stand round the haystack; the
+  portals are a row at x -118 (z -51, -17, 17, 51) facing it; 8 lamps ring it at 62 studs; the
+  cobblestone yard is 58 across. The plot fences, signs and per-plot ground are gone.
+- Server physics (bundles, bales) doesn't see haystacks (they're only on screens), so hay
+  dropped on the heap falls to the ground.

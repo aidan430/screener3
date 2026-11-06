@@ -191,7 +191,7 @@ local function harvest(player, target)
 		end
 		local clump = Plots.contains(plotIndex, point, 0) and Piles.clumpAt(plotIndex, d, point)
 		if not clump then
-			return nope(player, "That's not your heap. Yours is on the farm marked YOUR FARM.")
+			return nope(player, "That isn't part of your haystack. Aim at the hay in the middle of the farm.")
 		elseif (head.Position - Piles.position(plotIndex, clump)).Magnitude > Config.Reach + 6 then
 			return nope(player, "Too far away. Step closer to the hay.")
 		end

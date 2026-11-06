@@ -90,23 +90,8 @@ local function spinFans()
 	end)
 end
 
-local function markFarm()
-	local plot = myPlot()
-	local sign = plot and plot:WaitForChild("PlotSign", 30)
-	if sign then
-		local board = Ui.make("BillboardGui", { Adornee = sign, Size = UDim2.fromScale(16, 3), StudsOffset = Vector3.new(0, 6, 0), LightInfluence = 0, MaxDistance = 600, ResetOnSpawn = false, Parent = player:WaitForChild("PlayerGui") })
-		Ui.label({ Text = "YOUR FARM", Size = UDim2.fromScale(1, 1), TextColor3 = Ui.colors.hay, Parent = board }, 48)
-	end
-end
-
 function WorldFx.start()
 	task.spawn(spinFans)
-	task.spawn(function()
-		while not player:GetAttribute("Plot") do
-			player:GetAttributeChangedSignal("Plot"):Wait()
-		end
-		markFarm()
-	end)
 end
 
 return WorldFx

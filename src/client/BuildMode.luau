@@ -42,6 +42,9 @@ local function aimPoint()
 	local camera = workspace.CurrentCamera
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
+	if player:GetAttribute("Plot") then -- pass through other players' hidden buildings and hay
+		params.CollisionGroup = "Plot" .. player:GetAttribute("Plot")
+	end
 	local ignore = {}
 	local things = { player.Character, ghost, workspace:FindFirstChild("MyEffects") }
 	for i = 1, 3 do

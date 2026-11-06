@@ -140,11 +140,12 @@ local function visit(player, def)
 	end
 	local pivot = stall:GetPivot()
 	local stop = Vector3.new(pivot.Position.X, 1.2, pivot.Position.Z) + pivot.LookVector * Vector3.new(1, 0, 1) * 14
-	local outward = Plots.centre(plotIndex).Unit
-	local entrance = Plots.entrance(plotIndex)
-	local road = Vector3.new(entrance.X, 1.2, entrance.Z) - outward * 26
+	local start = Config.TruckStart
+	local road = Plots.centre(plotIndex) + Vector3.new(start[1], 1.2, start[3])
 	local truck = makeTruck(def)
 	truck.PrimaryPart.CFrame = CFrame.lookAt(road, stop)
+	truck:SetAttribute("Owner", player.UserId) -- other players' screens hide it
+	Plots.tag(truck, plotIndex)
 	truck.Parent = trucks
 	local seconds = math.clamp((stop - road).Magnitude / 16, 2, 8)
 	local arrive = TweenService:Create(truck.PrimaryPart, TweenInfo.new(seconds, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), { CFrame = CFrame.lookAt(stop, stop + (stop - road)) })

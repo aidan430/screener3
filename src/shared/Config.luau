@@ -5,9 +5,15 @@ local Config = {}
 Config.Title = "Needle in the Haystack"
 Config.FarmName = "Hollow Creek Farm"
 
--- Plots: each player gets one, with their own pile. Four per server, around the hub.
-Config.PlotSize = 140
-Config.PlotCentres = { { 85, 85 }, { -85, 85 }, { -85, -85 }, { 85, -85 } }
+-- Plots: each player gets one. All four are the SAME place, the middle of the farm, with the
+-- haystack at its centre: everyone sees and digs only their own haystack, and only their own
+-- buildings and hay (other players' are hidden and pass-through on your screen).
+Config.PlotSize = 300 -- the build area round the haystack (the countryside starts at 162)
+Config.PlotCentres = { { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } }
+Config.FarmEntrance = { 0, 0, 118 } -- where you arrive: south of the haystack, facing it
+Config.TraderStart = { 0, 0, 64 } -- your trader's stall, between the haystack and where you arrive
+Config.TruckStart = { 0, 0, 150 } -- trucks drive in from the south field
+Config.BuildClear = 40 -- nothing can stand this close to the haystack's centre (it's hay)
 
 -- The heap: 5,000,000 straws in clumps, one smooth terrain haystack 80 studs (22 m) high and
 -- 88 across: steep sides and a rounded top, like a beehive haystack.
@@ -52,7 +58,6 @@ Config.NeedleHeight = { 0.5, 0.8 }
 Config.NeedleCore = 0.4
 Config.Reach = 18 -- studs from your head to a clump you can harvest
 Config.SearchCooldown = 0.3 -- seconds between harvests (the Swift perk shortens it)
-Config.MerchantRange = 16
 
 Config.CoinsPerStraw = 1
 
@@ -130,7 +135,6 @@ Config.Pieces = {
 	{ id = "baler", name = "Bale Maker", price = 60000, max = 3, size = { 8, 7, 10 }, text = "Feed it hay at the back; it pushes out bales. Trucks carry bales 3x as easily." },
 	{ id = "trader", name = "Trader's Stall", price = 0, max = 1, size = { 12, 12, 8 }, text = "Your trader. Dump your hay in the basket. Move it anywhere, even up a platform." },
 }
-Config.TraderDistance = 57 -- your trader's stall starts this far from your plot's centre, towards the hub
 Config.BasketDrainSeconds = 4 -- how fast the basket's hay level eases down after a dump (just for show)
 
 -- Hauling: what you dump waits in your trader's basket. The trader himself buys TraderRate

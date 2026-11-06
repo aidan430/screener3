@@ -61,6 +61,7 @@ end)
 step("touch pad", function()
 	TouchPad.mount(gui) -- before the parts that add buttons to it
 end)
+step("your haystack", function() require(script.Parent:WaitForChild("PileView")).start(); require(script.Parent:WaitForChild("OnlyMine")).start() end)
 step("harvesting", function()
 	Harvest.onMiss = function(text)
 		Notify.toast(text, Ui.colors.wood)

@@ -16,7 +16,8 @@ local piles = {} -- [plot index] = { folder, origin = Vector3 }
 local cursor = setmetatable({}, { __mode = "k" }) -- [data] = where the machines got to in machineOrder
 local terrain = workspace.Terrain
 local HEAP = Enum.Material.Grass -- recoloured to straw; its grass blades read as loose straw
-local STEPS = 8 -- a clump shrinks in this many visible steps as you harvest it
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local HeapTerrain = require(Shared:WaitForChild("HeapTerrain"))(Config)
 
 local function setup()
 	local c = if Config.HayTexture ~= "" then Config.HayTint else Config.HeapColour
@@ -32,24 +33,24 @@ local function origin(plotIndex)
 	return Vector3.new(x, 0, z)
 end
 
--- How full a clump's terrain cell looks: the heap's rounded outside, shrinking as it's harvested.
-local function fullness(index, left)
-	if left <= 0 then
-		return 0
+-- Every player's haystack stands in the same place, so each player's screen draws only its own
+-- (client/PileView.luau): the server sends it the whole heap on joining and each changed clump.
+local function send(plotIndex, message)
+	local owner = Plots.owner(plotIndex)
+	if owner then
+		Remotes.PileSync:FireClient(owner, message)
 	end
-	local step = math.ceil(left / Economy.STRAWS_PER_CLUMP * STEPS) / STEPS
-	return Layout.shape[index] * (0.3 + 0.7 * step)
+end
+
+function Piles.sync(plotIndex)
+	local pile = piles[plotIndex]
+	if pile and pile.data then
+		send(plotIndex, { kind = "full", removed = pile.data.removed, partial = pile.data.partial })
+	end
 end
 
 local function writeCell(plotIndex, index, left)
-	local o = piles[plotIndex] and piles[plotIndex].origin
-	if not o then
-		return
-	end
-	local c = o + Vector3.new(Layout[index][1], Layout[index][2], Layout[index][3])
-	local half = Vector3.new(1, 1, 1) * (Config.ClumpSize / 2)
-	local amount = fullness(index, left)
-	terrain:WriteVoxels(Region3.new(c - half, c + half), Config.ClumpSize, { { { if amount > 0 then HEAP else Enum.Material.Air } } }, { { { amount } } })
+	send(plotIndex, { kind = "cell", index = index, left = left })
 end
 
 function Piles.position(plotIndex, clump)
@@ -106,27 +107,9 @@ function Piles.build(plotIndex, d)
 	folder.Parent = Plots.folder(plotIndex)
 	local o = origin(plotIndex)
 	piles[plotIndex] = { folder = folder, origin = o }
-	local s = Config.ClumpSize
-	local n = math.ceil(Config.PileRadiusBottom / s) + 1
-	local materials, amounts = {}, {}
-	for x = 1, 2 * n + 1 do
-		materials[x], amounts[x] = {}, {}
-		for y = 1, Config.PileLayers do
-			materials[x][y], amounts[x][y] = {}, {}
-			for z = 1, 2 * n + 1 do
-				materials[x][y][z], amounts[x][y][z] = Enum.Material.Air, 0
-			end
-		end
-	end
-	for index, cell in ipairs(Layout.cell) do
-		local amount = fullness(index, Profile.clumpLeft(d, index))
-		if amount > 0 then
-			local x, y, z = cell[1] + n + 1, cell[2] + 1, cell[3] + n + 1
-			materials[x][y][z], amounts[x][y][z] = HEAP, amount
-		end
-	end
-	local corner = o - Vector3.new(n * s + s / 2, 0, n * s + s / 2)
-	terrain:WriteVoxels(Region3.new(corner, corner + Vector3.new((2 * n + 1) * s, Config.PileLayers * s, (2 * n + 1) * s)), s, materials, amounts)
+	folder:SetAttribute("Owner", Plots.owner(plotIndex) and Plots.owner(plotIndex).UserId or 0)
+	piles[plotIndex].data = d
+	Piles.sync(plotIndex)
 	-- loose hay mounds spilled round the foot of the heap, so it sits in its own straw
 	local rng = Random.new(plotIndex)
 	for i = 1, Config.HeapMounds do
@@ -140,11 +123,8 @@ function Piles.build(plotIndex, d)
 	return piles[plotIndex]
 end
 
--- Clears a plot's heap from the terrain (when its player leaves).
+-- Forgets a plot's heap (when its player leaves; their screen drew it, nobody else's did).
 function Piles.clear(plotIndex)
-	local o = origin(plotIndex)
-	local reach = (math.ceil(Config.PileRadiusBottom / Config.ClumpSize) + 1) * Config.ClumpSize + Config.ClumpSize / 2
-	terrain:FillBlock(CFrame.new(o + Vector3.new(0, Config.PileLayers * Config.ClumpSize / 2, 0)), Vector3.new(reach * 2, Config.PileLayers * Config.ClumpSize, reach * 2), Enum.Material.Air)
 	piles[plotIndex] = nil
 end
 
@@ -157,13 +137,22 @@ function Piles.take(plotIndex, d, clump, amount)
 		return 0, false
 	end
 	Profile.setClumpLeft(d, clump, left - taken)
-	if fullness(clump, left - taken) ~= fullness(clump, left) then
+	if HeapTerrain.fullness(clump, left - taken) ~= HeapTerrain.fullness(clump, left) then
 		writeCell(plotIndex, clump, left - taken)
 	end
 	return taken, left - taken <= 0
 end
 
 -- The next clump for the machines: they peel the heap from the outside in, bottom first.
+function Piles.init()
+	Remotes.PileSync.OnServerEvent:Connect(function(player) -- the screen asks once it's ready
+		local plotIndex = Plots.of(player)
+		if plotIndex then
+			Piles.sync(plotIndex)
+		end
+	end)
+end
+
 function Piles.next(d)
 	local order = Layout.machineOrder
 	local i = cursor[d] or 1

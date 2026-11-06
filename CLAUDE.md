@@ -1,8 +1,11 @@
 # Needle in the Haystack: operational brief
 
 ## What this is
-An original Roblox simulator, strictly first person. Four players a server, each with a plot
-around a hub. Each plot holds that player's own heap: one smooth terrain haystack of 5,000 clumps
+An original Roblox simulator, strictly first person. Four players a server. All four plots
+share the middle of the farm: one haystack stands there, and each player sees and digs only
+their own copy of it (their screen draws it as terrain from their save, client/PileView), and
+sees only their own buildings and hay (client/OnlyMine; each plot has a collision group that
+doesn't collide with the others'). Each player's heap is one smooth terrain haystack of 5,000 clumps
 of 1,000 straws (5,000,000), 80 studs (22 m) high and 88 across, one clump per 4-stud terrain cell, saved clump by
 clump, with the needle hidden deep in the upper heap. Players lift hay off the heap onto their
 fork (visible on the tines; buckets at the hip carry more), dump it in their own trader's basket,
@@ -16,8 +19,9 @@ The owner publishes from Roblox Studio and owns the Roblox account, the Robux it
 earnings. Nothing is published, sold or priced without them.
 
 ## How it plays
-- **Plots** (`server/Plots.luau`): claimed on join, released on leave; `Piles.luau` builds the
-  heap (terrain) from `Layout.luau` (index order is saved order: never reorder it; change the
+- **Plots** (`server/Plots.luau`): claimed on join, released on leave, all centred on (0, 0);
+  `Piles.luau` keeps the heap's data and sends it to its owner's screen, which draws it with
+  `shared/HeapTerrain.luau`; the server never draws heaps (no server terrain for them), from `Layout.luau` (index order is saved order: never reorder it; change the
   DataStoreName if you must), `Structures.luau` the placed things (saved relative to the plot centre).
 - **Harvesting** (`server/Search.luau`): the client sends the point it aimed at, just inside the
   heap's surface (Remotes.Harvest); the server checks it is on the player's plot and within

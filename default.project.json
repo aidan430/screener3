@@ -20,6 +20,9 @@
         "Achievement": {
           "$className": "RemoteEvent"
         },
+        "PileSync": {
+          "$className": "RemoteEvent"
+        },
         "GoHome": {
           "$className": "RemoteEvent"
         },

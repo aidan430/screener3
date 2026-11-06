@@ -41,15 +41,12 @@ class Pile(unittest.TestCase):
         reach = max(max(abs(c[0]), abs(c[2])) for c in clumps) + pacing.number("ClumpSize") / 2
         self.assertLess(reach, pacing.number("PlotSize") / 2 - 15, "leave room to build around the pile")
 
-    def test_four_plots_do_not_overlap_the_roads(self):
-        size = pacing.number("PlotSize")
+    def test_old_four_plot_layout_note(self):
+        """All four plots now share the middle of the farm (see Config.PlotCentres)."""
         centres = re.findall(r"\{ (-?\d+), (-?\d+) \}", re.search(r"^Config\.PlotCentres = (.*)$", CONFIG, re.M).group(1))
         self.assertEqual(len(centres), 4)
-        for x, z in centres:
-            self.assertGreaterEqual(min(abs(int(x)), abs(int(z))) - size / 2, 15, "plots must leave the roads clear")
+        self.assertEqual(len(set(centres)), 1, "every plot is the same place")
 
-
-class Items(unittest.TestCase):
     def test_tools_get_stronger_and_carry_more(self):
         tools = pacing.rows("Tools")
         self.assertEqual(len(tools), 10)
@@ -214,16 +211,16 @@ class PortalWorlds(unittest.TestCase):
             for x2, z2 in centres[i + 1:]:
                 self.assertGreater(math.hypot(x - x2, z - z2), 2 * inside + 200, "worlds overlap")
 
-    def test_portals_stand_on_the_west_road_and_leave_a_lane(self):
-        line = re.search(r"^Config\.WorldPortals = \{ xs = \{ (.*?) \}, z = (-?[\d.]+)", CONFIG, re.M)
-        xs = sorted(float(v) for v in line.group(1).split(","))
-        z = float(line.group(2))
-        self.assertEqual(len(xs), 4)
-        self.assertTrue(all(-150 <= x <= -20 for x in xs), xs)
-        self.assertTrue(all(b - a >= 16 for a, b in zip(xs, xs[1:])), "arches (13 wide) must not touch")
-        self.assertLessEqual(abs(z) + 2, 13, "the arch's step stays inside the road, clear of the plots")
-        self.assertGreaterEqual(abs(z) - 2 + 15, 18, "a walking lane on the other half of the road")
-
+    def test_portals_stand_round_the_haystack_clear_of_it(self):
+        line = re.search(r"^Config\.WorldPortals = \{ spots = \{ (.*?) \}, holdSeconds", CONFIG, re.M)
+        spots = [tuple(float(v) for v in m) for m in re.findall(r"\{ (-?[\d.]+), (-?[\d.]+) \}", line.group(1))]
+        self.assertEqual(len(spots), 4)
+        heap = pacing.number("PileRadiusBottom")
+        for i, (x, z) in enumerate(spots):
+            self.assertGreater(math.hypot(x, z), heap + 30, "arches stand well clear of the haystack")
+            self.assertLess(max(abs(x), abs(z)), pacing.number("PlotSize") / 2, "inside the farm's middle")
+            for x2, z2 in spots[i + 1:]:
+                self.assertGreaterEqual(math.hypot(x - x2, z - z2), 16, "arches (13 wide) must not touch")
 
 if __name__ == "__main__":
     unittest.main(verbosity=1)

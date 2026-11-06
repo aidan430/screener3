@@ -9,6 +9,7 @@ local Economy = require(Shared:WaitForChild("Economy"))(Config)
 local HayLook = require(Shared:WaitForChild("HayLook"))(Config)
 
 local PlayerData = require(script.Parent.PlayerData)
+local Plots = require(script.Parent.Plots)
 local Build = require(script.Parent.Build)
 
 local Carry = {}
@@ -45,6 +46,10 @@ local function makeBucket(player, root, level)
 		part.Anchored = false
 		part.Massless = true
 		weld(root, part)
+	end
+	model:SetAttribute("Owner", player.UserId)
+	if Plots.of(player) then
+		Plots.tag(model, Plots.of(player))
 	end
 	model.Parent = gear
 	return model

@@ -129,6 +129,7 @@ end)
 -- Each part starts on its own: if one breaks, its error shows in Output and the rest still run.
 local parts = {
 	{ "Search", Search.init }, -- harvesting first: it matters most
+	{ "Piles", Piles.init }, -- each screen asks for its own haystack
 	{ "Stamina", Stamina.init }, -- before PlayerData, so it hears every player load
 	{ "Detector", Detector.init },
 	{ "Plots", Plots.init },

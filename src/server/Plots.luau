@@ -1,17 +1,18 @@
--- The four plots around the hub. A player gets a free plot when they join and gives it
--- back when they leave; their pile and buildings are rebuilt from their save each visit.
+-- The four plots. They all share the middle of the farm: a player gets a free plot (an index)
+-- when they join and gives it back when they leave; their haystack and buildings are rebuilt
+-- from their save each visit. Each plot has a collision group, and groups don't collide with
+-- each other, so players' buildings, hay and characters pass through other players' (each
+-- player's screen also hides other players' plots: see client/OnlyMine.luau).
+local PhysicsService = game:GetService("PhysicsService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 
-local Build = require(script.Parent.Build)
-
 local Plots = {}
 local owners = {} -- [plot index] = player
 local byPlayer = {} -- [player] = plot index
-local signs = {} -- [plot index] = TextLabel
 
 function Plots.centre(index)
 	local c = Config.PlotCentres[index]
@@ -36,10 +37,29 @@ function Plots.contains(index, position, margin)
 	return math.abs(position.X - centre.X) <= half and math.abs(position.Z - centre.Z) <= half and position.Y >= -2 and position.Y <= 320
 end
 
--- Where a player arrives on their plot: the corner nearest the hub.
+-- Where a player arrives: south of the haystack, facing it.
 function Plots.entrance(index)
-	local centre = Plots.centre(index)
-	return centre - centre.Unit * (Config.PlotSize / 2 - 3) + Vector3.new(0, 4, 0)
+	local e = Config.FarmEntrance
+	return Plots.centre(index) + Vector3.new(e[1], e[2] + 4, e[3])
+end
+
+function Plots.group(index)
+	return "Plot" .. index
+end
+
+-- Puts a part (and everything later added under `root`) in the plot's collision group.
+function Plots.tag(root, index)
+	local group = Plots.group(index)
+	local function set(part)
+		if part:IsA("BasePart") then
+			part.CollisionGroup = group
+		end
+	end
+	set(root)
+	for _, part in ipairs(root:GetDescendants()) do
+		set(part)
+	end
+	return root.DescendantAdded:Connect(set)
 end
 
 function Plots.build()
@@ -47,23 +67,21 @@ function Plots.build()
 	root.Name = "Plots"
 	root.Parent = workspace
 	for index in ipairs(Config.PlotCentres) do
+		pcall(function()
+			PhysicsService:RegisterCollisionGroup(Plots.group(index))
+		end)
+	end
+	for index in ipairs(Config.PlotCentres) do
+		for other in ipairs(Config.PlotCentres) do
+			if other ~= index then
+				PhysicsService:CollisionGroupSetCollidable(Plots.group(index), Plots.group(other), false)
+			end
+		end
 		local folder = Instance.new("Folder")
 		folder.Name = "Plot" .. index
 		folder:SetAttribute("Index", index)
 		folder.Parent = root
-		local centre = Plots.centre(index)
-		local half = Config.PlotSize / 2
-		Build.part({ name = "Ground", size = Vector3.new(Config.PlotSize, 1, Config.PlotSize), cframe = CFrame.new(centre + Vector3.new(0, -0.45, 0)), color = { 124, 140, 66 }, material = "LeafyGrass", parent = folder })
-		for _, side in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
-			local edge = centre + Vector3.new(side[1] * half, 0.3, side[2] * half)
-			local size = if side[1] ~= 0 then Vector3.new(1, 0.6, Config.PlotSize) else Vector3.new(Config.PlotSize, 0.6, 1)
-			Build.part({ name = "Edge", size = size, cframe = CFrame.new(edge), color = { 150, 110, 70 }, material = "WoodPlanks", parent = folder })
-		end
-		local corner = centre - centre.Unit * (half - 2)
-		local sign = Build.part({ name = "PlotSign", size = Vector3.new(12, 3, 0.4), cframe = CFrame.lookAt(corner + Vector3.new(0, 7, 0), Vector3.new(0, 7, 0)), color = { 246, 234, 204 }, material = "WoodPlanks", parent = folder })
-		Build.post({ name = "SignPost", color = { 122, 86, 52 }, material = "Wood", parent = folder }, CFrame.new(corner), 5.5, 0.6)
-		signs[index] = Build.text(sign, Enum.NormalId.Front, "FREE PLOT")
-		Build.text(sign, Enum.NormalId.Back, "PLOT " .. index)
+		Plots.tag(folder, index)
 	end
 end
 
@@ -73,7 +91,18 @@ function Plots.claim(player)
 		if not owners[index] then
 			owners[index] = player
 			byPlayer[player] = index
-			signs[index].Text = player.DisplayName .. "'s farm"
+			-- the player's character goes in their plot's group, every time it spawns
+			local function tagCharacter(character)
+				Plots.tag(character, index)
+			end
+			if player.Character then
+				tagCharacter(player.Character)
+			end
+			player.CharacterAdded:Connect(function(character)
+				if byPlayer[player] == index then
+					tagCharacter(character)
+				end
+			end)
 			return index
 		end
 	end
@@ -89,7 +118,6 @@ function Plots.release(player)
 		end
 		owners[index] = nil
 		byPlayer[player] = nil
-		signs[index].Text = "FREE PLOT"
 		for _, child in ipairs(Plots.folder(index):GetChildren()) do
 			if child.Name == "Pile" or child.Name == "Built" or child.Name == "Loose" then -- loose straws are saved
 				child:Destroy()

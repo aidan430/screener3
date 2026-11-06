@@ -77,6 +77,9 @@ local function cast(distance, ignoreEffects)
 	end
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
+	if player:GetAttribute("Plot") then -- pass through other players' hidden buildings and hay
+		params.CollisionGroup = "Plot" .. player:GetAttribute("Plot")
+	end
 	params.FilterDescendantsInstances = if ignoreEffects then { character, workspace:FindFirstChild("MyEffects") } else { character }
 	return workspace:Raycast(camera.CFrame.Position, camera.CFrame.LookVector * distance, params)
 end
@@ -121,7 +124,7 @@ function Harvest.miss()
 		if onMyHeap(result) and far > Config.Reach then
 			Harvest.onMiss("Too far: " .. math.floor(far) .. " studs. Get within " .. Config.Reach .. ".")
 		elseif not onMyHeap(result) then
-			Harvest.onMiss("That's not your heap. Yours is on the farm marked YOUR FARM.")
+			Harvest.onMiss("That isn't part of your haystack. Aim at the hay in the middle of the farm.")
 		end
 	else
 		Harvest.onMiss("That's " .. (if result.Instance == workspace.Terrain then "the ground" else result.Instance.Name) .. ", not hay. Aim the dot at your heap.")
