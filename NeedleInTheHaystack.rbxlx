@@ -7287,13 +7287,21 @@ local function light(part, colour, range)
 	l.Parent = part
 end
 
--- Hay Blower: held by its pistol grip; a motor body, a side fan with a grille, a long nozzle
--- that puffs a little air, and a hopper on top where the hay rides.
+-- Hay Blower: held by its pistol grip; a motor body with side vents, the fan's round intake
+-- and grille on its back (facing you), a long nozzle that puffs a little air, and a hopper on
+-- top where the hay rides.
 function ToolGadgets.blower(k)
 	P.trim(k, Vector3.new(0.12, 0.22, 0.3), CFrame.new(0, 0.42, 0.05), { 200, 60, 50 }, "SmoothPlastic") -- trigger
 	P.head(k, Vector3.new(1.1, 1.8, 0.9), CFrame.new(0, 0.2, 0.65))
-	P.trim(k, Vector3.new(0.4, 1.2, 1.2), CFrame.new(0.72, 0, 0.65), DARK, "SmoothPlastic", "Cylinder")
-	P.trim(k, Vector3.new(0.05, 0.9, 0.9), CFrame.new(0.93, 0, 0.65), GREY, "DiamondPlate", "Cylinder")
+	for _, x in ipairs({ -0.56, 0.56 }) do -- vents along both sides
+		for i = 0, 2 do
+			P.trim(k, Vector3.new(0.04, 0.9, 0.08), CFrame.new(x, 0.2, 0.42 + i * 0.2), DARK, "SmoothPlastic")
+		end
+	end
+	P.trim(k, Vector3.new(0.22, 0.95, 0.95), CFrame.new(0, -0.8, 0.65) * ROLL, DARK, "SmoothPlastic", "Cylinder")
+	for i = -1, 1 do -- the intake's grille
+		P.trim(k, Vector3.new(0.8 - math.abs(i) * 0.25, 0.04, 0.06), CFrame.new(0, -0.92, 0.65 + i * 0.22), GREY, "Metal")
+	end
 	P.trim(k, Vector3.new(2.6, 0.48, 0.48), CFrame.new(0, 2.35, 0.6) * ROLL, { 225, 225, 230 }, "SmoothPlastic", "Cylinder")
 	local mouth = P.head(k, Vector3.new(0.35, 0.75, 0.75), CFrame.new(0, 3.75, 0.6) * ROLL, "Cylinder")
 	emitter(mouth, Color3.fromRGB(245, 240, 225), 5, 6, { 0.3, 0.8 }, Enum.NormalId.Right)
@@ -7305,10 +7313,11 @@ function ToolGadgets.blower(k)
 	return { length = 1, hold = 0, seat = CFrame.new(0, 0.2, 1.18) * UPRIGHT, load = 1.15, material = "SmoothPlastic" }
 end
 
--- Magnet Gloves: a big horseshoe magnet with silver poles, held out front; the hay floats
--- between its arms in a soft blue shimmer.
+-- Magnet Gloves: a big horseshoe magnet with silver poles, held out front by a rubber grip that
+-- covers the whole handle; the hay floats between its arms in a soft blue shimmer.
 function ToolGadgets.magnet(k)
-	P.trim(k, Vector3.new(1.0, 0.42, 0.42), CFrame.new(0, -0.2, 0) * ROLL, RUBBER, "Fabric", "Cylinder")
+	P.trim(k, Vector3.new(1.75, 0.44, 0.44), CFrame.new(0, -0.05, 0) * ROLL, RUBBER, "Fabric", "Cylinder")
+	P.trim(k, Vector3.new(0.14, 0.5, 0.5), CFrame.new(0, -0.95, 0) * ROLL, DARK, "Metal", "Cylinder")
 	local r = 0.85
 	P.ring(k, CFrame.new(0, 1.5, 0), r, 8, 0.42, 0.42, nil, nil, math.pi, math.pi * 2)
 	for _, s in ipairs({ -1, 1 }) do
@@ -7322,8 +7331,9 @@ function ToolGadgets.magnet(k)
 	return { length = 1.8, hold = -0.2, seat = CFrame.new(0, 2.5, -0.5) * UPRIGHT, load = 1.1, material = "SmoothPlastic" }
 end
 
--- Twin Turbines: two fans in round housings on a cross frame; the fans spin (client/WorldFx
--- turns each "Spin" weld) and the hay rides on a deck between them.
+-- Twin Turbines: two jet engine pods on a cross frame. Each pod has a coloured lip, four wide
+-- blades spinning round a pointed nose at the front (client/WorldFx turns each "Spin" weld) and a
+-- soft orange exhaust glow at the back, facing you; the hay rides on a deck between them.
 function ToolGadgets.turbines(k)
 	P.trim(k, Vector3.new(1.1, 0.4, 0.4), CFrame.new(0, -0.8, 0) * ROLL, RUBBER, "Fabric", "Cylinder")
 	P.trim(k, Vector3.new(0.3, 0.3, 0.75), CFrame.new(0, 1.9, -0.4), DARK, "Metal")
@@ -7331,17 +7341,23 @@ function ToolGadgets.turbines(k)
 	P.trim(k, Vector3.new(0.8, 1.1, 0.12), CFrame.new(0, 1.5, 0.21), { 120, 84, 50 }, "WoodPlanks")
 	for _, s in ipairs({ -1, 1 }) do
 		local centre = CFrame.new(s * 1.15, 2.0, 0)
-		P.ring(k, centre * UPRIGHT, 0.72, 14, 0.12, 0.5)
-		local hub = P.trim(k, Vector3.new(0.4, 0.36, 0.36), centre * ROLL, GREY, "Metal", "Cylinder")
-		for i = 0, 2 do
-			local blade = P.head(k, Vector3.new(0.3, 0.06, 0.56), centre * CFrame.Angles(0, i * math.pi * 2 / 3, 0) * CFrame.new(0, 0, 0.36) * CFrame.Angles(0, 0, math.rad(25)))
+		P.trim(k, Vector3.new(1.2, 1.36, 1.36), centre * ROLL, DARK, "Metal", "Cylinder") -- the pod
+		P.ring(k, centre * CFrame.new(0, 0.6, 0) * UPRIGHT, 0.7, 18, 0.1, 0.14) -- its coloured lip
+		local exhaust = P.trim(k, Vector3.new(0.04, 0.9, 0.9), centre * CFrame.new(0, -0.61, 0) * ROLL, { 255, 150, 60 }, "Neon", "Cylinder")
+		light(exhaust, Color3.fromRGB(255, 150, 60), 4)
+		local front = centre * CFrame.new(0, 0.7, 0)
+		local hub = P.trim(k, Vector3.new(0.16, 0.3, 0.3), front * ROLL, GREY, "Metal", "Cylinder")
+		local nose = P.trim(k, Vector3.new(0.3, 0.3, 0.3), front * CFrame.new(0, 0.1, 0), GREY, "Metal", "Ball")
+		nose:FindFirstChildOfClass("WeldConstraint").Part0 = hub
+		for i = 0, 3 do
+			local blade = P.head(k, Vector3.new(0.4, 0.05, 0.5), front * CFrame.Angles(0, i * math.pi / 2, 0) * CFrame.new(0, 0, 0.36) * CFrame.Angles(0, 0, math.rad(30)))
 			blade:FindFirstChildOfClass("WeldConstraint").Part0 = hub -- turns with the hub
 		end
 		hub:FindFirstChildOfClass("WeldConstraint"):Destroy()
 		local spin = Instance.new("Weld")
 		spin.Name = "Spin"
 		spin.Part0, spin.Part1 = k.handle, hub
-		spin.C0 = P.scaled(k, centre * ROLL)
+		spin.C0 = P.scaled(k, front * ROLL)
 		spin:SetAttribute("Base", spin.C0)
 		spin.Parent = hub
 	end

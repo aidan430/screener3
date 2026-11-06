@@ -585,3 +585,12 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   Config.HeapSkirt = { from = 43, to = 49, height = 14 }, like the foot of a hill. It is only
   drawn, never harvested (aiming at it digs the nearest clump), stays inside BuildClear (50) so
   it never buries a building, and never refills a clump you dug out.
+
+## Hay Blower, Twin Turbines and Magnet Gloves reworked (2026-11-06)
+- Hay Blower: the round fan on its side read as a wheel; the fan's intake is now on the back of
+  the motor (facing the player) behind a grille, with vents along the sides.
+- Twin Turbines: the open rings read as tyres; each fan is now a jet engine pod (dark body,
+  coloured lip ring, four wide spinning blades round a pointed nose at the front, a soft orange
+  exhaust glow at the back, facing the player).
+- Magnet Gloves: the silver handle stuck out behind the grip; the rubber grip now covers the
+  whole handle, with a metal end cap.
