@@ -82,6 +82,12 @@ local function spinFans()
 		end
 		local step = spinning * 6
 		spinning = 0
+		local tool = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChildOfClass("Tool")
+		for _, weld in ipairs(tool and tool:GetDescendants() or {}) do -- the Twin Turbines' fans
+			if weld.Name == "Spin" and weld:IsA("Weld") then
+				weld.C0 = weld:GetAttribute("Base") * CFrame.Angles((os.clock() * Config.ToolFanSpin) % (math.pi * 2), 0, 0)
+			end
+		end
 		local plot = myPlot()
 		local built = plot and plot:FindFirstChild("Built")
 		if not built then

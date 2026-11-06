@@ -1,4 +1,5 @@
--- The search tools: a pitchfork-shaped Tool per level, coloured from Config.Tools.
+-- The search tools: one Tool per level, built in its own shape (ToolParts, ToolGadgets) or
+-- wearing an uploaded model (ToolLook), coloured from Config.Tools or the equipped skin.
 -- The tool goes in StarterGear too, so players keep it when they respawn.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -8,27 +9,10 @@ local Format = require(Shared:WaitForChild("Format"))
 local HayLook = require(Shared:WaitForChild("HayLook"))(Config)
 local Build = require(script.Parent.Build)
 local ToolLook = require(script.Parent.ToolLook)
+local ToolParts = require(script.Parent.ToolParts)
+local ToolGadgets = require(script.Parent.ToolGadgets)
 
 local Tools = {}
-
-local function attach(tool, handle, size, offset, colour, material)
-	local part = Instance.new("Part")
-	part.Name = "Head"
-	part.Size = size
-	part.Color = colour
-	part.Material = material
-	part.CanCollide = false
-	part.CanTouch = false
-	part.CanQuery = false
-	part.Massless = true
-	part.CFrame = handle.CFrame * offset
-	local weld = Instance.new("WeldConstraint")
-	weld.Part0 = handle
-	weld.Part1 = part
-	weld.Parent = part
-	part.Parent = tool
-	return part
-end
 
 -- A skin on any tool: an uploaded model loses its own texture and takes the skin's colour and
 -- material (so the Galaxy, Lava... skins show on it too), and every skinned tool gives off a
@@ -118,8 +102,7 @@ function Tools.make(level, skinId)
 	handle.Parent = tool
 	local look, length = ToolLook.make(def)
 	-- where the hay sits (its bottom, in the handle's space) and how big it can get
-	-- on a fork the hay rests on top of the tines (the handle's +Z is up when held)
-	local seat, maxLoad = CFrame.new(0, 3.75, 0.2) * CFrame.Angles(math.rad(90), 0, 0), Config.LoadSize
+	local seat, maxLoad = nil, Config.LoadSize
 	if look then
 		-- an imported model, held straight out in front with its working end forward and up,
 		-- like a scoop holding the hay. The handle's -Z points away from the hand.
@@ -135,14 +118,19 @@ function Tools.make(level, skinId)
 		seat = CFrame.new(0, def.bladeTop or 0.15, -length * (def.loadAt or 0.3))
 		maxLoad = def.loadSize or length * 0.45
 	else
-		local colour = Build.rgb(if skin then skin.head else def.head)
-		local material = Enum.Material[if skin then skin.material else def.material]
-		attach(tool, handle, Vector3.new(1.7, 0.3, 0.3), CFrame.new(0, 2.9, 0), colour, material)
-		for x = -1, 1 do
-			attach(tool, handle, Vector3.new(0.16, 1.5, 0.16), CFrame.new(x * 0.7, 3.75, 0), colour, material)
-		end
+		local build = ToolParts[def.shape] or ToolGadgets[def.shape] or ToolParts.fork3
+		local spec = build({
+			tool = tool,
+			handle = handle,
+			colour = Build.rgb(if skin then skin.head else def.head),
+			material = Enum.Material[if skin then skin.material else def.material],
+		})
+		handle.Size = Vector3.new(0.3, spec.length, 0.3)
+		handle.Material = Enum.Material[spec.material or "Wood"]
+		tool.Grip = CFrame.new(0, spec.hold, 0) * CFrame.Angles(math.rad(90), 0, 0)
+		seat, maxLoad = spec.seat, spec.load
 	end
-	-- the hay you've harvested sits on the tines and grows as you harvest (see Carry.luau)
+	-- the hay you've harvested sits on the working end and grows as you harvest (see Carry.luau)
 	local load = HayLook.lump(0.2, false)
 	load.Name = "Load"
 	load.Massless = true

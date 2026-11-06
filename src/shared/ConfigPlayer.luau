@@ -38,4 +38,6 @@ Config.Touch = {
 	padColumns = 3,
 }
 
+Config.ToolFanSpin = 9 -- radians a second the Twin Turbines' fans turn while held
+
 return Config

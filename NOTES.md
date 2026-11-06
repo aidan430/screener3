@@ -518,3 +518,12 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   assets/skins/, made by dev/tools/skin_textures.py, seamless 1024 tiles). With a texture,
   uploaded models take it as their TextureID and part-built tools (forks) get a Texture on every
   face, tiled every Config.SkinTextureStuds (1.5) studs. Without one, the colour/material look stays.
+
+## Every tool rebuilt in its own shape (2026-11-06)
+- Config.Tools[n].shape picks the look, built from parts (server/ToolParts: fork3, fork4,
+  rake, goldrake, sifter; server/ToolGadgets: blower, magnet, turbines, detector). Each returns
+  its handle length, where the hand holds it, and where and how big the carried hay sits.
+  The trowel keeps the owner's model. All are held straight out in front like the trowel.
+- The Twin Turbines' fans spin on your own screen (client/WorldFx), Config.ToolFanSpin = 9
+  radians a second. Skins recolour each tool's Head parts and handle; Trim parts (collars,
+  grips, mesh, poles) keep their colours. Patterned skins cover every visible part.
