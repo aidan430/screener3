@@ -594,3 +594,12 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   exhaust glow at the back, facing the player).
 - Magnet Gloves: the silver handle stuck out behind the grip; the rubber grip now covers the
   whole handle, with a metal end cap.
+
+## Skins sold directly (2026-11-07)
+- Each tool skin can be bought directly as its own game pass (Config.Wheel[n].pass, 0 = not on
+  sale yet). Finds & Skins shows "Buy the <skin> (R$ price)" for skins you don't own, with the
+  price read from Roblox; Roblox's own prompt confirms before anything is paid. Owning the pass
+  gives the skin on every visit (Monetization checks on join and on purchase). Direct purchases
+  aren't random, so they're offered everywhere, including where the wheel is restricted. The
+  wheel stays as the free daily way to win one (a skin you already own pays coins). Icons:
+  assets/marketing/robux/skin_*.png; names, descriptions and suggested prices in ROBUX_ITEMS.md.

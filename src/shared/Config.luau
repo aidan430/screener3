@@ -264,15 +264,15 @@ Config.VipOfflineSeconds = 3600
 -- before buying, and the wheel is hidden where paid random items aren't allowed.
 -- weight / total weight = chance. A skin you already own pays `WheelDuplicateSearches` instead.
 Config.Wheel = {
-	{ id = "rose", flow = { 0.05, 0 }, gleam = 5, name = "Rose Gold skin", weight = 3000, texture = "", shaft = { 120, 70, 60 }, head = { 232, 160, 150 }, material = "Metal" },
-	{ id = "ice", flow = { 0, 0.04 }, twinkle = 3, name = "Ice skin", weight = 2500, texture = "", shaft = { 180, 220, 240 }, head = { 210, 240, 255 }, material = "Ice" },
-	{ id = "lava", flow = { 0, -0.3 }, pulse = 0.5, name = "Lava skin", weight = 2000, texture = "", shaft = { 60, 30, 20 }, head = { 255, 90, 30 }, material = "Neon" },
-	{ id = "candy", flow = { 0.4, 0 }, name = "Candy Cane skin", weight = 1500, texture = "", shaft = { 245, 245, 245 }, head = { 230, 40, 60 }, material = "SmoothPlastic" },
-	{ id = "galaxy", flow = { 0.06, 0.04 }, pulse = 0.3, twinkle = 4, name = "Galaxy skin", weight = 700, texture = "", shaft = { 30, 20, 60 }, head = { 140, 90, 255 }, material = "Neon" },
-	{ id = "diamond", gleam = 3, twinkle = 2, name = "Diamond skin", weight = 299, texture = "", shaft = { 200, 230, 255 }, head = { 160, 220, 255 }, material = "Glass" },
+	{ id = "rose", pass = 0, flow = { 0.05, 0 }, gleam = 5, name = "Rose Gold skin", weight = 3000, texture = "", shaft = { 120, 70, 60 }, head = { 232, 160, 150 }, material = "Metal" },
+	{ id = "ice", pass = 0, flow = { 0, 0.04 }, twinkle = 3, name = "Ice skin", weight = 2500, texture = "", shaft = { 180, 220, 240 }, head = { 210, 240, 255 }, material = "Ice" },
+	{ id = "lava", pass = 0, flow = { 0, -0.3 }, pulse = 0.5, name = "Lava skin", weight = 2000, texture = "", shaft = { 60, 30, 20 }, head = { 255, 90, 30 }, material = "Neon" },
+	{ id = "candy", pass = 0, flow = { 0.4, 0 }, name = "Candy Cane skin", weight = 1500, texture = "", shaft = { 245, 245, 245 }, head = { 230, 40, 60 }, material = "SmoothPlastic" },
+	{ id = "galaxy", pass = 0, flow = { 0.06, 0.04 }, pulse = 0.3, twinkle = 4, name = "Galaxy skin", weight = 700, texture = "", shaft = { 30, 20, 60 }, head = { 140, 90, 255 }, material = "Neon" },
+	{ id = "diamond", pass = 0, gleam = 3, twinkle = 2, name = "Diamond skin", weight = 299, texture = "", shaft = { 200, 230, 255 }, head = { 160, 220, 255 }, material = "Glass" },
 	{ id = "needle", name = "NEEDLE REVEAL", weight = 1, reveal = true },
 }
--- Skin animation (client/SkinFx): flow = pattern drift (studs/s), pulse = glow swell, gleam = s between shines, twinkle = sparkles/s
+-- pass = the skin's own game pass ID (buy it directly; 0 = not on sale). Skin animation (client/SkinFx): flow = pattern drift (studs/s), pulse = glow swell, gleam = s between shines, twinkle = sparkles/s
 Config.WheelDuplicateSearches = 200
 Config.WheelMinSlice = 0.004 -- the thinnest slice on the wheel's face (of a turn), so the needle reveal shows
 Config.SkinTextureStuds = 1.5 -- studs one copy of a patterned skin covers on the built tools

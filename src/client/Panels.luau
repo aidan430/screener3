@@ -60,8 +60,9 @@ function Panels.mount(gui, notify, actions)
 	local finds, findsBody = Ui.window(gui, "Finds")
 	windows.Finds = finds
 	local found, count = {}, 0
-	local skinsHeader = Ui.paragraph("Tool skins (win them on the Wheel of Fortune):", { LayoutOrder = 1, Font = Ui.font, TextSize = 20, Parent = findsBody })
-	local skinButtons = {}
+	local HEADER = "Tool skins: win them on the Wheel of Fortune, or buy the one you want:"
+	local skinsHeader = Ui.paragraph(HEADER, { LayoutOrder = 1, Font = Ui.font, TextSize = 20, Parent = findsBody })
+	local skinButtons, prices = {}, {}
 	local function wear(id)
 		local ok, _, message = pcall(Remotes.EquipSkin.InvokeServer, Remotes.EquipSkin, id)
 		notify.toast(if ok then tostring(message) else "Try again.", Ui.colors.purple)
@@ -74,19 +75,45 @@ function Panels.mount(gui, notify, actions)
 		if not prize.reveal then
 			local b = Ui.button(prize.name, Ui.colors.grey, { LayoutOrder = 2 + i, Size = UDim2.new(1, 0, 0, 40), Parent = findsBody })
 			b.Activated:Connect(function()
-				wear(prize.id)
+				if player:GetAttribute("Skin_" .. prize.id) then
+					wear(prize.id)
+				elseif prize.pass and prize.pass ~= 0 then -- buy it directly: Roblox shows the price before anything is paid
+					MarketplaceService:PromptGamePassPurchase(player, prize.pass)
+				end
 			end)
 			skinButtons[prize.id] = b
+			if prize.pass and prize.pass ~= 0 then
+				task.spawn(function() -- the price as set on the Creator Dashboard
+					local ok, info = pcall(MarketplaceService.GetProductInfo, MarketplaceService, prize.pass, Enum.InfoType.GamePass)
+					prices[prize.id] = ok and info and info.PriceInRobux or nil
+				end)
+			end
+			player:GetAttributeChangedSignal("Skin_" .. prize.id):Connect(function()
+				if finds.Visible then
+					refreshers.Finds()
+				end
+			end)
 		end
 	end
 	local storyHeader = Ui.paragraph("Lucky finds: odd things in the hay, and what they tell you.", { LayoutOrder = 50, Font = Ui.font, TextSize = 20, Parent = findsBody })
 	refreshers.Finds = function()
-		for id, b in pairs(skinButtons) do
-			local owned = player:GetAttribute("Skin_" .. id) == true
-			b.Visible = owned
-			b.BackgroundColor3 = if player:GetAttribute("Skin") == id then Ui.colors.green else Ui.colors.purple
+		for _, prize in ipairs(Config.Wheel) do
+			local b = skinButtons[prize.id]
+			if b then
+				local owned = player:GetAttribute("Skin_" .. prize.id) == true
+				local forSale = prize.pass ~= nil and prize.pass ~= 0
+				b.Visible = owned or forSale
+				if owned then
+					b.Text = prize.name
+					b.BackgroundColor3 = if player:GetAttribute("Skin") == prize.id then Ui.colors.green else Ui.colors.purple
+				else
+					local price = prices[prize.id]
+					b.Text = "Buy the " .. prize.name .. (if price then " (R$ " .. price .. ")" else " (Robux)")
+					b.BackgroundColor3 = Ui.colors.blue
+				end
+			end
 		end
-		skinsHeader.Text = "Tool skins (win them on the Wheel of Fortune):"
+		skinsHeader.Text = HEADER
 		storyHeader.Text = if count == 0 then "Lucky finds: nothing yet. Keep harvesting!" else "Lucky finds:"
 	end
 

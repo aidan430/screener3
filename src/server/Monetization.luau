@@ -24,7 +24,33 @@ local function nameOf(table_, id)
 	return nil
 end
 
+-- A skin bought directly (its game pass, Config.Wheel[n].pass): yours for good, on every visit.
+local function skinPass(id)
+	for _, prize in ipairs(Config.Wheel) do
+		if prize.pass and prize.pass ~= 0 and prize.pass == id then
+			return prize
+		end
+	end
+	return nil
+end
+
+local function grantSkin(player, prize)
+	PlayerData.update(player, function(d)
+		d.skins[prize.id] = true
+	end)
+end
+
 local function checkPasses(player)
+	for _, prize in ipairs(Config.Wheel) do
+		if prize.pass and prize.pass ~= 0 then
+			local ok, owns = pcall(function()
+				return MarketplaceService:UserOwnsGamePassAsync(player.UserId, prize.pass)
+			end)
+			if ok and owns then
+				grantSkin(player, prize)
+			end
+		end
+	end
 	for name, id in pairs(Config.GamePasses) do
 		if id ~= 0 then
 			local ok, owns = pcall(function()
@@ -100,6 +126,12 @@ end
 function Monetization.init()
 	PlayerData.onLoaded(checkPasses)
 	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
+		local skin = purchased and skinPass(passId)
+		if skin then
+			grantSkin(player, skin)
+			Remotes.Announce:FireClient(player, { kind = "notice", text = "Thank you! The " .. skin.name .. " is yours. Wear it from Finds & Skins." })
+			return
+		end
 		local name = nameOf(Config.GamePasses, passId)
 		if purchased and name then
 			PlayerData.setPass(player, name, true)

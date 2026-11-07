@@ -276,15 +276,15 @@ Config.VipOfflineSeconds = 3600
 -- before buying, and the wheel is hidden where paid random items aren't allowed.
 -- weight / total weight = chance. A skin you already own pays `WheelDuplicateSearches` instead.
 Config.Wheel = {
-	{ id = "rose", flow = { 0.05, 0 }, gleam = 5, name = "Rose Gold skin", weight = 3000, texture = "", shaft = { 120, 70, 60 }, head = { 232, 160, 150 }, material = "Metal" },
-	{ id = "ice", flow = { 0, 0.04 }, twinkle = 3, name = "Ice skin", weight = 2500, texture = "", shaft = { 180, 220, 240 }, head = { 210, 240, 255 }, material = "Ice" },
-	{ id = "lava", flow = { 0, -0.3 }, pulse = 0.5, name = "Lava skin", weight = 2000, texture = "", shaft = { 60, 30, 20 }, head = { 255, 90, 30 }, material = "Neon" },
-	{ id = "candy", flow = { 0.4, 0 }, name = "Candy Cane skin", weight = 1500, texture = "", shaft = { 245, 245, 245 }, head = { 230, 40, 60 }, material = "SmoothPlastic" },
-	{ id = "galaxy", flow = { 0.06, 0.04 }, pulse = 0.3, twinkle = 4, name = "Galaxy skin", weight = 700, texture = "", shaft = { 30, 20, 60 }, head = { 140, 90, 255 }, material = "Neon" },
-	{ id = "diamond", gleam = 3, twinkle = 2, name = "Diamond skin", weight = 299, texture = "", shaft = { 200, 230, 255 }, head = { 160, 220, 255 }, material = "Glass" },
+	{ id = "rose", pass = 0, flow = { 0.05, 0 }, gleam = 5, name = "Rose Gold skin", weight = 3000, texture = "", shaft = { 120, 70, 60 }, head = { 232, 160, 150 }, material = "Metal" },
+	{ id = "ice", pass = 0, flow = { 0, 0.04 }, twinkle = 3, name = "Ice skin", weight = 2500, texture = "", shaft = { 180, 220, 240 }, head = { 210, 240, 255 }, material = "Ice" },
+	{ id = "lava", pass = 0, flow = { 0, -0.3 }, pulse = 0.5, name = "Lava skin", weight = 2000, texture = "", shaft = { 60, 30, 20 }, head = { 255, 90, 30 }, material = "Neon" },
+	{ id = "candy", pass = 0, flow = { 0.4, 0 }, name = "Candy Cane skin", weight = 1500, texture = "", shaft = { 245, 245, 245 }, head = { 230, 40, 60 }, material = "SmoothPlastic" },
+	{ id = "galaxy", pass = 0, flow = { 0.06, 0.04 }, pulse = 0.3, twinkle = 4, name = "Galaxy skin", weight = 700, texture = "", shaft = { 30, 20, 60 }, head = { 140, 90, 255 }, material = "Neon" },
+	{ id = "diamond", pass = 0, gleam = 3, twinkle = 2, name = "Diamond skin", weight = 299, texture = "", shaft = { 200, 230, 255 }, head = { 160, 220, 255 }, material = "Glass" },
 	{ id = "needle", name = "NEEDLE REVEAL", weight = 1, reveal = true },
 }
--- Skin animation (client/SkinFx): flow = pattern drift (studs/s), pulse = glow swell, gleam = s between shines, twinkle = sparkles/s
+-- pass = the skin's own game pass ID (buy it directly; 0 = not on sale). Skin animation (client/SkinFx): flow = pattern drift (studs/s), pulse = glow swell, gleam = s between shines, twinkle = sparkles/s
 Config.WheelDuplicateSearches = 200
 Config.WheelMinSlice = 0.004 -- the thinnest slice on the wheel's face (of a turn), so the needle reveal shows
 Config.SkinTextureStuds = 1.5 -- studs one copy of a patterned skin covers on the built tools
@@ -3629,7 +3629,33 @@ local function nameOf(table_, id)
 	return nil
 end
 
+-- A skin bought directly (its game pass, Config.Wheel[n].pass): yours for good, on every visit.
+local function skinPass(id)
+	for _, prize in ipairs(Config.Wheel) do
+		if prize.pass and prize.pass ~= 0 and prize.pass == id then
+			return prize
+		end
+	end
+	return nil
+end
+
+local function grantSkin(player, prize)
+	PlayerData.update(player, function(d)
+		d.skins[prize.id] = true
+	end)
+end
+
 local function checkPasses(player)
+	for _, prize in ipairs(Config.Wheel) do
+		if prize.pass and prize.pass ~= 0 then
+			local ok, owns = pcall(function()
+				return MarketplaceService:UserOwnsGamePassAsync(player.UserId, prize.pass)
+			end)
+			if ok and owns then
+				grantSkin(player, prize)
+			end
+		end
+	end
 	for name, id in pairs(Config.GamePasses) do
 		if id ~= 0 then
 			local ok, owns = pcall(function()
@@ -3705,6 +3731,12 @@ end
 function Monetization.init()
 	PlayerData.onLoaded(checkPasses)
 	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
+		local skin = purchased and skinPass(passId)
+		if skin then
+			grantSkin(player, skin)
+			Remotes.Announce:FireClient(player, { kind = "notice", text = "Thank you! The " .. skin.name .. " is yours. Wear it from Finds & Skins." })
+			return
+		end
 		local name = nameOf(Config.GamePasses, passId)
 		if purchased and name then
 			PlayerData.setPass(player, name, true)
@@ -12051,8 +12083,9 @@ function Panels.mount(gui, notify, actions)
 	local finds, findsBody = Ui.window(gui, "Finds")
 	windows.Finds = finds
 	local found, count = {}, 0
-	local skinsHeader = Ui.paragraph("Tool skins (win them on the Wheel of Fortune):", { LayoutOrder = 1, Font = Ui.font, TextSize = 20, Parent = findsBody })
-	local skinButtons = {}
+	local HEADER = "Tool skins: win them on the Wheel of Fortune, or buy the one you want:"
+	local skinsHeader = Ui.paragraph(HEADER, { LayoutOrder = 1, Font = Ui.font, TextSize = 20, Parent = findsBody })
+	local skinButtons, prices = {}, {}
 	local function wear(id)
 		local ok, _, message = pcall(Remotes.EquipSkin.InvokeServer, Remotes.EquipSkin, id)
 		notify.toast(if ok then tostring(message) else "Try again.", Ui.colors.purple)
@@ -12065,19 +12098,45 @@ function Panels.mount(gui, notify, actions)
 		if not prize.reveal then
 			local b = Ui.button(prize.name, Ui.colors.grey, { LayoutOrder = 2 + i, Size = UDim2.new(1, 0, 0, 40), Parent = findsBody })
 			b.Activated:Connect(function()
-				wear(prize.id)
+				if player:GetAttribute("Skin_" .. prize.id) then
+					wear(prize.id)
+				elseif prize.pass and prize.pass ~= 0 then -- buy it directly: Roblox shows the price before anything is paid
+					MarketplaceService:PromptGamePassPurchase(player, prize.pass)
+				end
 			end)
 			skinButtons[prize.id] = b
+			if prize.pass and prize.pass ~= 0 then
+				task.spawn(function() -- the price as set on the Creator Dashboard
+					local ok, info = pcall(MarketplaceService.GetProductInfo, MarketplaceService, prize.pass, Enum.InfoType.GamePass)
+					prices[prize.id] = ok and info and info.PriceInRobux or nil
+				end)
+			end
+			player:GetAttributeChangedSignal("Skin_" .. prize.id):Connect(function()
+				if finds.Visible then
+					refreshers.Finds()
+				end
+			end)
 		end
 	end
 	local storyHeader = Ui.paragraph("Lucky finds: odd things in the hay, and what they tell you.", { LayoutOrder = 50, Font = Ui.font, TextSize = 20, Parent = findsBody })
 	refreshers.Finds = function()
-		for id, b in pairs(skinButtons) do
-			local owned = player:GetAttribute("Skin_" .. id) == true
-			b.Visible = owned
-			b.BackgroundColor3 = if player:GetAttribute("Skin") == id then Ui.colors.green else Ui.colors.purple
+		for _, prize in ipairs(Config.Wheel) do
+			local b = skinButtons[prize.id]
+			if b then
+				local owned = player:GetAttribute("Skin_" .. prize.id) == true
+				local forSale = prize.pass ~= nil and prize.pass ~= 0
+				b.Visible = owned or forSale
+				if owned then
+					b.Text = prize.name
+					b.BackgroundColor3 = if player:GetAttribute("Skin") == prize.id then Ui.colors.green else Ui.colors.purple
+				else
+					local price = prices[prize.id]
+					b.Text = "Buy the " .. prize.name .. (if price then " (R$ " .. price .. ")" else " (Robux)")
+					b.BackgroundColor3 = Ui.colors.blue
+				end
+			end
 		end
-		skinsHeader.Text = "Tool skins (win them on the Wheel of Fortune):"
+		skinsHeader.Text = HEADER
 		storyHeader.Text = if count == 0 then "Lucky finds: nothing yet. Keep harvesting!" else "Lucky finds:"
 	end
 

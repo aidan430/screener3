@@ -19,6 +19,19 @@ the price. Copy the pass ID (the number in its page address).
 | sparkletrail.png | Sparkle Trail | Just for fun: a soft golden sparkle trail follows you. Changes nothing else. | 79 | GamePasses.SparkleTrail |
 | jetpack.png | Jetpack | Hold Space in the air to fly up and hover (H), so you can reach any part of your haystack. | 199 | GamePasses.Jetpack |
 
+## Tool skins (game passes, bought once, kept forever)
+Same steps as the passes above. Each skin can also be won on the Wheel of Fortune; buying it
+is the sure way. Send Claude the IDs (they go in `Config.Wheel`, `pass = ...`).
+
+| Icon | Name | Description | Suggested price |
+|---|---|---|---|
+| skin_rose.png | Rose Gold Skin | Your tools in rose gold, with a soft shine that glides along them. Looks only. | 99 |
+| skin_ice.png | Ice Skin | Your tools in frosted ice, with little twinkling stars. Looks only. | 99 |
+| skin_lava.png | Lava Skin | Your tools in glowing lava cracks that slowly flow. Looks only. | 149 |
+| skin_candy.png | Candy Cane Skin | Your tools in rolling candy-cane stripes. Looks only. | 149 |
+| skin_galaxy.png | Galaxy Skin | Your tools in a drifting purple galaxy full of stars. Looks only. | 199 |
+| skin_diamond.png | Diamond Skin | Your tools in sparkling diamond, with a gleam every few seconds. Looks only. | 249 |
+
 ## Developer products (can be bought again)
 Creator Dashboard > your game > Monetization > Developer Products > Create a Developer
 Product. Upload the icon, enter the name, description and price, Create. Copy its ID.
