@@ -28,7 +28,7 @@ local function ask(remote, ...)
 end
 
 local function row(parent, order, name, text, colour)
-	local f = Ui.make("Frame", { LayoutOrder = order, Size = UDim2.new(1, 0, 0, 64), BackgroundColor3 = colour or Ui.colors.paper, Parent = parent }, { Ui.corner(10) })
+	local f = Ui.make("Frame", { LayoutOrder = order, Size = UDim2.new(1, 0, 0, 64), BackgroundColor3 = colour or Ui.colors.white, Parent = parent }, { Ui.corner(6), Ui.stroke() })
 	Ui.label({ Text = name, Size = UDim2.new(0.6, -12, 0, 28), Position = UDim2.fromOffset(12, 5), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Ui.colors.ink, TextStrokeTransparency = 1, Parent = f }, 22)
 	local sub = Ui.label({ Text = text, Size = UDim2.new(0.6, -12, 0, 24), Position = UDim2.fromOffset(12, 35), Font = Ui.body, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Ui.colors.grey, TextStrokeTransparency = 1, Parent = f }, 14)
 	local button = Ui.button("", Ui.colors.green, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0.36, 0, 0, 46), Parent = f })
@@ -37,21 +37,22 @@ end
 
 local function price(button, cost, done, available, doneText)
 	if done then
-		button.Text, button.BackgroundColor3 = doneText or "OWNED", Ui.colors.grey
+		button.Text, button.BackgroundColor3 = doneText or "Owned", Ui.colors.grey
 	elseif not available then
-		button.Text, button.BackgroundColor3 = "LOCKED", Ui.colors.grey
+		button.Text, button.BackgroundColor3 = "Locked", Ui.colors.grey
 	else
-		button.Text = "BUY " .. Format.short(cost)
+		button.Text = "Buy · " .. Format.short(cost)
 		button.BackgroundColor3 = if (player:GetAttribute("Coins") or 0) >= cost then Ui.colors.green else Ui.colors.red
 	end
 end
 
 function Shop.mount(gui, notify)
 	local body
-	frame, body = Ui.window(gui, "Shop")
+	frame, body = Ui.window(gui, "Shop", nil, "Shop")
 	Ui.fit(frame, 640, 540)
 	-- tabs share the width with a mouse; on touch screens they stay tappable and scroll sideways
-	local tabs = Ui.make("ScrollingFrame", { Size = UDim2.new(1, -24, 0, 40), Position = UDim2.fromOffset(12, 64), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 0, CanvasSize = UDim2.new(), Parent = frame }, { Ui.make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }) })
+	local rail = frame:GetAttribute("Rail") or 0 -- the journal's tab rail down the left
+	local tabs = Ui.make("ScrollingFrame", { Size = UDim2.new(1, -rail - 40, 0, 36), Position = UDim2.fromOffset(rail + 24, 64), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 0, CanvasSize = UDim2.new(), Parent = frame }, { Ui.make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }) })
 	local tabButtons = {}
 	Ui.onLayout(function()
 		local touch = Ui.touch()
@@ -60,7 +61,7 @@ function Shop.mount(gui, notify)
 			b.Size = if touch then UDim2.fromOffset(104, 40) else UDim2.new(1 / 9, -4, 1, 0)
 		end
 	end)
-	body.Position, body.Size = UDim2.fromOffset(12, 110), UDim2.new(1, -24, 1, -118)
+	body.Position, body.Size = UDim2.fromOffset(rail + 24, 110), UDim2.new(1, -rail - 40, 1, -118)
 	local pages, refreshers, order = {}, {}, 0
 	Shop.refreshers = refreshers
 
@@ -80,12 +81,17 @@ function Shop.mount(gui, notify)
 		order += 1
 		local list = Ui.make("Frame", { Name = name, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Visible = false, Parent = body }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
 		pages[name], refreshers[name] = list, build(list)
-		local tab = Ui.button(name, colour, { LayoutOrder = order, Size = if Ui.touch() then UDim2.fromOffset(104, 40) else UDim2.new(1 / 9, -4, 1, 0), Parent = tabs })
+		local _ = colour -- quiet tabs: the open one in ink, the rest plain paper
+		local tab = Ui.button(name, Ui.colors.paper, { LayoutOrder = order, TextColor3 = Ui.colors.soft, Size = if Ui.touch() then UDim2.fromOffset(104, 40) else UDim2.new(1 / 9, -4, 1, 0), Parent = tabs })
 		table.insert(tabButtons, tab)
 		tab.Activated:Connect(function()
 			for key, p in pairs(pages) do
 				p.Visible = key == name
 			end
+			for _, other in ipairs(tabButtons) do
+				other.BackgroundColor3, other.TextColor3 = Ui.colors.paper, Ui.colors.soft
+			end
+			tab.BackgroundColor3, tab.TextColor3 = Ui.colors.ink, Ui.colors.white
 			Shop.refresh()
 		end)
 	end
@@ -122,7 +128,7 @@ function Shop.mount(gui, notify)
 			for i, perk in ipairs(Config.Perks) do
 				local level = d.perks[perk.id]
 				subs[i].Text = perk.text .. ". " .. level .. "/" .. perk.levels .. " on this tool."
-				price(rows[i], Economy.perkPrice(d, i), level >= perk.levels, true, "MAXED")
+				price(rows[i], Economy.perkPrice(d, i), level >= perk.levels, true, "All done")
 			end
 		end
 	end)
@@ -144,7 +150,7 @@ function Shop.mount(gui, notify)
 			for i, f in ipairs(Config.Fitness) do
 				local level = player:GetAttribute("Fitness_" .. f.id) or 0
 				subs[i].Text = f.text .. ". " .. level .. "/" .. f.levels .. "."
-				price(rows[i], math.floor(f.price * f.growth ^ level), level >= f.levels, true, "MAXED")
+				price(rows[i], math.floor(f.price * f.growth ^ level), level >= f.levels, true, "All done")
 			end
 			price(detector, Config.MetalDetector.price, player:GetAttribute("Detector") == true, true)
 		end
@@ -191,7 +197,7 @@ function Shop.mount(gui, notify)
 				for i, def in ipairs(list_) do
 					local own, inv = player:GetAttribute("Own_" .. def.id) or 0, player:GetAttribute("Inv_" .. def.id) or 0
 					subs[i].Text = describe(def) .. "  You have " .. own .. (if def.max then "/" .. def.max else "") .. (if inv > 0 then " (" .. inv .. " to build)" else "")
-					price(rows[i], def.price, def.max ~= nil and own >= def.max, true, "MAXED")
+					price(rows[i], def.price, def.max ~= nil and own >= def.max, true, "All done")
 				end
 			end
 		end)
@@ -240,7 +246,7 @@ function Shop.mount(gui, notify)
 			for i, truck in ipairs(Config.Trucks) do
 				local own = player:GetAttribute("Truck_" .. truck.id) or 0
 				subs[i].Text = "Hauls " .. Format.commas(truck.rate) .. " straws a second. You have " .. own .. "/" .. truck.max .. "."
-				price(rows[i], truck.price, own >= truck.max, true, "MAXED")
+				price(rows[i], truck.price, own >= truck.max, true, "All done")
 			end
 			local belt = player:GetAttribute("BeltLevel") or 1
 			for level, button in pairs(belts) do
@@ -256,7 +262,7 @@ function Shop.mount(gui, notify)
 			if id and id ~= 0 then
 				any = true
 				local button = row(list, i, item.title, item.text, Color3.fromRGB(226, 236, 250))
-				button.Text, button.BackgroundColor3 = "ROBUX", Ui.colors.blue
+				button.Text, button.BackgroundColor3 = "Robux", Ui.colors.blue
 				button.Activated:Connect(function()
 					if item.kind == "pass" then
 						MarketplaceService:PromptGamePassPurchase(player, id)
@@ -273,9 +279,8 @@ function Shop.mount(gui, notify)
 	end)
 
 	pages.Tools.Visible = true
-	player.AttributeChanged:Connect(function()
-		Shop.refresh()
-	end)
+	tabButtons[1].BackgroundColor3, tabButtons[1].TextColor3 = Ui.colors.ink, Ui.colors.white
+	player.AttributeChanged:Connect(Shop.refresh)
 	return frame
 end
 

@@ -603,3 +603,19 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   aren't random, so they're offered everywhere, including where the wheel is restricted. The
   wheel stays as the free daily way to win one (a skin you already own pays coins). Icons:
   assets/marketing/robux/skin_*.png; names, descriptions and suggested prices in ROBUX_ITEMS.md.
+
+## The farm journal look (2026-11-08)
+- The UI moved away from the chunky wooden simulator style. Ui.colors are now a muted paper
+  palette (cream paper, ink brown, sage, mustard, rust, slate, plum, plus `soft` for secondary
+  text); headings are bold Merriweather (Ui.font), body text Builder Sans; buttons are flat with
+  small corners and no outlines; Ui.stroke is a fine pencil line whatever thickness is asked.
+- client/UiJournal adds Ui.card, Ui.pin, Ui.bar, Ui.stamp and the journal windows: Shop,
+  Achievements, Skins & finds and Wheel are pages of one "Farm journal" with a tab rail on the
+  left (Ui.JOURNAL; Panels sets Ui.journalOpen).
+- HUD: a paper tag top left (coins, carrying, silo, farm numbers, boosts); the heap's progress
+  written across the sky at the top; goal and delivery order as notes pinned at the top right;
+  round stamps bottom left (Shop, Build, achievements, Skins & finds, Whistle when owned); "?"
+  (keys) and music stamps bottom right; a ring crosshair that turns mustard on target.
+- Toasts are paper with a coloured stripe; the banner is paper. Skins are a grid of cards
+  (colour swatch, name, Config.Wheel `about`, Wear / Wearing / Buy · R$ price). Button words
+  are sentence case. Icons would need uploaded images, so stamps use words.

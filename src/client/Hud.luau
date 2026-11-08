@@ -1,5 +1,7 @@
--- The always-on screen: a crosshair, your pile's progress at the top, and on the left your
--- coins (they count up smoothly), what you carry, your silo, power and the menu buttons.
+-- The always-on screen, in the farm journal style: a ring crosshair; your heap's progress
+-- written across the sky at the top; a paper tag at the top left with your coins (they count up
+-- smoothly), what you carry, your silo and your farm's numbers; round paper stamps at the bottom
+-- left for the journal's pages; and a "?" stamp that shows the keys.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -15,74 +17,84 @@ local player = Players.LocalPlayer
 local Hud = {}
 Hud.state = { inLoft = false, warmth = nil, targeting = false }
 
-local function bar(parent, y, colour)
-	local back = Ui.make("Frame", { Size = UDim2.new(1, -16, 0, 10), Position = UDim2.fromOffset(8, y), BackgroundColor3 = Ui.colors.woodDark, Parent = parent }, { Ui.corner(5) })
-	return Ui.make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = colour, Parent = back }, { Ui.corner(5) })
-end
-
 local function fillTo(fill, share)
 	Juice.ease(fill, 0.25, { Size = UDim2.fromScale(math.clamp(share, 0, 1), 1) })
 end
 
+-- Small text on paper: soft brown, no shadow.
+local function note(parent, y, size, props)
+	local defaults = { Font = Ui.body, Size = UDim2.new(1, -28, 0, size + 2), Position = UDim2.fromOffset(14, y), TextColor3 = Ui.colors.soft, TextStrokeTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = parent }
+	for k, v in pairs(props or {}) do
+		defaults[k] = v
+	end
+	return Ui.label(defaults, size)
+end
+
 function Hud.mount(gui, open)
-	local crosshair = Ui.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(6, 6), BackgroundColor3 = Ui.colors.white, BackgroundTransparency = 0.2, Parent = gui }, { Ui.corner(3), Ui.stroke(Ui.colors.woodDark, 1) })
+	local crosshair = Ui.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(14, 14), BackgroundTransparency = 1, Parent = gui }, { Ui.corner(7) })
+	local ring = Ui.make("UIStroke", { Color = Ui.colors.white, Thickness = 2, Transparency = 0.1, Parent = crosshair })
 
-	local top = Ui.make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6), Size = UDim2.fromOffset(470, 84), BackgroundColor3 = Ui.colors.wood, BackgroundTransparency = 0.1, Parent = gui }, { Ui.corner(14), Ui.stroke(Ui.colors.woodDark, 3) })
+	-- the heap's progress, written across the sky: no box, a soft shadow and a thin line
+	local top = Ui.make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 10), Size = UDim2.fromOffset(460, 64), BackgroundTransparency = 1, Parent = gui })
 	Ui.autoScale(top)
-	local title = Ui.label({ Size = UDim2.new(1, -20, 0, 22), Position = UDim2.fromOffset(10, 4), TextColor3 = Ui.colors.hay, Parent = top }, 20)
-	local countLabel = Ui.label({ Size = UDim2.new(1, -20, 0, 22), Position = UDim2.fromOffset(10, 27), Parent = top }, 20)
-	local pileFill = bar(top, 54, Ui.colors.hay)
-	local warmth = Ui.label({ Size = UDim2.new(1, -20, 0, 14), Position = UDim2.fromOffset(10, 67), TextColor3 = Ui.colors.cream, Parent = top }, 13)
+	local title = Ui.label({ Size = UDim2.new(1, 0, 0, 22), TextColor3 = Ui.colors.white, Parent = top }, 18)
+	local _, pileFill = Ui.bar(top, { Size = UDim2.new(0.74, 0, 0, 3), Position = UDim2.new(0.13, 0, 0, 28), BackgroundColor3 = Ui.colors.white, BackgroundTransparency = 0.6 }, Ui.colors.white)
+	local warmth = Ui.label({ Size = UDim2.new(1, 0, 0, 16), Position = UDim2.fromOffset(0, 38), Font = Ui.body, TextColor3 = Ui.colors.white, Parent = top }, 14)
 
-	local left = Ui.make("Frame", { AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0, 10, 0, 140), Size = UDim2.fromOffset(220, 488), BackgroundTransparency = 1, Parent = gui }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
-	Ui.autoScale(left)
-	local stats = Ui.make("Frame", { LayoutOrder = 1, Size = UDim2.fromOffset(220, 194), BackgroundColor3 = Ui.colors.wood, BackgroundTransparency = 0.1, Parent = left }, { Ui.corner(12), Ui.stroke(Ui.colors.woodDark, 3) })
-	local coinsLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 36), Position = UDim2.fromOffset(8, 4), TextColor3 = Ui.colors.hay, Parent = stats }, 32)
-	local earnLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 16), Position = UDim2.fromOffset(8, 38), TextColor3 = Ui.colors.cream, Parent = stats }, 14) -- coins a minute (client Goals.luau)
-	local carryLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(8, 60), Parent = stats }, 16)
-	local carryFill = bar(stats, 80, Ui.colors.green)
-	local siloLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(8, 94), Parent = stats }, 16)
-	local siloFill = bar(stats, 114, Ui.colors.blue)
-	local powerLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(8, 128), Parent = stats }, 15)
-	local rateLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(8, 148), Parent = stats }, 15)
-	local bonusLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(8, 168), Parent = stats }, 15)
+	-- the paper tag, top left
+	local tag = Ui.card({ Position = UDim2.fromOffset(16, 0), Size = UDim2.fromOffset(250, 210), Parent = gui })
+	Ui.autoScale(tag)
+	Ui.make("Frame", { Size = UDim2.fromOffset(28, 28), Position = UDim2.fromOffset(14, 14), BackgroundColor3 = Ui.colors.hay, Parent = tag }, { Ui.corner(14), Ui.make("UIStroke", { Color = Color3.fromRGB(150, 104, 26), Thickness = 1.5 }) })
+	local coinsLabel = Ui.label({ Size = UDim2.new(1, -66, 0, 30), Position = UDim2.fromOffset(52, 8), TextColor3 = Ui.colors.ink, TextStrokeTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = tag }, 28)
+	local earnLabel = note(tag, 38, 12, { Position = UDim2.fromOffset(52, 38), Size = UDim2.new(1, -66, 0, 14) }) -- coins a minute (client Goals.luau)
+	local carryLabel = note(tag, 64, 12)
+	local _, carryFill = Ui.bar(tag, { Size = UDim2.new(1, -28, 0, 5), Position = UDim2.fromOffset(14, 82) })
+	local siloLabel = note(tag, 94, 12)
+	local _, siloFill = Ui.bar(tag, { Size = UDim2.new(1, -28, 0, 5), Position = UDim2.fromOffset(14, 112) }, Ui.colors.blue)
+	local powerLabel = note(tag, 126, 12)
+	local rateLabel = note(tag, 144, 12)
+	local bonusLabel = note(tag, 162, 12)
+	local boosts = note(tag, 182, 12, { TextColor3 = Ui.colors.green, Size = UDim2.new(1, -28, 0, 22), TextYAlignment = Enum.TextYAlignment.Top })
 	local coinValue = Instance.new("NumberValue")
 
-	local function button(order, text, colour, onClick)
-		local b = Ui.button(text, colour, { LayoutOrder = order, Size = UDim2.fromOffset(220, 40), Parent = left })
-		b.Activated:Connect(onClick)
-		return b
+	-- the stamps, bottom left: the journal's pages
+	local stamps = Ui.make("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -16), Size = UDim2.fromOffset(400, 64), BackgroundTransparency = 1, Parent = gui }, {
+		Ui.make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
+	})
+	Ui.autoScale(stamps)
+	local function stamp(order, word, caption, page)
+		local s, label = Ui.stamp(word, caption, { LayoutOrder = order, Parent = stamps })
+		s.Activated:Connect(function()
+			open(page)
+		end)
+		return s, label
 	end
-	local shopButton = button(2, "SHOP  (Q)", Ui.colors.green, function()
-		open("Shop")
+	local shopButton = stamp(1, "Shop", "Q", "Shop")
+	local buildButton = stamp(2, "Build", "B", "Build")
+	local achievementsButton, achievementsWord = stamp(3, "0/0", "FEATS", "Achievements")
+	local findsButton = stamp(4, "Skins", "& FINDS", "Finds")
+	local whistle = stamp(5, "Whistle", "SELL HERE", "Whistle")
+
+	-- "?": the keys, on a paper slip that opens and closes
+	local help = Ui.stamp("?", "KEYS", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -16, 1, -16), Size = UDim2.fromOffset(48, 48), Parent = gui })
+	Ui.autoScale(help)
+	local keys = Ui.card({ AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -16, 1, -74), Size = UDim2.fromOffset(250, 150), Visible = false, Parent = gui })
+	Ui.autoScale(keys)
+	Ui.paragraph(table.concat({ "M  mouse and menus", "Q  shop", "B  build", "E  use", Config.DropKey .. "  drop hay", Config.HomeKey .. "  home", "Shift  sprint" }, "\n"), { Size = UDim2.new(1, -24, 1, -16), Position = UDim2.fromOffset(12, 8), AutomaticSize = Enum.AutomaticSize.None, TextSize = 15, Parent = keys })
+	help.Activated:Connect(function()
+		keys.Visible = not keys.Visible
 	end)
-	local buildButton = button(3, "BUILD  (B)", Ui.colors.wood, function()
-		open("Build")
-	end)
-	local achievementsButton = button(4, "ACHIEVEMENTS", Ui.colors.blue, function()
-		open("Achievements")
-	end)
-	local findsButton = button(5, "FINDS & SKINS", Ui.colors.purple, function()
-		open("Finds")
-	end)
-	local whistle = button(6, "WHISTLE: SELL HERE", Ui.colors.red, function()
-		open("Whistle")
-	end)
-	local boosts = Ui.label({ LayoutOrder = 7, Size = UDim2.fromOffset(220, 50), TextColor3 = Ui.colors.hay, TextYAlignment = Enum.TextYAlignment.Top, Parent = left }, 14)
-	local keys = Ui.label({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.fromOffset(560, 18), Text = "M: mouse & menus   Q: shop   B: build   E: use   " .. Config.DropKey .. ": drop hay   " .. Config.HomeKey .. ": home", TextTransparency = 0.3, Parent = gui }, 15)
 
 	local function refresh()
-		left.Position = UDim2.new(0, 10, 0, 60 + 74 * Ui.screenScale()) -- just under the goal card
+		tag.Position = UDim2.fromOffset(16, Ui.topInset() + 10)
 		local needles = player:GetAttribute("Needles") or 0
 		if Hud.state.inLoft then
 			local searched = player:GetAttribute("LoftSearched") or 0
-			title.Text = "THE GOLDEN LOFT: " .. (player:GetAttribute("GoldenNeedles") or 0) .. " golden needle(s) found"
-			countLabel.Text = Format.commas(Config.Loft.straws - searched) .. " golden straws left. 1 golden needle."
+			title.Text = Format.commas(Config.Loft.straws - searched) .. " golden straws left · " .. (player:GetAttribute("GoldenNeedles") or 0) .. " golden needles found"
 			fillTo(pileFill, 1 - searched / Config.Loft.straws)
 		else
 			local clumps = player:GetAttribute("ClumpsLeft") or Config.Clumps
-			title.Text = "YOUR PILE: " .. needles .. " needle(s) found"
-			countLabel.Text = Format.commas(clumps) .. " of " .. Format.commas(Config.Clumps) .. " clumps left. 1 needle inside."
+			title.Text = Format.commas(clumps) .. " clumps left · 1 needle inside" .. (if needles > 0 then " · " .. needles .. " found" else "")
 			fillTo(pileFill, clumps / Config.Clumps)
 		end
 		local w = Hud.state.warmth
@@ -91,38 +103,39 @@ function Hud.mount(gui, open)
 			return Format.short(math.floor(v + 0.5)) .. " coins"
 		end)
 		local carried, capacity = player:GetAttribute("Carried") or 0, player:GetAttribute("Capacity") or 1
-		carryLabel.Text = "Carrying " .. Format.commas(carried) .. " / " .. Format.commas(capacity) .. (if carried >= capacity then "  FULL!" else "")
+		carryLabel.Text = "Carrying " .. Format.commas(carried) .. " of " .. Format.commas(capacity) .. (if carried >= capacity then " · full" else "")
 		fillTo(carryFill, carried / capacity)
-		carryFill.BackgroundColor3 = if carried >= capacity then Ui.colors.red else Ui.colors.green
+		carryFill.BackgroundColor3 = if carried >= capacity then Ui.colors.red else Ui.colors.hay
 		local siloSize = Economy.silo(player:GetAttribute("Silo") or 1).size
 		local silo = player:GetAttribute("SiloStraw") or 0
-		siloLabel.Text = "Silo " .. Format.commas(silo) .. " / " .. Format.commas(siloSize)
+		siloLabel.Text = "Silo " .. Format.commas(silo) .. " of " .. Format.commas(siloSize)
 		fillTo(siloFill, silo / siloSize)
 		local made, draw = player:GetAttribute("PowerMade") or 0, player:GetAttribute("PowerDraw") or 0
-		powerLabel.Text = "Power " .. made .. " made / " .. draw .. " used" .. (if draw > made then "  LOW!" else "")
-		powerLabel.TextColor3 = if draw > made then Color3.fromRGB(255, 130, 110) else Ui.colors.white
-		rateLabel.Text = (player:GetAttribute("Power") or 1) .. " a click, machines " .. string.format("%.1f", player:GetAttribute("MachineRate") or 0) .. "/s"
+		powerLabel.Text = "Power " .. made .. " made, " .. draw .. " used" .. (if draw > made then " · low" else "")
+		powerLabel.TextColor3 = if draw > made then Ui.colors.red else Ui.colors.soft
+		rateLabel.Text = (player:GetAttribute("Power") or 1) .. " a click · machines " .. string.format("%.1f", player:GetAttribute("MachineRate") or 0) .. "/s · x" .. string.format("%.2f", player:GetAttribute("Multiplier") or 1)
 		-- what waits in your trader's basket, and how fast the trader and your trucks sell it
 		local waiting = (player:GetAttribute("BasketStraw") or 0) + (player:GetAttribute("BaledStraw") or 0)
-		bonusLabel.Text = "Basket " .. Format.short(waiting) .. ", sells " .. Format.short(player:GetAttribute("HaulRate") or Config.TraderRate) .. "/s"
-		rateLabel.Text ..= "  x" .. string.format("%.2f", player:GetAttribute("Multiplier") or 1)
-		achievementsButton.Text = "ACHIEVEMENTS " .. (player:GetAttribute("Achievements") or 0) .. "/" .. #Config.Achievements
-		-- touch screens: the menu buttons and key list fold away (the action pad and its MENU
-		-- have them), so nothing sits over the thumbstick
+		bonusLabel.Text = "Basket " .. Format.short(waiting) .. " · sells " .. Format.short(player:GetAttribute("HaulRate") or Config.TraderRate) .. "/s"
+		achievementsWord.Text = (player:GetAttribute("Achievements") or 0) .. "/" .. #Config.Achievements
+		-- touch screens: the stamps and keys fold away (the action pad and its MENU have them),
+		-- so nothing sits over the thumbstick
 		local touch = Ui.touch()
 		for _, b in ipairs({ shopButton, buildButton, achievementsButton, findsButton }) do
 			b.Visible = not touch
 		end
-		keys.Visible = not touch
+		help.Visible = not touch
+		keys.Visible = keys.Visible and not touch
 		whistle.Visible = not touch and (player:GetAttribute("Whistles") or 0) > 0
 		local lines, now = {}, os.time()
 		for name, label in pairs({ SpeedBoost = "2x speed", CoinBoost = "2x coins", LuckyCharm = "Lucky charm" }) do
 			local until_ = player:GetAttribute("Boost_" .. name) or 0
 			if until_ > now then
-				table.insert(lines, label .. ": " .. math.ceil((until_ - now) / 60) .. " min")
+				table.insert(lines, label .. " " .. math.ceil((until_ - now) / 60) .. " min")
 			end
 		end
-		boosts.Text = table.concat(lines, "\n")
+		boosts.Text = table.concat(lines, " · ")
+		tag.Size = UDim2.fromOffset(250, if #lines > 0 then 210 else 186)
 	end
 
 	player.AttributeChanged:Connect(refresh)
@@ -135,7 +148,7 @@ function Hud.mount(gui, open)
 	end)
 	task.spawn(function()
 		while true do
-			crosshair.BackgroundColor3 = if Hud.state.targeting then Ui.colors.hay else Ui.colors.white
+			ring.Color = if Hud.state.targeting then Ui.colors.hay else Ui.colors.white
 			task.wait(0.1)
 		end
 	end)

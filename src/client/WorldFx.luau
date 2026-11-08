@@ -40,7 +40,7 @@ function WorldFx.reveal(clump)
 	glow.Adornee = part
 	glow.Parent = part
 	local board = Ui.make("BillboardGui", { Adornee = part, Size = UDim2.fromOffset(220, 40), StudsOffset = Vector3.new(0, 5, 0), AlwaysOnTop = true, LightInfluence = 0, Parent = part })
-	Ui.label({ Text = "THE NEEDLE IS HERE", Size = UDim2.fromScale(1, 1), TextColor3 = Ui.colors.hay, Parent = board }, 30)
+	Ui.label({ Text = "The needle is here", Size = UDim2.fromScale(1, 1), TextColor3 = Ui.colors.hay, Parent = board }, 30)
 	TweenService:Create(glow, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { FillTransparency = 0.8 }):Play()
 	-- gone once the needle's found (the clump count jumps back to full)
 	player:GetAttributeChangedSignal("Needles"):Connect(function()

@@ -66,10 +66,10 @@ function Sprint.start()
 		end
 	end)
 	local button
-	button = TouchPad.add({ order = 0, text = "RUN", colour = Ui.colors.green, tap = function()
+	button = TouchPad.add({ order = 0, text = "Run", colour = Ui.colors.green, tap = function()
 		set(not running)
 		if button then
-			button.Text = if running then "WALK" else "RUN"
+			button.Text = if running then "Walk" else "Run"
 		end
 	end })
 end

@@ -16,12 +16,16 @@ local Goals = {}
 local earned = {} -- { time, coins } for each rise in Coins (goal rewards taken back out)
 
 local function card(gui)
-	local frame = Ui.make("Frame", { Name = "GoalCard", Position = UDim2.fromOffset(10, 60), Size = UDim2.fromOffset(290, 66), BackgroundColor3 = Ui.colors.wood, BackgroundTransparency = 0.15, Visible = false, Parent = gui }, { Ui.corner(12), Ui.stroke(Ui.colors.woodDark, 3) })
+	-- a note pinned at the top right, a little askew
+	local frame = Ui.card({ Name = "GoalCard", AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(280, 86), Rotation = -1, Visible = false, Parent = gui })
 	Ui.autoScale(frame)
-	local heading = Ui.label({ Size = UDim2.new(1, -16, 0, 16), Position = UDim2.fromOffset(8, 4), TextColor3 = Ui.colors.hay, TextXAlignment = Enum.TextXAlignment.Left, Parent = frame }, 15)
-	local text = Ui.label({ Size = UDim2.new(1, -16, 0, 30), Position = UDim2.fromOffset(8, 20), TextColor3 = Ui.colors.cream, TextXAlignment = Enum.TextXAlignment.Left, Font = Ui.body, Parent = frame }, 15)
-	local back = Ui.make("Frame", { Size = UDim2.new(1, -16, 0, 8), Position = UDim2.fromOffset(8, 53), BackgroundColor3 = Ui.colors.woodDark, Parent = frame }, { Ui.corner(4) })
-	local fill = Ui.make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Ui.colors.green, Parent = back }, { Ui.corner(4) })
+	Ui.onLayout(function()
+		frame.Position = UDim2.new(1, -16, 0, Ui.topInset() + 14)
+	end)
+	Ui.pin(frame, Ui.colors.red)
+	local heading = Ui.label({ Size = UDim2.new(1, -28, 0, 20), Position = UDim2.fromOffset(14, 12), TextColor3 = Ui.colors.ink, TextStrokeTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = frame }, 16)
+	local text = Ui.label({ Size = UDim2.new(1, -28, 0, 30), Position = UDim2.fromOffset(14, 34), TextColor3 = Ui.colors.soft, TextStrokeTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Font = Ui.body, Parent = frame }, 14)
+	local _, fill = Ui.bar(frame, { Size = UDim2.new(1, -28, 0, 5), Position = UDim2.fromOffset(14, 70) }, Ui.colors.green)
 	return frame, heading, text, fill
 end
 
@@ -50,8 +54,8 @@ local function celebrate(Notify, frame, from, to)
 	if to > #Config.Goals or (to - 1) % 5 == 0 then
 		Juice.confetti()
 	end
-	frame.BackgroundColor3 = Ui.colors.green
-	Juice.ease(frame, 1.2, { BackgroundColor3 = Ui.colors.wood })
+	frame.BackgroundColor3 = Color3.fromRGB(226, 236, 210) -- a soft green flush, fading back to paper
+	Juice.ease(frame, 1.2, { BackgroundColor3 = Ui.colors.cream })
 end
 
 local function startCard(gui, Notify)
@@ -80,7 +84,7 @@ local function startCard(gui, Notify)
 			return
 		end
 		frame.Visible = true
-		heading.Text = "Goal " .. index .. " of " .. #Config.Goals .. "  (+" .. Format.short(Config.Goals[index].reward) .. " coins)"
+		heading.Text = "Goal " .. index .. " of " .. #Config.Goals .. " · " .. Format.short(Config.Goals[index].reward) .. " coins"
 		text.Text = goalLine(index)
 		local share = player:GetAttribute("GoalShare") or 0
 		if shown ~= index then
@@ -117,7 +121,7 @@ local function startRate(label)
 			end
 			local perMinute = math.max(0, total) * 60 / window
 			Juice.countTo(label, holder, perMinute, function(v)
-				return "+" .. Format.short(math.floor(v + 0.5)) .. " coins/min"
+				return "+" .. Format.short(math.floor(v + 0.5)) .. " a minute"
 			end)
 			task.wait(1)
 		end

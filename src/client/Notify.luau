@@ -16,7 +16,7 @@ function Notify.mount(gui)
 	}, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }) })
 	Ui.autoScale(stack)
 	Ui.onLayout(function()
-		stack.Position = UDim2.new(0.5, 0, 0, 6 + 92 * Ui.screenScale()) -- just under the top bar
+		stack.Position = UDim2.new(0.5, 0, 0, 10 + 70 * Ui.screenScale()) -- just under the heap's progress
 	end)
 
 	banner = Ui.make("Frame", {
@@ -25,19 +25,19 @@ function Notify.mount(gui)
 		Position = UDim2.fromScale(0.5, 0.36),
 		Size = UDim2.fromOffset(560, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
-		BackgroundColor3 = Ui.colors.wood,
+		BackgroundColor3 = Ui.colors.cream,
 		Visible = false,
 		Active = true, -- a tap that dismisses it doesn't also harvest
 		Parent = gui,
 	}, {
-		Ui.corner(18),
-		Ui.stroke(Ui.colors.hay, 4),
+		Ui.corner(8),
+		Ui.stroke(),
 		Ui.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
 		Ui.make("UIPadding", { PaddingTop = UDim.new(0, 14), PaddingBottom = UDim.new(0, 16), PaddingLeft = UDim.new(0, 18), PaddingRight = UDim.new(0, 18) }),
 	})
 	Ui.autoScale(banner)
-	bannerTitle = Ui.paragraph("", { LayoutOrder = 1, Font = Ui.font, TextSize = 34, TextColor3 = Ui.colors.hay, TextXAlignment = Enum.TextXAlignment.Center, Parent = banner })
-	bannerBody = Ui.paragraph("", { LayoutOrder = 2, TextSize = 20, TextColor3 = Ui.colors.white, TextXAlignment = Enum.TextXAlignment.Center, Parent = banner })
+	bannerTitle = Ui.paragraph("", { LayoutOrder = 1, Font = Ui.font, TextSize = 30, TextColor3 = Ui.colors.ink, TextXAlignment = Enum.TextXAlignment.Center, Parent = banner })
+	bannerBody = Ui.paragraph("", { LayoutOrder = 2, TextSize = 18, TextColor3 = Ui.colors.soft, TextXAlignment = Enum.TextXAlignment.Center, Parent = banner })
 	banner.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			banner.Visible = false
@@ -54,14 +54,15 @@ function Notify.toast(text, colour)
 		LayoutOrder = order,
 		Size = UDim2.fromOffset(440, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
-		BackgroundColor3 = colour or Ui.colors.wood,
+		BackgroundColor3 = Ui.colors.cream, -- paper, with the message's colour as a stripe on its left
 		Parent = stack,
 	}, {
-		Ui.corner(12),
-		Ui.stroke(Ui.colors.woodDark, 2),
-		Ui.make("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }),
+		Ui.corner(6),
+		Ui.stroke(),
+		Ui.make("UIPadding", { PaddingTop = UDim.new(0, 9), PaddingBottom = UDim.new(0, 9), PaddingLeft = UDim.new(0, 20), PaddingRight = UDim.new(0, 14) }),
 	})
-	Ui.paragraph(text, { Font = Ui.font, TextSize = 20, TextColor3 = Ui.colors.white, TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
+	Ui.make("Frame", { Size = UDim2.new(0, 4, 1, 18), Position = UDim2.fromOffset(-20, -9), BackgroundColor3 = colour or Ui.colors.wood, BorderSizePixel = 0, Parent = card }, { Ui.corner(2) })
+	Ui.paragraph(text, { TextSize = 17, TextColor3 = Ui.colors.ink, Parent = card })
 	local cards = {}
 	for _, child in ipairs(stack:GetChildren()) do
 		if child:IsA("Frame") then

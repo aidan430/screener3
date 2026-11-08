@@ -22,7 +22,7 @@ local DIM = Color3.fromRGB(60, 70, 66)
 function Detector.start(gui, notify)
 	local holding, signal, lastHint = false, 0, -10
 	local meter = Ui.make("Frame", { Name = "Detector", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -110), Size = UDim2.fromOffset(200, 54), BackgroundColor3 = Ui.colors.woodDark, BackgroundTransparency = 1, Parent = gui }, { Ui.corner(10) })
-	local title = Ui.label({ Text = "METAL DETECTOR", Size = UDim2.new(1, 0, 0, 18), Position = UDim2.fromOffset(0, 4), TextTransparency = 1, TextStrokeTransparency = 1, Parent = meter }, 14)
+	local title = Ui.label({ Text = "Metal detector", Size = UDim2.new(1, 0, 0, 18), Position = UDim2.fromOffset(0, 4), TextTransparency = 1, TextStrokeTransparency = 1, Parent = meter }, 14)
 	local scale = Ui.make("UIScale", { Parent = meter })
 	local bars = {}
 	for i = 1, cfg.levels do
@@ -108,7 +108,7 @@ function Detector.start(gui, notify)
 			finish()
 		end
 	end)
-	TouchPad.add({ order = 3, text = "DETECT", colour = Color3.fromRGB(70, 150, 140), down = begin, up = finish, show = function()
+	TouchPad.add({ order = 3, text = "Detect", colour = Color3.fromRGB(70, 150, 140), down = begin, up = finish, show = function()
 		return player:GetAttribute("Detector") == true
 	end })
 end

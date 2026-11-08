@@ -100,8 +100,8 @@ end
 
 local function show()
 	if button then
-		button.Text = if on then "♪ On" else "♪ Off"
-		button.BackgroundColor3 = if on then Ui.colors.wood else Ui.colors.grey
+		button.Caption.Text = if on then "ON" else "OFF"
+		button.Word.TextTransparency = if on then 0 else 0.55
 	end
 end
 
@@ -127,8 +127,16 @@ function Music.start(gui)
 	if type(Config.Music) ~= "table" or #Config.Music == 0 then
 		return -- no music set up: no button either
 	end
-	button = Ui.button("", Ui.colors.wood, { Name = "MusicToggle", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 10), Size = UDim2.fromOffset(92, 40), Parent = gui })
+	-- a round stamp beside the "?" at the bottom right (on touch screens, at the top, left of the notes)
+	button = Ui.stamp("♪", "ON", { Name = "MusicToggle", AnchorPoint = Vector2.new(1, 1), Size = UDim2.fromOffset(48, 48), Parent = gui })
 	Ui.autoScale(button)
+	Ui.onLayout(function()
+		if Ui.touch() then
+			button.AnchorPoint, button.Position = Vector2.new(1, 0), UDim2.new(1, -16 - 296 * Ui.screenScale(), 0, Ui.topInset() + 14)
+		else
+			button.AnchorPoint, button.Position = Vector2.new(1, 1), UDim2.new(1, -16 - 58 * Ui.screenScale(), 1, -16)
+		end
+	end)
 	button.Activated:Connect(Music.toggle)
 	show()
 	task.spawn(loop)

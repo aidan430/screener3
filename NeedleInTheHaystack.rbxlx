@@ -276,12 +276,12 @@ Config.VipOfflineSeconds = 3600
 -- before buying, and the wheel is hidden where paid random items aren't allowed.
 -- weight / total weight = chance. A skin you already own pays `WheelDuplicateSearches` instead.
 Config.Wheel = {
-	{ id = "rose", pass = 0, flow = { 0.05, 0 }, gleam = 5, name = "Rose Gold skin", weight = 3000, texture = "", shaft = { 120, 70, 60 }, head = { 232, 160, 150 }, material = "Metal" },
-	{ id = "ice", pass = 0, flow = { 0, 0.04 }, twinkle = 3, name = "Ice skin", weight = 2500, texture = "", shaft = { 180, 220, 240 }, head = { 210, 240, 255 }, material = "Ice" },
-	{ id = "lava", pass = 0, flow = { 0, -0.3 }, pulse = 0.5, name = "Lava skin", weight = 2000, texture = "", shaft = { 60, 30, 20 }, head = { 255, 90, 30 }, material = "Neon" },
-	{ id = "candy", pass = 0, flow = { 0.4, 0 }, name = "Candy Cane skin", weight = 1500, texture = "", shaft = { 245, 245, 245 }, head = { 230, 40, 60 }, material = "SmoothPlastic" },
-	{ id = "galaxy", pass = 0, flow = { 0.06, 0.04 }, pulse = 0.3, twinkle = 4, name = "Galaxy skin", weight = 700, texture = "", shaft = { 30, 20, 60 }, head = { 140, 90, 255 }, material = "Neon" },
-	{ id = "diamond", pass = 0, gleam = 3, twinkle = 2, name = "Diamond skin", weight = 299, texture = "", shaft = { 200, 230, 255 }, head = { 160, 220, 255 }, material = "Glass" },
+	{ id = "rose", about = "A soft shine glides along it", pass = 0, flow = { 0.05, 0 }, gleam = 5, name = "Rose Gold skin", weight = 3000, texture = "", shaft = { 120, 70, 60 }, head = { 232, 160, 150 }, material = "Metal" },
+	{ id = "ice", about = "Frost and twinkling stars", pass = 0, flow = { 0, 0.04 }, twinkle = 3, name = "Ice skin", weight = 2500, texture = "", shaft = { 180, 220, 240 }, head = { 210, 240, 255 }, material = "Ice" },
+	{ id = "lava", about = "Glowing cracks that flow", pass = 0, flow = { 0, -0.3 }, pulse = 0.5, name = "Lava skin", weight = 2000, texture = "", shaft = { 60, 30, 20 }, head = { 255, 90, 30 }, material = "Neon" },
+	{ id = "candy", about = "Rolling candy stripes", pass = 0, flow = { 0.4, 0 }, name = "Candy Cane skin", weight = 1500, texture = "", shaft = { 245, 245, 245 }, head = { 230, 40, 60 }, material = "SmoothPlastic" },
+	{ id = "galaxy", about = "A drifting purple galaxy", pass = 0, flow = { 0.06, 0.04 }, pulse = 0.3, twinkle = 4, name = "Galaxy skin", weight = 700, texture = "", shaft = { 30, 20, 60 }, head = { 140, 90, 255 }, material = "Neon" },
+	{ id = "diamond", about = "A gleam every few seconds", pass = 0, gleam = 3, twinkle = 2, name = "Diamond skin", weight = 299, texture = "", shaft = { 200, 230, 255 }, head = { 160, 220, 255 }, material = "Glass" },
 	{ id = "needle", name = "NEEDLE REVEAL", weight = 1, reveal = true },
 }
 -- pass = the skin's own game pass ID (buy it directly; 0 = not on sale). Skin animation (client/SkinFx): flow = pattern drift (studs/s), pulse = glow swell, gleam = s between shines, twinkle = sparkles/s
@@ -9545,30 +9545,30 @@ function BuildMode.mount(gui, notifier)
 	end
 	-- touch: the pad's build set (PLACE sits next to the thumb)
 	for i, b in ipairs({
-		{ "PLACE", function()
+		{ "Place", function()
 			if removing then
 				takeBack()
 			else
 				place()
 			end
 		end, Ui.colors.green },
-		{ "TURN", function()
+		{ "Turn", function()
 			rotation = (rotation + 45) % 360
 		end },
-		{ "TAKE BACK", function()
+		{ "Take back", function()
 			if removing and hovered then
 				takeBack()
 			else
 				toggleRemove()
 			end
 		end, Ui.colors.red },
-		{ "NEXT", function()
+		{ "Next", function()
 			cycle(1)
 		end },
-		{ "PREV", function()
+		{ "Back", function()
 			cycle(-1)
 		end },
-		{ "DONE", function()
+		{ "Done", function()
 			BuildMode.toggle(false)
 		end, Ui.colors.blue },
 	}) do
@@ -9704,18 +9704,18 @@ function Controls.start(open)
 			Teleport.open(prompt:FindFirstAncestorOfClass("Model"))
 		end
 	end)
-	TouchPad.add({ order = 4, text = "DROP", tap = drop })
-	TouchPad.add({ order = 5, text = "HOME", tap = home })
-	TouchPad.add({ order = 6, text = "TOOL", colour = Ui.colors.green, tap = equip, show = function()
+	TouchPad.add({ order = 4, text = "Drop", tap = drop })
+	TouchPad.add({ order = 5, text = "Home", tap = home })
+	TouchPad.add({ order = 6, text = "Tool", colour = Ui.colors.green, tap = equip, show = function()
 		return not holdingTool()
 	end })
-	TouchPad.add({ order = 7, text = "SHOP", colour = Ui.colors.green, tap = function()
+	TouchPad.add({ order = 7, text = "Shop", colour = Ui.colors.green, tap = function()
 		open("Shop")
 	end })
-	TouchPad.add({ order = 8, text = "BUILD", tap = function()
+	TouchPad.add({ order = 8, text = "Build", tap = function()
 		open("Build")
 	end })
-	TouchPad.add({ order = 9, text = "MENU", colour = Ui.colors.purple, tap = function()
+	TouchPad.add({ order = 9, text = "Journal", colour = Ui.colors.purple, tap = function()
 		open("Menu")
 	end })
 end
@@ -9881,7 +9881,7 @@ local DIM = Color3.fromRGB(60, 70, 66)
 function Detector.start(gui, notify)
 	local holding, signal, lastHint = false, 0, -10
 	local meter = Ui.make("Frame", { Name = "Detector", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -110), Size = UDim2.fromOffset(200, 54), BackgroundColor3 = Ui.colors.woodDark, BackgroundTransparency = 1, Parent = gui }, { Ui.corner(10) })
-	local title = Ui.label({ Text = "METAL DETECTOR", Size = UDim2.new(1, 0, 0, 18), Position = UDim2.fromOffset(0, 4), TextTransparency = 1, TextStrokeTransparency = 1, Parent = meter }, 14)
+	local title = Ui.label({ Text = "Metal detector", Size = UDim2.new(1, 0, 0, 18), Position = UDim2.fromOffset(0, 4), TextTransparency = 1, TextStrokeTransparency = 1, Parent = meter }, 14)
 	local scale = Ui.make("UIScale", { Parent = meter })
 	local bars = {}
 	for i = 1, cfg.levels do
@@ -9967,7 +9967,7 @@ function Detector.start(gui, notify)
 			finish()
 		end
 	end)
-	TouchPad.add({ order = 3, text = "DETECT", colour = Color3.fromRGB(70, 150, 140), down = begin, up = finish, show = function()
+	TouchPad.add({ order = 3, text = "Detect", colour = Color3.fromRGB(70, 150, 140), down = begin, up = finish, show = function()
 		return player:GetAttribute("Detector") == true
 	end })
 end
@@ -9997,12 +9997,16 @@ local Goals = {}
 local earned = {} -- { time, coins } for each rise in Coins (goal rewards taken back out)
 
 local function card(gui)
-	local frame = Ui.make("Frame", { Name = "GoalCard", Position = UDim2.fromOffset(10, 60), Size = UDim2.fromOffset(290, 66), BackgroundColor3 = Ui.colors.wood, BackgroundTransparency = 0.15, Visible = false, Parent = gui }, { Ui.corner(12), Ui.stroke(Ui.colors.woodDark, 3) })
+	-- a note pinned at the top right, a little askew
+	local frame = Ui.card({ Name = "GoalCard", AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(280, 86), Rotation = -1, Visible = false, Parent = gui })
 	Ui.autoScale(frame)
-	local heading = Ui.label({ Size = UDim2.new(1, -16, 0, 16), Position = UDim2.fromOffset(8, 4), TextColor3 = Ui.colors.hay, TextXAlignment = Enum.TextXAlignment.Left, Parent = frame }, 15)
-	local text = Ui.label({ Size = UDim2.new(1, -16, 0, 30), Position = UDim2.fromOffset(8, 20), TextColor3 = Ui.colors.cream, TextXAlignment = Enum.TextXAlignment.Left, Font = Ui.body, Parent = frame }, 15)
-	local back = Ui.make("Frame", { Size = UDim2.new(1, -16, 0, 8), Position = UDim2.fromOffset(8, 53), BackgroundColor3 = Ui.colors.woodDark, Parent = frame }, { Ui.corner(4) })
-	local fill = Ui.make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Ui.colors.green, Parent = back }, { Ui.corner(4) })
+	Ui.onLayout(function()
+		frame.Position = UDim2.new(1, -16, 0, Ui.topInset() + 14)
+	end)
+	Ui.pin(frame, Ui.colors.red)
+	local heading = Ui.label({ Size = UDim2.new(1, -28, 0, 20), Position = UDim2.fromOffset(14, 12), TextColor3 = Ui.colors.ink, TextStrokeTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = frame }, 16)
+	local text = Ui.label({ Size = UDim2.new(1, -28, 0, 30), Position = UDim2.fromOffset(14, 34), TextColor3 = Ui.colors.soft, TextStrokeTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Font = Ui.body, Parent = frame }, 14)
+	local _, fill = Ui.bar(frame, { Size = UDim2.new(1, -28, 0, 5), Position = UDim2.fromOffset(14, 70) }, Ui.colors.green)
 	return frame, heading, text, fill
 end
 
@@ -10031,8 +10035,8 @@ local function celebrate(Notify, frame, from, to)
 	if to > #Config.Goals or (to - 1) % 5 == 0 then
 		Juice.confetti()
 	end
-	frame.BackgroundColor3 = Ui.colors.green
-	Juice.ease(frame, 1.2, { BackgroundColor3 = Ui.colors.wood })
+	frame.BackgroundColor3 = Color3.fromRGB(226, 236, 210) -- a soft green flush, fading back to paper
+	Juice.ease(frame, 1.2, { BackgroundColor3 = Ui.colors.cream })
 end
 
 local function startCard(gui, Notify)
@@ -10061,7 +10065,7 @@ local function startCard(gui, Notify)
 			return
 		end
 		frame.Visible = true
-		heading.Text = "Goal " .. index .. " of " .. #Config.Goals .. "  (+" .. Format.short(Config.Goals[index].reward) .. " coins)"
+		heading.Text = "Goal " .. index .. " of " .. #Config.Goals .. " · " .. Format.short(Config.Goals[index].reward) .. " coins"
 		text.Text = goalLine(index)
 		local share = player:GetAttribute("GoalShare") or 0
 		if shown ~= index then
@@ -10098,7 +10102,7 @@ local function startRate(label)
 			end
 			local perMinute = math.max(0, total) * 60 / window
 			Juice.countTo(label, holder, perMinute, function(v)
-				return "+" .. Format.short(math.floor(v + 0.5)) .. " coins/min"
+				return "+" .. Format.short(math.floor(v + 0.5)) .. " a minute"
 			end)
 			task.wait(1)
 		end
@@ -10550,8 +10554,10 @@ return HayFx
 				<Item class="ModuleScript" referent="RBX00062">
 					<Properties>
 						<string name="Name">Hud</string>
-						<ProtectedString name="Source"><![CDATA[-- The always-on screen: a crosshair, your pile's progress at the top, and on the left your
--- coins (they count up smoothly), what you carry, your silo, power and the menu buttons.
+						<ProtectedString name="Source"><![CDATA[-- The always-on screen, in the farm journal style: a ring crosshair; your heap's progress
+-- written across the sky at the top; a paper tag at the top left with your coins (they count up
+-- smoothly), what you carry, your silo and your farm's numbers; round paper stamps at the bottom
+-- left for the journal's pages; and a "?" stamp that shows the keys.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -10567,74 +10573,84 @@ local player = Players.LocalPlayer
 local Hud = {}
 Hud.state = { inLoft = false, warmth = nil, targeting = false }
 
-local function bar(parent, y, colour)
-	local back = Ui.make("Frame", { Size = UDim2.new(1, -16, 0, 10), Position = UDim2.fromOffset(8, y), BackgroundColor3 = Ui.colors.woodDark, Parent = parent }, { Ui.corner(5) })
-	return Ui.make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = colour, Parent = back }, { Ui.corner(5) })
-end
-
 local function fillTo(fill, share)
 	Juice.ease(fill, 0.25, { Size = UDim2.fromScale(math.clamp(share, 0, 1), 1) })
 end
 
+-- Small text on paper: soft brown, no shadow.
+local function note(parent, y, size, props)
+	local defaults = { Font = Ui.body, Size = UDim2.new(1, -28, 0, size + 2), Position = UDim2.fromOffset(14, y), TextColor3 = Ui.colors.soft, TextStrokeTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = parent }
+	for k, v in pairs(props or {}) do
+		defaults[k] = v
+	end
+	return Ui.label(defaults, size)
+end
+
 function Hud.mount(gui, open)
-	local crosshair = Ui.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(6, 6), BackgroundColor3 = Ui.colors.white, BackgroundTransparency = 0.2, Parent = gui }, { Ui.corner(3), Ui.stroke(Ui.colors.woodDark, 1) })
+	local crosshair = Ui.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(14, 14), BackgroundTransparency = 1, Parent = gui }, { Ui.corner(7) })
+	local ring = Ui.make("UIStroke", { Color = Ui.colors.white, Thickness = 2, Transparency = 0.1, Parent = crosshair })
 
-	local top = Ui.make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6), Size = UDim2.fromOffset(470, 84), BackgroundColor3 = Ui.colors.wood, BackgroundTransparency = 0.1, Parent = gui }, { Ui.corner(14), Ui.stroke(Ui.colors.woodDark, 3) })
+	-- the heap's progress, written across the sky: no box, a soft shadow and a thin line
+	local top = Ui.make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 10), Size = UDim2.fromOffset(460, 64), BackgroundTransparency = 1, Parent = gui })
 	Ui.autoScale(top)
-	local title = Ui.label({ Size = UDim2.new(1, -20, 0, 22), Position = UDim2.fromOffset(10, 4), TextColor3 = Ui.colors.hay, Parent = top }, 20)
-	local countLabel = Ui.label({ Size = UDim2.new(1, -20, 0, 22), Position = UDim2.fromOffset(10, 27), Parent = top }, 20)
-	local pileFill = bar(top, 54, Ui.colors.hay)
-	local warmth = Ui.label({ Size = UDim2.new(1, -20, 0, 14), Position = UDim2.fromOffset(10, 67), TextColor3 = Ui.colors.cream, Parent = top }, 13)
+	local title = Ui.label({ Size = UDim2.new(1, 0, 0, 22), TextColor3 = Ui.colors.white, Parent = top }, 18)
+	local _, pileFill = Ui.bar(top, { Size = UDim2.new(0.74, 0, 0, 3), Position = UDim2.new(0.13, 0, 0, 28), BackgroundColor3 = Ui.colors.white, BackgroundTransparency = 0.6 }, Ui.colors.white)
+	local warmth = Ui.label({ Size = UDim2.new(1, 0, 0, 16), Position = UDim2.fromOffset(0, 38), Font = Ui.body, TextColor3 = Ui.colors.white, Parent = top }, 14)
 
-	local left = Ui.make("Frame", { AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0, 10, 0, 140), Size = UDim2.fromOffset(220, 488), BackgroundTransparency = 1, Parent = gui }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
-	Ui.autoScale(left)
-	local stats = Ui.make("Frame", { LayoutOrder = 1, Size = UDim2.fromOffset(220, 194), BackgroundColor3 = Ui.colors.wood, BackgroundTransparency = 0.1, Parent = left }, { Ui.corner(12), Ui.stroke(Ui.colors.woodDark, 3) })
-	local coinsLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 36), Position = UDim2.fromOffset(8, 4), TextColor3 = Ui.colors.hay, Parent = stats }, 32)
-	local earnLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 16), Position = UDim2.fromOffset(8, 38), TextColor3 = Ui.colors.cream, Parent = stats }, 14) -- coins a minute (client Goals.luau)
-	local carryLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(8, 60), Parent = stats }, 16)
-	local carryFill = bar(stats, 80, Ui.colors.green)
-	local siloLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(8, 94), Parent = stats }, 16)
-	local siloFill = bar(stats, 114, Ui.colors.blue)
-	local powerLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(8, 128), Parent = stats }, 15)
-	local rateLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(8, 148), Parent = stats }, 15)
-	local bonusLabel = Ui.label({ Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(8, 168), Parent = stats }, 15)
+	-- the paper tag, top left
+	local tag = Ui.card({ Position = UDim2.fromOffset(16, 0), Size = UDim2.fromOffset(250, 210), Parent = gui })
+	Ui.autoScale(tag)
+	Ui.make("Frame", { Size = UDim2.fromOffset(28, 28), Position = UDim2.fromOffset(14, 14), BackgroundColor3 = Ui.colors.hay, Parent = tag }, { Ui.corner(14), Ui.make("UIStroke", { Color = Color3.fromRGB(150, 104, 26), Thickness = 1.5 }) })
+	local coinsLabel = Ui.label({ Size = UDim2.new(1, -66, 0, 30), Position = UDim2.fromOffset(52, 8), TextColor3 = Ui.colors.ink, TextStrokeTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = tag }, 28)
+	local earnLabel = note(tag, 38, 12, { Position = UDim2.fromOffset(52, 38), Size = UDim2.new(1, -66, 0, 14) }) -- coins a minute (client Goals.luau)
+	local carryLabel = note(tag, 64, 12)
+	local _, carryFill = Ui.bar(tag, { Size = UDim2.new(1, -28, 0, 5), Position = UDim2.fromOffset(14, 82) })
+	local siloLabel = note(tag, 94, 12)
+	local _, siloFill = Ui.bar(tag, { Size = UDim2.new(1, -28, 0, 5), Position = UDim2.fromOffset(14, 112) }, Ui.colors.blue)
+	local powerLabel = note(tag, 126, 12)
+	local rateLabel = note(tag, 144, 12)
+	local bonusLabel = note(tag, 162, 12)
+	local boosts = note(tag, 182, 12, { TextColor3 = Ui.colors.green, Size = UDim2.new(1, -28, 0, 22), TextYAlignment = Enum.TextYAlignment.Top })
 	local coinValue = Instance.new("NumberValue")
 
-	local function button(order, text, colour, onClick)
-		local b = Ui.button(text, colour, { LayoutOrder = order, Size = UDim2.fromOffset(220, 40), Parent = left })
-		b.Activated:Connect(onClick)
-		return b
+	-- the stamps, bottom left: the journal's pages
+	local stamps = Ui.make("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -16), Size = UDim2.fromOffset(400, 64), BackgroundTransparency = 1, Parent = gui }, {
+		Ui.make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
+	})
+	Ui.autoScale(stamps)
+	local function stamp(order, word, caption, page)
+		local s, label = Ui.stamp(word, caption, { LayoutOrder = order, Parent = stamps })
+		s.Activated:Connect(function()
+			open(page)
+		end)
+		return s, label
 	end
-	local shopButton = button(2, "SHOP  (Q)", Ui.colors.green, function()
-		open("Shop")
+	local shopButton = stamp(1, "Shop", "Q", "Shop")
+	local buildButton = stamp(2, "Build", "B", "Build")
+	local achievementsButton, achievementsWord = stamp(3, "0/0", "FEATS", "Achievements")
+	local findsButton = stamp(4, "Skins", "& FINDS", "Finds")
+	local whistle = stamp(5, "Whistle", "SELL HERE", "Whistle")
+
+	-- "?": the keys, on a paper slip that opens and closes
+	local help = Ui.stamp("?", "KEYS", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -16, 1, -16), Size = UDim2.fromOffset(48, 48), Parent = gui })
+	Ui.autoScale(help)
+	local keys = Ui.card({ AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -16, 1, -74), Size = UDim2.fromOffset(250, 150), Visible = false, Parent = gui })
+	Ui.autoScale(keys)
+	Ui.paragraph(table.concat({ "M  mouse and menus", "Q  shop", "B  build", "E  use", Config.DropKey .. "  drop hay", Config.HomeKey .. "  home", "Shift  sprint" }, "\n"), { Size = UDim2.new(1, -24, 1, -16), Position = UDim2.fromOffset(12, 8), AutomaticSize = Enum.AutomaticSize.None, TextSize = 15, Parent = keys })
+	help.Activated:Connect(function()
+		keys.Visible = not keys.Visible
 	end)
-	local buildButton = button(3, "BUILD  (B)", Ui.colors.wood, function()
-		open("Build")
-	end)
-	local achievementsButton = button(4, "ACHIEVEMENTS", Ui.colors.blue, function()
-		open("Achievements")
-	end)
-	local findsButton = button(5, "FINDS & SKINS", Ui.colors.purple, function()
-		open("Finds")
-	end)
-	local whistle = button(6, "WHISTLE: SELL HERE", Ui.colors.red, function()
-		open("Whistle")
-	end)
-	local boosts = Ui.label({ LayoutOrder = 7, Size = UDim2.fromOffset(220, 50), TextColor3 = Ui.colors.hay, TextYAlignment = Enum.TextYAlignment.Top, Parent = left }, 14)
-	local keys = Ui.label({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.fromOffset(560, 18), Text = "M: mouse & menus   Q: shop   B: build   E: use   " .. Config.DropKey .. ": drop hay   " .. Config.HomeKey .. ": home", TextTransparency = 0.3, Parent = gui }, 15)
 
 	local function refresh()
-		left.Position = UDim2.new(0, 10, 0, 60 + 74 * Ui.screenScale()) -- just under the goal card
+		tag.Position = UDim2.fromOffset(16, Ui.topInset() + 10)
 		local needles = player:GetAttribute("Needles") or 0
 		if Hud.state.inLoft then
 			local searched = player:GetAttribute("LoftSearched") or 0
-			title.Text = "THE GOLDEN LOFT: " .. (player:GetAttribute("GoldenNeedles") or 0) .. " golden needle(s) found"
-			countLabel.Text = Format.commas(Config.Loft.straws - searched) .. " golden straws left. 1 golden needle."
+			title.Text = Format.commas(Config.Loft.straws - searched) .. " golden straws left · " .. (player:GetAttribute("GoldenNeedles") or 0) .. " golden needles found"
 			fillTo(pileFill, 1 - searched / Config.Loft.straws)
 		else
 			local clumps = player:GetAttribute("ClumpsLeft") or Config.Clumps
-			title.Text = "YOUR PILE: " .. needles .. " needle(s) found"
-			countLabel.Text = Format.commas(clumps) .. " of " .. Format.commas(Config.Clumps) .. " clumps left. 1 needle inside."
+			title.Text = Format.commas(clumps) .. " clumps left · 1 needle inside" .. (if needles > 0 then " · " .. needles .. " found" else "")
 			fillTo(pileFill, clumps / Config.Clumps)
 		end
 		local w = Hud.state.warmth
@@ -10643,38 +10659,39 @@ function Hud.mount(gui, open)
 			return Format.short(math.floor(v + 0.5)) .. " coins"
 		end)
 		local carried, capacity = player:GetAttribute("Carried") or 0, player:GetAttribute("Capacity") or 1
-		carryLabel.Text = "Carrying " .. Format.commas(carried) .. " / " .. Format.commas(capacity) .. (if carried >= capacity then "  FULL!" else "")
+		carryLabel.Text = "Carrying " .. Format.commas(carried) .. " of " .. Format.commas(capacity) .. (if carried >= capacity then " · full" else "")
 		fillTo(carryFill, carried / capacity)
-		carryFill.BackgroundColor3 = if carried >= capacity then Ui.colors.red else Ui.colors.green
+		carryFill.BackgroundColor3 = if carried >= capacity then Ui.colors.red else Ui.colors.hay
 		local siloSize = Economy.silo(player:GetAttribute("Silo") or 1).size
 		local silo = player:GetAttribute("SiloStraw") or 0
-		siloLabel.Text = "Silo " .. Format.commas(silo) .. " / " .. Format.commas(siloSize)
+		siloLabel.Text = "Silo " .. Format.commas(silo) .. " of " .. Format.commas(siloSize)
 		fillTo(siloFill, silo / siloSize)
 		local made, draw = player:GetAttribute("PowerMade") or 0, player:GetAttribute("PowerDraw") or 0
-		powerLabel.Text = "Power " .. made .. " made / " .. draw .. " used" .. (if draw > made then "  LOW!" else "")
-		powerLabel.TextColor3 = if draw > made then Color3.fromRGB(255, 130, 110) else Ui.colors.white
-		rateLabel.Text = (player:GetAttribute("Power") or 1) .. " a click, machines " .. string.format("%.1f", player:GetAttribute("MachineRate") or 0) .. "/s"
+		powerLabel.Text = "Power " .. made .. " made, " .. draw .. " used" .. (if draw > made then " · low" else "")
+		powerLabel.TextColor3 = if draw > made then Ui.colors.red else Ui.colors.soft
+		rateLabel.Text = (player:GetAttribute("Power") or 1) .. " a click · machines " .. string.format("%.1f", player:GetAttribute("MachineRate") or 0) .. "/s · x" .. string.format("%.2f", player:GetAttribute("Multiplier") or 1)
 		-- what waits in your trader's basket, and how fast the trader and your trucks sell it
 		local waiting = (player:GetAttribute("BasketStraw") or 0) + (player:GetAttribute("BaledStraw") or 0)
-		bonusLabel.Text = "Basket " .. Format.short(waiting) .. ", sells " .. Format.short(player:GetAttribute("HaulRate") or Config.TraderRate) .. "/s"
-		rateLabel.Text ..= "  x" .. string.format("%.2f", player:GetAttribute("Multiplier") or 1)
-		achievementsButton.Text = "ACHIEVEMENTS " .. (player:GetAttribute("Achievements") or 0) .. "/" .. #Config.Achievements
-		-- touch screens: the menu buttons and key list fold away (the action pad and its MENU
-		-- have them), so nothing sits over the thumbstick
+		bonusLabel.Text = "Basket " .. Format.short(waiting) .. " · sells " .. Format.short(player:GetAttribute("HaulRate") or Config.TraderRate) .. "/s"
+		achievementsWord.Text = (player:GetAttribute("Achievements") or 0) .. "/" .. #Config.Achievements
+		-- touch screens: the stamps and keys fold away (the action pad and its MENU have them),
+		-- so nothing sits over the thumbstick
 		local touch = Ui.touch()
 		for _, b in ipairs({ shopButton, buildButton, achievementsButton, findsButton }) do
 			b.Visible = not touch
 		end
-		keys.Visible = not touch
+		help.Visible = not touch
+		keys.Visible = keys.Visible and not touch
 		whistle.Visible = not touch and (player:GetAttribute("Whistles") or 0) > 0
 		local lines, now = {}, os.time()
 		for name, label in pairs({ SpeedBoost = "2x speed", CoinBoost = "2x coins", LuckyCharm = "Lucky charm" }) do
 			local until_ = player:GetAttribute("Boost_" .. name) or 0
 			if until_ > now then
-				table.insert(lines, label .. ": " .. math.ceil((until_ - now) / 60) .. " min")
+				table.insert(lines, label .. " " .. math.ceil((until_ - now) / 60) .. " min")
 			end
 		end
-		boosts.Text = table.concat(lines, "\n")
+		boosts.Text = table.concat(lines, " · ")
+		tag.Size = UDim2.fromOffset(250, if #lines > 0 then 210 else 186)
 	end
 
 	player.AttributeChanged:Connect(refresh)
@@ -10687,7 +10704,7 @@ function Hud.mount(gui, open)
 	end)
 	task.spawn(function()
 		while true do
-			crosshair.BackgroundColor3 = if Hud.state.targeting then Ui.colors.hay else Ui.colors.white
+			ring.Color = if Hud.state.targeting then Ui.colors.hay else Ui.colors.white
 			task.wait(0.1)
 		end
 	end)
@@ -10857,7 +10874,7 @@ function Jetpack.start(gui, notify)
 	end, up = function()
 		touchHeld = false
 	end })
-	TouchPad.add({ order = 2, text = "HOVER", colour = Ui.colors.blue, show = owned, tap = function()
+	TouchPad.add({ order = 2, text = "Hover", colour = Ui.colors.blue, show = owned, tap = function()
 		if rig and rig.humanoid.FloorMaterial == Enum.Material.Air then
 			hover = not hover
 			if notify then
@@ -11625,8 +11642,8 @@ end
 
 local function show()
 	if button then
-		button.Text = if on then "♪ On" else "♪ Off"
-		button.BackgroundColor3 = if on then Ui.colors.wood else Ui.colors.grey
+		button.Caption.Text = if on then "ON" else "OFF"
+		button.Word.TextTransparency = if on then 0 else 0.55
 	end
 end
 
@@ -11652,8 +11669,16 @@ function Music.start(gui)
 	if type(Config.Music) ~= "table" or #Config.Music == 0 then
 		return -- no music set up: no button either
 	end
-	button = Ui.button("", Ui.colors.wood, { Name = "MusicToggle", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 10), Size = UDim2.fromOffset(92, 40), Parent = gui })
+	-- a round stamp beside the "?" at the bottom right (on touch screens, at the top, left of the notes)
+	button = Ui.stamp("♪", "ON", { Name = "MusicToggle", AnchorPoint = Vector2.new(1, 1), Size = UDim2.fromOffset(48, 48), Parent = gui })
 	Ui.autoScale(button)
+	Ui.onLayout(function()
+		if Ui.touch() then
+			button.AnchorPoint, button.Position = Vector2.new(1, 0), UDim2.new(1, -16 - 296 * Ui.screenScale(), 0, Ui.topInset() + 14)
+		else
+			button.AnchorPoint, button.Position = Vector2.new(1, 1), UDim2.new(1, -16 - 58 * Ui.screenScale(), 1, -16)
+		end
+	end)
 	button.Activated:Connect(Music.toggle)
 	show()
 	task.spawn(loop)
@@ -11684,7 +11709,7 @@ function Notify.mount(gui)
 	}, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }) })
 	Ui.autoScale(stack)
 	Ui.onLayout(function()
-		stack.Position = UDim2.new(0.5, 0, 0, 6 + 92 * Ui.screenScale()) -- just under the top bar
+		stack.Position = UDim2.new(0.5, 0, 0, 10 + 70 * Ui.screenScale()) -- just under the heap's progress
 	end)
 
 	banner = Ui.make("Frame", {
@@ -11693,19 +11718,19 @@ function Notify.mount(gui)
 		Position = UDim2.fromScale(0.5, 0.36),
 		Size = UDim2.fromOffset(560, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
-		BackgroundColor3 = Ui.colors.wood,
+		BackgroundColor3 = Ui.colors.cream,
 		Visible = false,
 		Active = true, -- a tap that dismisses it doesn't also harvest
 		Parent = gui,
 	}, {
-		Ui.corner(18),
-		Ui.stroke(Ui.colors.hay, 4),
+		Ui.corner(8),
+		Ui.stroke(),
 		Ui.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
 		Ui.make("UIPadding", { PaddingTop = UDim.new(0, 14), PaddingBottom = UDim.new(0, 16), PaddingLeft = UDim.new(0, 18), PaddingRight = UDim.new(0, 18) }),
 	})
 	Ui.autoScale(banner)
-	bannerTitle = Ui.paragraph("", { LayoutOrder = 1, Font = Ui.font, TextSize = 34, TextColor3 = Ui.colors.hay, TextXAlignment = Enum.TextXAlignment.Center, Parent = banner })
-	bannerBody = Ui.paragraph("", { LayoutOrder = 2, TextSize = 20, TextColor3 = Ui.colors.white, TextXAlignment = Enum.TextXAlignment.Center, Parent = banner })
+	bannerTitle = Ui.paragraph("", { LayoutOrder = 1, Font = Ui.font, TextSize = 30, TextColor3 = Ui.colors.ink, TextXAlignment = Enum.TextXAlignment.Center, Parent = banner })
+	bannerBody = Ui.paragraph("", { LayoutOrder = 2, TextSize = 18, TextColor3 = Ui.colors.soft, TextXAlignment = Enum.TextXAlignment.Center, Parent = banner })
 	banner.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			banner.Visible = false
@@ -11722,14 +11747,15 @@ function Notify.toast(text, colour)
 		LayoutOrder = order,
 		Size = UDim2.fromOffset(440, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
-		BackgroundColor3 = colour or Ui.colors.wood,
+		BackgroundColor3 = Ui.colors.cream, -- paper, with the message's colour as a stripe on its left
 		Parent = stack,
 	}, {
-		Ui.corner(12),
-		Ui.stroke(Ui.colors.woodDark, 2),
-		Ui.make("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }),
+		Ui.corner(6),
+		Ui.stroke(),
+		Ui.make("UIPadding", { PaddingTop = UDim.new(0, 9), PaddingBottom = UDim.new(0, 9), PaddingLeft = UDim.new(0, 20), PaddingRight = UDim.new(0, 14) }),
 	})
-	Ui.paragraph(text, { Font = Ui.font, TextSize = 20, TextColor3 = Ui.colors.white, TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
+	Ui.make("Frame", { Size = UDim2.new(0, 4, 1, 18), Position = UDim2.fromOffset(-20, -9), BackgroundColor3 = colour or Ui.colors.wood, BorderSizePixel = 0, Parent = card }, { Ui.corner(2) })
+	Ui.paragraph(text, { TextSize = 17, TextColor3 = Ui.colors.ink, Parent = card })
 	local cards = {}
 	for _, child in ipairs(stack:GetChildren()) do
 		if child:IsA("Frame") then
@@ -11980,25 +12006,22 @@ local player = Players.LocalPlayer
 local OrderCard = {}
 
 function OrderCard.mount(gui)
-	local card = Ui.make("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.38, 0), Size = UDim2.fromOffset(230, 86), BackgroundColor3 = Ui.colors.wood, BackgroundTransparency = 0.1, Visible = false, Parent = gui }, { Ui.corner(12), Ui.stroke(Ui.colors.woodDark, 3) })
+	-- a second note pinned under the goal, askew the other way (clear of the touch action pad)
+	local card = Ui.card({ AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(280, 92), Rotation = 1.2, Visible = false, Parent = gui })
 	Ui.autoScale(card)
-	Ui.onLayout(function() -- touch: top right under the music button, clear of the action pad
-		if Ui.touch() then
-			card.AnchorPoint, card.Position = Vector2.new(1, 0), UDim2.new(1, -10, 0, 56)
-		else
-			card.AnchorPoint, card.Position = Vector2.new(1, 0.5), UDim2.new(1, -10, 0.38, 0)
-		end
+	Ui.onLayout(function()
+		card.Position = UDim2.new(1, -16, 0, Ui.topInset() + 14 + 104 * Ui.screenScale())
 	end)
-	local title = Ui.label({ Text = "DELIVERY ORDER", Size = UDim2.new(1, -16, 0, 20), Position = UDim2.fromOffset(8, 4), TextColor3 = Ui.colors.hay, Parent = card }, 16)
-	local text = Ui.label({ Size = UDim2.new(1, -16, 0, 34), Position = UDim2.fromOffset(8, 24), TextWrapped = true, Parent = card }, 14)
-	local track = Ui.make("Frame", { Size = UDim2.new(1, -16, 0, 10), Position = UDim2.fromOffset(8, 66), BackgroundColor3 = Ui.colors.woodDark, Parent = card }, { Ui.corner(5) })
-	local fill = Ui.make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Ui.colors.hay, Parent = track }, { Ui.corner(5) })
+	Ui.pin(card, Ui.colors.green)
+	local title = Ui.label({ Text = "Delivery order", Size = UDim2.new(1, -28, 0, 20), Position = UDim2.fromOffset(14, 12), TextColor3 = Ui.colors.ink, TextStrokeTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = card }, 16)
+	local text = Ui.label({ Font = Ui.body, Size = UDim2.new(1, -28, 0, 32), Position = UDim2.fromOffset(14, 34), TextWrapped = true, TextColor3 = Ui.colors.soft, TextStrokeTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = card }, 14)
+	local _, fill = Ui.bar(card, { Size = UDim2.new(1, -28, 0, 5), Position = UDim2.fromOffset(14, 74) })
 	local function refresh()
 		local wanted = player:GetAttribute("OrderText")
 		local done, count = player:GetAttribute("OrderDone") or 0, player:GetAttribute("OrderCount") or 1
 		card.Visible = wanted ~= nil
 		text.Text = (wanted or "") .. ": " .. Format.short(done) .. "/" .. Format.short(count)
-		title.Text = "DELIVERY ORDER  +" .. Format.short(player:GetAttribute("OrderReward") or 0)
+		title.Text = "Delivery order · " .. Format.short(player:GetAttribute("OrderReward") or 0) .. " coins"
 		Juice.ease(fill, 0.4, { Size = UDim2.fromScale(math.clamp(done / count, 0, 1), 1) })
 	end
 	for _, name in ipairs({ "OrderText", "OrderDone", "OrderCount", "OrderReward" }) do
@@ -12053,7 +12076,7 @@ function Panels.mount(gui, notify, actions)
 	refreshers.Shop = Shop.refresh
 
 	-- Achievements: secret until earned
-	local achievements, achievementsBody = Ui.window(gui, "Achievements")
+	local achievements, achievementsBody = Ui.window(gui, "Achievements", nil, "Achievements")
 	windows.Achievements = achievements
 	refreshers.Achievements = function()
 		task.spawn(function()
@@ -12080,23 +12103,32 @@ function Panels.mount(gui, notify, actions)
 	end
 
 	-- Finds & Skins
-	local finds, findsBody = Ui.window(gui, "Finds")
+	local finds, findsBody = Ui.window(gui, "Skins & finds", nil, "Finds")
 	windows.Finds = finds
 	local found, count = {}, 0
-	local HEADER = "Tool skins: win them on the Wheel of Fortune, or buy the one you want:"
-	local skinsHeader = Ui.paragraph(HEADER, { LayoutOrder = 1, Font = Ui.font, TextSize = 20, Parent = findsBody })
+	local HEADER = "Tool skins: win one free on the wheel each day, or buy the one you want. Looks only."
+	local skinsHeader = Ui.paragraph(HEADER, { LayoutOrder = 1, TextSize = 16, TextColor3 = Ui.colors.soft, Parent = findsBody })
 	local skinButtons, prices = {}, {}
 	local function wear(id)
 		local ok, _, message = pcall(Remotes.EquipSkin.InvokeServer, Remotes.EquipSkin, id)
 		notify.toast(if ok then tostring(message) else "Try again.", Ui.colors.purple)
 	end
-	local plain = Ui.button("Plain tool", Ui.colors.wood, { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 40), Parent = findsBody })
+	local plain = Ui.button("Use the plain tool", Ui.colors.wood, { LayoutOrder = 3, Size = UDim2.new(0, 200, 0, 32), Parent = findsBody })
 	plain.Activated:Connect(function()
 		wear("")
 	end)
+	local grid = Ui.make("Frame", { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = findsBody }, {
+		Ui.make("UIGridLayout", { CellSize = UDim2.new(1 / 3, -8, 0, 168), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
+	})
 	for i, prize in ipairs(Config.Wheel) do
 		if not prize.reveal then
-			local b = Ui.button(prize.name, Ui.colors.grey, { LayoutOrder = 2 + i, Size = UDim2.new(1, 0, 0, 40), Parent = findsBody })
+			-- a card: a swatch in the skin's colours, its name and what it does, and its button
+			local card = Ui.card({ LayoutOrder = i, BackgroundColor3 = Ui.colors.white, Parent = grid })
+			local swatch = Ui.make("Frame", { Size = UDim2.new(1, -16, 0, 62), Position = UDim2.fromOffset(8, 8), BackgroundColor3 = Color3.new(1, 1, 1), Parent = card }, { Ui.corner(4) })
+			Ui.make("UIGradient", { Rotation = 25, Color = ColorSequence.new(Color3.fromRGB(prize.shaft[1], prize.shaft[2], prize.shaft[3]), Color3.fromRGB(prize.head[1], prize.head[2], prize.head[3])), Parent = swatch })
+			Ui.label({ Text = prize.name:gsub(" skin", ""), Size = UDim2.new(1, -16, 0, 22), Position = UDim2.fromOffset(8, 76), TextColor3 = Ui.colors.ink, TextStrokeTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = card }, 17)
+			Ui.label({ Text = prize.about or "", Font = Ui.body, Size = UDim2.new(1, -16, 0, 16), Position = UDim2.fromOffset(8, 99), TextColor3 = Ui.colors.soft, TextStrokeTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = card }, 13)
+			local b = Ui.button(prize.name, Ui.colors.grey, { Size = UDim2.new(1, -16, 0, 34), Position = UDim2.new(0, 8, 1, -42), Parent = card })
 			b.Activated:Connect(function()
 				if player:GetAttribute("Skin_" .. prize.id) then
 					wear(prize.id)
@@ -12125,14 +12157,17 @@ function Panels.mount(gui, notify, actions)
 			if b then
 				local owned = player:GetAttribute("Skin_" .. prize.id) == true
 				local forSale = prize.pass ~= nil and prize.pass ~= 0
-				b.Visible = owned or forSale
+				b.Parent.Visible = owned or forSale -- the whole card
+				local wearing = player:GetAttribute("Skin") == prize.id
 				if owned then
-					b.Text = prize.name
-					b.BackgroundColor3 = if player:GetAttribute("Skin") == prize.id then Ui.colors.green else Ui.colors.purple
+					b.Text = if wearing then "Wearing" else "Wear"
+					b.BackgroundColor3 = if wearing then Ui.colors.ink else Ui.colors.green
+					b.TextColor3 = Ui.colors.white
 				else
 					local price = prices[prize.id]
-					b.Text = "Buy the " .. prize.name .. (if price then " (R$ " .. price .. ")" else " (Robux)")
-					b.BackgroundColor3 = Ui.colors.blue
+					b.Text = "Buy" .. (if price then " · R$ " .. price else " with Robux")
+					b.BackgroundColor3 = Ui.colors.hay
+					b.TextColor3 = Ui.colors.ink
 				end
 			end
 		end
@@ -12141,7 +12176,7 @@ function Panels.mount(gui, notify, actions)
 	end
 
 	-- Wheel of Fortune: the odds are always on screen before you can spin
-	local wheel, wheelBody = Ui.window(gui, "Wheel of Fortune")
+	local wheel, wheelBody = Ui.window(gui, "Wheel of Fortune", nil, "Wheel")
 	windows.Wheel = wheel
 	local restricted = true
 	task.spawn(function()
@@ -12192,7 +12227,7 @@ function Panels.mount(gui, notify, actions)
 	windows.Menu = menu
 	Ui.fit(menu, 420, 330)
 	local open, whistleButton
-	for i, b in ipairs({ { "ACHIEVEMENTS", "Achievements", Ui.colors.blue }, { "FINDS & SKINS", "Finds", Ui.colors.purple }, { "WHISTLE: SELL HERE", "Whistle", Ui.colors.red } }) do
+	for i, b in ipairs({ { "Achievements", "Achievements", Ui.colors.blue }, { "Skins & finds", "Finds", Ui.colors.purple }, { "Whistle: sell here", "Whistle", Ui.colors.red } }) do
 		local button = Ui.button(b[1], b[3], { LayoutOrder = i, Size = UDim2.new(1, 0, 0, 56), Parent = menuBody })
 		button.Activated:Connect(function()
 			open(b[2])
@@ -12245,6 +12280,7 @@ function Panels.mount(gui, notify, actions)
 		end)
 	end
 
+	Ui.journalOpen = open -- the journal's tab rail
 	local panels = { open = open }
 	function panels.addFind(name, story)
 		if found[name] then
@@ -12383,7 +12419,7 @@ end
 
 local function priceText(model)
 	if owned(model) then
-		return "OWNED"
+		return "Owned"
 	end
 	local price = model:GetAttribute("Price")
 	return if type(price) == "number" then price .. " Robux" else "Robux"
@@ -12609,7 +12645,7 @@ local function ask(remote, ...)
 end
 
 local function row(parent, order, name, text, colour)
-	local f = Ui.make("Frame", { LayoutOrder = order, Size = UDim2.new(1, 0, 0, 64), BackgroundColor3 = colour or Ui.colors.paper, Parent = parent }, { Ui.corner(10) })
+	local f = Ui.make("Frame", { LayoutOrder = order, Size = UDim2.new(1, 0, 0, 64), BackgroundColor3 = colour or Ui.colors.white, Parent = parent }, { Ui.corner(6), Ui.stroke() })
 	Ui.label({ Text = name, Size = UDim2.new(0.6, -12, 0, 28), Position = UDim2.fromOffset(12, 5), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Ui.colors.ink, TextStrokeTransparency = 1, Parent = f }, 22)
 	local sub = Ui.label({ Text = text, Size = UDim2.new(0.6, -12, 0, 24), Position = UDim2.fromOffset(12, 35), Font = Ui.body, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Ui.colors.grey, TextStrokeTransparency = 1, Parent = f }, 14)
 	local button = Ui.button("", Ui.colors.green, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0.36, 0, 0, 46), Parent = f })
@@ -12618,21 +12654,22 @@ end
 
 local function price(button, cost, done, available, doneText)
 	if done then
-		button.Text, button.BackgroundColor3 = doneText or "OWNED", Ui.colors.grey
+		button.Text, button.BackgroundColor3 = doneText or "Owned", Ui.colors.grey
 	elseif not available then
-		button.Text, button.BackgroundColor3 = "LOCKED", Ui.colors.grey
+		button.Text, button.BackgroundColor3 = "Locked", Ui.colors.grey
 	else
-		button.Text = "BUY " .. Format.short(cost)
+		button.Text = "Buy · " .. Format.short(cost)
 		button.BackgroundColor3 = if (player:GetAttribute("Coins") or 0) >= cost then Ui.colors.green else Ui.colors.red
 	end
 end
 
 function Shop.mount(gui, notify)
 	local body
-	frame, body = Ui.window(gui, "Shop")
+	frame, body = Ui.window(gui, "Shop", nil, "Shop")
 	Ui.fit(frame, 640, 540)
 	-- tabs share the width with a mouse; on touch screens they stay tappable and scroll sideways
-	local tabs = Ui.make("ScrollingFrame", { Size = UDim2.new(1, -24, 0, 40), Position = UDim2.fromOffset(12, 64), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 0, CanvasSize = UDim2.new(), Parent = frame }, { Ui.make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }) })
+	local rail = frame:GetAttribute("Rail") or 0 -- the journal's tab rail down the left
+	local tabs = Ui.make("ScrollingFrame", { Size = UDim2.new(1, -rail - 40, 0, 36), Position = UDim2.fromOffset(rail + 24, 64), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 0, CanvasSize = UDim2.new(), Parent = frame }, { Ui.make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }) })
 	local tabButtons = {}
 	Ui.onLayout(function()
 		local touch = Ui.touch()
@@ -12641,7 +12678,7 @@ function Shop.mount(gui, notify)
 			b.Size = if touch then UDim2.fromOffset(104, 40) else UDim2.new(1 / 9, -4, 1, 0)
 		end
 	end)
-	body.Position, body.Size = UDim2.fromOffset(12, 110), UDim2.new(1, -24, 1, -118)
+	body.Position, body.Size = UDim2.fromOffset(rail + 24, 110), UDim2.new(1, -rail - 40, 1, -118)
 	local pages, refreshers, order = {}, {}, 0
 	Shop.refreshers = refreshers
 
@@ -12661,12 +12698,17 @@ function Shop.mount(gui, notify)
 		order += 1
 		local list = Ui.make("Frame", { Name = name, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Visible = false, Parent = body }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
 		pages[name], refreshers[name] = list, build(list)
-		local tab = Ui.button(name, colour, { LayoutOrder = order, Size = if Ui.touch() then UDim2.fromOffset(104, 40) else UDim2.new(1 / 9, -4, 1, 0), Parent = tabs })
+		local _ = colour -- quiet tabs: the open one in ink, the rest plain paper
+		local tab = Ui.button(name, Ui.colors.paper, { LayoutOrder = order, TextColor3 = Ui.colors.soft, Size = if Ui.touch() then UDim2.fromOffset(104, 40) else UDim2.new(1 / 9, -4, 1, 0), Parent = tabs })
 		table.insert(tabButtons, tab)
 		tab.Activated:Connect(function()
 			for key, p in pairs(pages) do
 				p.Visible = key == name
 			end
+			for _, other in ipairs(tabButtons) do
+				other.BackgroundColor3, other.TextColor3 = Ui.colors.paper, Ui.colors.soft
+			end
+			tab.BackgroundColor3, tab.TextColor3 = Ui.colors.ink, Ui.colors.white
 			Shop.refresh()
 		end)
 	end
@@ -12703,7 +12745,7 @@ function Shop.mount(gui, notify)
 			for i, perk in ipairs(Config.Perks) do
 				local level = d.perks[perk.id]
 				subs[i].Text = perk.text .. ". " .. level .. "/" .. perk.levels .. " on this tool."
-				price(rows[i], Economy.perkPrice(d, i), level >= perk.levels, true, "MAXED")
+				price(rows[i], Economy.perkPrice(d, i), level >= perk.levels, true, "All done")
 			end
 		end
 	end)
@@ -12725,7 +12767,7 @@ function Shop.mount(gui, notify)
 			for i, f in ipairs(Config.Fitness) do
 				local level = player:GetAttribute("Fitness_" .. f.id) or 0
 				subs[i].Text = f.text .. ". " .. level .. "/" .. f.levels .. "."
-				price(rows[i], math.floor(f.price * f.growth ^ level), level >= f.levels, true, "MAXED")
+				price(rows[i], math.floor(f.price * f.growth ^ level), level >= f.levels, true, "All done")
 			end
 			price(detector, Config.MetalDetector.price, player:GetAttribute("Detector") == true, true)
 		end
@@ -12772,7 +12814,7 @@ function Shop.mount(gui, notify)
 				for i, def in ipairs(list_) do
 					local own, inv = player:GetAttribute("Own_" .. def.id) or 0, player:GetAttribute("Inv_" .. def.id) or 0
 					subs[i].Text = describe(def) .. "  You have " .. own .. (if def.max then "/" .. def.max else "") .. (if inv > 0 then " (" .. inv .. " to build)" else "")
-					price(rows[i], def.price, def.max ~= nil and own >= def.max, true, "MAXED")
+					price(rows[i], def.price, def.max ~= nil and own >= def.max, true, "All done")
 				end
 			end
 		end)
@@ -12821,7 +12863,7 @@ function Shop.mount(gui, notify)
 			for i, truck in ipairs(Config.Trucks) do
 				local own = player:GetAttribute("Truck_" .. truck.id) or 0
 				subs[i].Text = "Hauls " .. Format.commas(truck.rate) .. " straws a second. You have " .. own .. "/" .. truck.max .. "."
-				price(rows[i], truck.price, own >= truck.max, true, "MAXED")
+				price(rows[i], truck.price, own >= truck.max, true, "All done")
 			end
 			local belt = player:GetAttribute("BeltLevel") or 1
 			for level, button in pairs(belts) do
@@ -12837,7 +12879,7 @@ function Shop.mount(gui, notify)
 			if id and id ~= 0 then
 				any = true
 				local button = row(list, i, item.title, item.text, Color3.fromRGB(226, 236, 250))
-				button.Text, button.BackgroundColor3 = "ROBUX", Ui.colors.blue
+				button.Text, button.BackgroundColor3 = "Robux", Ui.colors.blue
 				button.Activated:Connect(function()
 					if item.kind == "pass" then
 						MarketplaceService:PromptGamePassPurchase(player, id)
@@ -12854,9 +12896,8 @@ function Shop.mount(gui, notify)
 	end)
 
 	pages.Tools.Visible = true
-	player.AttributeChanged:Connect(function()
-		Shop.refresh()
-	end)
+	tabButtons[1].BackgroundColor3, tabButtons[1].TextColor3 = Ui.colors.ink, Ui.colors.white
+	player.AttributeChanged:Connect(Shop.refresh)
 	return frame
 end
 
@@ -13045,10 +13086,10 @@ function Sprint.start()
 		end
 	end)
 	local button
-	button = TouchPad.add({ order = 0, text = "RUN", colour = Ui.colors.green, tap = function()
+	button = TouchPad.add({ order = 0, text = "Run", colour = Ui.colors.green, tap = function()
 		set(not running)
 		if button then
-			button.Text = if running then "WALK" else "RUN"
+			button.Text = if running then "Walk" else "Run"
 		end
 	end })
 end
@@ -13391,26 +13432,38 @@ return TouchPad
 				<Item class="ModuleScript" referent="RBX00077">
 					<Properties>
 						<string name="Name">Ui</string>
-						<ProtectedString name="Source"><![CDATA[-- A small UI kit: the farm colours, rounded wooden buttons and windows that scale with
--- the screen, and helpers for touch screens.
+						<ProtectedString name="Source"><![CDATA[-- A small UI kit in the "farm journal" style: cream paper cards, ink-brown text, serif headings,
+-- flat muted buttons and windows that scale with the screen, and helpers for touch screens.
 local Ui = {}
 
 Ui.colors = {
-	wood = Color3.fromRGB(110, 70, 40),
-	woodDark = Color3.fromRGB(62, 38, 22),
-	hay = Color3.fromRGB(242, 196, 82),
-	cream = Color3.fromRGB(255, 244, 222),
-	paper = Color3.fromRGB(246, 232, 200),
-	red = Color3.fromRGB(200, 64, 48),
-	green = Color3.fromRGB(84, 166, 70),
-	blue = Color3.fromRGB(64, 136, 206),
-	purple = Color3.fromRGB(136, 92, 196),
-	grey = Color3.fromRGB(128, 120, 112),
-	ink = Color3.fromRGB(56, 36, 20),
-	white = Color3.new(1, 1, 1),
+	wood = Color3.fromRGB(116, 88, 60), -- warm brown: plain buttons
+	woodDark = Color3.fromRGB(59, 42, 26), -- ink: lines, dark buttons
+	hay = Color3.fromRGB(206, 152, 46), -- mustard: highlights, bars
+	cream = Color3.fromRGB(246, 237, 218), -- the paper
+	paper = Color3.fromRGB(234, 220, 190), -- the paper's darker edge, tab rails
+	red = Color3.fromRGB(176, 84, 60), -- rust
+	green = Color3.fromRGB(96, 128, 74), -- sage
+	blue = Color3.fromRGB(76, 106, 130), -- slate
+	purple = Color3.fromRGB(122, 90, 128), -- plum
+	grey = Color3.fromRGB(140, 122, 100), -- soft brown-grey
+	soft = Color3.fromRGB(122, 98, 72), -- secondary text on paper
+	ink = Color3.fromRGB(59, 42, 26),
+	white = Color3.fromRGB(255, 250, 238),
 }
-Ui.font = Enum.Font.FredokaOne
-Ui.body = Enum.Font.GothamMedium
+Ui.font = Enum.Font.Merriweather -- headings (shown in its bold weight, below)
+Ui.body = Enum.Font.BuilderSans
+Ui.bold = Enum.Font.BuilderSansBold
+local HEADING = Font.new("rbxasset://fonts/families/Merriweather.json", Enum.FontWeight.Bold)
+
+-- Headings in the bold serif: anything set in Ui.font.
+local function serif(instance)
+	if instance.Font == Ui.font then
+		instance.FontFace = HEADING
+	end
+	return instance
+end
+Ui.serif = serif
 
 local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -13485,8 +13538,9 @@ function Ui.corner(radius)
 	return Ui.make("UICorner", { CornerRadius = UDim.new(0, radius or 12) })
 end
 
+-- A fine pencil line round a card (thick wooden borders belong to another style).
 function Ui.stroke(color, thickness)
-	return Ui.make("UIStroke", { Color = color or Ui.colors.woodDark, Thickness = thickness or 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+	return Ui.make("UIStroke", { Color = color or Ui.colors.woodDark, Thickness = math.min(thickness or 1, 1.5), Transparency = 0.78, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
 end
 
 function Ui.maxText(size)
@@ -13516,7 +13570,7 @@ function Ui.fit(frame, width, height)
 	end
 	fitted[frame] = function()
 		local s, view, inset = screenScale(), camera.ViewportSize, Ui.topInset()
-		local w = math.min(frame:GetAttribute("FitW"), (view.X - 24) / s)
+		local w = math.min(frame:GetAttribute("FitW") + (frame:GetAttribute("Rail") or 0), (view.X - 24) / s)
 		local h = math.min(frame:GetAttribute("FitH"), (view.Y - inset - 16) / s)
 		frame.Size = UDim2.fromOffset(w, h)
 		frame.Position = UDim2.new(0.5, 0, 0.5, inset / 2)
@@ -13534,22 +13588,21 @@ function Ui.label(props, maxSize)
 		TextScaled = true,
 		TextWrapped = true,
 		TextStrokeColor3 = Ui.colors.woodDark,
-		TextStrokeTransparency = 0.35,
+		TextStrokeTransparency = 0.7, -- a soft shadow, readable over the world; none on paper (set 1)
 	}
 	for name, value in pairs(props) do
 		defaults[name] = value
 	end
-	return Ui.make("TextLabel", defaults, { Ui.maxText(maxSize or 40) })
+	return serif(Ui.make("TextLabel", defaults, { Ui.maxText(maxSize or 40) }))
 end
 
 function Ui.button(text, color, props)
 	local defaults = {
 		Text = text,
-		Font = Ui.font,
+		Font = Ui.bold,
 		TextScaled = true,
 		TextColor3 = Ui.colors.white,
-		TextStrokeColor3 = Ui.colors.woodDark,
-		TextStrokeTransparency = 0.4,
+		TextStrokeTransparency = 1,
 		BackgroundColor3 = color,
 		AutoButtonColor = true,
 	}
@@ -13557,51 +13610,10 @@ function Ui.button(text, color, props)
 		defaults[name] = value
 	end
 	return Ui.make("TextButton", defaults, {
-		Ui.corner(10),
-		Ui.stroke(Ui.colors.woodDark, 3),
-		Ui.maxText(28),
+		Ui.corner(5),
+		Ui.maxText(20),
 		Ui.make("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 4) }),
 	})
-end
-
--- A centred window with a title and a close button. Returns frame, body (a scrolling list).
-function Ui.window(parent, title, onClose)
-	local frame = Ui.make("Frame", {
-		Name = title,
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(540, 480),
-		BackgroundColor3 = Ui.colors.cream,
-		Visible = false,
-		Parent = parent,
-	}, { Ui.corner(18), Ui.stroke(Ui.colors.wood, 5) })
-	Ui.autoScale(frame)
-	Ui.fit(frame, 540, 480)
-	Ui.make("Frame", { Name = "Header", Size = UDim2.new(1, 0, 0, 58), BackgroundColor3 = Ui.colors.wood, Parent = frame }, { Ui.corner(16) })
-	Ui.label({ Text = title, Size = UDim2.new(1, -120, 0, 46), Position = UDim2.fromOffset(20, 6), TextXAlignment = Enum.TextXAlignment.Left, Parent = frame }, 34)
-	local close = Ui.button("X", Ui.colors.red, { Size = UDim2.fromOffset(46, 42), Position = UDim2.new(1, -56, 0, 8), Parent = frame })
-	close.Activated:Connect(function()
-		frame.Visible = false
-		if onClose then
-			onClose()
-		end
-	end)
-	local body = Ui.make("ScrollingFrame", {
-		Name = "Body",
-		Size = UDim2.new(1, -24, 1, -76),
-		Position = UDim2.fromOffset(12, 68),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		ScrollBarThickness = 8,
-		ScrollBarImageColor3 = Ui.colors.wood,
-		AutomaticCanvasSize = Enum.AutomaticSize.Y,
-		CanvasSize = UDim2.new(),
-		Parent = frame,
-	}, {
-		Ui.make("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
-		Ui.make("UIPadding", { PaddingRight = UDim.new(0, 10) }),
-	})
-	return frame, body
 end
 
 -- Paragraph text that grows to fit, for lists inside windows.
@@ -13620,14 +13632,134 @@ function Ui.paragraph(text, props)
 	for name, value in pairs(props or {}) do
 		defaults[name] = value
 	end
-	return Ui.make("TextLabel", defaults)
+	return serif(Ui.make("TextLabel", defaults))
 end
+
+require(script.Parent.UiJournal)(Ui) -- paper cards, pins, stamps and the journal windows
 
 return Ui
 ]]></ProtectedString>
 					</Properties>
 				</Item>
 				<Item class="ModuleScript" referent="RBX00078">
+					<Properties>
+						<string name="Name">UiJournal</string>
+						<ProtectedString name="Source"><![CDATA[-- The farm journal's own pieces for the UI kit: paper cards, pins, thin bars, round stamp
+-- buttons and the journal windows with their tab rail. Usage (from Ui.luau): require(this)(Ui).
+return function(Ui)
+	-- A paper card: cream, softly rounded, a fine line round it.
+	function Ui.card(props)
+		local defaults = { BackgroundColor3 = Ui.colors.cream, BorderSizePixel = 0 }
+		for name, value in pairs(props) do
+			defaults[name] = value
+		end
+		return Ui.make("Frame", defaults, { Ui.corner(6), Ui.stroke() })
+	end
+
+	-- A pin at the top of a note card, in `colour`.
+	function Ui.pin(card, colour)
+		return Ui.make("Frame", { Name = "Pin", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 0), Size = UDim2.fromOffset(12, 12), BackgroundColor3 = colour or Ui.colors.red, ZIndex = 3, Parent = card }, { Ui.corner(6) })
+	end
+
+	-- A thin progress line: returns the track and its fill (scale X = share).
+	function Ui.bar(parent, props, colour)
+		local defaults = { Size = UDim2.new(1, 0, 0, 5), BackgroundColor3 = Ui.colors.woodDark, BackgroundTransparency = 0.84, BorderSizePixel = 0, Parent = parent }
+		for name, value in pairs(props or {}) do
+			defaults[name] = value
+		end
+		local track = Ui.make("Frame", defaults, { Ui.corner(3) })
+		local fill = Ui.make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = colour or Ui.colors.hay, BorderSizePixel = 0, Parent = track }, { Ui.corner(3) })
+		return track, fill
+	end
+
+	-- A round paper stamp button: a word in the serif and a small caption (its key) under it.
+	function Ui.stamp(text, caption, props)
+		local defaults = { Text = "", AutoButtonColor = true, BackgroundColor3 = Ui.colors.cream, Size = UDim2.fromOffset(64, 64) }
+		for name, value in pairs(props or {}) do
+			defaults[name] = value
+		end
+		local stamp = Ui.make("TextButton", defaults, { Ui.corner(32), Ui.stroke() })
+		local word = Ui.serif(Ui.make("TextLabel", { Name = "Word", Text = text, BackgroundTransparency = 1, Font = Ui.font, TextColor3 = Ui.colors.ink, TextScaled = true, Size = UDim2.new(0.8, 0, 0, 20), Position = UDim2.new(0.1, 0, 0.5, -16), Parent = stamp }, { Ui.maxText(16) }))
+		Ui.make("TextLabel", { Name = "Caption", Text = caption or "", BackgroundTransparency = 1, Font = Ui.bold, TextColor3 = Ui.colors.soft, TextScaled = true, Size = UDim2.new(0.7, 0, 0, 12), Position = UDim2.new(0.15, 0, 0.5, 6), Parent = stamp }, { Ui.maxText(11) })
+		return stamp, word
+	end
+
+	-- The farm journal's pages, in the order of the tab rail down the left of each journal window.
+	-- Ui.journalOpen (set by Panels) opens a page by its key.
+	Ui.JOURNAL = { { "Shop", "Shop" }, { "Achievements", "Achievements" }, { "Finds", "Skins & finds" }, { "Wheel", "Wheel" } }
+	Ui.journalOpen = nil
+	local RAIL = 160
+
+	-- A centred paper window with a serif title and a quiet Close. With `page` (a key in
+	-- Ui.JOURNAL) it is a page of the farm journal: a tab rail down its left opens the others.
+	-- Returns frame, body (a scrolling list).
+	function Ui.window(parent, title, onClose, page)
+		local rail = if page then RAIL else 0
+		local frame = Ui.make("Frame", {
+			Name = title,
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromOffset(540 + rail, 480),
+			BackgroundColor3 = Ui.colors.cream,
+			Visible = false,
+			Parent = parent,
+		}, { Ui.corner(8), Ui.stroke() })
+		frame:SetAttribute("Rail", rail)
+		Ui.autoScale(frame)
+		Ui.fit(frame, 540, 480)
+		if page then
+			local side = Ui.make("Frame", { Name = "Rail", Size = UDim2.new(0, rail, 1, 0), BackgroundColor3 = Ui.colors.paper, BorderSizePixel = 0, Parent = frame }, { Ui.corner(8) })
+			Ui.make("Frame", { Size = UDim2.new(0, 10, 1, 0), Position = UDim2.new(1, -10, 0, 0), BackgroundColor3 = Ui.colors.paper, BorderSizePixel = 0, Parent = side }) -- square inner edge
+			Ui.label({ Text = "Farm journal", Size = UDim2.new(1, -28, 0, 26), Position = UDim2.fromOffset(18, 22), TextColor3 = Ui.colors.ink, TextStrokeTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = side }, 20)
+			for i, entry in ipairs(Ui.JOURNAL) do
+				local here = entry[1] == page
+				local tab = Ui.make("TextButton", {
+					Text = entry[2], Font = if here then Ui.bold else Ui.body, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Left,
+					TextColor3 = if here then Ui.colors.ink else Ui.colors.soft, AutoButtonColor = not here,
+					BackgroundColor3 = Ui.colors.cream, BackgroundTransparency = if here then 0 else 1, BorderSizePixel = 0,
+					Size = UDim2.new(1, 0, 0, 38), Position = UDim2.fromOffset(0, 62 + (i - 1) * 40), Parent = side,
+				}, { Ui.make("UIPadding", { PaddingLeft = UDim.new(0, 20) }) })
+				if here then
+					Ui.make("Frame", { Size = UDim2.new(0, 3, 1, 0), BackgroundColor3 = Ui.colors.red, BorderSizePixel = 0, Parent = tab })
+				else
+					tab.Activated:Connect(function()
+						if Ui.journalOpen then
+							Ui.journalOpen(entry[1])
+						end
+					end)
+				end
+			end
+		end
+		Ui.label({ Text = title, Size = UDim2.new(1, -rail - 150, 0, 34), Position = UDim2.fromOffset(rail + 24, 18), TextColor3 = Ui.colors.ink, TextStrokeTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = frame }, 28)
+		local close = Ui.make("TextButton", { Text = "Close", Font = Ui.body, TextSize = 15, TextColor3 = Ui.colors.soft, BackgroundTransparency = 1, Size = UDim2.fromOffset(70, 30), Position = UDim2.new(1, -84, 0, 16), Parent = frame })
+		close.Activated:Connect(function()
+			frame.Visible = false
+			if onClose then
+				onClose()
+			end
+		end)
+		local body = Ui.make("ScrollingFrame", {
+			Name = "Body",
+			Size = UDim2.new(1, -rail - 40, 1, -84),
+			Position = UDim2.fromOffset(rail + 24, 66),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ScrollBarThickness = 4,
+			ScrollBarImageColor3 = Ui.colors.grey,
+			AutomaticCanvasSize = Enum.AutomaticSize.Y,
+			CanvasSize = UDim2.new(),
+			Parent = frame,
+		}, {
+			Ui.make("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+			Ui.make("UIPadding", { PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 8) }),
+		})
+		return frame, body
+	end
+end
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX00079">
 					<Properties>
 						<string name="Name">WorldFx</string>
 						<ProtectedString name="Source"><![CDATA[-- World effects on your screen: the glowing needle clump (Wheel jackpot), the wheel turning
@@ -13672,7 +13804,7 @@ function WorldFx.reveal(clump)
 	glow.Adornee = part
 	glow.Parent = part
 	local board = Ui.make("BillboardGui", { Adornee = part, Size = UDim2.fromOffset(220, 40), StudsOffset = Vector3.new(0, 5, 0), AlwaysOnTop = true, LightInfluence = 0, Parent = part })
-	Ui.label({ Text = "THE NEEDLE IS HERE", Size = UDim2.fromScale(1, 1), TextColor3 = Ui.colors.hay, Parent = board }, 30)
+	Ui.label({ Text = "The needle is here", Size = UDim2.fromScale(1, 1), TextColor3 = Ui.colors.hay, Parent = board }, 30)
 	TweenService:Create(glow, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { FillTransparency = 0.8 }):Play()
 	-- gone once the needle's found (the clump count jumps back to full)
 	player:GetAttributeChangedSignal("Needles"):Connect(function()
@@ -13748,7 +13880,7 @@ return WorldFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00079">
+				<Item class="ModuleScript" referent="RBX0007A">
 					<Properties>
 						<string name="Name">Worlds</string>
 						<ProtectedString name="Source"><![CDATA[-- The portal worlds and the lobby on your own screen: each world's light (and the lobby's,
@@ -14015,19 +14147,19 @@ return Worlds
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX0007A">
+	<Item class="Workspace" referent="RBX0007B">
 		<Properties>
 			<string name="Name">Workspace</string>
 			<bool name="StreamingEnabled">false</bool>
 		</Properties>
 	</Item>
-	<Item class="MaterialService" referent="RBX0007B">
+	<Item class="MaterialService" referent="RBX0007C">
 		<Properties>
 			<string name="Name">MaterialService</string>
 			<bool name="Use2022Materials">true</bool>
 			<string name="LeafyGrassName">Field</string>
 		</Properties>
-		<Item class="MaterialVariant" referent="RBX0007C">
+		<Item class="MaterialVariant" referent="RBX0007D">
 			<Properties>
 				<string name="Name">Field</string>
 				<token name="BaseMaterial">1284</token>

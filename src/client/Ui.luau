@@ -1,23 +1,35 @@
--- A small UI kit: the farm colours, rounded wooden buttons and windows that scale with
--- the screen, and helpers for touch screens.
+-- A small UI kit in the "farm journal" style: cream paper cards, ink-brown text, serif headings,
+-- flat muted buttons and windows that scale with the screen, and helpers for touch screens.
 local Ui = {}
 
 Ui.colors = {
-	wood = Color3.fromRGB(110, 70, 40),
-	woodDark = Color3.fromRGB(62, 38, 22),
-	hay = Color3.fromRGB(242, 196, 82),
-	cream = Color3.fromRGB(255, 244, 222),
-	paper = Color3.fromRGB(246, 232, 200),
-	red = Color3.fromRGB(200, 64, 48),
-	green = Color3.fromRGB(84, 166, 70),
-	blue = Color3.fromRGB(64, 136, 206),
-	purple = Color3.fromRGB(136, 92, 196),
-	grey = Color3.fromRGB(128, 120, 112),
-	ink = Color3.fromRGB(56, 36, 20),
-	white = Color3.new(1, 1, 1),
+	wood = Color3.fromRGB(116, 88, 60), -- warm brown: plain buttons
+	woodDark = Color3.fromRGB(59, 42, 26), -- ink: lines, dark buttons
+	hay = Color3.fromRGB(206, 152, 46), -- mustard: highlights, bars
+	cream = Color3.fromRGB(246, 237, 218), -- the paper
+	paper = Color3.fromRGB(234, 220, 190), -- the paper's darker edge, tab rails
+	red = Color3.fromRGB(176, 84, 60), -- rust
+	green = Color3.fromRGB(96, 128, 74), -- sage
+	blue = Color3.fromRGB(76, 106, 130), -- slate
+	purple = Color3.fromRGB(122, 90, 128), -- plum
+	grey = Color3.fromRGB(140, 122, 100), -- soft brown-grey
+	soft = Color3.fromRGB(122, 98, 72), -- secondary text on paper
+	ink = Color3.fromRGB(59, 42, 26),
+	white = Color3.fromRGB(255, 250, 238),
 }
-Ui.font = Enum.Font.FredokaOne
-Ui.body = Enum.Font.GothamMedium
+Ui.font = Enum.Font.Merriweather -- headings (shown in its bold weight, below)
+Ui.body = Enum.Font.BuilderSans
+Ui.bold = Enum.Font.BuilderSansBold
+local HEADING = Font.new("rbxasset://fonts/families/Merriweather.json", Enum.FontWeight.Bold)
+
+-- Headings in the bold serif: anything set in Ui.font.
+local function serif(instance)
+	if instance.Font == Ui.font then
+		instance.FontFace = HEADING
+	end
+	return instance
+end
+Ui.serif = serif
 
 local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -92,8 +104,9 @@ function Ui.corner(radius)
 	return Ui.make("UICorner", { CornerRadius = UDim.new(0, radius or 12) })
 end
 
+-- A fine pencil line round a card (thick wooden borders belong to another style).
 function Ui.stroke(color, thickness)
-	return Ui.make("UIStroke", { Color = color or Ui.colors.woodDark, Thickness = thickness or 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+	return Ui.make("UIStroke", { Color = color or Ui.colors.woodDark, Thickness = math.min(thickness or 1, 1.5), Transparency = 0.78, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
 end
 
 function Ui.maxText(size)
@@ -123,7 +136,7 @@ function Ui.fit(frame, width, height)
 	end
 	fitted[frame] = function()
 		local s, view, inset = screenScale(), camera.ViewportSize, Ui.topInset()
-		local w = math.min(frame:GetAttribute("FitW"), (view.X - 24) / s)
+		local w = math.min(frame:GetAttribute("FitW") + (frame:GetAttribute("Rail") or 0), (view.X - 24) / s)
 		local h = math.min(frame:GetAttribute("FitH"), (view.Y - inset - 16) / s)
 		frame.Size = UDim2.fromOffset(w, h)
 		frame.Position = UDim2.new(0.5, 0, 0.5, inset / 2)
@@ -141,22 +154,21 @@ function Ui.label(props, maxSize)
 		TextScaled = true,
 		TextWrapped = true,
 		TextStrokeColor3 = Ui.colors.woodDark,
-		TextStrokeTransparency = 0.35,
+		TextStrokeTransparency = 0.7, -- a soft shadow, readable over the world; none on paper (set 1)
 	}
 	for name, value in pairs(props) do
 		defaults[name] = value
 	end
-	return Ui.make("TextLabel", defaults, { Ui.maxText(maxSize or 40) })
+	return serif(Ui.make("TextLabel", defaults, { Ui.maxText(maxSize or 40) }))
 end
 
 function Ui.button(text, color, props)
 	local defaults = {
 		Text = text,
-		Font = Ui.font,
+		Font = Ui.bold,
 		TextScaled = true,
 		TextColor3 = Ui.colors.white,
-		TextStrokeColor3 = Ui.colors.woodDark,
-		TextStrokeTransparency = 0.4,
+		TextStrokeTransparency = 1,
 		BackgroundColor3 = color,
 		AutoButtonColor = true,
 	}
@@ -164,51 +176,10 @@ function Ui.button(text, color, props)
 		defaults[name] = value
 	end
 	return Ui.make("TextButton", defaults, {
-		Ui.corner(10),
-		Ui.stroke(Ui.colors.woodDark, 3),
-		Ui.maxText(28),
+		Ui.corner(5),
+		Ui.maxText(20),
 		Ui.make("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 4) }),
 	})
-end
-
--- A centred window with a title and a close button. Returns frame, body (a scrolling list).
-function Ui.window(parent, title, onClose)
-	local frame = Ui.make("Frame", {
-		Name = title,
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(540, 480),
-		BackgroundColor3 = Ui.colors.cream,
-		Visible = false,
-		Parent = parent,
-	}, { Ui.corner(18), Ui.stroke(Ui.colors.wood, 5) })
-	Ui.autoScale(frame)
-	Ui.fit(frame, 540, 480)
-	Ui.make("Frame", { Name = "Header", Size = UDim2.new(1, 0, 0, 58), BackgroundColor3 = Ui.colors.wood, Parent = frame }, { Ui.corner(16) })
-	Ui.label({ Text = title, Size = UDim2.new(1, -120, 0, 46), Position = UDim2.fromOffset(20, 6), TextXAlignment = Enum.TextXAlignment.Left, Parent = frame }, 34)
-	local close = Ui.button("X", Ui.colors.red, { Size = UDim2.fromOffset(46, 42), Position = UDim2.new(1, -56, 0, 8), Parent = frame })
-	close.Activated:Connect(function()
-		frame.Visible = false
-		if onClose then
-			onClose()
-		end
-	end)
-	local body = Ui.make("ScrollingFrame", {
-		Name = "Body",
-		Size = UDim2.new(1, -24, 1, -76),
-		Position = UDim2.fromOffset(12, 68),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		ScrollBarThickness = 8,
-		ScrollBarImageColor3 = Ui.colors.wood,
-		AutomaticCanvasSize = Enum.AutomaticSize.Y,
-		CanvasSize = UDim2.new(),
-		Parent = frame,
-	}, {
-		Ui.make("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
-		Ui.make("UIPadding", { PaddingRight = UDim.new(0, 10) }),
-	})
-	return frame, body
 end
 
 -- Paragraph text that grows to fit, for lists inside windows.
@@ -227,7 +198,9 @@ function Ui.paragraph(text, props)
 	for name, value in pairs(props or {}) do
 		defaults[name] = value
 	end
-	return Ui.make("TextLabel", defaults)
+	return serif(Ui.make("TextLabel", defaults))
 end
+
+require(script.Parent.UiJournal)(Ui) -- paper cards, pins, stamps and the journal windows
 
 return Ui

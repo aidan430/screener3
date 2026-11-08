@@ -38,7 +38,7 @@ end
 
 local function priceText(model)
 	if owned(model) then
-		return "OWNED"
+		return "Owned"
 	end
 	local price = model:GetAttribute("Price")
 	return if type(price) == "number" then price .. " Robux" else "Robux"

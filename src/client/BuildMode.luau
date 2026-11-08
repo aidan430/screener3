@@ -209,30 +209,30 @@ function BuildMode.mount(gui, notifier)
 	end
 	-- touch: the pad's build set (PLACE sits next to the thumb)
 	for i, b in ipairs({
-		{ "PLACE", function()
+		{ "Place", function()
 			if removing then
 				takeBack()
 			else
 				place()
 			end
 		end, Ui.colors.green },
-		{ "TURN", function()
+		{ "Turn", function()
 			rotation = (rotation + 45) % 360
 		end },
-		{ "TAKE BACK", function()
+		{ "Take back", function()
 			if removing and hovered then
 				takeBack()
 			else
 				toggleRemove()
 			end
 		end, Ui.colors.red },
-		{ "NEXT", function()
+		{ "Next", function()
 			cycle(1)
 		end },
-		{ "PREV", function()
+		{ "Back", function()
 			cycle(-1)
 		end },
-		{ "DONE", function()
+		{ "Done", function()
 			BuildMode.toggle(false)
 		end, Ui.colors.blue },
 	}) do

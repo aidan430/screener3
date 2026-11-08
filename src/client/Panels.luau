@@ -30,7 +30,7 @@ function Panels.mount(gui, notify, actions)
 	refreshers.Shop = Shop.refresh
 
 	-- Achievements: secret until earned
-	local achievements, achievementsBody = Ui.window(gui, "Achievements")
+	local achievements, achievementsBody = Ui.window(gui, "Achievements", nil, "Achievements")
 	windows.Achievements = achievements
 	refreshers.Achievements = function()
 		task.spawn(function()
@@ -57,23 +57,32 @@ function Panels.mount(gui, notify, actions)
 	end
 
 	-- Finds & Skins
-	local finds, findsBody = Ui.window(gui, "Finds")
+	local finds, findsBody = Ui.window(gui, "Skins & finds", nil, "Finds")
 	windows.Finds = finds
 	local found, count = {}, 0
-	local HEADER = "Tool skins: win them on the Wheel of Fortune, or buy the one you want:"
-	local skinsHeader = Ui.paragraph(HEADER, { LayoutOrder = 1, Font = Ui.font, TextSize = 20, Parent = findsBody })
+	local HEADER = "Tool skins: win one free on the wheel each day, or buy the one you want. Looks only."
+	local skinsHeader = Ui.paragraph(HEADER, { LayoutOrder = 1, TextSize = 16, TextColor3 = Ui.colors.soft, Parent = findsBody })
 	local skinButtons, prices = {}, {}
 	local function wear(id)
 		local ok, _, message = pcall(Remotes.EquipSkin.InvokeServer, Remotes.EquipSkin, id)
 		notify.toast(if ok then tostring(message) else "Try again.", Ui.colors.purple)
 	end
-	local plain = Ui.button("Plain tool", Ui.colors.wood, { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 40), Parent = findsBody })
+	local plain = Ui.button("Use the plain tool", Ui.colors.wood, { LayoutOrder = 3, Size = UDim2.new(0, 200, 0, 32), Parent = findsBody })
 	plain.Activated:Connect(function()
 		wear("")
 	end)
+	local grid = Ui.make("Frame", { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = findsBody }, {
+		Ui.make("UIGridLayout", { CellSize = UDim2.new(1 / 3, -8, 0, 168), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
+	})
 	for i, prize in ipairs(Config.Wheel) do
 		if not prize.reveal then
-			local b = Ui.button(prize.name, Ui.colors.grey, { LayoutOrder = 2 + i, Size = UDim2.new(1, 0, 0, 40), Parent = findsBody })
+			-- a card: a swatch in the skin's colours, its name and what it does, and its button
+			local card = Ui.card({ LayoutOrder = i, BackgroundColor3 = Ui.colors.white, Parent = grid })
+			local swatch = Ui.make("Frame", { Size = UDim2.new(1, -16, 0, 62), Position = UDim2.fromOffset(8, 8), BackgroundColor3 = Color3.new(1, 1, 1), Parent = card }, { Ui.corner(4) })
+			Ui.make("UIGradient", { Rotation = 25, Color = ColorSequence.new(Color3.fromRGB(prize.shaft[1], prize.shaft[2], prize.shaft[3]), Color3.fromRGB(prize.head[1], prize.head[2], prize.head[3])), Parent = swatch })
+			Ui.label({ Text = prize.name:gsub(" skin", ""), Size = UDim2.new(1, -16, 0, 22), Position = UDim2.fromOffset(8, 76), TextColor3 = Ui.colors.ink, TextStrokeTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = card }, 17)
+			Ui.label({ Text = prize.about or "", Font = Ui.body, Size = UDim2.new(1, -16, 0, 16), Position = UDim2.fromOffset(8, 99), TextColor3 = Ui.colors.soft, TextStrokeTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = card }, 13)
+			local b = Ui.button(prize.name, Ui.colors.grey, { Size = UDim2.new(1, -16, 0, 34), Position = UDim2.new(0, 8, 1, -42), Parent = card })
 			b.Activated:Connect(function()
 				if player:GetAttribute("Skin_" .. prize.id) then
 					wear(prize.id)
@@ -102,14 +111,17 @@ function Panels.mount(gui, notify, actions)
 			if b then
 				local owned = player:GetAttribute("Skin_" .. prize.id) == true
 				local forSale = prize.pass ~= nil and prize.pass ~= 0
-				b.Visible = owned or forSale
+				b.Parent.Visible = owned or forSale -- the whole card
+				local wearing = player:GetAttribute("Skin") == prize.id
 				if owned then
-					b.Text = prize.name
-					b.BackgroundColor3 = if player:GetAttribute("Skin") == prize.id then Ui.colors.green else Ui.colors.purple
+					b.Text = if wearing then "Wearing" else "Wear"
+					b.BackgroundColor3 = if wearing then Ui.colors.ink else Ui.colors.green
+					b.TextColor3 = Ui.colors.white
 				else
 					local price = prices[prize.id]
-					b.Text = "Buy the " .. prize.name .. (if price then " (R$ " .. price .. ")" else " (Robux)")
-					b.BackgroundColor3 = Ui.colors.blue
+					b.Text = "Buy" .. (if price then " · R$ " .. price else " with Robux")
+					b.BackgroundColor3 = Ui.colors.hay
+					b.TextColor3 = Ui.colors.ink
 				end
 			end
 		end
@@ -118,7 +130,7 @@ function Panels.mount(gui, notify, actions)
 	end
 
 	-- Wheel of Fortune: the odds are always on screen before you can spin
-	local wheel, wheelBody = Ui.window(gui, "Wheel of Fortune")
+	local wheel, wheelBody = Ui.window(gui, "Wheel of Fortune", nil, "Wheel")
 	windows.Wheel = wheel
 	local restricted = true
 	task.spawn(function()
@@ -169,7 +181,7 @@ function Panels.mount(gui, notify, actions)
 	windows.Menu = menu
 	Ui.fit(menu, 420, 330)
 	local open, whistleButton
-	for i, b in ipairs({ { "ACHIEVEMENTS", "Achievements", Ui.colors.blue }, { "FINDS & SKINS", "Finds", Ui.colors.purple }, { "WHISTLE: SELL HERE", "Whistle", Ui.colors.red } }) do
+	for i, b in ipairs({ { "Achievements", "Achievements", Ui.colors.blue }, { "Skins & finds", "Finds", Ui.colors.purple }, { "Whistle: sell here", "Whistle", Ui.colors.red } }) do
 		local button = Ui.button(b[1], b[3], { LayoutOrder = i, Size = UDim2.new(1, 0, 0, 56), Parent = menuBody })
 		button.Activated:Connect(function()
 			open(b[2])
@@ -222,6 +234,7 @@ function Panels.mount(gui, notify, actions)
 		end)
 	end
 
+	Ui.journalOpen = open -- the journal's tab rail
 	local panels = { open = open }
 	function panels.addFind(name, story)
 		if found[name] then

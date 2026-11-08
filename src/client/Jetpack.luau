@@ -153,7 +153,7 @@ function Jetpack.start(gui, notify)
 	end, up = function()
 		touchHeld = false
 	end })
-	TouchPad.add({ order = 2, text = "HOVER", colour = Ui.colors.blue, show = owned, tap = function()
+	TouchPad.add({ order = 2, text = "Hover", colour = Ui.colors.blue, show = owned, tap = function()
 		if rig and rig.humanoid.FloorMaterial == Enum.Material.Air then
 			hover = not hover
 			if notify then
