@@ -658,3 +658,22 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   deep (4) granite frame of 18 stones in pure black, round steps, two lanterns, glowing rim and
   sign, no gem, light half see-through, flowing at 4 studs/s; their painted light is
   assets/portal/portal-flow.png (512 px).
+
+## The first 30 minutes (2026-11-08)
+- Beginner's boost: a farmer's first 20,000 straws by hand come off 3x faster (ConfigPlayer:
+  Config.EarlyBoost; Economy.power, saved through stats.total_searched; the HUD shows what's left).
+  The pacing simulation ignores it (it ends within the first half hour); the needle still comes
+  after about 31 hours.
+- Early goals that take minutes: harvest 3 clumps (was 10), then 10, 25 and 50 (were 25, 50, 100).
+- Selling: TraderRate 8 -> 10; the Farm Van costs 4,500 (was 7,600); the HUD's basket line turns
+  rust with "piling up" when more than 30 seconds of selling waits, and a toast (at most every
+  10 minutes) points to the Farm Van.
+- Progress you can see: the top line shows "% harvested" to two decimals.
+- Not alone: a "Farmers here" card (client/Farmers) lists everyone on the server with % harvested
+  and needles (desktop, when there are others).
+- Camera: V, the View stamp or the touch pad's View switches to an over-the-shoulder view
+  (client/CameraView, Config.CameraZoom); the crosshair still aims (Harvest casts from the camera).
+- New farmers start at their haystack, not in Sky Meadow, until they've harvested
+  Config.LobbyAfterSearches (200) times.
+- Worlds cost less: Moon 75K, Ember Lands 750K, Bubble City 5M, Haystack Stadium 25M (were
+  250K, 2M, 10M, 50M); the unlock card says how far along you are.

@@ -29,6 +29,12 @@ return function(Config)
 		return Config.Silos[math.clamp(level, 1, #Config.Silos)]
 	end
 
+	-- Straws of the beginner's boost still to come (Config.EarlyBoost), 0 once it's used up.
+	function Economy.earlyLeft(data)
+		local done = data.stats and data.stats.total_searched or 0
+		return math.max(0, Config.EarlyBoost.straws - done)
+	end
+
 	-- straws one click takes, with the Sharpened perk and any speed boost
 	function Economy.power(data, speedBoost)
 		local p = Economy.tool(data.tool).power * (1 + Config.Perks[1].per_level * perkLevel(data, "sharp"))
@@ -37,6 +43,9 @@ return function(Config)
 		end
 		if data.superTool then -- the Super Tool game pass
 			p *= Config.SuperToolBoost
+		end
+		if Economy.earlyLeft(data) > 0 then -- the beginner's boost: the loose outer hay
+			p *= Config.EarlyBoost.factor
 		end
 		return math.max(1, math.floor(p + 0.5))
 	end

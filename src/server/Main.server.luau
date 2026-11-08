@@ -125,7 +125,11 @@ PlayerData.onLoaded(function(player, saveable)
 	Carry.show(player)
 	Orders.publish(player)
 	Wheel.remind(player)
-	Lobby.arrive(player, nil, true) -- everyone arrives in the lobby
+	if (data.stats.searches or 0) < Config.LobbyAfterSearches then
+		toPlot(player) -- a new farmer starts at their haystack; Sky Meadow comes once they've played a little
+	else
+		Lobby.arrive(player, nil, true) -- everyone else arrives in the lobby
+	end
 	-- after every spawn: back where you were (the lobby, or your farm's entrance), and make sure
 	-- the tool arrived (it comes from StarterGear)
 	player.CharacterAdded:Connect(function()

@@ -89,6 +89,7 @@ local function publish(player, profile)
 	player:SetAttribute("PowerDraw", plot.draw)
 	player:SetAttribute("Multiplier", Economy.coinMultiplier(flags, d.needles))
 	player:SetAttribute("Whistles", d.whistles)
+	player:SetAttribute("EarlyLeft", Economy.earlyLeft(d))
 	player:SetAttribute("Skin", d.skin)
 	player:SetAttribute("FreeSpinDay", d.freeSpinDay)
 	for _, prize in ipairs(Config.Wheel) do

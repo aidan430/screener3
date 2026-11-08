@@ -147,10 +147,10 @@ Config.BasketDrainSeconds = 4 -- how fast the basket's hay level eases down afte
 -- Hauling: what you dump waits in your trader's basket. The trader himself buys TraderRate
 -- straws a second; trucks fetch more (rate = straws a second each, as one load a trip).
 -- Baled hay packs tighter: a truck or the trader moves BaleCompaction times as much of it.
-Config.TraderRate = 8
+Config.TraderRate = 10
 Config.TruckTripSeconds = 40
 Config.Trucks = {
-	{ id = "van", name = "Farm Van", rate = 15, price = 7600, max = 2, size = { 6, 6, 11 }, color = { 236, 236, 228 } },
+	{ id = "van", name = "Farm Van", rate = 15, price = 4500, max = 2, size = { 6, 6, 11 }, color = { 236, 236, 228 } },
 	{ id = "mini", name = "Mini Truck", rate = 35, price = 57000, max = 2, size = { 6, 6, 13 }, color = { 70, 130, 200 } },
 	{ id = "semi", name = "Semi Truck", rate = 90, price = 475000, max = 2, size = { 8, 9, 24 }, color = { 196, 72, 56 } },
 	{ id = "big", name = "Large Truck", rate = 220, price = 2850000, max = 2, size = { 9, 10, 30 }, color = { 60, 120, 70 } },

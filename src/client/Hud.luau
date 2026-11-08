@@ -11,6 +11,9 @@ local Economy = require(Shared:WaitForChild("Economy"))(Config)
 local Format = require(Shared:WaitForChild("Format"))
 local Ui = require(script.Parent.Ui)
 local Juice = require(script.Parent.Juice)
+local Notify = require(script.Parent.Notify)
+local CameraView = require(script.Parent.CameraView)
+local Farmers = require(script.Parent.Farmers)
 
 local player = Players.LocalPlayer
 
@@ -94,7 +97,8 @@ function Hud.mount(gui, open)
 			fillTo(pileFill, 1 - searched / Config.Loft.straws)
 		else
 			local clumps = player:GetAttribute("ClumpsLeft") or Config.Clumps
-			title.Text = Format.commas(clumps) .. " clumps left · 1 needle inside" .. (if needles > 0 then " · " .. needles .. " found" else "")
+			local done = (1 - clumps / Config.Clumps) * 100 -- two decimals, so every few clumps it visibly moves
+			title.Text = string.format("%.2f%% harvested", done) .. " · " .. Format.commas(clumps) .. " clumps left · 1 needle inside" .. (if needles > 0 then " · " .. needles .. " found" else "")
 			fillTo(pileFill, clumps / Config.Clumps)
 		end
 		local w = Hud.state.warmth
@@ -116,7 +120,14 @@ function Hud.mount(gui, open)
 		rateLabel.Text = (player:GetAttribute("Power") or 1) .. " a click · machines " .. string.format("%.1f", player:GetAttribute("MachineRate") or 0) .. "/s · x" .. string.format("%.2f", player:GetAttribute("Multiplier") or 1)
 		-- what waits in your trader's basket, and how fast the trader and your trucks sell it
 		local waiting = (player:GetAttribute("BasketStraw") or 0) + (player:GetAttribute("BaledStraw") or 0)
-		bonusLabel.Text = "Basket " .. Format.short(waiting) .. " · sells " .. Format.short(player:GetAttribute("HaulRate") or Config.TraderRate) .. "/s"
+		local haul = player:GetAttribute("HaulRate") or Config.TraderRate
+		local backed = waiting > haul * 30 -- more than half a minute of selling waiting: the trader can't keep up
+		bonusLabel.Text = "Basket " .. Format.short(waiting) .. " · sells " .. Format.short(haul) .. "/s" .. (if backed then " · piling up" else "")
+		bonusLabel.TextColor3 = if backed then Ui.colors.red else Ui.colors.soft
+		if backed and os.clock() - (Hud.warned or -1e9) > 600 then -- a gentle hint, at most every 10 minutes
+			Hud.warned = os.clock()
+			Notify.toast("Your trader sells " .. Format.short(haul) .. " straws a second and your basket is piling up. A Farm Van (Shop > Trucks) sells faster.", Ui.colors.hay)
+		end
 		achievementsWord.Text = (player:GetAttribute("Achievements") or 0) .. "/" .. #Config.Achievements
 		-- touch screens: the stamps and keys fold away (the action pad and its MENU have them),
 		-- so nothing sits over the thumbstick
@@ -133,6 +144,10 @@ function Hud.mount(gui, open)
 			if until_ > now then
 				table.insert(lines, label .. " " .. math.ceil((until_ - now) / 60) .. " min")
 			end
+		end
+		local early = player:GetAttribute("EarlyLeft") or 0
+		if early > 0 then
+			table.insert(lines, 1, "Beginner's boost x" .. Config.EarlyBoost.factor .. " · " .. Format.short(early) .. " straws left")
 		end
 		boosts.Text = table.concat(lines, " · ")
 		tag.Size = UDim2.fromOffset(250, if #lines > 0 then 210 else 186)
@@ -153,6 +168,8 @@ function Hud.mount(gui, open)
 		end
 	end)
 	Hud.refresh = refresh
+	CameraView.start(gui)
+	Farmers.start(gui)
 	return { refresh = refresh, coins = coinsLabel, earn = earnLabel, crosshair = crosshair }
 end
 

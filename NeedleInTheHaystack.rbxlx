@@ -159,10 +159,10 @@ Config.BasketDrainSeconds = 4 -- how fast the basket's hay level eases down afte
 -- Hauling: what you dump waits in your trader's basket. The trader himself buys TraderRate
 -- straws a second; trucks fetch more (rate = straws a second each, as one load a trip).
 -- Baled hay packs tighter: a truck or the trader moves BaleCompaction times as much of it.
-Config.TraderRate = 8
+Config.TraderRate = 10
 Config.TruckTripSeconds = 40
 Config.Trucks = {
-	{ id = "van", name = "Farm Van", rate = 15, price = 7600, max = 2, size = { 6, 6, 11 }, color = { 236, 236, 228 } },
+	{ id = "van", name = "Farm Van", rate = 15, price = 4500, max = 2, size = { 6, 6, 11 }, color = { 236, 236, 228 } },
 	{ id = "mini", name = "Mini Truck", rate = 35, price = 57000, max = 2, size = { 6, 6, 13 }, color = { 70, 130, 200 } },
 	{ id = "semi", name = "Semi Truck", rate = 90, price = 475000, max = 2, size = { 8, 9, 24 }, color = { 196, 72, 56 } },
 	{ id = "big", name = "Large Truck", rate = 220, price = 2850000, max = 2, size = { 9, 10, 30 }, color = { 60, 120, 70 } },
@@ -386,16 +386,16 @@ Config.Goals = {
 	{ id = "first_hay", text = "Aim at your haystack and click to lift some hay", kind = "stat", key = "searches", n = 1, reward = 25 }, { id = "fill_tool", text = "Keep harvesting until your tool is full", kind = "stat", key = "loads_filled", n = 1, reward = 50 },
 	{ id = "dump", text = "Dump your hay in your trader's basket", kind = "stat", key = "dumps", n = 1, reward = 75 }, { id = "first_sale", text = "Let your trader sell 500 straws", kind = "stat", key = "straws_sold", n = 500, reward = 100 },
 	{ id = "pitchfork", text = "Buy the Wooden Pitchfork in the shop (Q)", kind = "tool", n = 2, reward = 150 }, { id = "ladder", text = "Buy a Ladder and build it (B) by your heap", kind = "placed", key = "ladder", n = 1, reward = 100 },
-	{ id = "clumps10", text = "Harvest 10 whole clumps", kind = "clumps", n = 10, reward = 200 }, { id = "bucket", text = "Buy a Tin Pail to carry more", kind = "bucket", n = 2, reward = 300 },
+	{ id = "clumps10", text = "Harvest 3 whole clumps", kind = "clumps", n = 3, reward = 200 }, { id = "bucket", text = "Buy a Tin Pail to carry more", kind = "bucket", n = 2, reward = 300 },
 	{ id = "stairs", text = "Build some Stairs up your heap", kind = "placed", key = "stairs", n = 1, reward = 150 }, { id = "drop", text = "Press G to drop your hay as a bundle", kind = "stat", key = "drops", n = 1, reward = 150 },
 	{ id = "belt", text = "Place a Conveyor Belt to carry bundles", kind = "placed", key = "conveyor", n = 1, reward = 300 }, { id = "dynamo", text = "Place a Hand-Crank Dynamo for power", kind = "placed", key = "crank", n = 1, reward = 400 },
 	{ id = "hen", text = "Place a Clockwork Hen to harvest for you", kind = "placed", key = "hen", n = 1, reward = 500 }, { id = "iron", text = "Buy the Iron Pitchfork", kind = "tool", n = 3, reward = 600 },
-	{ id = "clumps25", text = "Harvest 25 whole clumps", kind = "clumps", n = 25, reward = 800 }, { id = "van", text = "Buy a Farm Van to sell hay faster", kind = "truck", key = "van", n = 1, reward = 1500 },
+	{ id = "clumps25", text = "Harvest 10 whole clumps", kind = "clumps", n = 10, reward = 800 }, { id = "van", text = "Buy a Farm Van to sell hay faster", kind = "truck", key = "van", n = 1, reward = 1500 },
 	{ id = "sold10k", text = "Sell 10,000 straws", kind = "stat", key = "straws_sold", n = 10000, reward = 1500 }, { id = "power20", text = "Make 20 power with your generators", kind = "power", n = 20, reward = 2000 },
-	{ id = "clumps50", text = "Harvest 50 whole clumps", kind = "clumps", n = 50, reward = 2500 }, { id = "machines3", text = "Have 3 machines on your plot", kind = "machines", n = 3, reward = 3000 },
+	{ id = "clumps50", text = "Harvest 25 whole clumps", kind = "clumps", n = 25, reward = 2500 }, { id = "machines3", text = "Have 3 machines on your plot", kind = "machines", n = 3, reward = 3000 },
 	{ id = "rake", text = "Buy the Steel Rake", kind = "tool", n = 4, reward = 4000 }, { id = "silo", text = "Upgrade to a Small Silo", kind = "silo", n = 2, reward = 4000 },
 	{ id = "baler", text = "Build a Bale Maker", kind = "placed", key = "baler", n = 1, reward = 10000 }, { id = "bale", text = "Feed it hay on a belt and make a bale", kind = "stat", key = "bales_made", n = 1, reward = 8000 },
-	{ id = "clumps100", text = "Harvest 100 whole clumps", kind = "clumps", n = 100, reward = 15000 },
+	{ id = "clumps100", text = "Harvest 50 whole clumps", kind = "clumps", n = 50, reward = 15000 },
 }
 Config.GoalCheckSeconds = 2 -- how often the server looks at your current goal
 Config.RateWindowSeconds = 60 -- the HUD's coins/min counts what you earned in this many seconds
@@ -559,6 +559,11 @@ Config.Touch = {
 
 Config.SkinPulseSeconds = 3 -- one slow swell and fade of an animated skin's glow
 Config.SkinGleamSeconds = 0.9 -- how long a skin's shine takes to sweep along the tool
+-- A new farmer's first straws come off faster (the loose outer hay), so the first half hour
+-- shows real progress: factor x straws for the first `straws` harvested by hand (saved, once).
+Config.EarlyBoost = { straws = 20000, factor = 3 }
+Config.LobbyAfterSearches = 200 -- new farmers start on their farm; after this many harvests, they arrive in Sky Meadow
+Config.CameraZoom = { near = 6, far = 18 } -- the optional over-the-shoulder view (V): studs from your head
 Config.ToolScale = 0.5 -- the built tools' size: 1 = the 6-stud pitchfork, which held out too far in first person
 Config.ToolFanSpin = 9 -- radians a second the Twin Turbines' fans turn while held
 
@@ -578,10 +583,10 @@ local Config = {}
 -- straws = how many straws its haystack holds before a fresh one (with a new needle) grows;
 -- x, z = the world's centre (studs; stay far from the farm and from the lobby, Config.Lobby).
 Config.Worlds = {
-	{ id = "moon", name = "The Moon", price = 250000, multiplier = 3, straws = 60000, x = 0, z = 2500 },
-	{ id = "lava", name = "Ember Lands", price = 2000000, multiplier = 6, straws = 120000, x = 2500, z = 0 },
-	{ id = "atlantis", name = "Bubble City", price = 10000000, multiplier = 12, straws = 240000, x = 0, z = -2500 },
-	{ id = "field", name = "Haystack Stadium", price = 50000000, multiplier = 25, straws = 480000, x = -2500, z = 0 },
+	{ id = "moon", name = "The Moon", price = 75000, multiplier = 3, straws = 60000, x = 0, z = 2500 },
+	{ id = "lava", name = "Ember Lands", price = 750000, multiplier = 6, straws = 120000, x = 2500, z = 0 },
+	{ id = "atlantis", name = "Bubble City", price = 5000000, multiplier = 12, straws = 240000, x = 0, z = -2500 },
+	{ id = "field", name = "Haystack Stadium", price = 25000000, multiplier = 25, straws = 480000, x = -2500, z = 0 },
 }
 Config.WorldSize = 300 -- each world is about this many studs across
 Config.WorldInside = 220 -- within this many studs (flat) of a world's centre you are "in" it
@@ -652,6 +657,12 @@ return function(Config)
 		return Config.Silos[math.clamp(level, 1, #Config.Silos)]
 	end
 
+	-- Straws of the beginner's boost still to come (Config.EarlyBoost), 0 once it's used up.
+	function Economy.earlyLeft(data)
+		local done = data.stats and data.stats.total_searched or 0
+		return math.max(0, Config.EarlyBoost.straws - done)
+	end
+
 	-- straws one click takes, with the Sharpened perk and any speed boost
 	function Economy.power(data, speedBoost)
 		local p = Economy.tool(data.tool).power * (1 + Config.Perks[1].per_level * perkLevel(data, "sharp"))
@@ -660,6 +671,9 @@ return function(Config)
 		end
 		if data.superTool then -- the Super Tool game pass
 			p *= Config.SuperToolBoost
+		end
+		if Economy.earlyLeft(data) > 0 then -- the beginner's boost: the loose outer hay
+			p *= Config.EarlyBoost.factor
 		end
 		return math.max(1, math.floor(p + 0.5))
 	end
@@ -3551,7 +3565,11 @@ PlayerData.onLoaded(function(player, saveable)
 	Carry.show(player)
 	Orders.publish(player)
 	Wheel.remind(player)
-	Lobby.arrive(player, nil, true) -- everyone arrives in the lobby
+	if (data.stats.searches or 0) < Config.LobbyAfterSearches then
+		toPlot(player) -- a new farmer starts at their haystack; Sky Meadow comes once they've played a little
+	else
+		Lobby.arrive(player, nil, true) -- everyone else arrives in the lobby
+	end
 	-- after every spawn: back where you were (the lobby, or your farm's entrance), and make sure
 	-- the tool arrived (it comes from StarterGear)
 	player.CharacterAdded:Connect(function()
@@ -4543,6 +4561,7 @@ local function publish(player, profile)
 	player:SetAttribute("PowerDraw", plot.draw)
 	player:SetAttribute("Multiplier", Economy.coinMultiplier(flags, d.needles))
 	player:SetAttribute("Whistles", d.whistles)
+	player:SetAttribute("EarlyLeft", Economy.earlyLeft(d))
 	player:SetAttribute("Skin", d.skin)
 	player:SetAttribute("FreeSpinDay", d.freeSpinDay)
 	for _, prize in ipairs(Config.Wheel) do
@@ -9900,6 +9919,90 @@ return BuildMode
 				</Item>
 				<Item class="ModuleScript" referent="RBX0005C">
 					<Properties>
+						<string name="Name">CameraView</string>
+						<ProtectedString name="Source"><![CDATA[-- The optional over-the-shoulder view: V (or the View stamp, or the touch pad's View) switches
+-- between first person and a camera just behind your right shoulder, so you can see yourself,
+-- your skins and your farm. The crosshair still aims at the middle of the screen, so harvesting
+-- works the same either way (client/Harvest casts from the camera).
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Ui = require(script.Parent.Ui)
+local Cursor = require(script.Parent.Cursor)
+local TouchPad = require(script.Parent.TouchPad)
+
+local player = Players.LocalPlayer
+local CameraView = {}
+local third = false
+local stamp = nil
+
+local function apply()
+	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if third then
+		player.CameraMode = Enum.CameraMode.Classic
+		player.CameraMinZoomDistance, player.CameraMaxZoomDistance = Config.CameraZoom.near, Config.CameraZoom.far
+		if humanoid then
+			humanoid.CameraOffset = Vector3.new(1.75, 0.6, 0) -- over the right shoulder, clear of the crosshair
+		end
+	else
+		player.CameraMinZoomDistance, player.CameraMaxZoomDistance = 0.5, 0.5
+		player.CameraMode = Enum.CameraMode.LockFirstPerson
+		if humanoid then
+			humanoid.CameraOffset = Vector3.zero
+		end
+	end
+	if stamp then
+		stamp.Caption.Text = if third then "BEHIND · V" else "EYES · V"
+	end
+end
+
+function CameraView.toggle()
+	third = not third
+	apply()
+end
+
+function CameraView.isThird()
+	return third
+end
+
+function CameraView.start(gui)
+	stamp = Ui.stamp("View", "EYES · V", { AnchorPoint = Vector2.new(1, 1), Size = UDim2.fromOffset(48, 48), Parent = gui })
+	Ui.autoScale(stamp)
+	Ui.onLayout(function() -- bottom right, beside the music and "?" stamps (hidden on touch: the pad has View)
+		stamp.Visible = not Ui.touch()
+		stamp.Position = UDim2.new(1, -16 - 116 * Ui.screenScale(), 1, -16)
+	end)
+	stamp.Word.TextScaled = true
+	stamp.Activated:Connect(CameraView.toggle)
+	TouchPad.add({ order = 10, text = "View", tap = CameraView.toggle })
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if not processed and input.KeyCode == Enum.KeyCode.V then
+			CameraView.toggle()
+		end
+	end)
+	player.CharacterAdded:Connect(function(character)
+		character:WaitForChild("Humanoid", 10)
+		task.wait(1.2) -- the server sets first person on every spawn; put your choice back after it
+		apply()
+	end)
+	-- behind the shoulder with a mouse: keep it locked to the crosshair (unless a menu needs it)
+	RunService.RenderStepped:Connect(function()
+		if third and not Cursor.isFree() and not Ui.touch() then
+			UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+		end
+	end)
+	apply()
+end
+
+return CameraView
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX0005D">
+					<Properties>
 						<string name="Name">Controls</string>
 						<ProtectedString name="Source"><![CDATA[-- The shortcuts: Q shop, T home, G drop hay (or put down a bale), and on touch screens the
 -- same as buttons on the action pad (client/TouchPad.luau), plus BUILD, MENU (achievements,
@@ -9987,7 +10090,7 @@ return Controls
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005D">
+				<Item class="ModuleScript" referent="RBX0005E">
 					<Properties>
 						<string name="Name">Cursor</string>
 						<ProtectedString name="Source"><![CDATA[-- First person locks the mouse to the centre of the screen. Menus need a pointer, so a
@@ -10039,7 +10142,7 @@ return Cursor
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005E">
+				<Item class="ModuleScript" referent="RBX0005F">
 					<Properties>
 						<string name="Name">Dents</string>
 						<ProtectedString name="Source"><![CDATA[-- Every swing leaves its mark: a dent carved in your haystack where you hit (on your screen;
@@ -10117,7 +10220,7 @@ return Dents
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005F">
+				<Item class="ModuleScript" referent="RBX00060">
 					<Properties>
 						<string name="Name">Detector</string>
 						<ProtectedString name="Source"><![CDATA[-- The metal detector: hold Config.MetalDetector.key to sweep. The client only says "I'm
@@ -10239,7 +10342,72 @@ return Detector
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00060">
+				<Item class="ModuleScript" referent="RBX00061">
+					<Properties>
+						<string name="Name">Farmers</string>
+						<ProtectedString name="Source"><![CDATA[-- "Farmers here": a small paper card at the bottom right listing everyone on this server with how
+-- much of their haystack they've harvested and their needles, so you can see each other's
+-- progress even though each of you sees only your own farm. From each player's attributes
+-- (ClumpsLeft, Needles), which every screen can read.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Ui = require(script.Parent.Ui)
+
+local Farmers = {}
+
+function Farmers.start(gui)
+	local card = Ui.card({ AnchorPoint = Vector2.new(1, 1), Size = UDim2.fromOffset(230, 40), AutomaticSize = Enum.AutomaticSize.Y, Parent = gui }, {})
+	Ui.autoScale(card)
+	Ui.make("UIListLayout", { Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder, Parent = card })
+	Ui.make("UIPadding", { PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12), Parent = card })
+	Ui.label({ LayoutOrder = 0, Text = "Farmers here", Size = UDim2.new(1, 0, 0, 20), TextColor3 = Ui.colors.ink, TextStrokeTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = card }, 16)
+	local rows = {}
+	local function row(i)
+		if not rows[i] then
+			rows[i] = Ui.label({ LayoutOrder = i, Font = Ui.body, Size = UDim2.new(1, 0, 0, 17), TextColor3 = Ui.colors.soft, TextStrokeTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = card }, 13)
+		end
+		return rows[i]
+	end
+	local function refresh()
+		card.Position = UDim2.new(1, -16, 1, -16 - 62 * Ui.screenScale())
+		local list = Players:GetPlayers()
+		card.Visible = #list > 1 and not Ui.touch() -- alone, or on a phone, it isn't worth the space
+		table.sort(list, function(a, b)
+			return (a:GetAttribute("ClumpsLeft") or Config.Clumps) < (b:GetAttribute("ClumpsLeft") or Config.Clumps)
+		end)
+		for i, p in ipairs(list) do
+			local left = p:GetAttribute("ClumpsLeft") or Config.Clumps
+			local share = (1 - left / Config.Clumps) * 100
+			local needles = p:GetAttribute("Needles") or 0
+			local label = row(i)
+			label.Visible = true
+			label.Text = p.DisplayName .. "  ·  " .. string.format("%.1f%%", share) .. (if needles > 0 then "  ·  " .. needles .. " needle" .. (if needles == 1 then "" else "s") else "")
+			label.TextColor3 = if p == Players.LocalPlayer then Ui.colors.ink else Ui.colors.soft
+		end
+		for i = #list + 1, #rows do
+			rows[i].Visible = false
+		end
+	end
+	Ui.onLayout(refresh)
+	Players.PlayerAdded:Connect(refresh)
+	Players.PlayerRemoving:Connect(function()
+		task.defer(refresh)
+	end)
+	task.spawn(function()
+		while true do
+			task.wait(3)
+			refresh()
+		end
+	end)
+end
+
+return Farmers
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX00062">
 					<Properties>
 						<string name="Name">Goals</string>
 						<ProtectedString name="Source"><![CDATA[-- The guided goal card (top left) and the coins-a-minute line under the coins counter.
@@ -10383,7 +10551,7 @@ return Goals
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00061">
+				<Item class="ModuleScript" referent="RBX00063">
 					<Properties>
 						<string name="Name">Guide</string>
 						<ProtectedString name="Source"><![CDATA[-- When your tool and bucket are full, a soft golden line runs from you to your trader's
@@ -10445,7 +10613,7 @@ return Guide
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00062">
+				<Item class="ModuleScript" referent="RBX00064">
 					<Properties>
 						<string name="Name">Harvest</string>
 						<ProtectedString name="Source"><![CDATA[-- Aiming in first person: the clump under the crosshair (within reach, on your own pile or the
@@ -10537,7 +10705,7 @@ end
 -- What a click would harvest: (what to send the server, where it is, the marker's centre)
 local function aim()
 	local head = player.Character and player.Character:FindFirstChild("Head")
-	local result = head and cast(Config.Reach + 4, true)
+	local result = head and cast(Config.Reach + 4 + (workspace.CurrentCamera.CFrame.Position - head.Position).Magnitude, true) -- (behind the shoulder, the camera sits further back)
 	if not result or (result.Position - head.Position).Magnitude > Config.Reach then
 		return nil
 	end
@@ -10713,7 +10881,7 @@ return Harvest
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00063">
+				<Item class="ModuleScript" referent="RBX00065">
 					<Properties>
 						<string name="Name">HayFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The hay you can see moving: every harvest lifts a lump off the heap onto your tool, and
@@ -10814,7 +10982,7 @@ return HayFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00064">
+				<Item class="ModuleScript" referent="RBX00066">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen, in the farm journal style: a ring crosshair; your heap's progress
@@ -10830,6 +10998,9 @@ local Economy = require(Shared:WaitForChild("Economy"))(Config)
 local Format = require(Shared:WaitForChild("Format"))
 local Ui = require(script.Parent.Ui)
 local Juice = require(script.Parent.Juice)
+local Notify = require(script.Parent.Notify)
+local CameraView = require(script.Parent.CameraView)
+local Farmers = require(script.Parent.Farmers)
 
 local player = Players.LocalPlayer
 
@@ -10913,7 +11084,8 @@ function Hud.mount(gui, open)
 			fillTo(pileFill, 1 - searched / Config.Loft.straws)
 		else
 			local clumps = player:GetAttribute("ClumpsLeft") or Config.Clumps
-			title.Text = Format.commas(clumps) .. " clumps left · 1 needle inside" .. (if needles > 0 then " · " .. needles .. " found" else "")
+			local done = (1 - clumps / Config.Clumps) * 100 -- two decimals, so every few clumps it visibly moves
+			title.Text = string.format("%.2f%% harvested", done) .. " · " .. Format.commas(clumps) .. " clumps left · 1 needle inside" .. (if needles > 0 then " · " .. needles .. " found" else "")
 			fillTo(pileFill, clumps / Config.Clumps)
 		end
 		local w = Hud.state.warmth
@@ -10935,7 +11107,14 @@ function Hud.mount(gui, open)
 		rateLabel.Text = (player:GetAttribute("Power") or 1) .. " a click · machines " .. string.format("%.1f", player:GetAttribute("MachineRate") or 0) .. "/s · x" .. string.format("%.2f", player:GetAttribute("Multiplier") or 1)
 		-- what waits in your trader's basket, and how fast the trader and your trucks sell it
 		local waiting = (player:GetAttribute("BasketStraw") or 0) + (player:GetAttribute("BaledStraw") or 0)
-		bonusLabel.Text = "Basket " .. Format.short(waiting) .. " · sells " .. Format.short(player:GetAttribute("HaulRate") or Config.TraderRate) .. "/s"
+		local haul = player:GetAttribute("HaulRate") or Config.TraderRate
+		local backed = waiting > haul * 30 -- more than half a minute of selling waiting: the trader can't keep up
+		bonusLabel.Text = "Basket " .. Format.short(waiting) .. " · sells " .. Format.short(haul) .. "/s" .. (if backed then " · piling up" else "")
+		bonusLabel.TextColor3 = if backed then Ui.colors.red else Ui.colors.soft
+		if backed and os.clock() - (Hud.warned or -1e9) > 600 then -- a gentle hint, at most every 10 minutes
+			Hud.warned = os.clock()
+			Notify.toast("Your trader sells " .. Format.short(haul) .. " straws a second and your basket is piling up. A Farm Van (Shop > Trucks) sells faster.", Ui.colors.hay)
+		end
 		achievementsWord.Text = (player:GetAttribute("Achievements") or 0) .. "/" .. #Config.Achievements
 		-- touch screens: the stamps and keys fold away (the action pad and its MENU have them),
 		-- so nothing sits over the thumbstick
@@ -10952,6 +11131,10 @@ function Hud.mount(gui, open)
 			if until_ > now then
 				table.insert(lines, label .. " " .. math.ceil((until_ - now) / 60) .. " min")
 			end
+		end
+		local early = player:GetAttribute("EarlyLeft") or 0
+		if early > 0 then
+			table.insert(lines, 1, "Beginner's boost x" .. Config.EarlyBoost.factor .. " · " .. Format.short(early) .. " straws left")
 		end
 		boosts.Text = table.concat(lines, " · ")
 		tag.Size = UDim2.fromOffset(250, if #lines > 0 then 210 else 186)
@@ -10972,6 +11155,8 @@ function Hud.mount(gui, open)
 		end
 	end)
 	Hud.refresh = refresh
+	CameraView.start(gui)
+	Farmers.start(gui)
 	return { refresh = refresh, coins = coinsLabel, earn = earnLabel, crosshair = crosshair }
 end
 
@@ -10979,7 +11164,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00065">
+				<Item class="ModuleScript" referent="RBX00067">
 					<Properties>
 						<string name="Name">Jetpack</string>
 						<ProtectedString name="Source"><![CDATA[-- The Jetpack (a Robux game pass; the server sets the "PassJetpack" attribute when you own it).
@@ -11161,7 +11346,7 @@ return Jetpack
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00066">
+				<Item class="ModuleScript" referent="RBX00068">
 					<Properties>
 						<string name="Name">Juice</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback that makes harvesting feel good: straw bursts, floating numbers, a soft camera
@@ -11350,7 +11535,7 @@ return Juice
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00067">
+				<Item class="ModuleScript" referent="RBX00069">
 					<Properties>
 						<string name="Name">Lobby</string>
 						<ProtectedString name="Source"><![CDATA[-- The lobby on your screen: a soft fade round every trip through an arch, the gentle card a
@@ -11439,7 +11624,7 @@ local function offer(gui, message)
 	local full = scale.Scale
 	local coins = player:GetAttribute("Coins") or 0
 	Ui.paragraph("Open " .. w.name .. " for " .. Format.commas(w.price) .. " coins?", { LayoutOrder = 1, Font = Ui.font, TextSize = 26, TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
-	Ui.paragraph("Hay there pays " .. w.multiplier .. "x, and travelling is free once it's open. You have " .. Format.commas(math.floor(coins)) .. " coins.", { LayoutOrder = 2, TextSize = 17, TextColor3 = Ui.colors.grey, TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
+	Ui.paragraph("Hay there pays " .. w.multiplier .. "x, and travelling is free once it's open. You have " .. Format.commas(math.floor(coins)) .. " coins" .. (if coins < w.price then string.format(" (%d%% of the way).", math.floor(coins / w.price * 100)) else "."), { LayoutOrder = 2, TextSize = 17, TextColor3 = Ui.colors.grey, TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
 	local id = w.id
 	local open = Ui.button("Open", Ui.colors.green, { LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 50), Parent = card })
 	open.Activated:Connect(function()
@@ -11496,7 +11681,7 @@ return Lobby
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX00068">
+				<Item class="LocalScript" referent="RBX0006A">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- The player's side of the game: first-person harvesting, building, the menus, and all the
@@ -11800,7 +11985,7 @@ end)
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00069">
+				<Item class="ModuleScript" referent="RBX0006B">
 					<Properties>
 						<string name="Name">Music</string>
 						<ProtectedString name="Source"><![CDATA[-- Soft background music: the Config.Music playlist in a loop, low and relaxing, fading gently
@@ -11951,7 +12136,7 @@ return Music
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006A">
+				<Item class="ModuleScript" referent="RBX0006C">
 					<Properties>
 						<string name="Name">Notify</string>
 						<ProtectedString name="Source"><![CDATA[-- Messages: small toasts under the haystack counter, and a big banner for case news.
@@ -12058,7 +12243,7 @@ return Notify
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006B">
+				<Item class="ModuleScript" referent="RBX0006D">
 					<Properties>
 						<string name="Name">Offer</string>
 						<ProtectedString name="Source"><![CDATA[-- One gentle Robux suggestion per session: after Config.OfferAfterClumps clumps harvested since
@@ -12164,7 +12349,7 @@ return Offer
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006C">
+				<Item class="ModuleScript" referent="RBX0006E">
 					<Properties>
 						<string name="Name">OnlyMine</string>
 						<ProtectedString name="Source"><![CDATA[-- Every player's farm shares the middle of the map, so on your screen other players' buildings,
@@ -12253,7 +12438,7 @@ return OnlyMine
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006D">
+				<Item class="ModuleScript" referent="RBX0006F">
 					<Properties>
 						<string name="Name">OrderCard</string>
 						<ProtectedString name="Source"><![CDATA[-- The current delivery order, on the right of the screen: what the driver wants, how many
@@ -12304,7 +12489,7 @@ return OrderCard
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006E">
+				<Item class="ModuleScript" referent="RBX00070">
 					<Properties>
 						<string name="Name">Panels</string>
 						<ProtectedString name="Source"><![CDATA[-- The windows: Shop, secret Achievements, Finds & Skins, and the Wheel of Fortune (odds first).
@@ -12560,7 +12745,7 @@ return Panels
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006F">
+				<Item class="ModuleScript" referent="RBX00071">
 					<Properties>
 						<string name="Name">PileView</string>
 						<ProtectedString name="Source"><![CDATA[-- Draws your own haystack on your screen. Every player's haystack stands in the same place in
@@ -12615,7 +12800,7 @@ return PileView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00070">
+				<Item class="ModuleScript" referent="RBX00072">
 					<Properties>
 						<string name="Name">RobuxItems</string>
 						<ProtectedString name="Source"><![CDATA[-- Every Robux item the game sells, in shop order, with exactly what it gives (shown in the
@@ -12639,7 +12824,7 @@ return {
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00071">
+				<Item class="ModuleScript" referent="RBX00073">
 					<Properties>
 						<string name="Name">RobuxPads</string>
 						<ProtectedString name="Source"><![CDATA[-- The Robux corner on your screen: each pad server/RobuxPads.luau built gets a floating
@@ -12875,7 +13060,7 @@ return RobuxPads
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00072">
+				<Item class="ModuleScript" referent="RBX00074">
 					<Properties>
 						<string name="Name">Shop</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop window: Tools, Perks, Fitness (stamina, the metal detector), Storage (buckets and
@@ -13179,7 +13364,7 @@ return Shop
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00073">
+				<Item class="ModuleScript" referent="RBX00075">
 					<Properties>
 						<string name="Name">SkinFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Animated skins, drawn on every screen for every equipped skinned tool (Tools.make sets the
@@ -13278,7 +13463,7 @@ return SkinFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00074">
+				<Item class="ModuleScript" referent="RBX00076">
 					<Properties>
 						<string name="Name">Sprint</string>
 						<ProtectedString name="Source"><![CDATA[-- Sprinting on every device: hold Shift on a keyboard, press the left stick (L3) on a controller
@@ -13361,7 +13546,7 @@ return Sprint
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00075">
+				<Item class="ModuleScript" referent="RBX00077">
 					<Properties>
 						<string name="Name">Stamina</string>
 						<ProtectedString name="Source"><![CDATA[-- A slim stamina bar under the crosshair (the server owns stamina: attributes Stamina,
@@ -13409,7 +13594,7 @@ return StaminaBar
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00076">
+				<Item class="ModuleScript" referent="RBX00078">
 					<Properties>
 						<string name="Name">Teleport</string>
 						<ProtectedString name="Source"><![CDATA[-- The teleporter menu: standing on one of your pads, pick any of your other pads (listed by
@@ -13480,7 +13665,7 @@ return Teleport
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00077">
+				<Item class="ModuleScript" referent="RBX00079">
 					<Properties>
 						<string name="Name">TouchAim</string>
 						<ProtectedString name="Source"><![CDATA[-- Harvesting on touch screens. In first person a finger dragged across the screen turns the
@@ -13545,7 +13730,7 @@ return TouchAim
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00078">
+				<Item class="ModuleScript" referent="RBX0007A">
 					<Properties>
 						<string name="Name">TouchPad</string>
 						<ProtectedString name="Source"><![CDATA[-- The action pad on touch screens: the keyboard's shortcuts (shop, build, drop, home, tool,
@@ -13692,7 +13877,7 @@ return TouchPad
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00079">
+				<Item class="ModuleScript" referent="RBX0007B">
 					<Properties>
 						<string name="Name">Ui</string>
 						<ProtectedString name="Source"><![CDATA[-- A small UI kit in the "farm journal" style: cream paper cards, ink-brown text, serif headings,
@@ -13904,7 +14089,7 @@ return Ui
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007A">
+				<Item class="ModuleScript" referent="RBX0007C">
 					<Properties>
 						<string name="Name">UiJournal</string>
 						<ProtectedString name="Source"><![CDATA[-- The farm journal's own pieces for the UI kit: paper cards, pins, thin bars, round stamp
@@ -14022,7 +14207,7 @@ end
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007B">
+				<Item class="ModuleScript" referent="RBX0007D">
 					<Properties>
 						<string name="Name">WorldFx</string>
 						<ProtectedString name="Source"><![CDATA[-- World effects on your screen: the glowing needle clump (Wheel jackpot), the wheel turning
@@ -14147,7 +14332,7 @@ return WorldFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007C">
+				<Item class="ModuleScript" referent="RBX0007E">
 					<Properties>
 						<string name="Name">Worlds</string>
 						<ProtectedString name="Source"><![CDATA[-- The portal worlds and the lobby on your own screen: each world's light (and the lobby's,
@@ -14414,29 +14599,29 @@ return Worlds
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX0007D">
+	<Item class="Workspace" referent="RBX0007F">
 		<Properties>
 			<string name="Name">Workspace</string>
 			<bool name="StreamingEnabled">false</bool>
 		</Properties>
 	</Item>
-	<Item class="ServerStorage" referent="RBX0007E">
+	<Item class="ServerStorage" referent="RBX00080">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
-		<Item class="Folder" referent="RBX0007F">
+		<Item class="Folder" referent="RBX00081">
 			<Properties>
 				<string name="Name">Designs</string>
 			</Properties>
 		</Item>
 	</Item>
-	<Item class="MaterialService" referent="RBX00080">
+	<Item class="MaterialService" referent="RBX00082">
 		<Properties>
 			<string name="Name">MaterialService</string>
 			<bool name="Use2022Materials">true</bool>
 			<string name="LeafyGrassName">Field</string>
 		</Properties>
-		<Item class="MaterialVariant" referent="RBX00081">
+		<Item class="MaterialVariant" referent="RBX00083">
 			<Properties>
 				<string name="Name">Field</string>
 				<token name="BaseMaterial">1284</token>

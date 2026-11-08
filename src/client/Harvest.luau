@@ -87,7 +87,7 @@ end
 -- What a click would harvest: (what to send the server, where it is, the marker's centre)
 local function aim()
 	local head = player.Character and player.Character:FindFirstChild("Head")
-	local result = head and cast(Config.Reach + 4, true)
+	local result = head and cast(Config.Reach + 4 + (workspace.CurrentCamera.CFrame.Position - head.Position).Magnitude, true) -- (behind the shoulder, the camera sits further back)
 	if not result or (result.Position - head.Position).Magnitude > Config.Reach then
 		return nil
 	end

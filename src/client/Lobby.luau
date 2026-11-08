@@ -84,7 +84,7 @@ local function offer(gui, message)
 	local full = scale.Scale
 	local coins = player:GetAttribute("Coins") or 0
 	Ui.paragraph("Open " .. w.name .. " for " .. Format.commas(w.price) .. " coins?", { LayoutOrder = 1, Font = Ui.font, TextSize = 26, TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
-	Ui.paragraph("Hay there pays " .. w.multiplier .. "x, and travelling is free once it's open. You have " .. Format.commas(math.floor(coins)) .. " coins.", { LayoutOrder = 2, TextSize = 17, TextColor3 = Ui.colors.grey, TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
+	Ui.paragraph("Hay there pays " .. w.multiplier .. "x, and travelling is free once it's open. You have " .. Format.commas(math.floor(coins)) .. " coins" .. (if coins < w.price then string.format(" (%d%% of the way).", math.floor(coins / w.price * 100)) else "."), { LayoutOrder = 2, TextSize = 17, TextColor3 = Ui.colors.grey, TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
 	local id = w.id
 	local open = Ui.button("Open", Ui.colors.green, { LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 50), Parent = card })
 	open.Activated:Connect(function()

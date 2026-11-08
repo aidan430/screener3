@@ -7,10 +7,10 @@ local Config = {}
 -- straws = how many straws its haystack holds before a fresh one (with a new needle) grows;
 -- x, z = the world's centre (studs; stay far from the farm and from the lobby, Config.Lobby).
 Config.Worlds = {
-	{ id = "moon", name = "The Moon", price = 250000, multiplier = 3, straws = 60000, x = 0, z = 2500 },
-	{ id = "lava", name = "Ember Lands", price = 2000000, multiplier = 6, straws = 120000, x = 2500, z = 0 },
-	{ id = "atlantis", name = "Bubble City", price = 10000000, multiplier = 12, straws = 240000, x = 0, z = -2500 },
-	{ id = "field", name = "Haystack Stadium", price = 50000000, multiplier = 25, straws = 480000, x = -2500, z = 0 },
+	{ id = "moon", name = "The Moon", price = 75000, multiplier = 3, straws = 60000, x = 0, z = 2500 },
+	{ id = "lava", name = "Ember Lands", price = 750000, multiplier = 6, straws = 120000, x = 2500, z = 0 },
+	{ id = "atlantis", name = "Bubble City", price = 5000000, multiplier = 12, straws = 240000, x = 0, z = -2500 },
+	{ id = "field", name = "Haystack Stadium", price = 25000000, multiplier = 25, straws = 480000, x = -2500, z = 0 },
 }
 Config.WorldSize = 300 -- each world is about this many studs across
 Config.WorldInside = 220 -- within this many studs (flat) of a world's centre you are "in" it
