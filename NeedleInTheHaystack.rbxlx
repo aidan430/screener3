@@ -455,23 +455,16 @@ Config.LobbyFarmColour = { 242, 196, 82 } -- the farm arch's glow (straw gold)
 Config.LobbyFarmPortal = { x = -26, past = 8, behind = 14 }
 Config.PortalTexture = "" -- the portals' flowing light: upload assets/portal/portal-flow.png, paste "rbxassetid://..."
 Config.PortalModel = 0 -- your own portal design saved to Roblox (its asset ID); or put a Model named Portal in ServerStorage > Designs
-Config.PortalFlow = 2.5
+Config.PortalFlow = 4
 -- The built-in portal's design (server/PortalShape), as the Portal Designer page sends it.
 -- shape: "round" | "arch" | "door" | "hex"; radius (round, hex) or width and height (arch, door);
 -- thick and depth: the frame's stones; stones: how many round the frame; base: "round" |
 -- "square" | "none"; lanterns: 0, 2 or 4; glow: the opening's see-through (0 solid .. 1 clear).
-Config.PortalDesign = {
-	shape = "round", radius = 5.6, width = 10, height = 13, thick = 1.5, depth = 1.8, stones = 22,
-	base = "round", lanterns = 2, gem = true, sign = true, lip = true, glow = 0.55, material = "Slate",
-	stoneA = { 84, 78, 92 }, stoneB = { 104, 98, 110 }, wood = { 92, 66, 44 },
-} -- studs a second the portals' light flows upwards
-Config.LobbyPortalCooldown = 2 -- seconds between two trips through any arch
-Config.LobbyFade = { into = 0.35, hold = 0.3, out = 0.9 } -- the soft fade round every trip (seconds)
-Config.LobbyNudge = { back = 26, up = 12 } -- a locked arch eases you back out (studs/s)
-Config.LobbyFallBelow = -60 -- anyone who drifts off the island below this height is set back on it
-
--- The lobby's light (eased in on your own screen, like a world's): a bright, soft sky morning.
-Config.LobbyMood = { clock = 13, brightness = 2.6, ambient = { 112, 118, 132 }, outdoor = { 172, 182, 198 }, shift = { 255, 246, 232 }, color = { 214, 230, 255 }, decay = { 156, 182, 220 }, density = 0.3, haze = 1.2, glare = 0.2 }
+Config.PortalDesign = { -- the owner's design, sent from the Portal Designer on 8 Nov 2026
+	shape = "arch", radius = 5.6, width = 10.6, height = 13, thick = 2.2, depth = 4, stones = 18,
+	base = "round", lanterns = 2, gem = false, sign = true, lip = true, glow = 0.5, material = "Granite",
+	stoneA = { 0, 0, 0 }, stoneB = { 0, 0, 0 }, wood = { 92, 66, 3 },
+}
 
 return Config
 ]]></ProtectedString>

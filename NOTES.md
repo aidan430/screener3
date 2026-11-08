@@ -654,3 +654,7 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   stores the design and the light PNG with the page (db portal/latest + an asset), and Claude
   copies them into Config.PortalDesign / PortalFlow and assets/portal/portal-flow.png.
 - A Portal model in ServerStorage > Designs (or Config.PortalModel) still wins over both.
+- The owner's first design (8 Nov): a round-topped arch 10.6 wide and 13 high, thick (2.2) and
+  deep (4) granite frame of 18 stones in pure black, round steps, two lanterns, glowing rim and
+  sign, no gem, light half see-through, flowing at 4 studs/s; their painted light is
+  assets/portal/portal-flow.png (512 px).
