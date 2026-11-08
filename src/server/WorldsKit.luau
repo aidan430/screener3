@@ -58,26 +58,10 @@ function Kit.sign(cf, size, text, colour, ink, parent)
 	return board
 end
 
--- A glowing portal arch standing at `cf` (its base), opening towards cf's look direction.
--- Returns the glowing membrane (put a walk-in trigger on it: Kit.trigger).
+-- A portal standing at `cf` (its base), opening towards cf's look direction (server/WorldsPortal).
+-- Returns the face over its opening (put a walk-in trigger on it: Kit.trigger).
 function Kit.arch(cf, colour, parent, title, subtitle)
-	local model = Instance.new("Model")
-	model.Name = "Portal"
-	local stone = { 70, 66, 80 }
-	Build.part({ name = "PortalStep", size = Vector3.new(13, 0.6, 4), cframe = cf * CFrame.new(0, 0.3, 0), color = stone, material = "Slate", parent = model })
-	for _, x in ipairs({ -5.6, 5.6 }) do
-		Build.part({ name = "PortalPillar", size = Vector3.new(1.6, 13, 1.6), cframe = cf * CFrame.new(x, 6.5, 0), color = stone, material = "Slate", parent = model })
-		local gem = Build.part({ name = "PortalGem", shape = "Ball", size = Vector3.new(1.6, 1.6, 1.6), cframe = cf * CFrame.new(x, 13.9, 0), color = colour, material = "Neon", parent = model })
-		Kit.light(gem, colour, 10, 0.6)
-	end
-	Build.part({ name = "PortalLintel", size = Vector3.new(12.8, 1.4, 1.8), cframe = cf * CFrame.new(0, 13.4, 0), color = stone, material = "Slate", parent = model })
-	local membrane = Build.part({ name = "PortalGlow", size = Vector3.new(9.6, 12.2, 0.3), cframe = cf * CFrame.new(0, 6.7, 0), color = colour, material = "Neon", transparency = 0.45, collide = false, parent = model })
-	Kit.light(membrane, colour, 16, 1)
-	Kit.drift(membrane, colour, 6, 1.2, 0.35)
-	local sign = Kit.sign(cf * CFrame.new(0, 16.4, 0), Vector3.new(12, 3.6, 0.4), title .. "\n" .. subtitle, { 40, 34, 48 }, colour, model)
-	sign.Material = Enum.Material.Slate
-	model.Parent = parent
-	return membrane
+	return require(script.Parent.WorldsPortal).build(cf, colour, parent, title, subtitle, Kit)
 end
 
 -- The world's haystack: a mound of balls, each one harvestable (attribute World = id).
@@ -111,7 +95,7 @@ end
 -- or a Config.Worlds id; server/Lobby.luau listens). `from` says which arch it is, so coming
 -- back to the lobby lands you in front of that world's arch.
 function Kit.trigger(membrane, to, from)
-	local part = Build.part({ name = "PortalTrigger", size = Vector3.new(9.6, 12.2, 2), cframe = membrane.CFrame, transparency = 1, collide = false, shadow = false, parent = membrane.Parent })
+	local part = Build.part({ name = "PortalTrigger", size = Vector3.new(membrane.Size.X, membrane.Size.Y, 2), cframe = membrane.CFrame, transparency = 1, collide = false, shadow = false, parent = membrane.Parent })
 	part.CanTouch = true -- (Build.part turns touching off for parts you walk through)
 	part:SetAttribute("To", to)
 	part:SetAttribute("From", from)

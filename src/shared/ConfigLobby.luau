@@ -26,6 +26,8 @@ Config.LobbyFarmColour = { 242, 196, 82 } -- the farm arch's glow (straw gold)
 -- south edge of the build area (Config.PlotSize / 2), and never nearer than `behind` studs south
 -- of where you arrive (Config.FarmEntrance). It faces the haystack.
 Config.LobbyFarmPortal = { x = -26, past = 8, behind = 14 }
+Config.PortalTexture = "" -- the portals' flowing light: upload assets/portal/portal-flow.png, paste "rbxassetid://..."
+Config.PortalFlow = 2.5 -- studs a second the portals' light flows upwards
 Config.LobbyPortalCooldown = 2 -- seconds between two trips through any arch
 Config.LobbyFade = { into = 0.35, hold = 0.3, out = 0.9 } -- the soft fade round every trip (seconds)
 Config.LobbyNudge = { back = 26, up = 12 } -- a locked arch eases you back out (studs/s)

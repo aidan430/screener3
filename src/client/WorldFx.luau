@@ -1,5 +1,6 @@
 -- World effects on your screen: the glowing needle clump (Wheel jackpot), the wheel turning
 -- when you spin, your machines' fans spinning, and a marker over your own farm.
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -86,6 +87,9 @@ local function spinFans()
 		end
 		local step = spinning * 6
 		spinning = 0
+		for _, flow in ipairs(CollectionService:GetTagged("PortalFlow")) do -- the portals' light flows up
+			flow.OffsetStudsV = (os.clock() * Config.PortalFlow) % flow.StudsPerTileV
+		end
 		local tool = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChildOfClass("Tool")
 		for _, weld in ipairs(tool and tool:GetDescendants() or {}) do -- the Twin Turbines' fans
 			if weld.Name == "Spin" and weld:IsA("Weld") then

@@ -619,3 +619,17 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
 - Toasts are paper with a coloured stripe; the banner is paper. Skins are a grid of cards
   (colour swatch, name, Config.Wheel `about`, Wear / Wearing / Buy · R$ price). Button words
   are sentence case. Icons would need uploaded images, so stamps use words.
+
+## Owner's hay texture, new grass, moon-gate portals (2026-11-08)
+- assets/hay/hay-texture.png is the owner's own seamless hay, painted in the Haystack
+  Sketchbook; dev/tools/world_textures.py makes its normal map (hay-normal.png), a new seamless
+  grass (assets/grass/grass.png + grass-normal.png) and the portals' light
+  (assets/portal/portal-flow.png, white veils on clear, tinted per portal). Once uploaded, the
+  IDs go in Config.HayTexture / HayNormal, GroundTexture / GroundNormal and ConfigLobby's
+  PortalTexture; the build writes the hay variant for both the Grass parts and the heap's
+  Limestone, and the grass variant for LeafyGrass.
+- Portals (server/WorldsPortal, used by Kit.arch everywhere): a round stone "moon gate" rising
+  from a two-step round plinth, the ring stopping at the floor so you walk straight in; a disc of
+  light in the portal's colour whose texture flows upwards (client/WorldFx, Config.PortalFlow =
+  2.5 studs/s); a glowing inner lip, a keystone gem, two lanterns and the sign above. The walk-in
+  trigger now matches the round opening.
