@@ -78,6 +78,12 @@
       "$properties": {
         "StreamingEnabled": false
       }
+    },
+    "ServerStorage": {
+      "$className": "ServerStorage",
+      "Designs": {
+        "$className": "Folder"
+      }
     }
   }
 }

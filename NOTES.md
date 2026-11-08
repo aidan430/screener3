@@ -633,3 +633,13 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   light in the portal's colour whose texture flows upwards (client/WorldFx, Config.PortalFlow =
   2.5 studs/s); a glowing inner lip, a keystone gem, two lanterns and the sign above. The walk-in
   trigger now matches the round opening.
+
+## Portals the owner designs in Studio (2026-11-08)
+- server/WorldsPortal uses the owner's design when there is one: a Model named Portal in
+  ServerStorage > Designs (the place file now has that empty folder), or one saved to Roblox
+  (ConfigLobby: Config.PortalModel). Named parts: Base (the ground under the middle, Front faces
+  the players; hidden), Opening (walk-in; coloured, glowing, flowing light; never collides),
+  Glow... (take each portal's colour), Sign (gets the name). Scripts in a design are removed.
+  Missing Base or Opening: a warning and the built-in portal.
+- dev/tools/portal_model.py writes assets/portal/Portal.rbxmx, the built-in portal as a
+  starting model; assets/portal/HOW_TO.md is the owner's guide.
