@@ -643,3 +643,14 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   Missing Base or Opening: a warning and the built-in portal.
 - dev/tools/portal_model.py writes assets/portal/Portal.rbxmx, the built-in portal as a
   starting model; assets/portal/HOW_TO.md is the owner's guide.
+
+## Portal Designer (2026-11-08)
+- The built-in portal is now shaped by ConfigLobby's Config.PortalDesign (server/PortalShape):
+  shape round | arch | door | hex, radius or width/height, frame thickness, depth and stone
+  count, base round | square | none, lanterns 0/2/4, gem, sign, glowing rim, the opening's
+  see-through, stone material and three colours. The default is the moon gate as before.
+- The owner designs it in the Portal Designer page (an artifact whose 3D preview copies
+  PortalShape's maths line for line) and paints the opening's light there; "Send to Claude"
+  stores the design and the light PNG with the page (db portal/latest + an asset), and Claude
+  copies them into Config.PortalDesign / PortalFlow and assets/portal/portal-flow.png.
+- A Portal model in ServerStorage > Designs (or Config.PortalModel) still wins over both.

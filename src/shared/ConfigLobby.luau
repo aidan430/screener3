@@ -28,7 +28,16 @@ Config.LobbyFarmColour = { 242, 196, 82 } -- the farm arch's glow (straw gold)
 Config.LobbyFarmPortal = { x = -26, past = 8, behind = 14 }
 Config.PortalTexture = "" -- the portals' flowing light: upload assets/portal/portal-flow.png, paste "rbxassetid://..."
 Config.PortalModel = 0 -- your own portal design saved to Roblox (its asset ID); or put a Model named Portal in ServerStorage > Designs
-Config.PortalFlow = 2.5 -- studs a second the portals' light flows upwards
+Config.PortalFlow = 2.5
+-- The built-in portal's design (server/PortalShape), as the Portal Designer page sends it.
+-- shape: "round" | "arch" | "door" | "hex"; radius (round, hex) or width and height (arch, door);
+-- thick and depth: the frame's stones; stones: how many round the frame; base: "round" |
+-- "square" | "none"; lanterns: 0, 2 or 4; glow: the opening's see-through (0 solid .. 1 clear).
+Config.PortalDesign = {
+	shape = "round", radius = 5.6, width = 10, height = 13, thick = 1.5, depth = 1.8, stones = 22,
+	base = "round", lanterns = 2, gem = true, sign = true, lip = true, glow = 0.55, material = "Slate",
+	stoneA = { 84, 78, 92 }, stoneB = { 104, 98, 110 }, wood = { 92, 66, 44 },
+} -- studs a second the portals' light flows upwards
 Config.LobbyPortalCooldown = 2 -- seconds between two trips through any arch
 Config.LobbyFade = { into = 0.35, hold = 0.3, out = 0.9 } -- the soft fade round every trip (seconds)
 Config.LobbyNudge = { back = 26, up = 12 } -- a locked arch eases you back out (studs/s)
