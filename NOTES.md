@@ -768,3 +768,6 @@ this game's own style. Nothing copied from that game.
   apart); the roof sits on the post tops (18 studs wide, at 18.3).
 - Top Farmers board: the title and the top three rows are bold Merriweather (gold); every row
   shrinks to fit (TextScaled, at most its normal size) so a long name stays on the paper.
+- The AUTO/STOP button and the XP bar have a solid 2 px cream border (client/LevelBar
+  creamEdge). The green button had blended into the grass, and Ui.stroke's faint pencil line
+  (78% see-through, at most 1.5 px) was too soft over grass and hay.

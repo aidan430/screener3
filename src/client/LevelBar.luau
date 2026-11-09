@@ -56,6 +56,11 @@ local function reveal(label, on, seconds, style, direction)
 	end
 end
 
+-- A solid cream border (Ui.stroke is a faint pencil line, too soft over grass and hay).
+local function creamEdge(frame)
+	Ui.make("UIStroke", { Color = Ui.colors.cream, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = frame })
+end
+
 local function setFill()
 	local xp, need = player:GetAttribute("Xp") or 0, player:GetAttribute("XpNeed") or 1
 	levelText.Text = "Level " .. (player:GetAttribute("Level") or 1)
@@ -140,11 +145,13 @@ end
 function LevelBar.mount(gui)
 	local holder = Ui.make("Frame", { Name = "LevelBar", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -14), Size = UDim2.fromOffset(380, 58), BackgroundTransparency = 1, Parent = gui })
 	Ui.autoScale(holder)
-	bar = Ui.make("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, -96, 0, 24), BackgroundColor3 = Ui.colors.woodDark, BackgroundTransparency = 0.15, Parent = holder }, { Ui.corner(12), Ui.stroke(Ui.colors.cream, 2) })
+	bar = Ui.make("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, -96, 0, 24), BackgroundColor3 = Ui.colors.woodDark, BackgroundTransparency = 0.15, Parent = holder }, { Ui.corner(12) })
+	creamEdge(bar)
 	fill = Ui.make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Ui.colors.hay, Parent = bar }, { Ui.corner(12) })
 	levelText = Ui.label({ Font = Ui.bold, Position = UDim2.fromOffset(12, 0), Size = UDim2.new(0.5, 0, 1, 0), TextColor3 = Ui.colors.white, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, Parent = bar }, 16)
 	xpText = Ui.label({ Font = Ui.body, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 0), Size = UDim2.new(0.5, 0, 1, 0), TextColor3 = Ui.colors.white, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 3, Parent = bar }, 14)
 	autoButton = Ui.button("AUTO  " .. Config.AutoKey, Ui.colors.green, { AnchorPoint = Vector2.new(1, 1), Position = UDim2.fromScale(1, 1), Size = UDim2.fromOffset(86, 30), Parent = holder })
+	creamEdge(autoButton) -- so the green button stands out against the grass
 	big = shout({ AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.26), Size = UDim2.fromOffset(520, 70), ZIndex = 30, Parent = gui }, 64, Vector2.new(220, 90)) -- one shadow behind both lines
 	sub = shout({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.26, 38), Size = UDim2.fromOffset(520, 30), ZIndex = 30, Parent = gui }, 24, Vector2.zero)
 	luckyText, luckyHolder = shout({ Text = "x2 XP!", AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(170, 52), ZIndex = 30, Parent = gui }, 46, Vector2.new(80, 26))
