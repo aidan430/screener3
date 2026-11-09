@@ -797,3 +797,6 @@ this game's own style. Nothing copied from that game.
   haystack with the title, "5,000,000 STRAWS / 1 NEEDLE! / CAN YOU FIND IT?" with a magnifying
   glass, and "LEVEL UP!" with the XP bar and x2 XP!. Drawn in code (dev/tools/store: art.py and
   one script per image; run from that folder, needs Pillow and numpy).
+- The owner's own icon (blocky gloved hand reaching for the needle in chunky hay) is now
+  assets/marketing/store/icon-512.png; it reads best at small sizes. The drawn one is kept as
+  icon-512-drawn.png and the owner's softer painted version as icon-alt-soft.png.
