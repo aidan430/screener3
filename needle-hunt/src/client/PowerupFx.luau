@@ -101,7 +101,7 @@ function PowerupFx.start(gui)
 		UiKit.make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 8) }),
 	})
 	UiKit.autoScale(chips)
-	arrow = UiKit.label({ Font = UiKit.bold, Text = "▲", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 180), Size = UDim2.fromOffset(90, 90), TextColor3 = Color3.fromRGB(90, 170, 255), TextStrokeTransparency = 0.2, Visible = false, ZIndex = 30, Parent = gui }, 80)
+	arrow = UiKit.label({ Font = UiKit.bold, Text = "▲", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 180), Size = UDim2.fromOffset(90, 90), TextColor3 = Color3.fromRGB(table.unpack((kindOf("compass") or { colour = { 240, 130, 40 } }).colour)), TextStrokeTransparency = 0.2, Visible = false, ZIndex = 30, Parent = gui }, 80)
 	distance = UiKit.label({ Font = UiKit.bold, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 228), Size = UDim2.fromOffset(160, 26), TextStrokeTransparency = 0.3, Visible = false, ZIndex = 30, Parent = gui }, 22)
 	Remotes.Powerup.OnClientEvent:Connect(function(m)
 		local kind = kindOf(m.kind)
