@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT / "dev"))
 import pacing  # noqa: E402
 
 SHARED = ROOT / "src" / "shared"
-CONFIG = "\n".join((SHARED / f).read_text() for f in ("Config.luau", "ConfigFactory.luau", "ConfigGoals.luau", "ConfigPlayer.luau", "ConfigWorlds.luau", "ConfigPads.luau", "ConfigLobby.luau"))
+CONFIG = "\n".join((SHARED / f).read_text() for f in ("Config.luau", "ConfigFactory.luau", "ConfigGoals.luau", "ConfigPlayer.luau", "ConfigWorlds.luau", "ConfigPads.luau", "ConfigLobby.luau", "ConfigCosmetics.luau"))
 FINDS = json.loads((SHARED / "Finds.json").read_text())
 
 
@@ -129,6 +129,23 @@ class StoryScript(unittest.TestCase):
         clumps = [int(n) for n in re.findall(r'kind = "clumps", n = (\d+)', text)]
         self.assertEqual(clumps, sorted(clumps), "heap beats come in order")
         self.assertLessEqual(clumps[0], 2, "the first find comes within minutes")
+
+
+class Milestones(unittest.TestCase):
+    def test_every_reward_is_a_real_cosmetic_and_the_24_hour_one_is_generous(self):
+        text = (SHARED / "ConfigCosmetics.luau").read_text()
+        cosmetics = set(re.findall(r'\{ id = "(\w+)", kind = "(?:title|hat|trail|aura)"', text))
+        for ids in re.findall(r"cosmetics = \{ ([^}]*) \}", text):
+            for c in re.findall(r'"(\w+)"', ids):
+                self.assertIn(c, cosmetics)
+        blocks = "".join(re.findall(r"^Config\.Achievements = \{(.*?)^\}", CONFIG, re.M | re.S))
+        achievement_ids = re.findall(r'\{ id = "(\w+)"', blocks)
+        self.assertEqual(len(achievement_ids), len(set(achievement_ids)), "achievement ids are unique")
+        day = re.search(r'\{ id = "play24".*', text).group(0)
+        self.assertIn("goal = 24", day)
+        self.assertIn("spins = 5", day)
+        self.assertIn("powerups = true", day)
+        self.assertIn('stat = "hours"', day, "24 hours in total, never one sitting")
 
 
 class Wheel(unittest.TestCase):

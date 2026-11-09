@@ -10,6 +10,7 @@ local Economy = require(Shared:WaitForChild("Economy"))(Config)
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local PlayerData = require(script.Parent.PlayerData)
+local Profile = require(script.Parent.Profile)
 
 local Achievements = {}
 
@@ -23,14 +24,54 @@ function Achievements.value(player, d, stat)
 		return Economy.plot(d.placed, false).made
 	elseif stat == "needles" then
 		return d.needles
+	elseif stat == "hours" then
+		return (d.stats.play_seconds or 0) / 3600
+	elseif stat == "streak" then
+		return d.stats.day_streak or 0
+	elseif stat == "days" then
+		return d.stats.days_played or 0
+	elseif stat == "clumps" then -- every clump cleared, on every heap so far
+		return d.needles * Config.Clumps + Config.Clumps - Profile.clumpsLeft(d)
+	elseif stat == "skins" or stat == "story" or stat == "worlds" then
+		local n, set = 0, if stat == "skins" then d.skins elseif stat == "story" then d.storySeen else d.worlds
+		for _, v in pairs(set) do
+			n += if stat == "worlds" then (if v.unlocked then 1 else 0) else 1
+		end
+		return n
+	elseif stat == "orders" then
+		return math.max(0, d.order - 1)
 	end
 	return d.stats[stat] or 0
+end
+
+-- A milestone's rewards: cosmetics, coins, banked wheel spins and (powerups) every power-up.
+local function reward(player, a)
+	PlayerData.update(player, function(data)
+		for _, id in ipairs(a.cosmetics or {}) do
+			data.cosmetics[id] = true
+		end
+		data.coins += a.coins or 0
+		data.spinBank += a.spins or 0
+		if a.powerups then
+			local now = os.time()
+			for _, name in ipairs({ "SpeedBoost", "CoinBoost", "LuckyCharm" }) do
+				data.boosts[name] = math.max(data.boosts[name] or 0, now) + Config.LegendBoostHours * 3600
+			end
+			data.whistles += Config.WhistleUses
+		end
+	end)
+	if a.powerups then
+		task.spawn(function() -- a Straw Blast too (Machines needs this module, so it's fetched here)
+			pcall(require(script.Parent.Machines).blast, player, Config.StrawBlastAmount)
+		end)
+	end
 end
 
 local function award(player, achievement)
 	PlayerData.update(player, function(data)
 		data.achievements[achievement.id] = true
 	end)
+	reward(player, achievement)
 	Remotes.Achievement:FireClient(player, { id = achievement.id, name = achievement.name, text = achievement.text, done = player:GetAttribute("Achievements"), total = #Config.Achievements })
 	local badge = Config.BadgeIds[achievement.id]
 	if badge and badge ~= 0 then
@@ -61,8 +102,12 @@ function Achievements.progress(player)
 	local out = {}
 	for _, a in ipairs(Config.Achievements) do
 		local done = d ~= nil and d.achievements[a.id] == true
-		-- secret until earned: the client only learns an achievement once it is done
-		table.insert(out, if done then { id = a.id, name = a.name, text = a.text, done = true } else { id = a.id, done = false })
+		-- secret until earned, unless it's an open milestone (shown with its progress and prizes)
+		if done or a.open then
+			table.insert(out, { id = a.id, name = a.name, text = a.text, done = done, open = a.open == true, have = if d then Achievements.value(player, d, a.stat) else 0, goal = a.goal, cosmetics = a.cosmetics, spins = a.spins })
+		else
+			table.insert(out, { id = a.id, done = false })
+		end
 	end
 	return out
 end

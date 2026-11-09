@@ -36,6 +36,9 @@ function Wheel.spin(player, free)
 		return "Your farm is still loading."
 	end
 	local coins = Economy.coinsFor(Economy.power(d, false) * Config.WheelDuplicateSearches, false, 1)
+	PlayerData.update(player, function(data)
+		data.stats.spins = (data.stats.spins or 0) + 1
+	end)
 	if not free and Wheel.restricted(player) then
 		PlayerData.update(player, function(data)
 			data.coins += coins
@@ -66,10 +69,20 @@ function Wheel.spin(player, free)
 	return message
 end
 
--- The daily free spin, if it hasn't been used today.
+-- A free spin: a banked one first (won from milestones), else the daily one if it's unused.
 local function freeSpin(player)
 	local d = PlayerData.get(player)
-	if not d or d.freeSpinDay >= today() then
+	if not d then
+		return
+	end
+	if d.spinBank > 0 then
+		PlayerData.update(player, function(data)
+			data.spinBank -= 1
+		end)
+		Wheel.spin(player, true)
+		return
+	end
+	if d.freeSpinDay >= today() then
 		return
 	end
 	PlayerData.update(player, function(data)

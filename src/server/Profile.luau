@@ -10,7 +10,7 @@ local Layout = require(Shared:WaitForChild("Layout"))(Config)
 local Profile = {}
 local rng = Random.new()
 
-Profile.STATS = { "searches", "loads_filled", "straws_sold", "lucky_finds", "perks_maxed", "total_searched", "best_height", "dumps", "drops", "bales_made", "secret_straw" }
+Profile.STATS = { "searches", "loads_filled", "straws_sold", "lucky_finds", "perks_maxed", "total_searched", "best_height", "dumps", "drops", "bales_made", "secret_straw", "play_seconds", "day_streak", "days_played", "last_day", "spins" }
 
 local function number(saved, name, default)
 	local v = type(saved) == "table" and saved[name]
@@ -49,6 +49,7 @@ function Profile.fresh(saved)
 		whistles = number(saved, "whistles", 0),
 		lastSeen = number(saved, "lastSeen", 0),
 		freeSpinDay = math.floor(number(saved, "freeSpinDay", 0)), -- the last day (UTC) the free wheel spin was used
+		spinBank = math.max(0, math.floor(number(saved, "spinBank", 0))), -- free wheel spins won from milestones
 		goal = math.clamp(math.floor(number(saved, "goal", 1)), 1, #Config.Goals + 1), -- the guided goal you're on
 		skin = if type(saved.skin) == "string" then saved.skin else "",
 		removed = if type(saved.removed) == "string" and #saved.removed == Config.Clumps then saved.removed else string.rep("0", Config.Clumps),
@@ -59,6 +60,8 @@ function Profile.fresh(saved)
 		placed = {},
 		skins = {},
 		storySeen = {}, -- [beat id] = true (shared/Story)
+		cosmetics = {}, -- [cosmetic id] = true (Config.Cosmetics)
+		wearing = {}, -- [kind] = cosmetic id
 		trucks = {},
 		stats = {},
 		achievements = {},
@@ -112,6 +115,20 @@ function Profile.fresh(saved)
 	for _, prize in ipairs(Config.Wheel) do
 		if not prize.reveal and type(saved.skins) == "table" and saved.skins[prize.id] == true then
 			d.skins[prize.id] = true
+		end
+	end
+	local kinds = {}
+	for _, c in ipairs(Config.Cosmetics) do
+		kinds[c.id] = c.kind
+		if type(saved.cosmetics) == "table" and saved.cosmetics[c.id] == true then
+			d.cosmetics[c.id] = true
+		end
+	end
+	if type(saved.wearing) == "table" then
+		for kind, id in pairs(saved.wearing) do
+			if d.cosmetics[id] and kinds[id] == kind then
+				d.wearing[kind] = id
+			end
 		end
 	end
 	for _, name in ipairs(Profile.STATS) do

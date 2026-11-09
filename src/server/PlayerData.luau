@@ -90,6 +90,17 @@ local function publish(player, profile)
 	player:SetAttribute("Multiplier", Economy.coinMultiplier(flags, d.needles))
 	player:SetAttribute("Whistles", d.whistles)
 	player:SetAttribute("EarlyLeft", Economy.earlyLeft(d))
+	player:SetAttribute("SpinBank", d.spinBank)
+	player:SetAttribute("PlayHours", math.floor((d.stats.play_seconds or 0) / 360) / 10)
+	local owned = {}
+	for id in pairs(d.cosmetics) do
+		table.insert(owned, id)
+	end
+	table.sort(owned)
+	player:SetAttribute("Cosmetics", table.concat(owned, ","))
+	for _, kind in ipairs({ "title", "hat", "trail", "aura" }) do
+		player:SetAttribute("Wearing_" .. kind, d.wearing[kind] or "")
+	end
 	player:SetAttribute("Skin", d.skin)
 	player:SetAttribute("FreeSpinDay", d.freeSpinDay)
 	for _, prize in ipairs(Config.Wheel) do

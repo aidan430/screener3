@@ -40,7 +40,7 @@ return function(Ui)
 
 	-- The farm journal's pages, in the order of the tab rail down the left of each journal window.
 	-- Ui.journalOpen (set by Panels) opens a page by its key.
-	Ui.JOURNAL = { { "Shop", "Shop" }, { "Achievements", "Achievements" }, { "Finds", "Skins & finds" }, { "Wheel", "Wheel" } }
+	Ui.JOURNAL = { { "Shop", "Shop" }, { "Achievements", "Achievements" }, { "Finds", "Skins & finds" }, { "Wardrobe", "Wardrobe" }, { "Wheel", "Wheel" } }
 	Ui.journalOpen = nil
 	local RAIL = 160
 

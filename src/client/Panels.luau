@@ -14,6 +14,8 @@ local Shop = require(script.Parent.Shop)
 local Cursor = require(script.Parent.Cursor)
 local Juice = require(script.Parent.Juice)
 local Dialogue = require(script.Parent.Dialogue)
+local Milestones = require(script.Parent.Milestones)
+local Wardrobe = require(script.Parent.Wardrobe)
 local StoryData = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Story"))
 
 local player = Players.LocalPlayer
@@ -42,21 +44,11 @@ function Panels.mount(gui, notify, actions)
 			if not ok or type(list) ~= "table" then
 				return
 			end
-			for _, child in ipairs(achievementsBody:GetChildren()) do
-				if child:IsA("GuiObject") then
-					child:Destroy()
-				end
-			end
-			local done = 0
-			for i, a in ipairs(list) do
-				done += if a.done then 1 else 0
-				local f = Ui.make("Frame", { LayoutOrder = i, Size = UDim2.new(1, 0, 0, 56), BackgroundColor3 = if a.done then Color3.fromRGB(226, 244, 220) else Color3.fromRGB(220, 214, 204), Parent = achievementsBody }, { Ui.corner(10) })
-				Ui.label({ Text = if a.done then a.name else "???", Size = UDim2.new(1, -24, 0, 26), Position = UDim2.fromOffset(12, 4), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Ui.colors.ink, TextStrokeTransparency = 1, Parent = f }, 22)
-				Ui.label({ Text = if a.done then a.text else "A secret achievement. Keep playing to discover it.", Size = UDim2.new(1, -24, 0, 20), Position = UDim2.fromOffset(12, 31), Font = Ui.body, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Ui.colors.grey, TextStrokeTransparency = 1, Parent = f }, 14)
-			end
-			Ui.paragraph(done .. " of " .. #list .. " discovered. Some say all ten open a golden door...", { LayoutOrder = 0, Font = Ui.font, TextSize = 20, Parent = achievementsBody })
+			Milestones.render(achievementsBody, list)
 		end)
 	end
+
+	windows.Wardrobe, refreshers.Wardrobe = Wardrobe.mount(gui)
 
 	-- Finds & Skins
 	local finds, findsBody = Ui.window(gui, "Skins & finds", nil, "Finds")
@@ -179,8 +171,9 @@ function Panels.mount(gui, notify, actions)
 		Ui.paragraph("A skin you already have pays coins instead.", { LayoutOrder = 50, TextColor3 = Ui.colors.grey, Parent = wheelBody })
 		-- one free spin a day; after that, more spins are Robux (never where that's restricted)
 		local now = workspace:GetServerTimeNow()
-		if (player:GetAttribute("FreeSpinDay") or 0) < math.floor(now / 86400) then
-			Ui.button("FREE SPIN (1 a day)", Ui.colors.green, { LayoutOrder = 60, Size = UDim2.new(1, 0, 0, 52), Parent = wheelBody }).Activated:Connect(function()
+		local bank = player:GetAttribute("SpinBank") or 0
+		if bank > 0 or (player:GetAttribute("FreeSpinDay") or 0) < math.floor(now / 86400) then
+			Ui.button(if bank > 0 then "FREE SPIN (" .. bank .. " saved)" else "FREE SPIN (1 a day)", Ui.colors.green, { LayoutOrder = 60, Size = UDim2.new(1, 0, 0, 52), Parent = wheelBody }).Activated:Connect(function()
 				Remotes.FreeSpin:FireServer()
 			end)
 			return
@@ -196,6 +189,11 @@ function Panels.mount(gui, notify, actions)
 			end)
 		end
 	end
+	player:GetAttributeChangedSignal("SpinBank"):Connect(function()
+		if wheel.Visible then
+			refreshers.Wheel()
+		end
+	end)
 	player:GetAttributeChangedSignal("FreeSpinDay"):Connect(function()
 		if wheel.Visible then
 			refreshers.Wheel()

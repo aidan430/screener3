@@ -692,3 +692,19 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   two-reply choices, Skip. The journal's Skins & finds page lists "The story so far" to replay.
 - Existing players see the story from the start on their next visit (beats they've already
   passed queue up; Skip closes each one).
+
+## Milestone cosmetics and open achievements (2026-11-09)
+- shared/ConfigCosmetics: 19 cosmetics (titles over the head, hats built from parts, trails,
+  auras; Common to Mythic) and 23 open milestone achievements, added after the 11 secret ones.
+  Milestones count TOTAL play time (stats.play_seconds, +60 a minute in game: server/Playtime)
+  and days in a row (day_streak, days_played, last_day; UTC days), never one long sitting.
+  1/3/6/12/24/48/100 hours, 3/7/30-day streaks, 50 days, clumps 100/1,000/10,000 (all heaps),
+  needles 3/10, all skins, all worlds, 20 story scenes, 25 orders, 25 spins, 100 lucky finds,
+  1M straws sold. Rewards: cosmetics, coins, banked free wheel spins (d.spinBank, used before the
+  daily spin) and, at 24 and 100 hours, every power-up (2x Speed, 2x Coins and Lucky Charm for
+  Config.LegendBoostHours = 24, a Straw Blast and a pack of whistles). 24 hours also gives
+  5 spins, the Golden Straw Crown, the Legend title and Legend's Glow.
+- server/Cosmetics builds what you wear on your character (everyone sees it), Remotes.Wear
+  equips what you own. The new Wardrobe journal page lists every cosmetic, how to unlock it,
+  and Wear / Take off. The Achievements page shows open milestones with progress bars and
+  prizes (client/Milestones); secret ones stay ??? until earned. Any 10 still open the Loft.
