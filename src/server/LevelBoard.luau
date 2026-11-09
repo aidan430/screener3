@@ -27,11 +27,11 @@ local function build()
 	model.Name = "TopFarmers"
 	local base = CFrame.new(B.at[1], 0, B.at[2]) * CFrame.Angles(0, math.rad(35), 0) -- its face (Back) turned towards where you arrive
 	local wood = Color3.fromRGB(120, 84, 48)
-	for _, x in ipairs({ -7, 7 }) do
+	for _, x in ipairs({ -8, 8 }) do -- just outside the board, so they never cover the list
 		part({ Name = "Post", Size = Vector3.new(1, 18, 1), CFrame = base * CFrame.new(x, 9, 0), Color = wood, Material = Enum.Material.Wood, Parent = model })
 	end
 	local board = part({ Name = "Board", Size = Vector3.new(15, 13, 0.6), CFrame = base * CFrame.new(0, 10.5, 0), Color = Color3.fromRGB(150, 108, 64), Material = Enum.Material.WoodPlanks, Parent = model })
-	part({ Name = "Roof", Size = Vector3.new(17, 0.6, 2.4), CFrame = base * CFrame.new(0, 17.4, 0), Color = Color3.fromRGB(92, 60, 36), Material = Enum.Material.Wood, Parent = model })
+	part({ Name = "Roof", Size = Vector3.new(18, 0.6, 2.4), CFrame = base * CFrame.new(0, 18.3, 0), Color = Color3.fromRGB(92, 60, 36), Material = Enum.Material.Wood, Parent = model })
 	local gui = Instance.new("SurfaceGui")
 	gui.Face, gui.SizingMode, gui.PixelsPerStud, gui.LightInfluence = Enum.NormalId.Back, Enum.SurfaceGuiSizingMode.PixelsPerStud, 40, 0.2
 	gui.Parent = board
@@ -50,7 +50,7 @@ local function build()
 	local title = text(10, 56, 46, Color3.fromRGB(60, 40, 22), Enum.Font.Merriweather)
 	title.Text, title.TextXAlignment = "TOP FARMERS", Enum.TextXAlignment.Center
 	for i = 1, B.rows do
-		lines[i] = text(70 + (i - 1) * 42, 40, 30, if i <= 3 then Color3.fromRGB(176, 120, 20) else Color3.fromRGB(70, 52, 36))
+		lines[i] = text(70 + (i - 1) * 40, 38, 30, if i <= 3 then Color3.fromRGB(176, 120, 20) else Color3.fromRGB(70, 52, 36))
 	end
 	model.Parent = workspace
 end
