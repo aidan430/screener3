@@ -24,7 +24,9 @@ needle-hunt/
     Maps.luau               the 5 maps: names, lighting, colours, pick weights
     Cosmetics.luau          needle skins, trails, titles, found effects (prices and sources)
     Quests.luau             the daily quest pool and the day's three (same for everyone)
-    Needles.luau            the collection: 12 needle types, 32 skins, rarities, values, the roll
+    Needles.luau            the collection: 12 needle types, 57 skins, rarities, values, the roll
+    Boxes.luau              what's in each box, the exact odds, the box roll
+    Robux.luau              what the shop says about each Robux item
     NeedleLook.luau         builds any needle type in any skin out of parts
   src/server/   -> ServerScriptService.Server
     Main.server.luau        (Script) starts everything
@@ -38,6 +40,11 @@ needle-hunt/
     AntiCheat.luau          speed/teleport checks
     Requests.luau           hint and settings requests
     CollectionManager.luau  the needle you keep: rolls it, saves it, values it, shows others
+    BoxManager.luau         box openings (coins and Robux), pity, PolicyService
+    Combat.luau             the Needle tool, pokes, hearts, tag-outs, inspect
+    MatchXp.luau            XP after each match (place, coins, needles, tag-outs)
+    RoundExtras.luau        starts/stops power-ups, combat and match XP with the round
+    TradeManager.luau       needle trades between players, with the safety checks
     LobbyBuilder.luau       builds the lobby
     MapKit.luau             building blocks for maps; records hiding spots
     MapsA.luau              Classic Haystack Field, Barn Interior, Farm at Sunset
@@ -52,6 +59,9 @@ needle-hunt/
     Screens2.luau           Daily Quests, Leaderboard, Settings
     Screens3.luau           the Collection (yours and anyone's in the server)
     NeedleView.luau         a needle in 3D inside the UI
+    BoxScreen.luau          the Boxes screen with the odds; BoxReel.luau the opening reel
+    CombatFx.luau           pokes, hearts, POP!, inspect (F)
+    TradeScreen.luau        the Trade screen and trade invites
     Effects.luau            sounds, particles, soft flash, camera kick, confetti
 ```
 
@@ -120,8 +130,9 @@ save is never overwritten) and is told so. To wipe everyone, change `Config.Data
 
 ### Selling with Robux (off until you set IDs)
 
-Every item says exactly what it gives. Nothing is random, and Robux never buys a needle, a
-power-up or a hint during a round: coins only buy looks (trails, titles, found effects).
+Every item says exactly what it gives. The only random thing Robux can buy is a Harvest or
+Starlight Box (odds always shown, see Boxes). Robux never buys a power-up, a hint during a
+round or combat power: coins buy looks (trails, titles, found effects) and boxes.
 
 | Item | Kind | Gives | Suggested price |
 |---|---|---|---|
@@ -129,6 +140,8 @@ power-up or a hint during a round: coins only buy looks (trails, titles, found e
 | Pouch of Coins | product (`CoinsSmall`) | 500 coins | 39 R$ |
 | Sack of Coins | product (`CoinsMedium`) | 1,500 coins | 99 R$ |
 | Cart of Coins | product (`CoinsLarge`) | 4,000 coins | 229 R$ |
+| Harvest Box | product (`HarvestBox`) | opens one Harvest Box (odds in Boxes) | 49 R$ |
+| Starlight Box | product (`StarlightBox`) | opens one Starlight Box (odds in Boxes) | 149 R$ |
 | Coin Shower | product (`CoinShower`) | 100 coins to everyone in the server, buyer too | 49 R$ |
 | 2x Coins | pass (`DoubleCoins`) | every coin earned doubled, forever | 199 R$ |
 | Extra Daily Hint | pass (`ExtraHint`) | one more lobby hint a day | 79 R$ |
@@ -301,7 +314,8 @@ Upholstery Needle and more) in one of **32 skins**. That makes 384 to collect.
 - A needle is worth its type's base value × its rarity.
 - A collection is worth its different needles added up; duplicates show as x2, x3.
 
-**Earned only:** needles are never sold for coins or Robux and never come from anything paid.
+**Where needles come from:** finds, boxes (below) and trades. A needle you already have still
+counts (x2, x3): keep it or trade it.
 
 **Showing it off:**
 - Everyone sees what you found as you find it.
@@ -313,11 +327,64 @@ Upholstery Needle and more) in one of **32 skins**. That makes 384 to collect.
 
 **Designing more skins:**
 - Print or draw on `assets/skin-template/needle_skin_template.png`.
-- Fill in a name, two colours, a pattern (solid, two-tone, stripes, gradient, rainbow), a material, a rarity and any extras.
+- Fill in a name, two or three colours, a pattern (solid, two-tone, stripes, gradient, rainbow, bands, sheen, split, tri, candy), a material, a rarity and any extras (glow, sparkle). Add `series = "harvest"` (or a new series) to make it a box-only skin.
 - Each card becomes one line in `shared/Needles.luau`, and every skin works on all 12 types.
 
 Skins are recipes rather than pictures, so no image upload is needed. For painted image skins
 later, free CC0 textures come from Poly Haven, ambientCG and Kenney, or the Roblox Creator Store.
+
+## Boxes
+
+Open a box for a needle for your collection (Boxes in the menu, or the Box Stall in the lobby).
+
+| Box | Price | What's inside |
+|---|---|---|
+| Hay Box | 400 coins | the regular skins |
+| Harvest Box | 1,500 coins or Robux | the Harvest Series (10 box-only skins) |
+| Starlight Box | 5,000 coins or Robux | the Starlight Series (10 box-only skins), better odds |
+
+- **Odds:** every box's exact chance for each rarity, and the skins at each, are always on the
+  Boxes screen, below the boxes. They come from `Config.Boxes` (the same numbers the server uses).
+- **Guarantee:** every 10 opens without Rare or better, the next one is Rare or better. The screen
+  shows how close you are.
+- **Where it's restricted:** `PolicyService` says whether paid random items are allowed for each
+  player. Where they aren't (or the check fails), boxes are off: the screen says so and sells
+  nothing. Every needle can still be found in rounds.
+- **The reel:** the server rolls first; the cards on screen are picked by the same odds and the
+  strip stops on the result, on the card and never teetering on an edge. Reduce effects shortens it.
+- **Robux:** create the HarvestBox and StarlightBox developer products (Selling with Robux) and put
+  their IDs in `Config.Products`; the R$ button then shows their price.
+
+## Needle combat
+
+During a round's search everyone carries their showcase needle (the **Needle** tool, slot 1).
+Click or tap to poke the nearest player in front of you.
+- 3 hearts. A poke takes one; a heart comes back every 8 seconds without a hit.
+- Three gone and you're **tagged out**: a soft pop, then you're back at a maze start after 5
+  seconds, with 3 seconds when nobody can poke you. You keep any needles you've found.
+- Tagging someone out gives +10 coins (doubled with 2x Coins) and match XP.
+- The server checks every poke: in the round, within reach, in front, off cooldown, not safe.
+- Every needle pokes the same: skins are looks only, and Robux never buys combat power.
+- **Inspect:** press F (or the Inspect button) with the Needle out: it lifts and turns in your
+  hand, and everyone sees it. Works in the lobby too.
+- If the needle points the wrong way in your hand, turn it with `Config.NeedleTool.grip`.
+
+All the numbers are in `Config.Combat`.
+
+## Match XP
+
+XP comes at the end of each match, with a breakdown on the results screen (`Config.MatchXp`):
+your place (1st 120, 2nd 90, 3rd 70, other finishers 50), +20 for playing, +0.5 per coin
+collected in the match, +40 per needle found and +25 per player tagged out.
+
+## Trading
+
+Menu > **Trade**: ask anyone in the server. They get Accept / No thanks.
+- Both offers show side by side with each needle's rarity and value, and both totals.
+- Up to 6 needles a side. Any change un-readies both players.
+- When both press Ready, a 5-second countdown runs; either can still cancel.
+- Then the server checks both still own everything, swaps them and saves both straight away.
+- Only in the lobby, never during a round; cancelled if someone leaves or a round starts.
 
 ## Adding things
 
@@ -367,7 +434,11 @@ remotes, but it can't run Roblox. Play mode in Studio is the real test.
 14. Phone: Test → Device emulator → a phone.
     - The HUD, menu and windows scale down and stay readable.
     - Tapping the needle works.
-15. Watch the Output window for red errors throughout.
+15. **Boxes:** open a Hay Box (give yourself coins first); the reel stops on a card and the needle turns. The odds show for all three boxes. In Studio, PolicyService may report boxes as restricted: then the screen says so (that's the safe answer).
+16. **Combat** (2 players): equip the Needle (1), click near the other player: hearts drop, POP! shows, three pokes tag them out and they're back in 5 seconds. Press F to inspect. Check the needle points forwards in the hand (`Config.NeedleTool.grip`).
+17. **Results:** the MATCH XP box shows your breakdown.
+18. **Trade** (2 players, in the lobby): ask, accept, add needles, both Ready, wait for the countdown: the needles swap. Changing an offer un-readies both.
+19. Watch the Output window for red errors throughout.
 
 ## Next 5 features after the MVP
 

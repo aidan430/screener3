@@ -77,8 +77,12 @@ needle-hunt/ a separate, round-based game ("A Needle in a Haystack"): its own Ro
 
 ## Rules
 - Original content only: never copy another game's name, map, art, story or UI.
-- Kid-friendly, within Roblox's Community Standards. No paid random rewards (no loot boxes);
-  every Robux item says exactly what it gives.
+- Kid-friendly, within Roblox's Community Standards. Every Robux item says exactly what it gives.
+  No paid random rewards, with one exception the owner chose (Nov 2026): Needle Hunt's boxes
+  (`needle-hunt/`, `Config.Boxes`) may be opened with coins or Robux, but only with the exact odds
+  shown before every open, a Rare-or-better guarantee (pity), and PolicyService turning them off
+  wherever paid random items are restricted (and when that check fails). No pressure tactics,
+  no fake near misses, and Robux never buys combat power. The main game keeps its Wheel rules.
 - The server decides everything that matters (searches, coins, clues, the needle, purchases);
   the client asks and shows.
 - Every tunable number lives in `src/shared/Config.luau` or its merged companions
