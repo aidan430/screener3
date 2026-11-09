@@ -396,6 +396,11 @@ return Maps
 -- fat (1 = true to life) thickens it for display: the UI and pedestals use about 2, so a needle
 -- reads as a bold little trophy instead of a hairline.
 local Needles = require(script.Parent.Needles)
+local Shapes = require(script.Parent.ShapesA) -- shapes kept as data (made by dev/shapes.py)
+for id, ops in pairs(require(script.Parent.ShapesB)) do
+	Shapes[id] = ops
+end
+local PART = { B = nil, C = "Cylinder", S = "Ball" }
 
 local NeedleLook = {}
 
@@ -613,6 +618,19 @@ function NeedleLook.build(typeId, skinId, scale, fat)
 			part(Vector3.new(0.26, 0.26, 0.08), centre * CFrame.Angles(0, 0, a) * CFrame.new(0.13, 0, 0), accent(skin), nil, true, true)
 		end
 		part(Vector3.one * 0.34, centre, accent(skin), "Ball", true, true)
+	elseif Shapes[typeId] then -- a shape kept as data: each op a shaft, a tip or one part
+		for _, op in ipairs(Shapes[typeId]) do
+			if op[1] == "s" then
+				shaft(op[2], op[3], op[4], op[5], op[6])
+			elseif op[1] == "t" then
+				tip(op[2], op[3], op[4])
+			else -- { "p", size x/y/z, position x/y/z, turn x/y/z (degrees), colour, part, flags }
+				local c = op[11]
+				local colour = if type(c) == "table" then Color3.fromRGB(c[1], c[2], c[3]) elseif c == "a" then accent(skin) else colourAt(skin, tonumber(string.match(c, "^c(%d+)")), tonumber(string.match(c, "/(%d+)$")))
+				local cf = CFrame.new(op[5], op[6], op[7]) * CFrame.Angles(math.rad(op[8]), math.rad(op[9]), math.rad(op[10]))
+				part(Vector3.new(op[2], op[3], op[4]), cf, colour, PART[op[12]], op[13] % 2 == 1, op[13] >= 2) -- flags: 1 keep its place, 2 keep its size
+			end
+		end
 	else -- sewing
 		shaft(-0.9, 0.85, 0.08, 6)
 		tip(0.85, 0.08, 3)
@@ -644,7 +662,7 @@ return NeedleLook
 					<string name="Name">Needles</string>
 					<ProtectedString name="Source"><![CDATA[-- The needle collection. Everyone hunts the same plain needle (fair); when you find it, it turns
 -- out to be one TYPE (its shape) in one SKIN (its look), and it's yours to keep. Every type comes
--- in every skin, so the collection has types x skins entries (16 x 60 = 960, plus the 1 of 1).
+-- in every skin, so the collection has types x skins entries (36 x 60 = 2,160, plus the 1 of 1).
 --   value: what one is worth = type.value x the skin's rarity multiplier. A collection's value
 --   is the sum of the different needles in it (duplicates show as x2, x3 but add nothing).
 -- Skins are recipes, not pictures: colours, a material and a pattern, drawn by shared/NeedleLook.
@@ -691,8 +709,29 @@ Needles.types = {
 	{ id = "sailmaker", name = "Sailmaker's Needle", weight = 1, value = 36, grade = "classic" },
 	{ id = "firework", name = "Firework Needle", weight = 2.5, value = 45, grade = "fancy" },
 	{ id = "jackhammer", name = "Jackhammer Needle", weight = 2, value = 50, grade = "fancy" },
-	{ id = "swordfish", name = "Swordfish Needle", weight = 1.2, value = 65, grade = "exotic" },
-	{ id = "shootingstar", name = "Shooting Star Needle", weight = 0.5, value = 90, grade = "masterwork" },
+	{ id = "swordfish", name = "Swordfish Needle", weight = 0.7, value = 65, grade = "exotic" },
+	{ id = "shootingstar", name = "Shooting Star Needle", weight = 0.3, value = 90, grade = "masterwork" },
+	-- shapes kept as data (shared/ShapesA and ShapesB, made by dev/shapes.py)
+	{ id = "pencil", name = "Pencil Needle", weight = 1.2, value = 40, grade = "fancy" },
+	{ id = "candle", name = "Candle Needle", weight = 1.0, value = 45, grade = "fancy" },
+	{ id = "wand", name = "Wand Needle", weight = 0.9, value = 50, grade = "fancy" },
+	{ id = "paintbrush", name = "Paintbrush Needle", weight = 1.0, value = 45, grade = "fancy" },
+	{ id = "lollipop", name = "Lollipop Needle", weight = 1.1, value = 42, grade = "fancy" },
+	{ id = "fork", name = "Fork Needle", weight = 1.2, value = 40, grade = "fancy" },
+	{ id = "umbrella", name = "Umbrella Needle", weight = 0.9, value = 48, grade = "fancy" },
+	{ id = "carrot", name = "Carrot Needle", weight = 1.2, value = 42, grade = "fancy" },
+	{ id = "pitchfork", name = "Pitchfork Needle", weight = 1.0, value = 50, grade = "fancy" },
+	{ id = "icecream", name = "Ice Cream Needle", weight = 1.0, value = 52, grade = "fancy" },
+	{ id = "narwhal", name = "Narwhal Needle", weight = 0.6, value = 72, grade = "exotic" },
+	{ id = "hummingbird", name = "Hummingbird Needle", weight = 0.6, value = 68, grade = "exotic" },
+	{ id = "porcupine", name = "Porcupine Quill", weight = 0.7, value = 62, grade = "exotic" },
+	{ id = "icicle", name = "Icicle Needle", weight = 0.8, value = 60, grade = "exotic" },
+	{ id = "thornyrose", name = "Thorny Rose Needle", weight = 0.5, value = 70, grade = "exotic" },
+	{ id = "lightning", name = "Lightning Bolt Needle", weight = 0.2, value = 100, grade = "masterwork" },
+	{ id = "rocketship", name = "Rocket Ship Needle", weight = 0.25, value = 95, grade = "masterwork" },
+	{ id = "cometspear", name = "Comet Spear", weight = 0.3, value = 88, grade = "masterwork" },
+	{ id = "dragontooth", name = "Dragon's Tooth", weight = 0.15, value = 105, grade = "masterwork" },
+	{ id = "crystalshard", name = "Crystal Shard Needle", weight = 0.2, value = 92, grade = "masterwork" },
 }
 
 Needles.skins = {
@@ -1098,137 +1137,361 @@ return Rules
 ]]></ProtectedString>
 				</Properties>
 			</Item>
+			<Item class="ModuleScript" referent="RBX0000B">
+				<Properties>
+					<string name="Name">ShapesA</string>
+					<ProtectedString name="Source"><![CDATA[-- Fancy shapes: needle shapes kept as data. Made by dev/shapes.py: change them there and run it.
+-- Each op: shaft { "s", x0, x1, d, n, y }, tip { "t", x, d, steps }, or one part
+-- { "p", size x/y/z, position x/y/z, turn x/y/z (degrees), colour, part, flags } (shared/NeedleLook).
+return {
+	pencil = {
+		{ "p", 0.33, 0.22, 0.22, -0.965, 0, 0, 0, 0, 0, "c1/6", "B", 0 }, { "p", 0.33, 0.22, 0.22, -0.655, 0, 0, 0, 0, 0, "c2/6", "B", 0 },
+		{ "p", 0.33, 0.22, 0.22, -0.345, 0, 0, 0, 0, 0, "c3/6", "B", 0 }, { "p", 0.33, 0.22, 0.22, -0.035, 0, 0, 0, 0, 0, "c4/6", "B", 0 },
+		{ "p", 0.33, 0.22, 0.22, 0.275, 0, 0, 0, 0, 0, "c5/6", "B", 0 }, { "p", 0.33, 0.22, 0.22, 0.585, 0, 0, 0, 0, 0, "c6/6", "B", 0 },
+		{ "p", 0.33, 0.22, 0.22, -0.965, 0, 0, 45, 0, 0, "c1/6", "B", 0 }, { "p", 0.33, 0.22, 0.22, -0.655, 0, 0, 45, 0, 0, "c2/6", "B", 0 },
+		{ "p", 0.33, 0.22, 0.22, -0.345, 0, 0, 45, 0, 0, "c3/6", "B", 0 }, { "p", 0.33, 0.22, 0.22, -0.035, 0, 0, 45, 0, 0, "c4/6", "B", 0 },
+		{ "p", 0.33, 0.22, 0.22, 0.275, 0, 0, 45, 0, 0, "c5/6", "B", 0 }, { "p", 0.33, 0.22, 0.22, 0.585, 0, 0, 45, 0, 0, "c6/6", "B", 0 },
+		{ "p", 0.1, 0.2, 0.2, 0.81, 0, 0, 0, 0, 0, { 222, 184, 135 }, "C", 0 }, { "p", 0.1, 0.16, 0.16, 0.9, 0, 0, 0, 0, 0, { 222, 184, 135 }, "C", 0 },
+		{ "p", 0.1, 0.12, 0.12, 0.99, 0, 0, 0, 0, 0, { 222, 184, 135 }, "C", 0 }, { "p", 0.1, 0.08, 0.08, 1.08, 0, 0, 0, 0, 0, { 222, 184, 135 }, "C", 0 },
+		{ "p", 0.1, 0.04, 0.04, 1.17, 0, 0, 0, 0, 0, { 222, 184, 135 }, "C", 0 }, { "p", 0.07, 0.05, 0.05, 1.27, 0, 0, 0, 0, 0, { 40, 40, 48 }, "C", 0 },
+		{ "p", 0.07, 0.025, 0.025, 1.33, 0, 0, 0, 0, 0, { 40, 40, 48 }, "C", 0 }, { "p", 0.14, 0.25, 0.25, -1.2, 0, 0, 0, 0, 0, { 190, 192, 204 }, "C", 0 },
+		{ "p", 0.22, 0.23, 0.23, -1.38, 0, 0, 0, 0, 0, { 240, 140, 160 }, "C", 0 },
+	},
+	candle = {
+		{ "p", 0.352, 0.22, 0.22, -1.329, 0, 0, 0, 0, 0, "c1/6", "C", 0 }, { "p", 0.352, 0.22, 0.22, -0.988, 0, 0, 0, 0, 0, "c2/6", "C", 0 },
+		{ "p", 0.352, 0.22, 0.22, -0.646, 0, 0, 0, 0, 0, "c3/6", "C", 0 }, { "p", 0.352, 0.22, 0.22, -0.304, 0, 0, 0, 0, 0, "c4/6", "C", 0 },
+		{ "p", 0.352, 0.22, 0.22, 0.037, 0, 0, 0, 0, 0, "c5/6", "C", 0 }, { "p", 0.352, 0.22, 0.22, 0.379, 0, 0, 0, 0, 0, "c6/6", "C", 0 },
+		{ "p", 0.08, 0.27, 0.27, 0.52, 0, 0, 0, 0, 0, "c6/6", "C", 0 }, { "p", 0.2, 0.05, 0.05, 0.3, 0.11, 0.06, 0, 0, 0, "c6/6", "C", 0 },
+		{ "p", 0.2, 0.05, 0.05, -0.05, 0.11, 0.06, 0, 0, 0, "c6/6", "C", 0 }, { "p", 0.14, 0.03, 0.03, 0.68, 0, 0, 0, 0, 0, { 40, 40, 48 }, "C", 0 },
+		{ "p", 0.2, 0.2, 0.2, 0.84, 0, 0, 0, 0, 0, { 255, 140, 40 }, "S", 2 }, { "p", 0.15, 0.15, 0.15, 0.97, 0, 0, 0, 0, 0, { 255, 190, 60 }, "S", 2 },
+		{ "p", 0.1, 0.1, 0.1, 1.08, 0, 0, 0, 0, 0, { 255, 230, 120 }, "S", 2 }, { "p", 0.05, 0.05, 0.05, 1.17, 0, 0, 0, 0, 0, { 255, 250, 215 }, "S", 2 },
+	},
+	wand = {
+		{ "p", 0.304, 0.13, 0.13, -1.353, 0, 0, 0, 0, 0, "c1/8", "C", 0 }, { "p", 0.304, 0.122, 0.122, -1.059, 0, 0, 0, 0, 0, "c2/8", "C", 0 },
+		{ "p", 0.304, 0.114, 0.114, -0.766, 0, 0, 0, 0, 0, "c3/8", "C", 0 }, { "p", 0.304, 0.106, 0.106, -0.472, 0, 0, 0, 0, 0, "c4/8", "C", 0 },
+		{ "p", 0.304, 0.098, 0.098, -0.178, 0, 0, 0, 0, 0, "c5/8", "C", 0 }, { "p", 0.304, 0.09, 0.09, 0.116, 0, 0, 0, 0, 0, "c6/8", "C", 0 },
+		{ "p", 0.304, 0.082, 0.082, 0.409, 0, 0, 0, 0, 0, "c7/8", "C", 0 }, { "p", 0.304, 0.074, 0.074, 0.703, 0, 0, 0, 0, 0, "c8/8", "C", 0 },
+		{ "p", 0.12, 0.05, 0.02, -1.4, 0.07, 0.02, 0, 0, 35, "a", "B", 1 }, { "p", 0.12, 0.05, 0.02, -1.29, -0.07, 0.02, 0, 0, -35, "a", "B", 1 },
+		{ "p", 0.12, 0.05, 0.02, -1.18, 0.07, 0.02, 0, 0, 35, "a", "B", 1 }, { "p", 0.12, 0.05, 0.02, -1.07, -0.07, 0.02, 0, 0, -35, "a", "B", 1 },
+		{ "p", 0.12, 0.05, 0.02, -0.96, 0.07, 0.02, 0, 0, 35, "a", "B", 1 }, { "p", 0.12, 0.05, 0.02, -0.85, -0.07, 0.02, 0, 0, -35, "a", "B", 1 },
+		{ "p", 0.28, 0.09, 0.06, 1.08, 0.14, 0, 0, 0, 90, "a", "B", 3 }, { "p", 0.28, 0.09, 0.06, 0.947, 0.043, 0, 0, 0, 162, "a", "B", 3 },
+		{ "p", 0.28, 0.09, 0.06, 0.998, -0.113, 0, 0, 0, 234, "a", "B", 3 }, { "p", 0.28, 0.09, 0.06, 1.162, -0.113, 0, 0, 0, 306, "a", "B", 3 },
+		{ "p", 0.28, 0.09, 0.06, 1.213, 0.043, 0, 0, 0, 378, "a", "B", 3 }, { "p", 0.144, 0.144, 0.144, 1.08, 0, 0, 0, 0, 0, "a", "S", 3 },
+	},
+	paintbrush = {
+		{ "p", 0.31, 0.1, 0.1, -1.45, 0, 0, 0, 0, 0, "c1/6", "C", 0 }, { "p", 0.31, 0.11, 0.11, -1.15, 0, 0, 0, 0, 0, "c2/6", "C", 0 },
+		{ "p", 0.31, 0.12, 0.12, -0.85, 0, 0, 0, 0, 0, "c3/6", "C", 0 }, { "p", 0.31, 0.13, 0.13, -0.55, 0, 0, 0, 0, 0, "c4/6", "C", 0 },
+		{ "p", 0.31, 0.15, 0.15, -0.25, 0, 0, 0, 0, 0, "c5/6", "C", 0 }, { "p", 0.31, 0.16, 0.16, 0.05, 0, 0, 0, 0, 0, "c6/6", "C", 0 },
+		{ "p", 0.36, 0.18, 0.18, 0.38, 0, 0, 0, 0, 0, { 190, 192, 204 }, "C", 0 }, { "p", 0.1, 0.2, 0.2, 0.61, 0, 0, 0, 0, 0, { 214, 184, 134 }, "C", 0 },
+		{ "p", 0.1, 0.19, 0.19, 0.7, 0, 0, 0, 0, 0, { 214, 184, 134 }, "C", 0 }, { "p", 0.1, 0.17, 0.17, 0.79, 0, 0, 0, 0, 0, { 214, 184, 134 }, "C", 0 },
+		{ "p", 0.1, 0.14, 0.14, 0.88, 0, 0, 0, 0, 0, { 214, 184, 134 }, "C", 0 }, { "p", 0.1, 0.11, 0.11, 0.97, 0, 0, 0, 0, 0, { 214, 184, 134 }, "C", 0 },
+		{ "p", 0.1, 0.08, 0.08, 1.06, 0, 0, 0, 0, 0, "a", "C", 0 }, { "p", 0.1, 0.05, 0.05, 1.15, 0, 0, 0, 0, 0, "a", "C", 0 },
+		{ "p", 0.1, 0.03, 0.03, 1.24, 0, 0, 0, 0, 0, "a", "C", 0 },
+	},
+	lollipop = {
+		{ "s", -0.9, 1.4, 0.05, 6, 0 }, { "t", 1.4, 0.05, 2 },
+		{ "p", 0.1, 0.75, 0.75, -1.32, 0, 0, 0, 90, 0, "c1/2", "C", 3 }, { "p", 0.112, 0.58, 0.58, -1.32, 0, 0.012, 0, 90, 0, "c2/2", "C", 3 },
+		{ "p", 0.124, 0.42, 0.42, -1.32, 0, 0.024, 0, 90, 0, "c1/2", "C", 3 }, { "p", 0.136, 0.26, 0.26, -1.32, 0, 0.036, 0, 90, 0, "c2/2", "C", 3 },
+		{ "p", 0.148, 0.11, 0.11, -1.32, 0, 0.048, 0, 90, 0, "c1/2", "C", 3 },
+	},
+	fork = {
+		{ "p", 0.293, 0.15, 0.052, -1.458, 0, 0, 0, 0, 0, "c1/6", "B", 0 }, { "p", 0.293, 0.15, 0.052, -1.175, 0, 0, 0, 0, 0, "c2/6", "B", 0 },
+		{ "p", 0.293, 0.15, 0.052, -0.892, 0, 0, 0, 0, 0, "c3/6", "B", 0 }, { "p", 0.293, 0.15, 0.052, -0.608, 0, 0, 0, 0, 0, "c4/6", "B", 0 },
+		{ "p", 0.293, 0.15, 0.052, -0.325, 0, 0, 0, 0, 0, "c5/6", "B", 0 }, { "p", 0.293, 0.15, 0.052, -0.042, 0, 0, 0, 0, 0, "c6/6", "B", 0 },
+		{ "p", 0.25, 0.1, 0.05, 0.22, 0, 0, 0, 0, 0, "c6/6", "B", 0 }, { "p", 0.22, 0.4, 0.05, 0.43, 0, 0, 0, 0, 0, "a", "B", 0 },
+		{ "s", 0.5, 1.45, 0.05, 4, 0 }, { "t", 1.45, 0.05, 2 },
+		{ "p", 0.75, 0.05, 0.05, 0.9, -0.15, 0, 0, 0, 0, "a", "B", 0 }, { "p", 0.75, 0.05, 0.05, 0.9, 0.15, 0, 0, 0, 0, "a", "B", 0 },
+	},
+	umbrella = {
+		{ "p", 0.21, 0.2, 0.2, -0.5, 0, 0, 0, 0, 0, "c1/8", "C", 0 }, { "p", 0.21, 0.3, 0.3, -0.3, 0, 0, 0, 0, 0, "c2/8", "C", 0 },
+		{ "p", 0.21, 0.36, 0.36, -0.1, 0, 0, 0, 0, 0, "c3/8", "C", 0 }, { "p", 0.21, 0.36, 0.36, 0.1, 0, 0, 0, 0, 0, "c4/8", "C", 0 },
+		{ "p", 0.21, 0.32, 0.32, 0.3, 0, 0, 0, 0, 0, "c5/8", "C", 0 }, { "p", 0.21, 0.26, 0.26, 0.5, 0, 0, 0, 0, 0, "c6/8", "C", 0 },
+		{ "p", 0.21, 0.19, 0.19, 0.7, 0, 0, 0, 0, 0, "c7/8", "C", 0 }, { "p", 0.21, 0.12, 0.12, 0.9, 0, 0, 0, 0, 0, "c8/8", "C", 0 },
+		{ "p", 0.5, 0.04, 0.04, 1.25, 0, 0, 0, 0, 0, { 190, 192, 204 }, "C", 0 }, { "t", 1.5, 0.04, 2 },
+		{ "p", 0.6, 0.06, 0.06, -0.9, 0, 0, 0, 0, 0, { 40, 40, 48 }, "C", 0 }, { "p", 0.108, 0.07, 0.07, -1.242, -0.011, 0, 0, 0, -165, { 96, 64, 42 }, "B", 1 },
+		{ "p", 0.108, 0.07, 0.07, -1.316, -0.054, 0, 0, 0, -135, { 96, 64, 42 }, "B", 1 }, { "p", 0.108, 0.07, 0.07, -1.359, -0.128, 0, 0, 0, -105, { 96, 64, 42 }, "B", 1 },
+		{ "p", 0.108, 0.07, 0.07, -1.359, -0.212, 0, 0, 0, -75, { 96, 64, 42 }, "B", 1 }, { "p", 0.108, 0.07, 0.07, -1.316, -0.286, 0, 0, 0, -45, { 96, 64, 42 }, "B", 1 },
+		{ "p", 0.108, 0.07, 0.07, -1.243, -0.329, 0, 0, 0, -15, { 96, 64, 42 }, "B", 1 },
+	},
+	carrot = {
+		{ "p", 0.271, 0.4, 0.4, -0.869, 0, 0, 0, 0, 0, "c1/9", "C", 0 }, { "p", 0.271, 0.38, 0.38, -0.608, 0, 0, 0, 0, 0, "c2/9", "C", 0 },
+		{ "p", 0.271, 0.34, 0.34, -0.347, 0, 0, 0, 0, 0, "c3/9", "C", 0 }, { "p", 0.271, 0.3, 0.3, -0.086, 0, 0, 0, 0, 0, "c4/9", "C", 0 },
+		{ "p", 0.271, 0.25, 0.25, 0.175, 0, 0, 0, 0, 0, "c5/9", "C", 0 }, { "p", 0.271, 0.2, 0.2, 0.436, 0, 0, 0, 0, 0, "c6/9", "C", 0 },
+		{ "p", 0.271, 0.15, 0.15, 0.697, 0, 0, 0, 0, 0, "c7/9", "C", 0 }, { "p", 0.271, 0.1, 0.1, 0.958, 0, 0, 0, 0, 0, "c8/9", "C", 0 },
+		{ "p", 0.271, 0.06, 0.06, 1.219, 0, 0, 0, 0, 0, "c9/9", "C", 0 }, { "t", 1.35, 0.06, 2 },
+		{ "p", 0.55, 0.1, 0.03, -1.31, 0.15, 0, 0, 0, 150, { 86, 164, 74 }, "B", 3 }, { "p", 0.55, 0.1, 0.03, -1.34, 0.078, 0, 0, 0, 165, { 110, 190, 90 }, "B", 3 },
+		{ "p", 0.55, 0.1, 0.03, -1.35, 0, 0, 0, 0, 180, { 86, 164, 74 }, "B", 3 }, { "p", 0.55, 0.1, 0.03, -1.34, -0.078, 0, 0, 0, 195, { 110, 190, 90 }, "B", 3 },
+		{ "p", 0.55, 0.1, 0.03, -1.31, -0.15, 0, 0, 0, 210, { 86, 164, 74 }, "B", 3 },
+	},
+	pitchfork = {
+		{ "s", -1.65, 0.4, 0.09, 7, 0 }, { "p", 0.12, 0.6, 0.08, 0.45, 0, 0, 0, 0, 0, "a", "B", 1 },
+		{ "s", 0.45, 1.45, 0.05, 4, 0 }, { "t", 1.45, 0.05, 2 },
+		{ "p", 0.8, 0.05, 0.05, 0.88, -0.26, 0, 0, 0, 0, "a", "C", 1 }, { "p", 0.1, 0.03, 0.03, 1.32, -0.26, 0, 0, 0, 0, "a", "C", 1 },
+		{ "p", 0.8, 0.05, 0.05, 0.88, 0.26, 0, 0, 0, 0, "a", "C", 1 }, { "p", 0.1, 0.03, 0.03, 1.32, 0.26, 0, 0, 0, 0, "a", "C", 1 },
+	},
+	icecream = {
+		{ "p", 0.2, 0.6, 0.6, -0.205, 0, 0, 0, 0, 0, { 222, 172, 104 }, "C", 2 }, { "p", 0.2, 0.53, 0.53, -0.015, 0, 0, 0, 0, 0, { 196, 146, 82 }, "C", 2 },
+		{ "p", 0.2, 0.46, 0.46, 0.175, 0, 0, 0, 0, 0, { 222, 172, 104 }, "C", 2 }, { "p", 0.2, 0.39, 0.39, 0.365, 0, 0, 0, 0, 0, { 196, 146, 82 }, "C", 2 },
+		{ "p", 0.2, 0.32, 0.32, 0.555, 0, 0, 0, 0, 0, { 222, 172, 104 }, "C", 2 }, { "p", 0.2, 0.25, 0.25, 0.745, 0, 0, 0, 0, 0, { 196, 146, 82 }, "C", 2 },
+		{ "p", 0.2, 0.18, 0.18, 0.935, 0, 0, 0, 0, 0, { 222, 172, 104 }, "C", 2 }, { "p", 0.2, 0.11, 0.11, 1.125, 0, 0, 0, 0, 0, { 196, 146, 82 }, "C", 2 },
+		{ "p", 0.2, 0.05, 0.05, 1.315, 0, 0, 0, 0, 0, { 222, 172, 104 }, "C", 2 }, { "p", 0.7, 0.7, 0.7, -0.55, 0, 0, 0, 0, 0, "c1/3", "S", 3 },
+		{ "p", 0.6, 0.6, 0.6, -1, 0, 0, 0, 0, 0, "c2/3", "S", 3 }, { "p", 0.5, 0.5, 0.5, -1.38, 0, 0, 0, 0, 0, "c3/3", "S", 3 },
+		{ "p", 0.2, 0.2, 0.2, -1.68, 0, 0, 0, 0, 0, { 220, 30, 50 }, "S", 3 },
+	},
+}
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX0000C">
+				<Properties>
+					<string name="Name">ShapesB</string>
+					<ProtectedString name="Source"><![CDATA[-- Exotic and Masterwork shapes: needle shapes kept as data. Made by dev/shapes.py: change them there and run it.
+-- Each op: shaft { "s", x0, x1, d, n, y }, tip { "t", x, d, steps }, or one part
+-- { "p", size x/y/z, position x/y/z, turn x/y/z (degrees), colour, part, flags } (shared/NeedleLook).
+return {
+	narwhal = {
+		{ "p", 0.149, 0.1, 0.1, 0.319, 0, 0, 0, 0, 0, "c1/9", "C", 0 }, { "p", 0.149, 0.092, 0.092, 0.458, 0, 0, 0, 0, 0, "c2/9", "C", 0 },
+		{ "p", 0.149, 0.084, 0.084, 0.597, 0, 0, 0, 0, 0, "c3/9", "C", 0 }, { "p", 0.149, 0.076, 0.076, 0.736, 0, 0, 0, 0, 0, "c4/9", "C", 0 },
+		{ "p", 0.149, 0.068, 0.068, 0.875, 0, 0, 0, 0, 0, "c5/9", "C", 0 }, { "p", 0.149, 0.06, 0.06, 1.014, 0, 0, 0, 0, 0, "c6/9", "C", 0 },
+		{ "p", 0.149, 0.052, 0.052, 1.153, 0, 0, 0, 0, 0, "c7/9", "C", 0 }, { "p", 0.149, 0.044, 0.044, 1.292, 0, 0, 0, 0, 0, "c8/9", "C", 0 },
+		{ "p", 0.149, 0.036, 0.036, 1.431, 0, 0, 0, 0, 0, "c9/9", "C", 0 }, { "t", 1.5, 0.03, 2 },
+		{ "p", 0.253, 0.16, 0.136, -1.329, 0, 0, 0, 0, 0, "a", "C", 0 }, { "p", 0.253, 0.3, 0.255, -1.086, 0, 0, 0, 0, 0, "a", "C", 0 },
+		{ "p", 0.253, 0.42, 0.357, -0.843, 0, 0, 0, 0, 0, "a", "C", 0 }, { "p", 0.253, 0.48, 0.408, -0.6, 0, 0, 0, 0, 0, "a", "C", 0 },
+		{ "p", 0.253, 0.48, 0.408, -0.357, 0, 0, 0, 0, 0, "a", "C", 0 }, { "p", 0.253, 0.42, 0.357, -0.114, 0, 0, 0, 0, 0, "a", "C", 0 },
+		{ "p", 0.253, 0.3, 0.255, 0.129, 0, 0, 0, 0, 0, "a", "C", 0 }, { "p", 0.42, 0.15, 0.03, -1.58, -0.18, 0, 0, 0, -40, "a", "B", 3 },
+		{ "p", 0.42, 0.15, 0.03, -1.58, 0.18, 0, 0, 0, 40, "a", "B", 3 }, { "p", 0.26, 0.09, 0.03, -0.4, -0.26, 0.05, 0, 0, -30, "a", "B", 3 },
+		{ "p", 0.07, 0.07, 0.07, 0.05, 0.08, 0.2, 0, 0, 0, { 40, 40, 48 }, "S", 1 },
+	},
+	hummingbird = {
+		{ "s", 0.36, 1.5, 0.04, 5, 0 }, { "t", 1.5, 0.04, 2 },
+		{ "p", 0.28, 0.28, 0.28, 0.24, 0.02, 0, 0, 0, 0, "c1/3", "S", 0 }, { "p", 0.265, 0.18, 0.18, -0.772, 0, 0, 0, 0, 0, "c2/3", "C", 0 },
+		{ "p", 0.265, 0.26, 0.26, -0.518, 0, 0, 0, 0, 0, "c2/3", "C", 0 }, { "p", 0.265, 0.3, 0.3, -0.263, 0, 0, 0, 0, 0, "c3/3", "C", 0 },
+		{ "p", 0.265, 0.26, 0.26, -0.007, 0, 0, 0, 0, 0, "c3/3", "C", 0 }, { "p", 0.42, 0.08, 0.02, -1.08, -0.06, 0, 0, 0, -14, "a", "B", 3 },
+		{ "p", 0.42, 0.08, 0.02, -1.08, 0.06, 0, 0, 0, 14, "a", "B", 3 }, { "p", 0.62, 0.08, 0.02, -0.234, 0.394, 0.03, 0, 0, 62, "a", "B", 3 },
+		{ "p", 0.56, 0.08, 0.02, -0.382, 0.394, 0.03, 0, 0, 78, "a", "B", 3 }, { "p", 0.48, 0.08, 0.02, -0.517, 0.359, 0.03, 0, 0, 94, "a", "B", 3 },
+		{ "p", 0.06, 0.06, 0.06, 0.32, 0.07, 0.12, 0, 0, 0, { 40, 40, 48 }, "S", 1 },
+	},
+	porcupine = {
+		{ "s", -0.35, 1.5, 0.07, 7, 0 }, { "t", 1.5, 0.07, 3 },
+		{ "p", 0.62, 0.62, 0.62, -0.95, 0, 0, 0, 0, 0, { 120, 92, 70 }, "S", 3 }, { "p", 0.34, 0.03, 0.03, -0.628, 0.27, 0, 0, 0, 40, "c1/2", "C", 3 },
+		{ "p", 0.34, 0.03, 0.03, -0.727, 0.356, 0, 0, 0, 58, "a", "C", 3 }, { "p", 0.34, 0.03, 0.03, -0.848, 0.408, 0, 0, 0, 76, "c1/2", "C", 3 },
+		{ "p", 0.34, 0.03, 0.03, -0.979, 0.419, 0, 0, 0, 94, "a", "C", 3 }, { "p", 0.34, 0.03, 0.03, -1.107, 0.389, 0, 0, 0, 112, "c1/2", "C", 3 },
+		{ "p", 0.34, 0.03, 0.03, -1.22, 0.322, 0, 0, 0, 130, "a", "C", 3 }, { "p", 0.34, 0.03, 0.03, -1.306, 0.223, 0, 0, 0, 148, "c1/2", "C", 3 },
+		{ "p", 0.34, 0.03, 0.03, -1.358, 0.102, 0, 0, 0, 166, "a", "C", 3 }, { "p", 0.34, 0.03, 0.03, -1.369, -0.029, 0, 0, 0, 184, "c1/2", "C", 3 },
+		{ "p", 0.14, 0.14, 0.14, -0.62, -0.12, 0.05, 0, 0, 0, { 40, 40, 48 }, "S", 3 },
+	},
+	icicle = {
+		{ "p", 0.29, 0.2, 0.2, -1.31, 0, 0, 0, 0, 0, "c1/10", "B", 0 }, { "p", 0.29, 0.24, 0.24, -1.03, 0, 0, 0, 0, 0, "c2/10", "B", 0 },
+		{ "p", 0.29, 0.15, 0.15, -0.75, 0, 0, 0, 0, 0, "c3/10", "B", 0 }, { "p", 0.29, 0.2, 0.2, -0.47, 0, 0, 0, 0, 0, "c4/10", "B", 0 },
+		{ "p", 0.29, 0.12, 0.12, -0.19, 0, 0, 0, 0, 0, "c5/10", "B", 0 }, { "p", 0.29, 0.16, 0.16, 0.09, 0, 0, 0, 0, 0, "c6/10", "B", 0 },
+		{ "p", 0.29, 0.09, 0.09, 0.37, 0, 0, 0, 0, 0, "c7/10", "B", 0 }, { "p", 0.29, 0.11, 0.11, 0.65, 0, 0, 0, 0, 0, "c8/10", "B", 0 },
+		{ "p", 0.29, 0.06, 0.06, 0.93, 0, 0, 0, 0, 0, "c9/10", "B", 0 }, { "p", 0.29, 0.05, 0.05, 1.21, 0, 0, 0, 0, 0, "c10/10", "B", 0 },
+		{ "p", 0.29, 0.2, 0.2, -1.31, 0, 0, 45, 0, 0, "c1/10", "B", 0 }, { "p", 0.29, 0.24, 0.24, -1.03, 0, 0, 45, 0, 0, "c2/10", "B", 0 },
+		{ "p", 0.29, 0.15, 0.15, -0.75, 0, 0, 45, 0, 0, "c3/10", "B", 0 }, { "p", 0.29, 0.2, 0.2, -0.47, 0, 0, 45, 0, 0, "c4/10", "B", 0 },
+		{ "p", 0.29, 0.12, 0.12, -0.19, 0, 0, 45, 0, 0, "c5/10", "B", 0 }, { "p", 0.29, 0.16, 0.16, 0.09, 0, 0, 45, 0, 0, "c6/10", "B", 0 },
+		{ "p", 0.29, 0.09, 0.09, 0.37, 0, 0, 45, 0, 0, "c7/10", "B", 0 }, { "p", 0.29, 0.11, 0.11, 0.65, 0, 0, 45, 0, 0, "c8/10", "B", 0 },
+		{ "p", 0.29, 0.06, 0.06, 0.93, 0, 0, 45, 0, 0, "c9/10", "B", 0 }, { "p", 0.29, 0.05, 0.05, 1.21, 0, 0, 45, 0, 0, "c10/10", "B", 0 },
+		{ "t", 1.35, 0.05, 2 }, { "p", 0.3, 0.05, 0.05, -1.1, 0.12, 0, 0, 0, 120, "a", "B", 3 },
+		{ "p", 0.24, 0.05, 0.05, -0.6, -0.1, 0, 0, 0, -110, "a", "B", 3 }, { "p", 0.18, 0.05, 0.05, -0.1, 0.08, 0, 0, 0, 110, "a", "B", 3 },
+		{ "p", 0.12, 0.34, 0.3, -1.55, 0, 0, 0, 0, 0, "a", "B", 0 },
+	},
+	thornyrose = {
+		{ "s", -0.95, 1.5, 0.06, 8, 0 }, { "t", 1.5, 0.06, 2 },
+		{ "p", 0.1, 0.05, 0.02, -0.6, 0.06, 0, 0, 0, 40, "c1/2", "B", 3 }, { "p", 0.1, 0.05, 0.02, -0.1, -0.06, 0, 0, 0, -40, "c1/2", "B", 3 },
+		{ "p", 0.1, 0.05, 0.02, 0.4, 0.06, 0, 0, 0, 40, "c1/2", "B", 3 }, { "p", 0.1, 0.05, 0.02, 0.9, -0.06, 0, 0, 0, -40, "c1/2", "B", 3 },
+		{ "p", 0.32, 0.13, 0.02, -0.45, -0.14, 0, 0, 0, -35, { 86, 164, 74 }, "B", 3 }, { "p", 0.32, 0.13, 0.02, -0.45, 0.14, 0, 0, 0, 35, { 86, 164, 74 }, "B", 3 },
+		{ "p", 0.44, 0.44, 0.44, -1.12, 0, 0, 0, 0, 0, "a", "S", 3 }, { "p", 0.24, 0.24, 0.24, -0.93, 0.062, 0.04, 0, 0, 0, "a", "S", 3 },
+		{ "p", 0.24, 0.24, 0.24, -1.12, 0.2, 0.04, 0, 0, 0, "a", "S", 3 }, { "p", 0.24, 0.24, 0.24, -1.31, 0.062, 0.04, 0, 0, 0, "a", "S", 3 },
+		{ "p", 0.24, 0.24, 0.24, -1.238, -0.162, 0.04, 0, 0, 0, "a", "S", 3 }, { "p", 0.24, 0.24, 0.24, -1.002, -0.162, 0.04, 0, 0, 0, "a", "S", 3 },
+		{ "p", 0.16, 0.16, 0.16, -1.12, 0, 0.18, 0, 0, 0, "c2/2", "S", 3 },
+	},
+	lightning = {
+		{ "p", 1.213, 0.34, 0.12, -1.05, 0.225, 0, 0, 0, -33.024, "c1/5", "B", 3 }, { "p", 0.54, 0.3, 0.12, -0.65, 0.14, 0, 0, 0, 112.62, "c2/5", "B", 3 },
+		{ "p", 1.273, 0.26, 0.12, -0.2, 0.08, 0, 0, 0, -28.61, "c3/5", "B", 3 }, { "p", 0.499, 0.22, 0.12, 0.235, -0.01, 0, 0, 0, 118.706, "c4/5", "B", 3 },
+		{ "p", 1.485, 0.14, 0.12, 0.835, 0.04, 0, 0, 0, -12.614, "c5/5", "B", 3 }, { "t", 1.55, 0.08, 2 },
+	},
+	rocketship = {
+		{ "p", 0.35, 0.42, 0.42, -0.73, 0, 0, 0, 0, 0, "c1/5", "C", 0 }, { "p", 0.35, 0.42, 0.42, -0.39, 0, 0, 0, 0, 0, "c2/5", "C", 0 },
+		{ "p", 0.35, 0.42, 0.42, -0.05, 0, 0, 0, 0, 0, "c3/5", "C", 0 }, { "p", 0.35, 0.42, 0.42, 0.29, 0, 0, 0, 0, 0, "c4/5", "C", 0 },
+		{ "p", 0.35, 0.42, 0.42, 0.63, 0, 0, 0, 0, 0, "c5/5", "C", 0 }, { "p", 0.1, 0.35, 0.35, 0.91, 0, 0, 0, 0, 0, "a", "C", 0 },
+		{ "p", 0.1, 0.28, 0.28, 1, 0, 0, 0, 0, 0, "a", "C", 0 }, { "p", 0.1, 0.21, 0.21, 1.09, 0, 0, 0, 0, 0, "a", "C", 0 },
+		{ "p", 0.1, 0.14, 0.14, 1.18, 0, 0, 0, 0, 0, "a", "C", 0 }, { "p", 0.1, 0.07, 0.07, 1.27, 0, 0, 0, 0, 0, "a", "C", 0 },
+		{ "p", 0.04, 0.13, 0.13, -0.45, 0.21, 0, 0, 0, 90, { 170, 220, 255 }, "C", 0 }, { "p", 0.04, 0.13, 0.13, -0.05, 0.21, 0, 0, 0, 90, { 170, 220, 255 }, "C", 0 },
+		{ "p", 0.04, 0.13, 0.13, 0.35, 0.21, 0, 0, 0, 90, { 170, 220, 255 }, "C", 0 }, { "p", 0.48, 0.42, 0.03, -0.7, -0.5, 0, 0, 0, 35, "a", "B", 3 },
+		{ "p", 0.48, 0.42, 0.03, -0.7, 0.5, 0, 0, 0, -35, "a", "B", 3 }, { "p", 0.32, 0.32, 0.32, -1.05, 0, 0, 0, 0, 0, { 255, 140, 40 }, "S", 2 },
+		{ "p", 0.24, 0.24, 0.24, -1.3, 0, 0, 0, 0, 0, { 255, 190, 60 }, "S", 2 }, { "p", 0.16, 0.16, 0.16, -1.5, 0, 0, 0, 0, 0, { 255, 230, 120 }, "S", 2 },
+		{ "p", 0.09, 0.09, 0.09, -1.66, 0, 0, 0, 0, 0, { 255, 250, 215 }, "S", 2 },
+	},
+	cometspear = {
+		{ "p", 0.34, 0.34, 0.34, 1.12, 0, 0, 0, 0, 0, "a", "S", 2 }, { "t", 1.25, 0.12, 3 },
+		{ "p", 0.297, 0.03, 0.03, -1.457, 0, 0, 0, 0, 0, "c1/9", "C", 0 }, { "p", 0.297, 0.042, 0.042, -1.17, 0, 0, 0, 0, 0, "c2/9", "C", 0 },
+		{ "p", 0.297, 0.054, 0.054, -0.883, 0, 0, 0, 0, 0, "c3/9", "C", 0 }, { "p", 0.297, 0.066, 0.066, -0.597, 0, 0, 0, 0, 0, "c4/9", "C", 0 },
+		{ "p", 0.297, 0.078, 0.078, -0.31, 0, 0, 0, 0, 0, "c5/9", "C", 0 }, { "p", 0.297, 0.09, 0.09, -0.023, 0, 0, 0, 0, 0, "c6/9", "C", 0 },
+		{ "p", 0.297, 0.102, 0.102, 0.263, 0, 0, 0, 0, 0, "c7/9", "C", 0 }, { "p", 0.297, 0.114, 0.114, 0.55, 0, 0, 0, 0, 0, "c8/9", "C", 0 },
+		{ "p", 0.297, 0.126, 0.126, 0.837, 0, 0, 0, 0, 0, "c9/9", "C", 0 }, { "p", 0.44, 0.04, 0.04, 0.85, -0.06, 0, 0, 0, -5, "c9/9", "C", 1 },
+		{ "p", 0.44, 0.04, 0.04, 0.43, -0.095, 0, 0, 0, -5, "c8/9", "C", 1 }, { "p", 0.44, 0.04, 0.04, 0.01, -0.13, 0, 0, 0, -5, "c7/9", "C", 1 },
+		{ "p", 0.44, 0.04, 0.04, -0.41, -0.165, 0, 0, 0, -5, "c6/9", "C", 1 }, { "p", 0.44, 0.04, 0.04, -0.83, -0.2, 0, 0, 0, -5, "c5/9", "C", 1 },
+		{ "p", 0.44, 0.04, 0.04, -1.25, -0.235, 0, 0, 0, -5, "c4/9", "C", 1 }, { "p", 0.44, 0.04, 0.04, 0.85, 0.06, 0, 0, 0, 5, "c9/9", "C", 1 },
+		{ "p", 0.44, 0.04, 0.04, 0.43, 0.095, 0, 0, 0, 5, "c8/9", "C", 1 }, { "p", 0.44, 0.04, 0.04, 0.01, 0.13, 0, 0, 0, 5, "c7/9", "C", 1 },
+		{ "p", 0.44, 0.04, 0.04, -0.41, 0.165, 0, 0, 0, 5, "c6/9", "C", 1 }, { "p", 0.44, 0.04, 0.04, -0.83, 0.2, 0, 0, 0, 5, "c5/9", "C", 1 },
+		{ "p", 0.44, 0.04, 0.04, -1.25, 0.235, 0, 0, 0, 5, "c4/9", "C", 1 },
+	},
+	dragontooth = {
+		{ "p", 0.314, 0.3, 0.3, -0.832, 0.101, 0, 0, 0, 29.375, "c1/8", "C", 1 }, { "p", 0.314, 0.268, 0.268, -0.564, 0.219, 0, 0, 0, 18.125, "c2/8", "C", 1 },
+		{ "p", 0.314, 0.236, 0.236, -0.279, 0.282, 0, 0, 0, 6.875, "c3/8", "C", 1 }, { "p", 0.314, 0.204, 0.204, 0.014, 0.288, 0, 0, 0, -4.375, "c4/8", "C", 1 },
+		{ "p", 0.314, 0.172, 0.172, 0.302, 0.238, 0, 0, 0, -15.625, "c5/8", "C", 1 }, { "p", 0.314, 0.14, 0.14, 0.575, 0.132, 0, 0, 0, -26.875, "c6/8", "C", 1 },
+		{ "p", 0.314, 0.108, 0.108, 0.822, -0.026, 0, 0, 0, -38.125, "c7/8", "C", 1 }, { "p", 0.314, 0.076, 0.076, 1.033, -0.228, 0, 0, 0, -49.375, "c8/8", "C", 1 },
+		{ "p", 0.6, 0.22, 0.22, -1.231, -0.161, 0, 0, 0, 35, { 236, 228, 206 }, "C", 1 }, { "p", 0.24, 0.24, 0.24, -1.449, -0.424, 0, 0, 0, 0, { 236, 228, 206 }, "S", 1 },
+		{ "p", 0.24, 0.24, 0.24, -1.553, -0.276, 0, 0, 0, 0, { 236, 228, 206 }, "S", 1 },
+	},
+	crystalshard = {
+		{ "p", 0.29, 0.18, 0.18, -0.71, 0, 0, 0, 0, 0, "c1/8", "B", 0 }, { "p", 0.29, 0.24, 0.24, -0.43, 0, 0, 0, 0, 0, "c2/8", "B", 0 },
+		{ "p", 0.29, 0.26, 0.26, -0.15, 0, 0, 0, 0, 0, "c3/8", "B", 0 }, { "p", 0.29, 0.25, 0.25, 0.13, 0, 0, 0, 0, 0, "c4/8", "B", 0 },
+		{ "p", 0.29, 0.22, 0.22, 0.41, 0, 0, 0, 0, 0, "c5/8", "B", 0 }, { "p", 0.29, 0.17, 0.17, 0.69, 0, 0, 0, 0, 0, "c6/8", "B", 0 },
+		{ "p", 0.29, 0.11, 0.11, 0.97, 0, 0, 0, 0, 0, "c7/8", "B", 0 }, { "p", 0.29, 0.06, 0.06, 1.25, 0, 0, 0, 0, 0, "c8/8", "B", 0 },
+		{ "p", 0.29, 0.18, 0.18, -0.71, 0, 0, 45, 0, 0, "c1/8", "B", 0 }, { "p", 0.29, 0.24, 0.24, -0.43, 0, 0, 45, 0, 0, "c2/8", "B", 0 },
+		{ "p", 0.29, 0.26, 0.26, -0.15, 0, 0, 45, 0, 0, "c3/8", "B", 0 }, { "p", 0.29, 0.25, 0.25, 0.13, 0, 0, 45, 0, 0, "c4/8", "B", 0 },
+		{ "p", 0.29, 0.22, 0.22, 0.41, 0, 0, 45, 0, 0, "c5/8", "B", 0 }, { "p", 0.29, 0.17, 0.17, 0.69, 0, 0, 45, 0, 0, "c6/8", "B", 0 },
+		{ "p", 0.29, 0.11, 0.11, 0.97, 0, 0, 45, 0, 0, "c7/8", "B", 0 }, { "p", 0.29, 0.06, 0.06, 1.25, 0, 0, 45, 0, 0, "c8/8", "B", 0 },
+		{ "t", 1.4, 0.06, 2 }, { "p", 0.6, 0.16, 0.16, -1, 0.28, 0, 45, 0, 140, "a", "B", 3 },
+		{ "p", 0.55, 0.16, 0.16, -1.05, -0.26, 0, 45, 0, 220, "a", "B", 3 }, { "p", 0.5, 0.16, 0.16, -1.25, 0.05, 0, 45, 0, 180, "a", "B", 3 },
+		{ "p", 0.5, 0.3, 0.3, -1.3, 0, 0, 0, 0, 0, { 100, 92, 112 }, "S", 3 },
+	},
+}
+]]></ProtectedString>
+				</Properties>
+			</Item>
 		</Item>
-		<Item class="Folder" referent="RBX0000B">
+		<Item class="Folder" referent="RBX0000D">
 			<Properties>
 				<string name="Name">Remotes</string>
 			</Properties>
-			<Item class="RemoteEvent" referent="RBX0000C">
+			<Item class="RemoteEvent" referent="RBX0000E">
 				<Properties>
 					<string name="Name">RoundState</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0000D">
+			<Item class="RemoteEvent" referent="RBX0000F">
 				<Properties>
 					<string name="Name">Found</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0000E">
+			<Item class="RemoteEvent" referent="RBX00010">
 				<Properties>
 					<string name="Name">Notify</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0000F">
+			<Item class="RemoteEvent" referent="RBX00011">
 				<Properties>
 					<string name="Name">Profile</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00010">
+			<Item class="RemoteEvent" referent="RBX00012">
 				<Properties>
 					<string name="Name">SaveSettings</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00011">
+			<Item class="RemoteFunction" referent="RBX00013">
 				<Properties>
 					<string name="Name">Shop</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00012">
+			<Item class="RemoteFunction" referent="RBX00014">
 				<Properties>
 					<string name="Name">Hint</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00013">
+			<Item class="RemoteFunction" referent="RBX00015">
 				<Properties>
 					<string name="Name">Boards</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00014">
+			<Item class="RemoteFunction" referent="RBX00016">
 				<Properties>
 					<string name="Name">Collection</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00015">
+			<Item class="RemoteEvent" referent="RBX00017">
 				<Properties>
 					<string name="Name">ShowOff</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00016">
+			<Item class="RemoteFunction" referent="RBX00018">
 				<Properties>
 					<string name="Name">LobbyInfo</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00017">
+			<Item class="RemoteEvent" referent="RBX00019">
 				<Properties>
 					<string name="Name">Powerup</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00018">
+			<Item class="RemoteFunction" referent="RBX0001A">
 				<Properties>
 					<string name="Name">Box</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00019">
+			<Item class="RemoteEvent" referent="RBX0001B">
 				<Properties>
 					<string name="Name">BoxResult</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0001A">
+			<Item class="RemoteEvent" referent="RBX0001C">
 				<Properties>
 					<string name="Name">Poke</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0001B">
+			<Item class="RemoteEvent" referent="RBX0001D">
 				<Properties>
 					<string name="Name">Hit</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0001C">
+			<Item class="RemoteEvent" referent="RBX0001E">
 				<Properties>
 					<string name="Name">Inspect</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX0001D">
+			<Item class="RemoteFunction" referent="RBX0001F">
 				<Properties>
 					<string name="Name">Trade</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0001E">
+			<Item class="RemoteEvent" referent="RBX00020">
 				<Properties>
 					<string name="Name">TradeState</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0001F">
+			<Item class="RemoteEvent" referent="RBX00021">
 				<Properties>
 					<string name="Name">Throw</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00020">
+			<Item class="RemoteEvent" referent="RBX00022">
 				<Properties>
 					<string name="Name">Thrown</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00021">
+			<Item class="RemoteEvent" referent="RBX00023">
 				<Properties>
 					<string name="Name">Dash</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00022">
+			<Item class="RemoteEvent" referent="RBX00024">
 				<Properties>
 					<string name="Name">Announce</string>
 				</Properties>
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerScriptService" referent="RBX00023">
+	<Item class="ServerScriptService" referent="RBX00025">
 		<Properties>
 			<string name="Name">ServerScriptService</string>
 		</Properties>
-		<Item class="Folder" referent="RBX00024">
+		<Item class="Folder" referent="RBX00026">
 			<Properties>
 				<string name="Name">Server</string>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX00025">
+			<Item class="ModuleScript" referent="RBX00027">
 				<Properties>
 					<string name="Name">AntiCheat</string>
 					<ProtectedString name="Source"><![CDATA[-- Basic anti-exploit: every Config.AntiCheat.checkEvery seconds, each character's position is
@@ -1314,7 +1577,7 @@ return AntiCheat
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00026">
+			<Item class="ModuleScript" referent="RBX00028">
 				<Properties>
 					<string name="Name">BoxManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Box openings (Config.Boxes, shared/Boxes). Boxes open through Remotes.Box with coins ("open") or
@@ -1445,7 +1708,7 @@ return BoxManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00027">
+			<Item class="ModuleScript" referent="RBX00029">
 				<Properties>
 					<string name="Name">ChestSpawner</string>
 					<ProtectedString name="Source"><![CDATA[-- The chests each round (Config.Chests). They go in the maze's dead ends first (then any checked
@@ -1637,7 +1900,7 @@ return ChestSpawner
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00028">
+			<Item class="ModuleScript" referent="RBX0002A">
 				<Properties>
 					<string name="Name">CollectionManager</string>
 					<ProtectedString name="Source"><![CDATA[-- The needle collection, on the server. Needles come from boxes (server/BoxManager: coins, keys
@@ -1722,7 +1985,7 @@ return CollectionManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00029">
+			<Item class="ModuleScript" referent="RBX0002B">
 				<Properties>
 					<string name="Name">Combat</string>
 					<ProtectedString name="Source"><![CDATA[-- Needle combat. Everyone carries their showcase needle as a tool (the "Needle", rebuilt when the
@@ -1957,7 +2220,7 @@ return Combat
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002A">
+			<Item class="ModuleScript" referent="RBX0002C">
 				<Properties>
 					<string name="Name">CombatThrow</string>
 					<ProtectedString name="Source"><![CDATA[-- Throwing your needle (Config.Throw). The client sends where it's aiming (Remotes.Throw); the
@@ -2050,7 +2313,7 @@ return CombatThrow
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002B">
+			<Item class="ModuleScript" referent="RBX0002D">
 				<Properties>
 					<string name="Name">Dash</string>
 					<ProtectedString name="Source"><![CDATA[-- Dashing (Config.Dash; the dash itself is client/DashFx, since each player's device moves its
@@ -2083,7 +2346,7 @@ return Dash
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002C">
+			<Item class="ModuleScript" referent="RBX0002E">
 				<Properties>
 					<string name="Name">DataManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Player data: loaded on join, cached for the session, saved with UpdateAsync on an autosave
@@ -2349,7 +2612,7 @@ return DataManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002D">
+			<Item class="ModuleScript" referent="RBX0002F">
 				<Properties>
 					<string name="Name">HaystackModel</string>
 					<ProtectedString name="Source"><![CDATA[-- The owner's own haystack model (Config.Haystacks.model): loaded once with InsertService (it must
@@ -2403,7 +2666,7 @@ return HaystackModel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002E">
+			<Item class="ModuleScript" referent="RBX00030">
 				<Properties>
 					<string name="Name">LeaderboardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Global leaderboards (Config.Boards), each an OrderedDataStore: most chests, most tag-outs,
@@ -2575,7 +2838,7 @@ return LeaderboardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002F">
+			<Item class="ModuleScript" referent="RBX00031">
 				<Properties>
 					<string name="Name">LobbyBuilder</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby, built once at Config.LobbyCentre: a wooden plaza in a field, the animated title sign
@@ -2815,7 +3078,7 @@ return LobbyBuilder
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00030">
+			<Item class="ModuleScript" referent="RBX00032">
 				<Properties>
 					<string name="Name">LobbyDecor</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's dressing (LobbyBuilder calls build once): a lawn crossed by cobbled paths (spawn to
@@ -2924,7 +3187,7 @@ return LobbyDecor
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00031">
+			<Item class="ModuleScript" referent="RBX00033">
 				<Properties>
 					<string name="Name">LobbyShowOff</string>
 					<ProtectedString name="Source"><![CDATA[-- Show off (Remotes.ShowOff): hold your showcase needle (or your best) up over your head for a
@@ -2993,7 +3256,7 @@ return LobbyShowOff
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00032">
+			<Item class="ModuleScript" referent="RBX00034">
 				<Properties>
 					<string name="Name">LobbySocial</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's social side: showing off collections.
@@ -3273,7 +3536,7 @@ return LobbySocial
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Script" referent="RBX00033">
+			<Item class="Script" referent="RBX00035">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Starts A Needle in a Haystack on the server. Systems that react to a player's save loading are
@@ -3336,7 +3599,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00034">
+			<Item class="ModuleScript" referent="RBX00036">
 				<Properties>
 					<string name="Name">MapKit</string>
 					<ProtectedString name="Source"><![CDATA[-- The building kit for maps (server/MapsA, MapsB): ground, hay bales, haystacks, crates, fences,
@@ -3551,7 +3814,7 @@ return MapKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00035">
+			<Item class="ModuleScript" referent="RBX00037">
 				<Properties>
 					<string name="Name">MapsA</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Classic Haystack Field (a hedge maze), Barn Interior (a maze of stall walls) and
@@ -3680,7 +3943,7 @@ return MapsA
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00036">
+			<Item class="ModuleScript" referent="RBX00038">
 				<Properties>
 					<string name="Name">MapsB</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Night Forest (a thicket maze) and Abandoned Attic (a maze of stacked boxes under
@@ -3779,7 +4042,7 @@ return MapsB
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00037">
+			<Item class="ModuleScript" referent="RBX00039">
 				<Properties>
 					<string name="Name">MatchXp</string>
 					<ProtectedString name="Source"><![CDATA[-- The match's stats and its end (Config.MatchXp, Config.Rewards): counted while the round runs
@@ -3858,7 +4121,7 @@ return MatchXp
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00038">
+			<Item class="ModuleScript" referent="RBX0003A">
 				<Properties>
 					<string name="Name">MazeKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Mazes for the maps: a grid of cells carved into a maze (a random depth-first walk, so every cell
@@ -4059,7 +4322,7 @@ return MazeKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00039">
+			<Item class="ModuleScript" referent="RBX0003B">
 				<Properties>
 					<string name="Name">OneOfOne</string>
 					<ProtectedString name="Source"><![CDATA[-- The 1 of 1 (Config.OneOfOne). A chest rolls for it (roll); the first player to roll it claims it
@@ -4157,7 +4420,7 @@ return OneOfOne
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003A">
+			<Item class="ModuleScript" referent="RBX0003C">
 				<Properties>
 					<string name="Name">Powerups</string>
 					<ProtectedString name="Source"><![CDATA[-- Power-ups on the maps (Config.Powerups). When a round's search starts, glowing orbs float in
@@ -4326,7 +4589,7 @@ return Powerups
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003B">
+			<Item class="ModuleScript" referent="RBX0003D">
 				<Properties>
 					<string name="Name">QuestManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Daily quests: three a day, the same for everyone (shared/Quests.forDay). Progress is saved;
@@ -4394,7 +4657,7 @@ return QuestManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003C">
+			<Item class="ModuleScript" referent="RBX0003E">
 				<Properties>
 					<string name="Name">Requests</string>
 					<ProtectedString name="Source"><![CDATA[-- Small requests from players, checked on the server: a hint (Remotes.Hint) and saving their
@@ -4454,7 +4717,7 @@ return Requests
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003D">
+			<Item class="ModuleScript" referent="RBX0003F">
 				<Properties>
 					<string name="Name">RewardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Every coin and XP point is given here, on the server: chests, places, playing a round to the
@@ -4607,7 +4870,7 @@ return RewardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003E">
+			<Item class="ModuleScript" referent="RBX00040">
 				<Properties>
 					<string name="Name">RoundExtras</string>
 					<ProtectedString name="Source"><![CDATA[-- What runs alongside a round's search, started and stopped together by server/RoundManager:
@@ -4641,7 +4904,7 @@ return RoundExtras
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003F">
+			<Item class="ModuleScript" referent="RBX00041">
 				<Properties>
 					<string name="Name">RoundManager</string>
 					<ProtectedString name="Source"><![CDATA[-- The round loop, all on the server:
@@ -4914,7 +5177,7 @@ return RoundManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00040">
+			<Item class="ModuleScript" referent="RBX00042">
 				<Properties>
 					<string name="Name">ShopManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Cosmetics and purchases. With Haystack Coins: buy a cosmetic (Remotes.Shop "buy"), and wear
@@ -5165,7 +5428,7 @@ return ShopManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00041">
+			<Item class="ModuleScript" referent="RBX00043">
 				<Properties>
 					<string name="Name">TradeManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Trading needles between two players in the lobby (Config.Trading). Remotes.Trade asks; the
@@ -5431,24 +5694,24 @@ return TradeManager
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerStorage" referent="RBX00042">
+	<Item class="ServerStorage" referent="RBX00044">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX00043">
+	<Item class="StarterPlayer" referent="RBX00045">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX00044">
+		<Item class="StarterPlayerScripts" referent="RBX00046">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX00045">
+			<Item class="Folder" referent="RBX00047">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX00046">
+				<Item class="ModuleScript" referent="RBX00048">
 					<Properties>
 						<string name="Name">BoxReel</string>
 						<ProtectedString name="Source"><![CDATA[-- The box opening on your screen: a strip of needle cards slides along under a gold marker,
@@ -5551,7 +5814,7 @@ return BoxReel
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00047">
+				<Item class="ModuleScript" referent="RBX00049">
 					<Properties>
 						<string name="Name">BoxScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Boxes screen: each box with its price (coins; the dearer ones also Robux), a key button
@@ -5703,7 +5966,7 @@ return BoxScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00048">
+				<Item class="ModuleScript" referent="RBX0004A">
 					<Properties>
 						<string name="Name">CombatFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Needle combat on your screen (server/Combat decides every hit):
@@ -5872,7 +6135,7 @@ return CombatFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00049">
+				<Item class="ModuleScript" referent="RBX0004B">
 					<Properties>
 						<string name="Name">DashFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Dashing (Config.Dash): C, B on a controller, or the Dash button on a phone. Your character
@@ -5992,7 +6255,7 @@ return DashFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004A">
+				<Item class="ModuleScript" referent="RBX0004C">
 					<Properties>
 						<string name="Name">Effects</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback you can see and hear, on your own screen only: sounds, a burst of particles where a
@@ -6073,7 +6336,7 @@ return Effects
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004B">
+				<Item class="ModuleScript" referent="RBX0004D">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: your coins and level (with an XP bar) at the top left; the round's
@@ -6209,7 +6472,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004C">
+				<Item class="ModuleScript" referent="RBX0004E">
 					<Properties>
 						<string name="Name">LobbyUi</string>
 						<ProtectedString name="Source"><![CDATA[-- The lobby, on your screen:
@@ -6307,7 +6570,7 @@ return LobbyUi
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX0004D">
+				<Item class="LocalScript" referent="RBX0004F">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- Starts the client: the whole UI (UIController). The client only shows things and asks the
@@ -6317,7 +6580,7 @@ UIController.start()
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004E">
+				<Item class="ModuleScript" referent="RBX00050">
 					<Properties>
 						<string name="Name">NeedleView</string>
 						<ProtectedString name="Source"><![CDATA[-- A needle in 3D inside the UI: a ViewportFrame with the needle (shared/NeedleLook) lit and
@@ -6364,7 +6627,7 @@ return NeedleView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004F">
+				<Item class="ModuleScript" referent="RBX00051">
 					<Properties>
 						<string name="Name">PowerupFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Power-ups on your screen (server/Powerups decides; Remotes.Powerup says what you got):
@@ -6498,7 +6761,7 @@ return PowerupFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00050">
+				<Item class="ModuleScript" referent="RBX00052">
 					<Properties>
 						<string name="Name">Results</string>
 						<ProtectedString name="Source"><![CDATA[-- The round's big moments on screen: the 3, 2, 1; CHEST OPENED! when you open one (coins, or a
@@ -6648,7 +6911,7 @@ return Results
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00051">
+				<Item class="ModuleScript" referent="RBX00053">
 					<Properties>
 						<string name="Name">Screens</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop and Inventory screens. The Shop sells cosmetics for Haystack Coins (needle skins,
@@ -6839,7 +7102,7 @@ return Screens
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00052">
+				<Item class="ModuleScript" referent="RBX00054">
 					<Properties>
 						<string name="Name">Screens2</string>
 						<ProtectedString name="Source"><![CDATA[-- The Quests, Leaderboard and Settings screens.
@@ -6973,7 +7236,7 @@ return Screens2
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00053">
+				<Item class="ModuleScript" referent="RBX00055">
 					<Properties>
 						<string name="Name">Screens3</string>
 						<ProtectedString name="Source"><![CDATA[-- The Collection screen: every needle you've found, by type, shown in 3D with its rarity, value
@@ -7110,7 +7373,7 @@ return Screens3
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00054">
+				<Item class="ModuleScript" referent="RBX00056">
 					<Properties>
 						<string name="Name">ThrowFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Throwing your needle on your screen (server/CombatThrow decides): Q, or the Throw button while
@@ -7223,7 +7486,7 @@ return ThrowFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00055">
+				<Item class="ModuleScript" referent="RBX00057">
 					<Properties>
 						<string name="Name">TradeScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Trade screen (server/TradeManager decides everything). Not trading: everyone in the server
@@ -7418,7 +7681,7 @@ return TradeScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00056">
+				<Item class="ModuleScript" referent="RBX00058">
 					<Properties>
 						<string name="Name">UIController</string>
 						<ProtectedString name="Source"><![CDATA[-- Puts the whole UI together: one ScreenGui with the HUD, the round moments (Results), and the
@@ -7553,7 +7816,7 @@ return UIController
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00057">
+				<Item class="ModuleScript" referent="RBX00059">
 					<Properties>
 						<string name="Name">UiKit</string>
 						<ProtectedString name="Source"><![CDATA[-- The UI's look in one place: a clean, modern dark-glass style with warm gold accents, big
@@ -7691,7 +7954,7 @@ return UiKit
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX00058">
+	<Item class="Workspace" referent="RBX0005A">
 		<Properties>
 			<string name="Name">Workspace</string>
 		</Properties>

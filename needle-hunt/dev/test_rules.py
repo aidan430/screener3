@@ -205,8 +205,9 @@ class Collection(unittest.TestCase):
     def test_every_skin_and_type_can_be_drawn(self):
         look = (SHARED / "NeedleLook.luau").read_text()
         for t in TYPES:
+            data = (SHARED / "ShapesA.luau").read_text() + (SHARED / "ShapesB.luau").read_text()
             if t["id"] != "sewing":  # the default shape
-                self.assertIn(f'typeId == "{t["id"]}"', look, t["id"])
+                self.assertTrue(f'typeId == "{t["id"]}"' in look or f"\t{t['id']} = {{" in data, t["id"])
         for s in SKINS:
             self.assertIn(s["pattern"], ("solid", "two", "stripes", "gradient", "rainbow", "bands", "sheen", "split", "tri", "candy"), s["id"])
 
@@ -215,7 +216,10 @@ class Collection(unittest.TestCase):
         self.assertTrue(all(t.get("grade") in grades for t in TYPES))
         classic = [t for t in TYPES if t["grade"] == "classic"]
         novel = [t for t in TYPES if t["grade"] != "classic"]
-        self.assertEqual({t["id"] for t in novel}, {"swordfish", "firework", "jackhammer", "shootingstar"})
+        self.assertEqual(len(novel), 24, "24 novelty shapes")
+        shapes = (SHARED / "ShapesA.luau").read_text() + (SHARED / "ShapesB.luau").read_text() + (SHARED / "NeedleLook.luau").read_text()
+        for t in novel:
+            self.assertTrue(f"\t{t['id']} = {{" in shapes or f'typeId == "{t["id"]}"' in shapes, t["id"] + " is drawn")
         top_classic = max(t["value"] for t in classic)
         order = ["fancy", "exotic", "masterwork"]
         for t in novel:
@@ -223,7 +227,7 @@ class Collection(unittest.TestCase):
         for lo, hi in zip(order, order[1:]):  # each grade rarer and worth more than the one before
             self.assertGreater(min(t["weight"] for t in novel if t["grade"] == lo), max(t["weight"] for t in novel if t["grade"] == hi))
             self.assertLess(max(t["value"] for t in novel if t["grade"] == lo), min(t["value"] for t in novel if t["grade"] == hi))
-        self.assertLess(sum(t["weight"] for t in novel) / sum(t["weight"] for t in TYPES), 0.1, "novelty shapes stay special")
+        self.assertLess(sum(t["weight"] for t in novel) / sum(t["weight"] for t in TYPES), 0.2, "novelty shapes stay special")
 
     def test_needles_are_earned_never_bought(self):
         shop = (SERVER / "ShopManager.luau").read_text()

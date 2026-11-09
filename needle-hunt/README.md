@@ -288,20 +288,23 @@ model carries them itself.
 ## The needle collection
 
 Needles come out of boxes (opened with coins, keys from chests, or Robux) and trades. Each is
-one of **16 shapes** in one of **60 skins** (960 to collect), plus the one-and-only 1 of 1.
+one of **36 shapes** in one of **60 skins** (2,160 to collect), plus the one-and-only 1 of 1.
 
 **Shapes** are graded. Every box uses the same shape odds, shown on the Boxes screen:
 
 | Grade | Shapes | Chance | Base value |
 |---|---|---|---|
-| Classic | Sewing Needle, Dressmaker's Pin, Quilting, Darning, Embroidery, Tapestry, Safety Pin, Knitting, Crochet Hook, Bodkin, Curved Upholstery, Sailmaker's | 94.2% | 8 to 36 |
-| Fancy | Firework Needle, Jackhammer Needle | 4.2% | 45, 50 |
-| Exotic | Swordfish Needle | 1.1% | 65 |
-| Masterwork | Shooting Star Needle | 0.5% | 90 |
+| Classic | Sewing, Dressmaker's Pin, Quilting, Darning, Embroidery, Tapestry, Safety Pin, Knitting, Crochet Hook, Bodkin, Curved Upholstery, Sailmaker's | 83.1% | 8 to 36 |
+| Fancy | Firework, Jackhammer, Pencil, Candle, Wand, Paintbrush, Lollipop, Fork, Umbrella, Carrot, Pitchfork, Ice Cream | 12.5% | 40 to 52 |
+| Exotic | Swordfish, Narwhal, Hummingbird, Porcupine Quill, Icicle, Thorny Rose | 3.2% | 60 to 72 |
+| Masterwork | Shooting Star, Lightning Bolt, Rocket Ship, Comet Spear, Dragon's Tooth, Crystal Shard | 1.2% | 88 to 105 |
+
+The 20 newest shapes are kept as data (`shared/ShapesA.luau`, `ShapesB.luau`), made by
+`dev/shapes.py`: change a shape there and run `python3 needle-hunt/dev/shapes.py`, which also
+writes the previews' copy. Previews: `previews/needle_shapes.png`, `previews/needle_shapes_2.png`.
 
 A needle's worth is its shape's base value × its skin's rarity. The novelty shapes keep the needle
-rule (their point, a bill, nose cone, chisel or star, is at the tip), so they work in the hand and
-when thrown. `previews/needle_shapes.png` shows each in six skins.
+rule (their point is always at the tip), so they work in the hand and when thrown.
 
 **Skins** come in six rarities, each rarer and worth more: Common x1, Uncommon x2, Rare x5,
 Epic x12, Legendary x40, Mythic x150. Each box has its own exact odds (see Boxes).

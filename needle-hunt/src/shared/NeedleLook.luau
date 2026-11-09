@@ -8,6 +8,11 @@
 -- fat (1 = true to life) thickens it for display: the UI and pedestals use about 2, so a needle
 -- reads as a bold little trophy instead of a hairline.
 local Needles = require(script.Parent.Needles)
+local Shapes = require(script.Parent.ShapesA) -- shapes kept as data (made by dev/shapes.py)
+for id, ops in pairs(require(script.Parent.ShapesB)) do
+	Shapes[id] = ops
+end
+local PART = { B = nil, C = "Cylinder", S = "Ball" }
 
 local NeedleLook = {}
 
@@ -225,6 +230,19 @@ function NeedleLook.build(typeId, skinId, scale, fat)
 			part(Vector3.new(0.26, 0.26, 0.08), centre * CFrame.Angles(0, 0, a) * CFrame.new(0.13, 0, 0), accent(skin), nil, true, true)
 		end
 		part(Vector3.one * 0.34, centre, accent(skin), "Ball", true, true)
+	elseif Shapes[typeId] then -- a shape kept as data: each op a shaft, a tip or one part
+		for _, op in ipairs(Shapes[typeId]) do
+			if op[1] == "s" then
+				shaft(op[2], op[3], op[4], op[5], op[6])
+			elseif op[1] == "t" then
+				tip(op[2], op[3], op[4])
+			else -- { "p", size x/y/z, position x/y/z, turn x/y/z (degrees), colour, part, flags }
+				local c = op[11]
+				local colour = if type(c) == "table" then Color3.fromRGB(c[1], c[2], c[3]) elseif c == "a" then accent(skin) else colourAt(skin, tonumber(string.match(c, "^c(%d+)")), tonumber(string.match(c, "/(%d+)$")))
+				local cf = CFrame.new(op[5], op[6], op[7]) * CFrame.Angles(math.rad(op[8]), math.rad(op[9]), math.rad(op[10]))
+				part(Vector3.new(op[2], op[3], op[4]), cf, colour, PART[op[12]], op[13] % 2 == 1, op[13] >= 2) -- flags: 1 keep its place, 2 keep its size
+			end
+		end
 	else -- sewing
 		shaft(-0.9, 0.85, 0.08, 6)
 		tip(0.85, 0.08, 3)
