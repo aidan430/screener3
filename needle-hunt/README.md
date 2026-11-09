@@ -195,6 +195,23 @@ Set Max Players to about 12 (Game Settings > Places) to match the booths.
 
 **Barriers:** every outdoor map and the lobby have a hedge all the way round, with invisible walls above it up to 200 studs. Anyone who falls below a height of -40 respawns: in a round, back into the map.
 
+## Maze maps
+
+Every map is a maze (`server/MazeKit.luau`), so you search corridor by corridor instead of
+scanning one open field. A new layout is generated every round, so nobody can learn it:
+- **Building it:** a random walk carves a maze in which every cell can be reached. A few extra
+  walls are then knocked through so there are loops, and two or three clearings are opened up
+  for big props (haystacks, the farmhouse, the tractor, lanterns).
+- **Walls:** taller than a jump, styled to each map:
+  - hedges on the field
+  - wooden stall walls in the barn
+  - hay bales four high on the sunset farm
+  - dark thickets in the forest
+  - stacked boxes in the attic
+- **Hiding spots:** at the back of dead ends and along the foot of walls, as well as on and
+  beside the props.
+- **Spawns:** players start spread out through the maze.
+
 ## Haystacks
 
 Haystacks are smooth, lumpy terrain domes: a drum, a rounded peak and a few bulges, coloured

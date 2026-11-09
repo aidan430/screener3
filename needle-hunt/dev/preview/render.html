@@ -3,6 +3,7 @@
 <body>
 <script src="three.min.js"></script>
 <script src="port.js"></script>
+<script src="maze.js"></script>
 <script src="needles_data.js"></script>
 <script src="needlelook.js"></script>
 <script>
@@ -112,10 +113,10 @@ scene.add(sun);
 
 const geo = { Block: new THREE.BoxGeometry(1, 1, 1), Ball: new THREE.SphereGeometry(0.5, 24, 16), Cylinder: new THREE.CylinderGeometry(0.5, 0.5, 1, 24).rotateZ(-Math.PI / 2) };
 let lights = 0;
-const hideNames = VIEW === 'aerial' && (MAP === 'barn' || MAP === 'attic') ? ['Roof'] : [];
+const hideNames = (VIEW === 'aerial' || VIEW === 'top') && (MAP === 'barn' || MAP === 'attic') ? ['Roof', 'Loft'] : [];
 for (const p of ctx.parts) {
   if (hideNames.includes(p.name)) continue;
-  if (VIEW === 'aerial' && MAP === 'barn' && p.name === 'BarnWall' && NH.pos(p.m).z > 0) continue;
+  if ((VIEW === 'aerial' || VIEW === 'top') && MAP === 'barn' && p.name === 'BarnWall' && NH.pos(p.m).z > 0) continue;
   if (VIEW === 'aerial' && MAP === 'attic' && p.name === 'Wall' && NH.pos(p.m).z > 10) continue;
   if (p.shape === 'Dome') { // smooth terrain: a lumpy, soft dome with a straw texture
     const [radius, domeY] = p.size, pts = [];
@@ -205,13 +206,20 @@ const camera = new THREE.PerspectiveCamera(70, W / H, 0.1, 2000);
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const views = {
   lobby: { aerial: [V(52, 36, 70), V(0, 4, -8)], player: [V(0, 5.5, 34), V(0, 8, -20)], hall: [V(0, 6.0, -7), V(0, 6.0, -26)], hallwide: [V(18, 9, 4), V(-2, 6, -26)], arrive: [V(0, 5.5, 74), V(0, 7.5, 30)], booths: [V(-30, 9, 66), V(-66, 5, 0)], wide: [V(70, 60, 120), V(0, 0, 0)] },
-  field: { aerial: [V(55, 38, 66), V(0, 0, -8)], player: [V(0, 5, 40), V(0, 2, 0)] },
-  barn: { aerial: [V(0, 38, 70), V(0, 2, -4)], player: [V(10, 5, 14), V(-10, 4, -12)] },
-  sunset: { aerial: [V(-55, 36, 66), V(0, 0, -6)], player: [V(20, 5, 40), V(-10, 3, -10)] },
-  forest: { aerial: [V(55, 40, 64), V(0, 0, -6)], player: [V(0, 5, 22), V(-5, 3, -20)] },
-  attic: { aerial: [V(0, 26, 46), V(0, 2, 0)], player: [V(24, 5, 3), V(-20, 4, -1)] },
+  field: { top: [V(0, 150, 40), V(0, 0, 0)], aerial: [V(55, 38, 66), V(0, 0, -8)], player: [V(0, 5, 40), V(0, 2, 0)] },
+  barn: { top: [V(0, 90, 26), V(3, 0, 0)], aerial: [V(0, 38, 70), V(0, 2, -4)], player: [V(10, 5, 14), V(-10, 4, -12)] },
+  sunset: { top: [V(0, 150, 40), V(0, 0, 0)], aerial: [V(-55, 36, 66), V(0, 0, -6)], player: [V(20, 5, 40), V(-10, 3, -10)] },
+  forest: { top: [V(0, 140, 40), V(0, 0, 0)], aerial: [V(55, 40, 64), V(0, 0, -6)], player: [V(0, 5, 22), V(-5, 3, -20)] },
+  attic: { top: [V(0, 90, 30), V(0, 0, 0)], aerial: [V(0, 26, 46), V(0, 2, 0)], player: [V(24, 5, 3), V(-20, 4, -1)] },
 };
 let [eye, at] = views[MAP][VIEW] || views[MAP].aerial;
+if (VIEW === 'player' && MAP !== 'lobby' && ctx.spawns.length) { // standing at a spawn, looking down a corridor
+  const s = ctx.spawns[+(q.get('spawn') || 0)]; eye = s.clone().add(V(0, 1.6, 0));
+  let best = null, bestLen = -1; const ray = new THREE.Raycaster();
+  const solids = scene.children.filter(o => o.isMesh);
+  for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2, dir = V(Math.cos(a), 0, Math.sin(a)); ray.set(eye, dir); const hit = ray.intersectObjects(solids, false)[0]; const len = hit ? hit.distance : 200; if (len > bestLen) { bestLen = len; best = dir; } }
+  at = eye.clone().add(best.multiplyScalar(10)).add(V(0, -0.6, 0));
+}
 if (VIEW === 'needle') { // a close look at the hiding place, as a player kneeling 4 studs away
   const dir = new THREE.Vector3(Math.cos(needleTurn + 1.2), 0, Math.sin(needleTurn + 1.2));
   eye = np.clone().add(dir.multiplyScalar(4.2)).add(V(0, 2.4, 0)); at = np.clone();

@@ -2312,58 +2312,53 @@ return MapKit
 			<Item class="ModuleScript" referent="RBX00021">
 				<Properties>
 					<string name="Name">MapsA</string>
-					<ProtectedString name="Source"><![CDATA[-- Map builders: Classic Haystack Field, Barn Interior and Farm at Sunset (shared/Maps holds their
--- names, light and colours). Each builds round ctx.centre with MapKit, records its hiding spots
--- as it goes, adds at least six spawn points, then scatters the round's loose straw
--- (ctx.diff.clutter) and, on Hard, tumbling hay (ctx.diff.moving).
+					<ProtectedString name="Source"><![CDATA[-- Map builders: Classic Haystack Field (a hedge maze), Barn Interior (a maze of stall walls) and
+-- Farm at Sunset (a maze of stacked hay bales). shared/Maps holds their names, light and colours.
+-- Each builds round ctx.centre with MapKit and MazeKit: the maze records its own hiding spots
+-- (dead ends, wall feet); props go inside cells and clearings and add theirs. Then the round's
+-- loose straw (ctx.diff.clutter) and, on Hard, tumbling hay (ctx.diff.moving).
 local MapKit = require(script.Parent.MapKit)
+local MazeKit = require(script.Parent.MazeKit)
 
 local MapsA = {}
 
-local function ring(ctx, count, radius)
-	for i = 1, count do
-		local a = i / count * math.pi * 2
-		MapKit.spawnAt(ctx, math.cos(a) * radius, math.sin(a) * radius)
-	end
+-- A random spot inside a maze cell, clear of its walls.
+local function inCell(ctx, maze, margin)
+	local cell = maze.randomCell()
+	local room = maze.size / 2 - 1 - (margin or 1.5)
+	return cell.x + ctx.rng:NextNumber(-room, room), cell.z + ctx.rng:NextNumber(-room, room)
 end
+MapsA.inCell = inCell
 
 local function finish(ctx, half)
 	MapKit.clutter(ctx, ctx.diff.clutter, half, half)
 	MapKit.moving(ctx, ctx.diff.moving, half * 0.8, half * 0.8)
 end
 
--- Classic Haystack Field: open grass, round haystacks, bales in heaps, a cart and fences.
+-- Classic Haystack Field: a hedge maze over the field, haystacks in its clearings, bales and
+-- hay carts tucked into the corridors.
 function MapsA.field(ctx)
 	local r = ctx.rng
 	MapKit.ground(ctx, 140, 140, ctx.def.ground, "Grass")
 	MapKit.edges(ctx, 68, 68, ctx.def.ground)
-	for _, e in ipairs({ { -60, -60, 60, -60 }, { 60, -60, 60, 60 }, { 60, 60, -60, 60 }, { -60, 60, -60, -60 } }) do
-		MapKit.fence(ctx, e[1], e[2], e[3], e[4])
+	local maze = MazeKit.build(ctx, { cols = 8, rows = 8, size = 16, height = 10, style = "hedge", loops = 0.15, rooms = 3 })
+	for _, room in ipairs(maze.rooms) do
+		MapKit.haystack(ctx, room.x + r:NextNumber(-3, 3), room.z + r:NextNumber(-3, 3), r:NextNumber(5, 6.5), r:NextNumber(9, 12))
 	end
-	for _ = 1, 9 do
-		MapKit.haystack(ctx, r:NextNumber(-48, 48), r:NextNumber(-48, 48), r:NextNumber(5, 7.5), r:NextNumber(9, 13))
+	for _ = 1, 14 do
+		local x, z = inCell(ctx, maze, 2.5)
+		MapKit.bale(ctx, x, 0, z, r:NextNumber() * math.pi)
 	end
-	for _ = 1, 7 do -- heaps of bales: a row of three with one on top
-		local x, z, turn = r:NextNumber(-50, 50), r:NextNumber(-50, 50), r:NextNumber() * math.pi
-		local along = Vector3.new(math.cos(turn), 0, -math.sin(turn)) * 4.1
-		for i = -1, 1 do
-			MapKit.bale(ctx, x + along.X * i, 0, z + along.Z * i, turn)
-		end
-		MapKit.bale(ctx, x, 2.5, z, turn)
+	for _ = 1, 6 do
+		local x, z = inCell(ctx, maze, 3)
+		MapKit.crate(ctx, x, 0, z, 2.5)
 	end
-	for _ = 1, 4 do -- a hay cart: a crate on wheels
-		local x, z = r:NextNumber(-45, 45), r:NextNumber(-45, 45)
-		MapKit.crate(ctx, x, 0.8, z, 4)
-		for _, d in ipairs({ { -2, -2 }, { 2, -2 }, { -2, 2 }, { 2, 2 } }) do
-			MapKit.part(ctx, { Name = "Wheel", Shape = "Cylinder", Size = Vector3.new(0.4, 1.6, 1.6), CFrame = CFrame.new(MapKit.at(ctx, x + d[1], 0.8, z + d[2])), Color = { 90, 64, 40 }, Material = "Wood" })
-		end
-	end
-	ring(ctx, 8, 30)
-	finish(ctx, 55)
+	maze.spawns(8)
+	finish(ctx, 62)
 end
 
--- Barn Interior: a big wooden barn with stalls, stacked bales, crates, a hay loft up the stairs
--- along one side, and warm hanging lamps.
+-- Barn Interior: a red barn whose floor is a maze of wooden stall walls under the hay loft;
+-- stairs up the west wall to the loft, crates and bales in the stalls, warm lamps above.
 function MapsA.barn(ctx)
 	local r = ctx.rng
 	local W, D, H = 76, 52, 24
@@ -2373,78 +2368,70 @@ function MapsA.barn(ctx)
 		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, w[1], H / 2, w[2])), Vector3.new(w[3], H, w[4]), { 168, 70, 56 }, "WoodPlanks")
 	end
 	MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, 0, H + 0.5, 0)), Vector3.new(W, 1, D), dark, "WoodPlanks")
-	-- the loft along the back wall, at 10 studs, and stairs up to it
 	local loftZ = -D / 2 + 7
 	MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, 0, 10, loftZ)), Vector3.new(W - 2, 1, 14), wood, "WoodPlanks")
-	for i = 0, 11 do
-		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, -W / 2 + 4, 0.4 + i * 0.8, loftZ + 7 + 19 - i * 1.6)), Vector3.new(6, 0.8, 1.7), wood, "WoodPlanks")
+	for i = 0, 11 do -- stairs up the west wall, outside the maze
+		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, -W / 2 + 3.5, 0.4 + i * 0.8, loftZ + 7 + 19 - i * 1.6)), Vector3.new(5, 0.8, 1.7), wood, "WoodPlanks")
 	end
 	for _ = 1, 8 do
 		MapKit.bale(ctx, r:NextNumber(-W / 2 + 10, W / 2 - 6), 10.5, loftZ + r:NextNumber(-4, 4), r:NextNumber() * 3, true)
 	end
-	for i = 0, 4 do -- the loft's edge spots
+	for i = 0, 4 do
 		MapKit.spot(ctx, MapKit.at(ctx, -W / 2 + 12 + i * 12, 10.5, loftZ + 6), true)
 	end
-	-- stalls down the front: low walls with bales and crates between
-	for i = 0, 4 do
-		local x = -W / 2 + 12 + i * 13
-		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, x, 2, D / 2 - 7)), Vector3.new(0.6, 4, 12), dark, "WoodPlanks")
-		MapKit.bale(ctx, x + 4, 0, D / 2 - 5, math.pi / 2)
-		MapKit.bale(ctx, x + 4, 2.5, D / 2 - 5, math.pi / 2)
-		MapKit.crate(ctx, x + 7.5, 0, D / 2 - 10, 2.5)
-	end
+	local maze = MazeKit.build(ctx, { cols = 6, rows = 4, size = 11, height = 8, style = "planks", loops = 0.2, rooms = 1, ox = 3.5, oz = 0 })
 	for _ = 1, 10 do
-		MapKit.crate(ctx, r:NextNumber(-W / 2 + 8, W / 2 - 8), 0, r:NextNumber(-4, 10), r:NextNumber(2, 3.5))
+		local x, z = inCell(ctx, maze, 1.5)
+		MapKit.crate(ctx, x, 0, z, r:NextNumber(1.8, 2.6))
 	end
 	for _ = 1, 6 do
-		MapKit.bale(ctx, r:NextNumber(-W / 2 + 8, W / 2 - 8), 0, r:NextNumber(-6, 12), r:NextNumber() * 3)
+		local x, z = inCell(ctx, maze, 2.5)
+		MapKit.bale(ctx, x, 0, z, r:NextNumber() * 3)
 	end
 	for i = 0, 3 do
-		MapKit.lamp(ctx, MapKit.at(ctx, -W / 2 + 12 + i * 17, H - 3, 0), { 255, 196, 120 }, 30)
+		MapKit.lamp(ctx, MapKit.at(ctx, -W / 2 + 12 + i * 17, H - 3, 6), { 255, 196, 120 }, 30)
 	end
-	ring(ctx, 8, 12)
+	maze.spawns(8)
 	finish(ctx, 32)
 end
 
--- Farm at Sunset: a farmhouse, a tractor, a scarecrow over rows of crops, haystacks and bales
--- in long orange light.
+-- Farm at Sunset: a maze of hay-bale walls four high across the farm, with the farmhouse, the
+-- tractor and a little crop patch with its scarecrow in the clearings.
 function MapsA.sunset(ctx)
 	local r = ctx.rng
 	MapKit.ground(ctx, 140, 140, ctx.def.ground, "Grass")
 	MapKit.edges(ctx, 68, 68, ctx.def.ground)
-	local house = MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, -38, 8, -38)), Vector3.new(24, 16, 18), { 236, 226, 200 }, "WoodPlanks")
-	MapKit.part(ctx, { Name = "Roof", Size = Vector3.new(26, 2, 20), CFrame = CFrame.new(house.Position + Vector3.new(0, 9, 0)), Color = { 150, 60, 50 }, Material = "Slate" })
-	MapKit.spotsOn(ctx, house, 0, 4)
-	-- the tractor
-	local body = MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, 30, 2.5, -30)), Vector3.new(8, 3, 4.5), { 196, 52, 40 }, "SmoothPlastic")
-	MapKit.part(ctx, { Name = "Cab", Size = Vector3.new(3.5, 3.5, 4), CFrame = body.CFrame * CFrame.new(-2, 3, 0), Color = { 196, 52, 40 }, Material = "SmoothPlastic" })
-	for _, w in ipairs({ { -3, 2.2, 3.6 }, { 3, 1.4, 2.2 } }) do
-		for _, side in ipairs({ -1, 1 }) do
-			MapKit.part(ctx, { Name = "Wheel", Shape = "Cylinder", Size = Vector3.new(1, w[3] * 2, w[3] * 2), CFrame = CFrame.new(MapKit.at(ctx, 30 + w[1], w[3], -30 + side * 2.8)) * CFrame.Angles(0, math.pi / 2, 0), Color = { 40, 40, 44 }, Material = "Fabric" })
+	local maze = MazeKit.build(ctx, { cols = 8, rows = 8, size = 16, height = 10, style = "bales", loops = 0.15, rooms = 3 })
+	for i, room in ipairs(maze.rooms) do
+		if i == 1 then -- the farmhouse
+			local house = MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, room.x, 7, room.z)), Vector3.new(16, 14, 12), { 236, 226, 200 }, "WoodPlanks")
+			MapKit.part(ctx, { Name = "Roof", Size = Vector3.new(18, 2, 14), CFrame = CFrame.new(house.Position + Vector3.new(0, 8, 0)), Color = { 150, 60, 50 }, Material = "Slate" })
+			MapKit.spotsOn(ctx, house, 0, 4)
+		elseif i == 2 then -- the tractor
+			local body = MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, room.x, 2.5, room.z)), Vector3.new(8, 3, 4.5), { 196, 52, 40 }, "SmoothPlastic")
+			MapKit.part(ctx, { Name = "Cab", Size = Vector3.new(3.5, 3.5, 4), CFrame = body.CFrame * CFrame.new(-2, 3, 0), Color = { 196, 52, 40 }, Material = "SmoothPlastic" })
+			for _, w in ipairs({ { -3, 2.2 }, { 3, 1.4 } }) do
+				for _, side in ipairs({ -1, 1 }) do
+					MapKit.part(ctx, { Name = "Wheel", Shape = "Cylinder", Size = Vector3.new(1, w[2] * 2, w[2] * 2), CFrame = CFrame.new(MapKit.at(ctx, room.x + w[1], w[2], room.z + side * 2.8)) * CFrame.Angles(0, math.pi / 2, 0), Color = { 40, 40, 44 }, Material = "Fabric" })
+				end
+			end
+			MapKit.spotsOn(ctx, body, 1, 4)
+		else -- crops and the scarecrow
+			for row = 0, 4 do
+				local x = room.x - 10 + row * 5
+				MapKit.part(ctx, { Name = "Crops", Size = Vector3.new(2, 1.2, 22), CFrame = CFrame.new(MapKit.at(ctx, x, 0.6, room.z)), Color = { 90, 140, 60 }, Material = "Grass" })
+				MapKit.spot(ctx, MapKit.at(ctx, x + 2.5, 0, room.z + r:NextNumber(-9, 9)))
+			end
+			MapKit.part(ctx, { Name = "Pole", Size = Vector3.new(0.5, 9, 0.5), CFrame = CFrame.new(MapKit.at(ctx, room.x + 1, 4.5, room.z)), Color = { 120, 84, 50 }, Material = "Wood" })
+			MapKit.part(ctx, { Name = "Scarecrow", Shape = "Ball", Size = Vector3.one * 2.4, CFrame = CFrame.new(MapKit.at(ctx, room.x + 1, 9.5, room.z)), Color = { 214, 186, 140 }, Material = "Fabric" })
 		end
-	end
-	MapKit.spotsOn(ctx, body, 1, 4)
-	-- rows of crops and a scarecrow
-	for row = 0, 7 do
-		local x = -10 + row * 5
-		MapKit.part(ctx, { Name = "Crops", Size = Vector3.new(2, 1.2, 36), CFrame = CFrame.new(MapKit.at(ctx, x, 0.6, 30)), Color = { 90, 140, 60 }, Material = "Grass" })
-		for _ = 1, 2 do
-			MapKit.spot(ctx, MapKit.at(ctx, x + 2.5, 0, 30 + r:NextNumber(-16, 16)))
-		end
-	end
-	MapKit.part(ctx, { Name = "Pole", Size = Vector3.new(0.5, 9, 0.5), CFrame = CFrame.new(MapKit.at(ctx, 7, 4.5, 30)), Color = { 120, 84, 50 }, Material = "Wood" })
-	MapKit.part(ctx, { Name = "Scarecrow", Shape = "Ball", Size = Vector3.one * 2.4, CFrame = CFrame.new(MapKit.at(ctx, 7, 9.5, 30)), Color = { 214, 186, 140 }, Material = "Fabric" })
-	for _ = 1, 7 do
-		MapKit.haystack(ctx, r:NextNumber(-50, 50), r:NextNumber(-50, 10), r:NextNumber(5, 7), r:NextNumber(9, 12))
 	end
 	for _ = 1, 10 do
-		MapKit.bale(ctx, r:NextNumber(-50, 50), 0, r:NextNumber(-50, 50), r:NextNumber() * 3)
+		local x, z = inCell(ctx, maze, 2.5)
+		MapKit.bale(ctx, x, 0, z, r:NextNumber() * 3)
 	end
-	for _, e in ipairs({ { -60, 60, 60, 60 }, { 60, -60, 60, 60 } }) do
-		MapKit.fence(ctx, e[1], e[2], e[3], e[4])
-	end
-	ring(ctx, 8, 26)
-	finish(ctx, 55)
+	maze.spawns(8)
+	finish(ctx, 62)
 end
 
 return MapsA
@@ -2454,62 +2441,57 @@ return MapsA
 			<Item class="ModuleScript" referent="RBX00022">
 				<Properties>
 					<string name="Name">MapsB</string>
-					<ProtectedString name="Source"><![CDATA[-- Map builders: Night Forest and Abandoned Attic (see MapsA for how a builder works).
+					<ProtectedString name="Source"><![CDATA[-- Map builders: Night Forest (a thicket maze) and Abandoned Attic (a maze of stacked boxes under
+-- the roof). See MapsA for how a builder works.
 local MapKit = require(script.Parent.MapKit)
+local MazeKit = require(script.Parent.MazeKit)
+local MapsA = require(script.Parent.MapsA)
 
 local MapsB = {}
 
-local function ring(ctx, count, radius)
-	for i = 1, count do
-		local a = i / count * math.pi * 2
-		MapKit.spawnAt(ctx, math.cos(a) * radius, math.sin(a) * radius)
-	end
-end
-
--- Night Forest: tall trees in fog, fallen logs, mossy rocks, glowing mushrooms and a few lanterns
--- so the paths stay readable in the dark.
+-- Night Forest: paths through dark thickets in the fog; trees, logs, rocks and glowing mushrooms
+-- in the corridors, and lanterns in the clearings so you can find your way.
 function MapsB.forest(ctx)
 	local r = ctx.rng
 	MapKit.ground(ctx, 130, 130, ctx.def.ground, "Grass")
 	MapKit.edges(ctx, 63, 63, ctx.def.ground)
-	for _ = 1, 26 do
-		MapKit.tree(ctx, r:NextNumber(-55, 55), r:NextNumber(-55, 55), r:NextNumber(14, 22), { 40, 76, 50 })
-	end
-	for _ = 1, 9 do -- fallen logs: spots along their tops
-		local x, z, turn = r:NextNumber(-48, 48), r:NextNumber(-48, 48), r:NextNumber() * math.pi
-		local log = MapKit.part(ctx, { Name = "Log", Shape = "Cylinder", Size = Vector3.new(r:NextNumber(8, 14), 2.2, 2.2), CFrame = CFrame.new(MapKit.at(ctx, x, 1.1, z)) * CFrame.Angles(0, turn, 0), Color = { 92, 66, 44 }, Material = "Wood" })
-		for _ = 1, 2 do
-			MapKit.spot(ctx, (log.CFrame * CFrame.new(r:NextNumber(-3, 3), 1.1, 0)).Position)
-		end
+	local maze = MazeKit.build(ctx, { cols = 8, rows = 8, size = 15, height = 10, style = "thicket", loops = 0.18, rooms = 3 })
+	for _, room in ipairs(maze.rooms) do
+		MapKit.tree(ctx, room.x, room.z, r:NextNumber(16, 22), { 40, 76, 50 })
+		MapKit.part(ctx, { Name = "LanternPost", Size = Vector3.new(0.4, 6, 0.4), CFrame = CFrame.new(MapKit.at(ctx, room.x + 6, 3, room.z + 6)), Color = { 60, 50, 40 }, Material = "Wood" })
+		MapKit.lamp(ctx, MapKit.at(ctx, room.x + 6, 6.4, room.z + 6), { 255, 190, 110 }, 34)
+		local log = MapKit.part(ctx, { Name = "Log", Shape = "Cylinder", Size = Vector3.new(10, 2.2, 2.2), CFrame = CFrame.new(MapKit.at(ctx, room.x - 5, 1.1, room.z - 4)) * CFrame.Angles(0, r:NextNumber() * math.pi, 0), Color = { 92, 66, 44 }, Material = "Wood" })
+		MapKit.spot(ctx, (log.CFrame * CFrame.new(r:NextNumber(-3, 3), 1.1, 0)).Position)
 		MapKit.spotsOn(ctx, log, 0, 2)
 	end
-	for _ = 1, 12 do -- rocks
-		local rock = MapKit.part(ctx, { Name = "Rock", Shape = "Ball", Size = Vector3.one * r:NextNumber(2.5, 5), CFrame = CFrame.new(MapKit.at(ctx, r:NextNumber(-50, 50), 0.6, r:NextNumber(-50, 50))), Color = { 96, 104, 100 }, Material = "Slate" })
+	for _ = 1, 8 do
+		local x, z = MapsA.inCell(ctx, maze, 2.5)
+		MapKit.tree(ctx, x, z, r:NextNumber(14, 20), { 40, 76, 50 })
+	end
+	for _ = 1, 10 do
+		local x, z = MapsA.inCell(ctx, maze, 2.5)
+		local rock = MapKit.part(ctx, { Name = "Rock", Shape = "Ball", Size = Vector3.one * r:NextNumber(2.5, 4), CFrame = CFrame.new(MapKit.at(ctx, x, 0.6, z)), Color = { 96, 104, 100 }, Material = "Slate" })
 		MapKit.spotsOn(ctx, rock, 0, 2)
 	end
-	for _ = 1, 16 do -- glowing mushrooms
-		local x, z = r:NextNumber(-50, 50), r:NextNumber(-50, 50)
+	for _ = 1, 18 do -- glowing mushrooms light the way
+		local x, z = MapsA.inCell(ctx, maze, 1.5)
 		MapKit.part(ctx, { Name = "Stalk", Size = Vector3.new(0.3, 0.8, 0.3), CFrame = CFrame.new(MapKit.at(ctx, x, 0.4, z)), Color = { 230, 226, 210 }, Material = "SmoothPlastic", CanCollide = false })
 		MapKit.part(ctx, { Name = "Cap", Shape = "Ball", Size = Vector3.new(1.1, 1.1, 1.1), CFrame = CFrame.new(MapKit.at(ctx, x, 0.9, z)), Color = { 120, 200, 255 }, Material = "Neon", CanCollide = false })
 	end
-	for i = 1, 6 do
-		local a = i / 6 * math.pi * 2
-		MapKit.part(ctx, { Name = "LanternPost", Size = Vector3.new(0.4, 6, 0.4), CFrame = CFrame.new(MapKit.at(ctx, math.cos(a) * 30, 3, math.sin(a) * 30)), Color = { 60, 50, 40 }, Material = "Wood" })
-		MapKit.lamp(ctx, MapKit.at(ctx, math.cos(a) * 30, 6.4, math.sin(a) * 30), { 255, 190, 110 }, 34)
-	end
-	ring(ctx, 8, 20)
-	MapKit.clutter(ctx, ctx.diff.clutter, 52, 52)
-	MapKit.moving(ctx, ctx.diff.moving, 40, 40)
+	maze.spawns(8)
+	MapKit.clutter(ctx, ctx.diff.clutter, 58, 58)
+	MapKit.moving(ctx, ctx.diff.moving, 45, 45)
 end
 
--- Abandoned Attic: a long, low room under a sloping roof, full of boxes, trunks, an old table,
--- a wardrobe, sheet-covered furniture and dusty lamps, lit by a round window at each end.
+-- Abandoned Attic: a long room under a sloping roof, its floor a maze of stacked boxes; trunks,
+-- an old table, a wardrobe and furniture under dust sheets in the corners and the clearing, lit
+-- by a round window at each end and dusty lamps.
 function MapsB.attic(ctx)
 	local r = ctx.rng
-	local L, Wd, H = 72, 32, 20
+	local L, Wd, H = 80, 48, 20
 	local wood, dark = { 132, 98, 66 }, { 96, 70, 48 }
 	MapKit.ground(ctx, L + 6, Wd + 6, ctx.def.ground, "WoodPlanks")
-	-- the roof: two slopes, low (3 studs) at the side walls and meeting a flat ridge at 19.6
+	-- the roof: two slopes, low (3 studs) at the side walls, up to a flat ridge at about 19.6
 	local slope, tilt = 20, math.rad(55)
 	for _, side in ipairs({ -1, 1 }) do
 		local run, rise = slope / 2 * math.cos(tilt), slope / 2 * math.sin(tilt)
@@ -2519,42 +2501,36 @@ function MapsB.attic(ctx)
 	MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, 0, 3 + slope * math.sin(tilt) + 0.2, 0)), Vector3.new(L, 1, Wd - 4 * slope / 2 * math.cos(tilt) + 2), dark, "WoodPlanks")
 	for _, side in ipairs({ -1, 1 }) do -- end walls with a round window
 		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, side * L / 2, H / 2, 0)), Vector3.new(1, H, Wd), wood, "WoodPlanks")
-		local win = MapKit.part(ctx, { Name = "Window", Shape = "Cylinder", Size = Vector3.new(1.2, 6, 6), CFrame = CFrame.new(MapKit.at(ctx, side * (L / 2 - 0.2), 9, 0)), Color = { 255, 236, 190 }, Material = "Neon", CanCollide = false })
+		local win = MapKit.part(ctx, { Name = "Window", Shape = "Cylinder", Size = Vector3.new(1.2, 6, 6), CFrame = CFrame.new(MapKit.at(ctx, side * (L / 2 - 0.2), 12, 0)), Color = { 255, 236, 190 }, Material = "Neon", CanCollide = false })
 		local light = Instance.new("SpotLight")
-		light.Face, light.Range, light.Angle, light.Brightness = if side > 0 then Enum.NormalId.Left else Enum.NormalId.Right, 50, 70, 2
+		light.Face, light.Range, light.Angle, light.Brightness = if side > 0 then Enum.NormalId.Left else Enum.NormalId.Right, 60, 70, 2
 		light.Color = Color3.fromRGB(255, 226, 170)
 		light.Parent = win
 	end
-	for _ = 1, 22 do -- boxes, some stacked
-		local x, z = r:NextNumber(-L / 2 + 5, L / 2 - 5), r:NextNumber(-Wd / 2 + 4, Wd / 2 - 4)
-		local s = r:NextNumber(2, 3.4)
-		MapKit.crate(ctx, x, 0, z, s)
-		if r:NextNumber() < 0.4 then
-			MapKit.crate(ctx, x, s, z, s * 0.8)
+	local maze = MazeKit.build(ctx, { cols = 8, rows = 3, size = 9.5, height = 6, style = "crates", loops = 0.22, rooms = 1 })
+	for _, room in ipairs(maze.rooms) do -- the old table in the clearing
+		local top = MapKit.part(ctx, { Name = "Table", Size = Vector3.new(7, 0.5, 4), CFrame = CFrame.new(MapKit.at(ctx, room.x, 3, room.z)), Color = wood, Material = "Wood" })
+		for _, d in ipairs({ { -3.1, -1.6 }, { 3.1, -1.6 }, { -3.1, 1.6 }, { 3.1, 1.6 } }) do
+			MapKit.part(ctx, { Name = "Leg", Size = Vector3.new(0.5, 2.8, 0.5), CFrame = CFrame.new(MapKit.at(ctx, room.x + d[1], 1.4, room.z + d[2])), Color = dark, Material = "Wood" })
 		end
+		MapKit.spotsOn(ctx, top, 3, 2)
 	end
-	for _ = 1, 5 do -- trunks
-		local t = MapKit.part(ctx, { Name = "Trunk", Size = Vector3.new(4.5, 2.6, 2.6), CFrame = CFrame.new(MapKit.at(ctx, r:NextNumber(-30, 30), 1.3, r:NextNumber(-10, 10))) * CFrame.Angles(0, r:NextNumber() * math.pi, 0), Color = { 110, 70, 46 }, Material = "Wood" })
+	for _ = 1, 4 do
+		local x, z = MapsA.inCell(ctx, maze, 2)
+		local t = MapKit.part(ctx, { Name = "Trunk", Size = Vector3.new(3.4, 2.4, 2.2), CFrame = CFrame.new(MapKit.at(ctx, x, 1.2, z)) * CFrame.Angles(0, r:NextNumber() * math.pi, 0), Color = { 110, 70, 46 }, Material = "Wood" })
 		MapKit.spotsOn(ctx, t, 1, 1)
 	end
-	-- an old table, a wardrobe and furniture under dust sheets
-	local top = MapKit.part(ctx, { Name = "Table", Size = Vector3.new(8, 0.5, 4.5), CFrame = CFrame.new(MapKit.at(ctx, 6, 3, 2)), Color = wood, Material = "Wood" })
-	for _, d in ipairs({ { -3.6, -1.9 }, { 3.6, -1.9 }, { -3.6, 1.9 }, { 3.6, 1.9 } }) do
-		MapKit.part(ctx, { Name = "Leg", Size = Vector3.new(0.5, 2.8, 0.5), CFrame = CFrame.new(MapKit.at(ctx, 6 + d[1], 1.4, 2 + d[2])), Color = dark, Material = "Wood" })
-	end
-	MapKit.spotsOn(ctx, top, 3, 2)
-	local wardrobe = MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, -26, 4.5, -10)), Vector3.new(6, 9, 3), dark, "Wood")
-	MapKit.spotsOn(ctx, wardrobe, 0, 3)
-	for _ = 1, 4 do
-		local sheet = MapKit.part(ctx, { Name = "DustSheet", Size = Vector3.new(r:NextNumber(4, 6), r:NextNumber(3, 4.5), r:NextNumber(3, 4)), CFrame = CFrame.new(MapKit.at(ctx, r:NextNumber(-28, 28), 2, r:NextNumber(-9, 9))), Color = { 226, 222, 210 }, Material = "Fabric" })
+	for _ = 1, 3 do
+		local x, z = MapsA.inCell(ctx, maze, 2)
+		local sheet = MapKit.part(ctx, { Name = "DustSheet", Size = Vector3.new(r:NextNumber(3, 4), r:NextNumber(3, 4), r:NextNumber(3, 3.6)), CFrame = CFrame.new(MapKit.at(ctx, x, 1.8, z)), Color = { 226, 222, 210 }, Material = "Fabric" })
 		MapKit.spotsOn(ctx, sheet, 1, 2)
 	end
-	for i = 0, 2 do
-		MapKit.lamp(ctx, MapKit.at(ctx, -24 + i * 24, 11, 0), { 255, 214, 150 }, 26)
+	for i = 0, 3 do
+		MapKit.lamp(ctx, MapKit.at(ctx, -30 + i * 20, 15, 0), { 255, 214, 150 }, 30)
 	end
-	ring(ctx, 8, 8)
-	MapKit.clutter(ctx, ctx.diff.clutter, L / 2 - 4, Wd / 2 - 4)
-	MapKit.moving(ctx, ctx.diff.moving, L / 2 - 8, Wd / 2 - 6)
+	maze.spawns(8)
+	MapKit.clutter(ctx, ctx.diff.clutter, L / 2 - 4, Wd / 2 - 8)
+	MapKit.moving(ctx, ctx.diff.moving, L / 2 - 8, Wd / 2 - 10)
 end
 
 return MapsB
@@ -2562,6 +2538,206 @@ return MapsB
 				</Properties>
 			</Item>
 			<Item class="ModuleScript" referent="RBX00023">
+				<Properties>
+					<string name="Name">MazeKit</string>
+					<ProtectedString name="Source"><![CDATA[-- Mazes for the maps: a grid of cells carved into a maze (a random depth-first walk, so every cell
+-- can be reached), then a few extra walls knocked through so there are loops (no long dead
+-- walks back), and a few 2x2 clearings opened up for big props. Walls are built in a style:
+--   hedge   tall clipped hedges          bales   hay bales stacked four high
+--   planks  wooden stall partitions      crates  stacked wooden boxes
+--   thicket dark, uneven bushes (forest)
+-- Every wall is taller than a jump, so you search corridor by corridor. Dead ends get hiding
+-- spots at their back wall, and some corridors get spots along a wall's foot.
+-- MazeKit.build(ctx, opts) -> maze. opts: cols, rows, size (cell width), height, style,
+--   loops (share of extra walls removed), rooms (how many clearings), ox, oz (centre offset).
+-- maze.cellCentre(c, r), maze.cells, maze.deadEnds, maze.rooms ({ centre, cells }),
+-- maze.randomCell(), maze.spawns(n).
+local MapKit = require(script.Parent.MapKit)
+
+local MazeKit = {}
+local T = 2 -- wall thickness
+
+local function wall(ctx, style, a, b, height)
+	local mid, len = (a + b) / 2, (b - a).Magnitude + T
+	local along = CFrame.lookAt(mid, mid + (b - a))
+	if style == "hedge" or style == "thicket" then
+		local colour = if style == "hedge" then { 58, 112, 56 } else { 34, 64, 40 }
+		MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T, height, len), CFrame = along * CFrame.new(0, height / 2, 0), Color = colour, Material = "LeafyGrass" })
+		if style == "thicket" then -- an uneven top
+			for i = 0, math.floor(len / 5) do
+				local s = ctx.rng:NextNumber(2.5, 4)
+				MapKit.part(ctx, { Name = "Bush", Shape = "Ball", Size = Vector3.one * s, CFrame = along * CFrame.new(0, height - 0.3, -len / 2 + i * 5 + 2), Color = { 40, 76, 46 }, Material = "LeafyGrass", CanCollide = false })
+			end
+		end
+	elseif style == "bales" then
+		local straw = ctx.def.straw
+		for level = 0, 3 do
+			local shade = 0.86 + ((level % 2) * 0.1)
+			local skew = if level % 2 == 0 then 0 else 1 -- bricked, like a real stack
+			MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T + 0.5, 2.5, len - skew), CFrame = along * CFrame.new(0, 1.25 + level * 2.5, 0), Color = { straw[1] * shade, straw[2] * shade, straw[3] * shade }, Material = "Grass" })
+			for i = 0, math.floor(len / 4) - 1 do -- the twine round each bale
+				MapKit.part(ctx, { Name = "Twine", Size = Vector3.new(T + 0.56, 2.52, 0.15), CFrame = along * CFrame.new(0, 1.25 + level * 2.5, -len / 2 + skew / 2 + 2 + i * 4), Color = { 150, 100, 60 }, Material = "Fabric", CanCollide = false, CanQuery = false })
+			end
+		end
+	elseif style == "planks" then
+		MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T * 0.6, height, len), CFrame = along * CFrame.new(0, height / 2, 0), Color = { 128, 82, 50 }, Material = "WoodPlanks" })
+		for _, z in ipairs({ -len / 2 + 0.4, len / 2 - 0.4 }) do
+			MapKit.part(ctx, { Name = "Post", Size = Vector3.new(1.2, height + 0.6, 1.2), CFrame = along * CFrame.new(0, (height + 0.6) / 2, z), Color = { 96, 62, 38 }, Material = "Wood" })
+		end
+	else -- crates
+		local n = math.max(1, math.floor(len / 3))
+		local s = len / n
+		for i = 0, n - 1 do
+			for level = 0, math.floor(height / s) do
+				local turn = CFrame.Angles(0, ctx.rng:NextNumber(-0.08, 0.08), 0)
+				MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T + 0.6, s, s), CFrame = along * CFrame.new(0, s / 2 + level * s, -len / 2 + s / 2 + i * s) * turn, Color = { 150 - level * 8, 106 - level * 6, 64 }, Material = "WoodPlanks" })
+			end
+		end
+	end
+end
+
+function MazeKit.build(ctx, o)
+	local cols, rows, size, rng = o.cols, o.rows, o.size, ctx.rng
+	local east, south, seen = {}, {}, {}
+	for c = 1, cols do
+		east[c], south[c], seen[c] = {}, {}, {}
+		for r = 1, rows do
+			east[c][r], south[c][r] = c < cols, r < rows
+		end
+	end
+	-- carve: a random depth-first walk
+	local stack = { { rng:NextInteger(1, cols), rng:NextInteger(1, rows) } }
+	seen[stack[1][1]][stack[1][2]] = true
+	while #stack > 0 do
+		local c, r = stack[#stack][1], stack[#stack][2]
+		local options = {}
+		for _, d in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
+			local nc, nr = c + d[1], r + d[2]
+			if nc >= 1 and nc <= cols and nr >= 1 and nr <= rows and not seen[nc][nr] then
+				table.insert(options, { nc, nr, d })
+			end
+		end
+		if #options == 0 then
+			table.remove(stack)
+		else
+			local nc, nr, d = table.unpack(options[rng:NextInteger(1, #options)])
+			if d[1] == 1 then east[c][r] = false elseif d[1] == -1 then east[nc][nr] = false elseif d[2] == 1 then south[c][r] = false else south[nc][nr] = false end
+			seen[nc][nr] = true
+			table.insert(stack, { nc, nr })
+		end
+	end
+	-- loops: knock out a share of the remaining inner walls
+	for c = 1, cols do
+		for r = 1, rows do
+			if east[c][r] and rng:NextNumber() < (o.loops or 0.15) then east[c][r] = false end
+			if south[c][r] and rng:NextNumber() < (o.loops or 0.15) then south[c][r] = false end
+		end
+	end
+	-- clearings: 2x2 blocks with no walls inside, spread out
+	local rooms, taken = {}, {}
+	for _ = 1, (o.rooms or 0) * 6 do
+		if #rooms >= (o.rooms or 0) then break end
+		local c, r = rng:NextInteger(1, cols - 1), rng:NextInteger(1, rows - 1)
+		local free = true
+		for _, q in ipairs(taken) do
+			if math.abs(q[1] - c) < 3 and math.abs(q[2] - r) < 3 then free = false end
+		end
+		if free then
+			east[c][r], east[c][r + 1], south[c][r], south[c + 1][r] = false, false, false, false
+			table.insert(taken, { c, r })
+			table.insert(rooms, { c = c, r = r })
+		end
+	end
+	local maze = { cols = cols, rows = rows, size = size, cells = {}, deadEnds = {}, rooms = {} }
+	local x0, z0 = (o.ox or 0) - cols * size / 2, (o.oz or 0) - rows * size / 2
+	function maze.cellCentre(c, r)
+		return x0 + (c - 0.5) * size, z0 + (r - 0.5) * size
+	end
+	local function at(x, z)
+		return MapKit.at(ctx, x, 0, z)
+	end
+	-- the walls: inner ones, then the outside
+	for c = 1, cols do
+		for r = 1, rows do
+			local x, z = x0 + c * size, z0 + r * size
+			if east[c][r] then wall(ctx, o.style, at(x, z - size), at(x, z), o.height) end
+			if south[c][r] then wall(ctx, o.style, at(x - size, z), at(x, z), o.height) end
+		end
+	end
+	local x1, z1 = x0 + cols * size, z0 + rows * size
+	for _, w in ipairs({ { x0, z0, x1, z0 }, { x0, z1, x1, z1 }, { x0, z0, x0, z1 }, { x1, z0, x1, z1 } }) do
+		wall(ctx, o.style, at(w[1], w[2]), at(w[3], w[4]), o.height)
+	end
+	-- cells, dead ends and their hiding spots
+	local inRoom = {}
+	for _, room in ipairs(rooms) do
+		local cx, cz = maze.cellCentre(room.c, room.r)
+		table.insert(maze.rooms, { x = cx + size / 2, z = cz + size / 2 })
+		for _, d in ipairs({ { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } }) do
+			inRoom[(room.c + d[1]) .. "," .. (room.r + d[2])] = true
+		end
+	end
+	for c = 1, cols do
+		for r = 1, rows do
+			local x, z = maze.cellCentre(c, r)
+			local walls = {
+				{ c == cols or east[c][r], 1, 0 }, { c == 1 or east[c - 1][r], -1, 0 },
+				{ r == rows or south[c][r], 0, 1 }, { r == 1 or south[c][r - 1], 0, -1 },
+			}
+			local closed = {}
+			for _, w in ipairs(walls) do
+				if w[1] then table.insert(closed, w) end
+			end
+			if not inRoom[c .. "," .. r] then
+				table.insert(maze.cells, { c = c, r = r, x = x, z = z })
+			end
+			local reach = size / 2 - T / 2 - 0.9
+			if #closed == 3 then -- a dead end: two spots against its back wall
+				table.insert(maze.deadEnds, { x = x, z = z })
+				for _, w in ipairs(closed) do
+					if rng:NextNumber() < 0.7 then
+						local side = rng:NextNumber(-0.3, 0.3) * size
+						MapKit.spot(ctx, at(x + w[2] * reach + w[3] * side, z + w[3] * reach + w[2] * side))
+					end
+				end
+			elseif #closed > 0 and rng:NextNumber() < 0.35 then -- a corridor: one along a wall's foot
+				local w = closed[rng:NextInteger(1, #closed)]
+				local side = rng:NextNumber(-0.35, 0.35) * size
+				MapKit.spot(ctx, at(x + w[2] * reach + w[3] * side, z + w[3] * reach + w[2] * side))
+			end
+		end
+	end
+	function maze.randomCell()
+		return maze.cells[rng:NextInteger(1, #maze.cells)]
+	end
+	-- n spawn cells spread through the maze (every other cell of a shuffled list, far apart)
+	function maze.spawns(n)
+		local list = table.clone(maze.cells)
+		for i = #list, 2, -1 do
+			local j = rng:NextInteger(1, i)
+			list[i], list[j] = list[j], list[i]
+		end
+		local picked = {}
+		for _, cell in ipairs(list) do
+			local ok = true
+			for _, p in ipairs(picked) do
+				if math.abs(p.c - cell.c) + math.abs(p.r - cell.r) < 3 then ok = false end
+			end
+			if ok then table.insert(picked, cell) end
+			if #picked >= n then break end
+		end
+		for _, cell in ipairs(picked) do
+			MapKit.spawnAt(ctx, cell.x, cell.z)
+		end
+	end
+	return maze
+end
+
+return MazeKit
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00024">
 				<Properties>
 					<string name="Name">NeedleModel</string>
 					<ProtectedString name="Source"><![CDATA[-- The owner's own needle model (Config.NeedleModel.asset): a model imported into Studio with its
@@ -2634,7 +2810,7 @@ return NeedleModel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00024">
+			<Item class="ModuleScript" referent="RBX00025">
 				<Properties>
 					<string name="Name">NeedleSpawner</string>
 					<ProtectedString name="Source"><![CDATA[-- Hides the needle(s) each round and decides, on the server, who found them.
@@ -2847,7 +3023,7 @@ return NeedleSpawner
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00025">
+			<Item class="ModuleScript" referent="RBX00026">
 				<Properties>
 					<string name="Name">QuestManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Daily quests: three a day, the same for everyone (shared/Quests.forDay). Progress is saved;
@@ -2915,7 +3091,7 @@ return QuestManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00026">
+			<Item class="ModuleScript" referent="RBX00027">
 				<Properties>
 					<string name="Name">Requests</string>
 					<ProtectedString name="Source"><![CDATA[-- Small requests from players, checked on the server: a hint (Remotes.Hint) and saving their
@@ -2975,7 +3151,7 @@ return Requests
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00027">
+			<Item class="ModuleScript" referent="RBX00028">
 				<Properties>
 					<string name="Name">RewardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Every coin and XP point is given here, on the server: needle finds (faster = more), places,
@@ -3096,7 +3272,7 @@ return RewardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00028">
+			<Item class="ModuleScript" referent="RBX00029">
 				<Properties>
 					<string name="Name">RoundManager</string>
 					<ProtectedString name="Source"><![CDATA[-- The round loop, all on the server:
@@ -3383,7 +3559,7 @@ return RoundManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00029">
+			<Item class="ModuleScript" referent="RBX0002A">
 				<Properties>
 					<string name="Name">ShopManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Cosmetics and purchases. With Haystack Coins: buy a cosmetic (Remotes.Shop "buy"), and wear
@@ -3582,24 +3758,24 @@ return ShopManager
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerStorage" referent="RBX0002A">
+	<Item class="ServerStorage" referent="RBX0002B">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX0002B">
+	<Item class="StarterPlayer" referent="RBX0002C">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX0002C">
+		<Item class="StarterPlayerScripts" referent="RBX0002D">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX0002D">
+			<Item class="Folder" referent="RBX0002E">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX0002E">
+				<Item class="ModuleScript" referent="RBX0002F">
 					<Properties>
 						<string name="Name">Effects</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback you can see and hear, on your own screen only: sounds, a burst of particles where a
@@ -3680,7 +3856,7 @@ return Effects
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002F">
+				<Item class="ModuleScript" referent="RBX00030">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: your coins and level (with an XP bar) at the top left; the round's
@@ -3816,7 +3992,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00030">
+				<Item class="ModuleScript" referent="RBX00031">
 					<Properties>
 						<string name="Name">LobbyUi</string>
 						<ProtectedString name="Source"><![CDATA[-- The lobby and finding, on your screen:
@@ -3938,7 +4114,7 @@ return LobbyUi
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX00031">
+				<Item class="LocalScript" referent="RBX00032">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- Starts the client: the whole UI (UIController). The client only shows things and asks the
@@ -3948,7 +4124,7 @@ UIController.start()
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00032">
+				<Item class="ModuleScript" referent="RBX00033">
 					<Properties>
 						<string name="Name">NeedleView</string>
 						<ProtectedString name="Source"><![CDATA[-- A needle in 3D inside the UI: a ViewportFrame with the needle (shared/NeedleLook) lit and
@@ -3995,7 +4171,7 @@ return NeedleView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00033">
+				<Item class="ModuleScript" referent="RBX00034">
 					<Properties>
 						<string name="Name">Results</string>
 						<ProtectedString name="Source"><![CDATA[-- The round's big moments on screen: the 3, 2, 1 before searching; NEEDLE FOUND! when you find it
@@ -4126,7 +4302,7 @@ return Results
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00034">
+				<Item class="ModuleScript" referent="RBX00035">
 					<Properties>
 						<string name="Name">Screens</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop and Inventory screens. The Shop sells cosmetics for Haystack Coins (needle skins,
@@ -4296,7 +4472,7 @@ return Screens
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00035">
+				<Item class="ModuleScript" referent="RBX00036">
 					<Properties>
 						<string name="Name">Screens2</string>
 						<ProtectedString name="Source"><![CDATA[-- The Quests, Leaderboard and Settings screens.
@@ -4430,7 +4606,7 @@ return Screens2
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00036">
+				<Item class="ModuleScript" referent="RBX00037">
 					<Properties>
 						<string name="Name">Screens3</string>
 						<ProtectedString name="Source"><![CDATA[-- The Collection screen: every needle you've found, by type, shown in 3D with its rarity, value
@@ -4563,7 +4739,7 @@ return Screens3
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00037">
+				<Item class="ModuleScript" referent="RBX00038">
 					<Properties>
 						<string name="Name">UIController</string>
 						<ProtectedString name="Source"><![CDATA[-- Puts the whole UI together: one ScreenGui with the HUD, the round moments (Results), and the
@@ -4681,7 +4857,7 @@ return UIController
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00038">
+				<Item class="ModuleScript" referent="RBX00039">
 					<Properties>
 						<string name="Name">UiKit</string>
 						<ProtectedString name="Source"><![CDATA[-- The UI's look in one place: a clean, modern dark-glass style with warm gold accents, big
@@ -4818,7 +4994,7 @@ return UiKit
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX00039">
+	<Item class="Workspace" referent="RBX0003A">
 		<Properties>
 			<string name="Name">Workspace</string>
 		</Properties>

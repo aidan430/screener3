@@ -124,8 +124,14 @@ class Content(unittest.TestCase):
         self.assertGreaterEqual(len(MAP_ROWS), 5)
         for m in MAP_ROWS:
             self.assertIn(f"function Maps{'A' if m['builder'] in ('field', 'barn', 'sunset') else 'B'}.{m['builder']}(ctx)", builders, m["id"])
-        for count in re.findall(r"ring\(ctx, (\d+),", builders):
+        counts = re.findall(r"maze\.spawns\((\d+)\)", builders)
+        self.assertEqual(len(counts), len(MAP_ROWS), "every map is a maze with its own spawns")
+        for count in counts:
             self.assertGreaterEqual(int(count), 6, "at least six spawn points per map")
+        maze = (SERVER / "MazeKit.luau").read_text()
+        heights = [float(h) for h in re.findall(r"height = ([\d.]+), style", builders)]
+        self.assertTrue(all(h >= 6 for h in heights), "maze walls block the view")
+        self.assertIn("deadEnds", maze)
 
     def test_cosmetics(self):
         ids = [i["id"] for i in ITEMS]
