@@ -2,6 +2,7 @@
 
     python3 dev/build.py            # check, then write NeedleInTheHaystack.rbxlx
     python3 dev/build.py --check    # check only
+    python3 dev/build.py --project needle-hunt   # build another game in this repo (its own folder)
 
 Follows Rojo's conventions for the parts this project uses: a folder becomes a Folder,
 X.server.luau a Script, X.client.luau a LocalScript, X.luau a ModuleScript and X.json a
@@ -21,6 +22,10 @@ import luau  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 PROJECT = ROOT / "default.project.json"
 OUT = ROOT / "NeedleInTheHaystack.rbxlx"
+if "--project" in sys.argv:  # another game in this repo: python3 dev/build.py --project needle-hunt
+    ROOT = (Path.cwd() / sys.argv[sys.argv.index("--project") + 1]).resolve()
+    PROJECT = ROOT / "default.project.json"
+    OUT = ROOT / (json.loads(PROJECT.read_text())["name"] + ".rbxlx")
 SCRIPT_KINDS = {".server.luau": "Script", ".client.luau": "LocalScript", ".luau": "ModuleScript"}
 # Names Rojo turns into their own class rather than a Folder when no $className is given
 SPECIAL = {"StarterPlayerScripts", "StarterCharacterScripts"}
@@ -205,7 +210,8 @@ def material_textures(tree: Node) -> None:
     """Scripts can't set a MaterialVariant's images, so for each texture in Config that holds
     an uploaded image ID (e.g. Config.HayTexture), the place file gets a MaterialVariant that
     replaces that material everywhere."""
-    config = (ROOT / "src" / "shared" / "Config.luau").read_text()
+    path = ROOT / "src" / "shared" / "Config.luau"
+    config = path.read_text() if path.exists() else ""
     def text(name: str) -> str:
         m = re.search(rf'^Config\.{name} = "([^"]*)"', config, re.M)
         return m.group(1) if m else ""

@@ -1,0 +1,95 @@
+-- Puts the whole UI together: one ScreenGui with the HUD, the round moments (Results), and the
+-- Shop, Inventory, Quests, Leaderboard and Settings windows. It keeps your latest profile (sent
+-- by the server on every change), opens one window at a time from the menu or a lobby stall's
+-- prompt, and applies your settings (sound, effects, music).
+local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local UiKit = require(script.Parent.UiKit)
+local Effects = require(script.Parent.Effects)
+local Hud = require(script.Parent.Hud)
+local Results = require(script.Parent.Results)
+local Screens = require(script.Parent.Screens)
+local Screens2 = require(script.Parent.Screens2)
+
+local player = Players.LocalPlayer
+local UIController = {}
+local profile = {}
+local windows, openers = {}, {}
+local music = nil
+
+local function getProfile()
+	return profile
+end
+
+function UIController.open(name)
+	for n, w in pairs(windows) do
+		if n ~= name then
+			w.Visible = false
+		end
+	end
+	local w = windows[name]
+	if not w then
+		return
+	end
+	w.Visible = not w.Visible
+	if w.Visible then
+		UiKit.pop(w, 0.9)
+		if openers[name] then
+			task.spawn(openers[name])
+		end
+		Screens.refresh()
+		Screens2.refresh()
+	end
+end
+
+local function applySettings()
+	local s = profile.settings or {}
+	Effects.settings.sfx = s.sfx ~= false
+	Effects.settings.reduceEffects = s.reduceEffects == true
+	Effects.settings.music = s.music ~= false
+	if music then
+		music.Volume = if Effects.settings.music then 0.3 else 0
+	end
+end
+
+function UIController.start()
+	local gui = UiKit.make("ScreenGui", { Name = "NeedleUi", ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
+	Effects.mount(gui)
+	Hud.mount(gui, UIController.open)
+	Results.mount(gui, getProfile)
+	for name, w in pairs(Screens.mount(gui, getProfile)) do
+		windows[name] = w
+	end
+	local more, extra = Screens2.mount(gui, getProfile)
+	for name, w in pairs(more) do
+		windows[name] = w
+	end
+	for name, fn in pairs(extra) do
+		openers[name] = fn
+	end
+	Remotes.Profile.OnClientEvent:Connect(function(p)
+		profile = p
+		applySettings()
+		Screens.refresh()
+		Screens2.refresh()
+	end)
+	-- the lobby's Shop stall and Wardrobe open their screens
+	ProximityPromptService.PromptTriggered:Connect(function(prompt)
+		local opens = prompt:GetAttribute("Opens")
+		if opens and windows[opens] and not windows[opens].Visible then
+			UIController.open(opens)
+		end
+	end)
+	if Config.Music ~= "" then
+		music = UiKit.make("Sound", { SoundId = Config.Music, Looped = true, Volume = 0.3, Parent = SoundService })
+		music:Play()
+	end
+	applySettings()
+end
+
+return UIController

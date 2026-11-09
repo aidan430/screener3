@@ -59,6 +59,9 @@ src/client/  -> StarterPlayerScripts.Client: Main (LocalScript), Ui, Cursor, Jui
 dev/         -> build.py, luau.py (checker), test_rules.py, pacing.py (keep in step with Economy)
 assets/hay/  the hay texture and the simplified hay model, for the owner to import in Studio
 NeedleInTheHaystack.rbxlx   the built place file (committed)
+needle-hunt/ a separate, round-based game ("A Needle in a Haystack"): its own Rojo project,
+             place file and tests; see needle-hunt/README.md. Build it with
+             `python3 dev/build.py --project needle-hunt`.
 ```
 
 ## Build and check

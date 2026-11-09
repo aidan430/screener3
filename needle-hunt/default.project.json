@@ -1,0 +1,56 @@
+{
+  "name": "NeedleHunt",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Shared": {
+        "$path": "src/shared"
+      },
+      "Remotes": {
+        "$className": "Folder",
+        "RoundState": {
+          "$className": "RemoteEvent"
+        },
+        "Found": {
+          "$className": "RemoteEvent"
+        },
+        "Notify": {
+          "$className": "RemoteEvent"
+        },
+        "Profile": {
+          "$className": "RemoteEvent"
+        },
+        "SaveSettings": {
+          "$className": "RemoteEvent"
+        },
+        "Shop": {
+          "$className": "RemoteFunction"
+        },
+        "Hint": {
+          "$className": "RemoteFunction"
+        },
+        "Boards": {
+          "$className": "RemoteFunction"
+        }
+      }
+    },
+    "ServerScriptService": {
+      "Server": {
+        "$path": "src/server"
+      }
+    },
+    "ServerStorage": {
+      "$className": "ServerStorage"
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "Client": {
+          "$path": "src/client"
+        }
+      }
+    },
+    "Workspace": {
+      "$className": "Workspace"
+    }
+  }
+}

@@ -1,0 +1,3389 @@
+<roblox version="4">
+	<Item class="ReplicatedStorage" referent="RBX00000">
+		<Properties>
+			<string name="Name">ReplicatedStorage</string>
+		</Properties>
+		<Item class="Folder" referent="RBX00001">
+			<Properties>
+				<string name="Name">Shared</string>
+			</Properties>
+			<Item class="ModuleScript" referent="RBX00002">
+				<Properties>
+					<string name="Name">Config</string>
+					<ProtectedString name="Source"><![CDATA[-- Every tunable number for A Needle in a Haystack. Change values here; nothing else needs to
+-- change. Maps, cosmetics and quests have their own data modules (Maps, Cosmetics, Quests).
+local Config = {}
+
+-- Rounds (server/RoundManager). Seconds.
+Config.Round = {
+	lobbyCountdown = 15, -- in the lobby before a round
+	loadCountdown = 3, -- 3, 2, 1 in the map before searching starts
+	duration = 180, -- a normal round
+	speedDuration = 90, -- a Speed Round
+	grace = 10, -- after the first find, everyone else still has this long (2nd, 3rd...)
+	results = 10, -- the results screen
+	minPlayers = 1, -- 1 = a solo player still gets (practice) rounds
+	winsNeedPlayers = 2, -- a win counts towards wins and weekly winners only with this many playing
+}
+
+-- Difficulty: picked each round by weight. needle = its length in studs; glint = a soft sparkle
+-- (easy only); clutter = loose straws scattered round the map; decoys = fake needles; dim =
+-- how much darker the light is; moving = tumbling hay bundles that drift about.
+Config.Difficulty = {
+	{ id = "easy", name = "Easy", weight = 30, needle = 2.2, glint = true, clutter = 160, decoys = 0, dim = 0, moving = 0, coins = 1.0 },
+	{ id = "normal", name = "Normal", weight = 50, needle = 1.5, glint = false, clutter = 260, decoys = 0, dim = 0, moving = 0, coins = 1.25 },
+	{ id = "hard", name = "Hard", weight = 20, needle = 1.1, glint = false, clutter = 380, decoys = 4, dim = 0.35, moving = 4, coins = 1.6 },
+}
+
+-- Modifiers: a round gets one with this chance (then by weight). The Golden Needle is a
+-- separate, rarer roll on top.
+Config.ModifierChance = 0.35
+Config.Modifiers = {
+	{ id = "double", name = "Double Needle", text = "Two needles: both must be found", weight = 30 },
+	{ id = "speed", name = "Speed Round", text = "Half the time!", weight = 30 },
+	{ id = "lowlight", name = "Low Light", text = "The lights are low", weight = 20 },
+	{ id = "camo", name = "Camouflage", text = "The needle matches the hay", weight = 20 },
+}
+Config.GoldenChance = 0.05 -- a Golden Needle: triple rewards
+
+-- Finding (server/NeedleSpawner). Studs and seconds.
+Config.Find = {
+	reach = 14, -- how close your character must be to claim the needle (clicks and taps)
+	hitbox = 0.9, -- the invisible box round the needle you click or tap (the same on every device)
+	decoyLockout = 3, -- clicking a decoy: no claims for this long
+	clicksPerSecond = 6, -- more than this and the extra clicks are ignored
+	jitter = 0.6, -- the needle moves this far from its hiding spot, so spots can't be memorised
+	maxSpotHeight = 6.5, -- spots higher than this above the floor need `climb = true` (a reachable loft)
+}
+
+-- Anti-exploit (server/AntiCheat).
+Config.AntiCheat = {
+	checkEvery = 0.5, -- seconds between movement checks
+	maxSpeed = 70, -- studs a second a character may move (walking, jumping, falling) outside a teleport
+	strikesToKick = 0, -- 0 = never kick; just put them back where they were
+}
+
+-- Rewards (server/RewardManager). Coins and XP.
+Config.Rewards = {
+	findCoins = 60, findXp = 80, -- the first finder, at the very start of a round (halves by the end)
+	place = { 1, 0.6, 0.4, 0.25 }, -- 1st, 2nd, 3rd, the rest
+	top3Coins = 15, top3Xp = 20,
+	playCoins = 5, playXp = 10, -- for being there at the end of a round
+	golden = 3, -- times everything for a Golden Needle
+	winStreakStep = 0.1, winStreakMax = 0.5, -- +10% per win in a row, up to +50%
+	loginCoins = 25, loginStreakMax = 7, -- daily login: 25 x streak day, up to day 7
+}
+
+-- Levels: level L needs xpBase + xpStep x (L - 1) XP.
+Config.Levels = { xpBase = 100, xpStep = 25, max = 500 }
+
+-- Hints: a free hint a day (two with the Extra Hint pass). A hint says roughly where the
+-- needle is: its compass direction, how far and whether it's high or low.
+Config.Hints = { free = 1, pass = 1, nearStuds = 15, farStuds = 45 }
+
+-- Saving (server/DataManager). Change DataStoreName to start everyone afresh.
+Config.DataStoreName = "NeedleHunt_v1"
+Config.AutosaveSeconds = 60
+Config.LoadRetries = 3
+
+-- Leaderboards (server/LeaderboardManager): OrderedDataStore names. weekly gets the week
+-- number added. Writes are batched every flushSeconds; boards re-read every readSeconds.
+Config.Boards = {
+	{ id = "needles", name = "Most Needles", store = "NH_Needles_v1", ascending = false },
+	{ id = "fastest", name = "Fastest Find", store = "NH_Fastest_v1", ascending = true, seconds = true },
+	{ id = "level", name = "Highest Level", store = "NH_Level_v1", ascending = false },
+	{ id = "coins", name = "Most Coins Earned", store = "NH_Coins_v1", ascending = false },
+	{ id = "weekly", name = "This Week's Winners", store = "NH_WeeklyWins_v1_", ascending = false, weekly = true },
+}
+Config.BoardRows = 10
+Config.BoardFlushSeconds = 120
+Config.BoardReadSeconds = 180
+
+-- Robux (server/ShopManager). 0 = not on sale yet: create the pass or product on the Creator
+-- Dashboard, then put its ID here. Nothing here is a random reward.
+Config.GamePasses = { DoubleCoins = 0, ExtraHint = 0, Supporter = 0 }
+Config.Products = { StarterBundle = 0 }
+Config.StarterBundle = { coins = 500, cosmetic = "n_rose" } -- what the Starter Bundle gives
+
+-- Sounds: Roblox's built-in sounds; swap in your own Toolbox IDs ("rbxassetid://...").
+Config.Sounds = {
+	found = "rbxasset://sounds/electronicpingshort.wav",
+	click = "rbxasset://sounds/button.wav",
+	whoosh = "rbxasset://sounds/swoosh.wav",
+	countdown = "rbxasset://sounds/clickfast.wav",
+}
+Config.Music = "" -- a looping lobby track ID, or "" for none
+
+-- Where things are. The lobby sits at the origin; maps are built far away, one at a time.
+Config.LobbyCentre = Vector3.new(0, 0, 0)
+Config.ArenaCentre = Vector3.new(0, 0, 600)
+
+return Config
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00003">
+				<Properties>
+					<string name="Name">Cosmetics</string>
+					<ProtectedString name="Source"><![CDATA[-- Cosmetics: looks only, never an advantage. The hidden needle always looks the same for
+-- everyone (fairness); your needle skin is the trophy needle you hold up when you find it, on
+-- the NEEDLE FOUND! popup and the results screen. Add an item by adding a line.
+--   kind: needle | trail | title | effect
+--   price: Haystack Coins in the shop (0 = not sold for coins: a starting item, a quest reward
+--     or from a Robux pass, named by `source`)
+--   colours: { r, g, b } for each part (needle: shaft, eye; trail: start, end)
+local Cosmetics = {}
+
+Cosmetics.items = {
+	-- needle skins: 1 free + 5 for coins
+	{ id = "n_silver", kind = "needle", name = "Classic Silver", price = 0, source = "start", colours = { { 205, 210, 220 }, { 150, 156, 168 } }, material = "Metal" },
+	{ id = "n_copper", kind = "needle", name = "Copper", price = 400, colours = { { 196, 116, 70 }, { 150, 84, 50 } }, material = "Metal" },
+	{ id = "n_rose", kind = "needle", name = "Rose Gold", price = 900, colours = { { 236, 170, 160 }, { 200, 130, 120 } }, material = "Metal" },
+	{ id = "n_frost", kind = "needle", name = "Frost", price = 1600, colours = { { 170, 225, 255 }, { 120, 190, 240 } }, material = "Glass", sparkle = true },
+	{ id = "n_midnight", kind = "needle", name = "Midnight", price = 2500, colours = { { 70, 60, 120 }, { 140, 120, 230 } }, material = "Neon" },
+	{ id = "n_rainbow", kind = "needle", name = "Rainbow", price = 4000, colours = { { 255, 120, 120 }, { 120, 160, 255 } }, material = "Neon", rainbow = true },
+	-- trails
+	{ id = "t_straw", kind = "trail", name = "Straw Trail", price = 700, colours = { { 240, 200, 90 }, { 255, 240, 190 } } },
+	{ id = "t_sparkle", kind = "trail", name = "Sparkle Trail", price = 1800, colours = { { 255, 255, 255 }, { 170, 220, 255 } } },
+	{ id = "t_supporter", kind = "trail", name = "Supporter Trail", price = 0, source = "Supporter pass", colours = { { 255, 200, 80 }, { 255, 120, 60 } } },
+	-- titles above your head
+	{ id = "ti_finder", kind = "title", name = "Needle Finder", price = 0, source = "quest", colours = { { 220, 225, 235 } } },
+	{ id = "ti_eagle", kind = "title", name = "Eagle Eye", price = 0, source = "quest", colours = { { 255, 214, 90 } } },
+	{ id = "ti_supporter", kind = "title", name = "Supporter", price = 0, source = "Supporter pass", colours = { { 255, 160, 70 } } },
+	-- found effects: the burst when you find a needle
+	{ id = "e_confetti", kind = "effect", name = "Confetti Pop", price = 0, source = "start", colours = { { 255, 206, 70 }, { 110, 170, 240 } } },
+	{ id = "e_stars", kind = "effect", name = "Starburst", price = 1200, colours = { { 255, 250, 220 }, { 255, 214, 90 } } },
+}
+
+Cosmetics.kinds = { "needle", "trail", "title", "effect" }
+Cosmetics.kindNames = { needle = "Needle Skins", trail = "Trails", title = "Titles", effect = "Found Effects" }
+Cosmetics.starting = { "n_silver", "e_confetti" } -- everyone owns these
+Cosmetics.defaults = { needle = "n_silver", effect = "e_confetti" } -- and wears these
+
+local byId = {}
+for _, item in ipairs(Cosmetics.items) do
+	byId[item.id] = item
+end
+
+function Cosmetics.get(id)
+	return byId[id]
+end
+
+return Cosmetics
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00004">
+				<Properties>
+					<string name="Name">Maps</string>
+					<ProtectedString name="Source"><![CDATA[-- The maps: what each is called, its light and its colours. server/MapsA and server/MapsB build
+-- them (`builder` names the function) and list their hiding spots as they place each prop, so
+-- every spot sits on a real surface in reach. Add a map: a line here plus a builder.
+--   lighting: Lighting's ClockTime, Brightness, Ambient, OutdoorAmbient, FogEnd, FogColor.
+--   straw: the colour of loose straw (and of a camouflaged needle); clutter tints vary round it.
+local Maps = {}
+
+Maps.list = {
+	{ id = "field", name = "Classic Haystack Field", builder = "field", weight = 25,
+		lighting = { ClockTime = 14, Brightness = 2.6, Ambient = { 120, 116, 104 }, OutdoorAmbient = { 150, 146, 134 }, FogEnd = 900, FogColor = { 200, 225, 245 } },
+		straw = { 226, 188, 92 }, ground = { 104, 160, 76 } },
+	{ id = "barn", name = "Barn Interior", builder = "barn", weight = 20,
+		lighting = { ClockTime = 13, Brightness = 1.4, Ambient = { 120, 96, 70 }, OutdoorAmbient = { 110, 90, 66 }, FogEnd = 400, FogColor = { 120, 96, 70 } },
+		straw = { 214, 172, 80 }, ground = { 120, 86, 56 } },
+	{ id = "sunset", name = "Farm at Sunset", builder = "sunset", weight = 20,
+		lighting = { ClockTime = 17.7, Brightness = 2.2, Ambient = { 130, 96, 80 }, OutdoorAmbient = { 170, 120, 96 }, FogEnd = 700, FogColor = { 250, 170, 120 } },
+		straw = { 232, 170, 84 }, ground = { 120, 150, 70 } },
+	{ id = "forest", name = "Night Forest", builder = "forest", weight = 15,
+		lighting = { ClockTime = 0.5, Brightness = 1.1, Ambient = { 70, 80, 110 }, OutdoorAmbient = { 90, 100, 140 }, FogEnd = 260, FogColor = { 30, 40, 64 } },
+		straw = { 196, 170, 100 }, ground = { 52, 84, 52 } },
+	{ id = "attic", name = "Abandoned Attic", builder = "attic", weight = 20,
+		lighting = { ClockTime = 15, Brightness = 1.2, Ambient = { 110, 100, 90 }, OutdoorAmbient = { 100, 92, 84 }, FogEnd = 300, FogColor = { 110, 100, 90 } },
+		straw = { 206, 176, 112 }, ground = { 112, 86, 64 } },
+}
+
+-- The lobby's light, between rounds.
+Maps.lobbyLighting = { ClockTime = 14.5, Brightness = 2.5, Ambient = { 120, 116, 104 }, OutdoorAmbient = { 150, 146, 134 }, FogEnd = 1200, FogColor = { 200, 225, 245 } }
+
+local byId = {}
+for _, m in ipairs(Maps.list) do
+	byId[m.id] = m
+end
+
+function Maps.get(id)
+	return byId[id]
+end
+
+return Maps
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00005">
+				<Properties>
+					<string name="Name">Quests</string>
+					<ProtectedString name="Source"><![CDATA[-- Daily quests: every day (UTC) everyone gets the same three, picked from this pool, so the
+-- lobby's Daily Challenge board can show them. Add a quest by adding a line.
+--   kind: what counts (server/QuestManager records these)
+--     find      a needle you found            win     a round you won (1st)
+--     play      a round you were in at the end fast    a find in under `under` seconds
+--     hard      a Hard round you were in at the end    golden  a Golden Needle you found
+--   n: how many. Rewards: coins, xp, and sometimes a cosmetic (Cosmetics id).
+local Quests = {}
+
+Quests.pool = {
+	{ id = "find5", kind = "find", n = 5, text = "Find 5 needles", coins = 150, xp = 200 },
+	{ id = "find3", kind = "find", n = 3, text = "Find 3 needles", coins = 90, xp = 120 },
+	{ id = "win2", kind = "win", n = 2, text = "Win 2 rounds", coins = 160, xp = 220 },
+	{ id = "win1", kind = "win", n = 1, text = "Win a round", coins = 80, xp = 110 },
+	{ id = "play10", kind = "play", n = 10, text = "Play 10 rounds", coins = 120, xp = 180 },
+	{ id = "play5", kind = "play", n = 5, text = "Play 5 rounds", coins = 60, xp = 90 },
+	{ id = "fast60", kind = "fast", n = 1, under = 60, text = "Find a needle in under 60 seconds", coins = 120, xp = 160, cosmetic = "ti_eagle" },
+	{ id = "fast30", kind = "fast", n = 1, under = 30, text = "Find a needle in under 30 seconds", coins = 200, xp = 260 },
+	{ id = "hard1", kind = "hard", n = 1, text = "Complete a Hard round", coins = 100, xp = 150 },
+	{ id = "golden1", kind = "golden", n = 1, text = "Find a Golden Needle", coins = 300, xp = 400 },
+	{ id = "finder10", kind = "find", n = 10, text = "Find 10 needles", coins = 260, xp = 350, cosmetic = "ti_finder" },
+}
+
+Quests.perDay = 3
+
+-- Today's day number (UTC).
+function Quests.today(now)
+	return math.floor((now or os.time()) / 86400)
+end
+
+-- The three quests for `day`: a fixed shuffle of the pool seeded by the day, so every server
+-- agrees. Golden-needle quests are rarer: they're only picked on every fourth day.
+function Quests.forDay(day)
+	local rng = Random.new(day * 7919 + 17)
+	local pool = {}
+	for _, q in ipairs(Quests.pool) do
+		if q.kind ~= "golden" or day % 4 == 0 then
+			table.insert(pool, q)
+		end
+	end
+	local picked, kinds = {}, {}
+	while #picked < Quests.perDay and #pool > 0 do
+		local q = table.remove(pool, rng:NextInteger(1, #pool))
+		if not kinds[q.kind] then -- three different kinds of quest
+			kinds[q.kind] = true
+			table.insert(picked, q)
+		end
+	end
+	return picked
+end
+
+local byId = {}
+for _, q in ipairs(Quests.pool) do
+	byId[q.id] = q
+end
+
+function Quests.get(id)
+	return byId[id]
+end
+
+return Quests
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00006">
+				<Properties>
+					<string name="Name">Rules</string>
+					<ProtectedString name="Source"><![CDATA[-- The game's arithmetic in one place, shared by the server (which decides) and the client
+-- (which only shows): levels, round rewards, and weighted picks. dev/test_rules.py mirrors it.
+local Config = require(script.Parent.Config)
+
+local Rules = {}
+
+-- XP needed to go from `level` to the next.
+function Rules.xpNeed(level)
+	return Config.Levels.xpBase + Config.Levels.xpStep * (level - 1)
+end
+
+-- Adds xp to a level/xp pair; returns the new level, the new xp and how many levels it gained.
+function Rules.addXp(level, xp, gain)
+	xp += gain
+	local before = level
+	while level < Config.Levels.max and xp >= Rules.xpNeed(level) do
+		xp -= Rules.xpNeed(level)
+		level += 1
+	end
+	return level, xp, level - before
+end
+
+-- Coins and XP for finding a needle: `place` (1 = first), `elapsed` seconds into a round of
+-- `duration`, at difficulty `diff` (a Config.Difficulty row), golden or not, with a win streak.
+-- Faster finds pay more: the time bonus falls from 100% to 50% over the round.
+function Rules.findReward(place, elapsed, duration, diff, golden, streak, doubleCoins)
+	local R = Config.Rewards
+	local placeMult = R.place[math.min(place, #R.place)]
+	local speed = 0.5 + 0.5 * math.clamp(1 - elapsed / math.max(duration, 1), 0, 1)
+	local streakMult = 1 + math.min(R.winStreakMax, R.winStreakStep * math.max(0, streak))
+	local mult = placeMult * speed * (diff.coins or 1) * (if golden then R.golden else 1)
+	local coins = math.floor(R.findCoins * mult * streakMult * (if doubleCoins then 2 else 1) + 0.5)
+	local xp = math.floor(R.findXp * mult + 0.5)
+	if place <= 3 then
+		coins += R.top3Coins * (if doubleCoins then 2 else 1)
+		xp += R.top3Xp
+	end
+	return coins, xp
+end
+
+-- Picks one row from a list of tables with `weight` fields.
+function Rules.pick(list, rng)
+	local total = 0
+	for _, row in ipairs(list) do
+		total += row.weight
+	end
+	local roll = rng:NextNumber() * total
+	for _, row in ipairs(list) do
+		roll -= row.weight
+		if roll <= 0 then
+			return row
+		end
+	end
+	return list[#list]
+end
+
+-- The ISO-ish week number (weeks since 1970, starting Mondays, UTC): the weekly board's key.
+function Rules.week(now)
+	return math.floor(((now or os.time()) / 86400 + 3) / 7)
+end
+
+-- "1:05" from seconds.
+function Rules.clock(seconds)
+	seconds = math.max(0, math.ceil(seconds))
+	return string.format("%d:%02d", seconds // 60, seconds % 60)
+end
+
+-- "12,345".
+function Rules.commas(n)
+	local s = tostring(math.floor(n))
+	local out = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+	return (out:gsub("^,", ""))
+end
+
+return Rules
+]]></ProtectedString>
+				</Properties>
+			</Item>
+		</Item>
+		<Item class="Folder" referent="RBX00007">
+			<Properties>
+				<string name="Name">Remotes</string>
+			</Properties>
+			<Item class="RemoteEvent" referent="RBX00008">
+				<Properties>
+					<string name="Name">RoundState</string>
+				</Properties>
+			</Item>
+			<Item class="RemoteEvent" referent="RBX00009">
+				<Properties>
+					<string name="Name">Found</string>
+				</Properties>
+			</Item>
+			<Item class="RemoteEvent" referent="RBX0000A">
+				<Properties>
+					<string name="Name">Notify</string>
+				</Properties>
+			</Item>
+			<Item class="RemoteEvent" referent="RBX0000B">
+				<Properties>
+					<string name="Name">Profile</string>
+				</Properties>
+			</Item>
+			<Item class="RemoteEvent" referent="RBX0000C">
+				<Properties>
+					<string name="Name">SaveSettings</string>
+				</Properties>
+			</Item>
+			<Item class="RemoteFunction" referent="RBX0000D">
+				<Properties>
+					<string name="Name">Shop</string>
+				</Properties>
+			</Item>
+			<Item class="RemoteFunction" referent="RBX0000E">
+				<Properties>
+					<string name="Name">Hint</string>
+				</Properties>
+			</Item>
+			<Item class="RemoteFunction" referent="RBX0000F">
+				<Properties>
+					<string name="Name">Boards</string>
+				</Properties>
+			</Item>
+		</Item>
+	</Item>
+	<Item class="ServerScriptService" referent="RBX00010">
+		<Properties>
+			<string name="Name">ServerScriptService</string>
+		</Properties>
+		<Item class="Folder" referent="RBX00011">
+			<Properties>
+				<string name="Name">Server</string>
+			</Properties>
+			<Item class="ModuleScript" referent="RBX00012">
+				<Properties>
+					<string name="Name">AntiCheat</string>
+					<ProtectedString name="Source"><![CDATA[-- Basic anti-exploit: every Config.AntiCheat.checkEvery seconds, each character's position is
+-- compared with the last; moving faster than Config.AntiCheat.maxSpeed (outside a teleport the
+-- server made itself, see AntiCheat.allow) puts the character back and flags the player, which
+-- stops them claiming a needle for a few seconds. Claims are also checked for distance and rate
+-- in server/NeedleSpawner. Nothing here trusts the client.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local AntiCheat = {}
+local last = {} -- [player] = { position, time }
+local allowedUntil = {} -- [player] = os.clock() a server teleport is allowed until
+local flaggedUntil = {} -- [player] = os.clock() claims are refused until
+local strikes = {}
+
+-- The server is about to move this player itself (to a map or back to the lobby).
+function AntiCheat.allow(player, seconds)
+	allowedUntil[player] = os.clock() + (seconds or 2)
+	last[player] = nil
+end
+
+function AntiCheat.flagged(player)
+	return (flaggedUntil[player] or 0) > os.clock()
+end
+
+local function check(player)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not root then
+		last[player] = nil
+		return
+	end
+	local now = os.clock()
+	local prev = last[player]
+	if (allowedUntil[player] or 0) > now or not prev then
+		last[player] = { position = root.Position, time = now }
+		return
+	end
+	local speed = (root.Position - prev.position).Magnitude / math.max(now - prev.time, 0.05)
+	if speed > Config.AntiCheat.maxSpeed then
+		root.CFrame = CFrame.new(prev.position) -- back to where they were
+		root.AssemblyLinearVelocity = Vector3.zero
+		flaggedUntil[player] = now + 5
+		strikes[player] = (strikes[player] or 0) + 1
+		warn(string.format("[AntiCheat] %s moved %.0f studs/s; put back (strike %d)", player.Name, speed, strikes[player]))
+		if Config.AntiCheat.strikesToKick > 0 and strikes[player] >= Config.AntiCheat.strikesToKick then
+			player:Kick("Unusual movement was detected. Please rejoin.")
+		end
+		return
+	end
+	last[player] = { position = root.Position, time = now }
+end
+
+function AntiCheat.init()
+	Players.PlayerRemoving:Connect(function(player)
+		last[player], allowedUntil[player], flaggedUntil[player], strikes[player] = nil, nil, nil, nil
+	end)
+	Players.PlayerAdded:Connect(function(player)
+		player.CharacterAdded:Connect(function()
+			AntiCheat.allow(player, 3) -- spawning is a teleport too
+		end)
+	end)
+	task.spawn(function()
+		while true do
+			task.wait(Config.AntiCheat.checkEvery)
+			for _, player in ipairs(Players:GetPlayers()) do
+				check(player)
+			end
+		end
+	end)
+end
+
+return AntiCheat
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00013">
+				<Properties>
+					<string name="Name">DataManager</string>
+					<ProtectedString name="Source"><![CDATA[-- Player data: loaded on join, cached for the session, saved with UpdateAsync on an autosave
+-- timer, on leave and on shutdown. A save that can't be loaded (DataStores down) plays unsaved,
+-- so it can never overwrite the real one. Every other module changes data only through
+-- DataManager.update, which marks it to save and shows it to the player (attributes, leaderstats
+-- and the Profile remote for the UI).
+local DataStoreService = game:GetService("DataStoreService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Rules = require(Shared:WaitForChild("Rules"))
+local Cosmetics = require(Shared:WaitForChild("Cosmetics"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local DataManager = {}
+local store = nil
+local sessions = {} -- [player] = { data, dirty, unsaved }
+local loadedCallbacks = {}
+
+-- A fresh save, or an old one with anything missing or the wrong type put right.
+local function number(t, key, default)
+	local v = type(t) == "table" and t[key]
+	return if type(v) == "number" and v == v then v else default
+end
+
+function DataManager.fresh(saved)
+	saved = if type(saved) == "table" then saved else {}
+	local d = {
+		coins = number(saved, "coins", 0), coinsEarned = number(saved, "coinsEarned", 0),
+		level = math.max(1, math.floor(number(saved, "level", 1))), xp = number(saved, "xp", 0),
+		needles = number(saved, "needles", 0), bestTime = number(saved, "bestTime", 0),
+		rounds = number(saved, "rounds", 0), wins = number(saved, "wins", 0), winStreak = number(saved, "winStreak", 0),
+		lastDay = number(saved, "lastDay", 0), loginStreak = number(saved, "loginStreak", 0),
+		hintsDay = number(saved, "hintsDay", 0), hintsUsed = number(saved, "hintsUsed", 0),
+		weekly = { week = 0, wins = 0 }, quests = { day = 0, progress = {}, done = {} },
+		owned = {}, equipped = {}, receipts = {},
+		settings = { music = true, sfx = true, reduceEffects = false, autoJoin = true },
+	}
+	if type(saved.weekly) == "table" then
+		d.weekly = { week = number(saved.weekly, "week", 0), wins = number(saved.weekly, "wins", 0) }
+	end
+	if type(saved.quests) == "table" then
+		d.quests.day = number(saved.quests, "day", 0)
+		for key, list in pairs({ progress = saved.quests.progress, done = saved.quests.done }) do
+			if type(list) == "table" then
+				for id, v in pairs(list) do
+					if type(id) == "string" and (type(v) == "number" or v == true) then
+						d.quests[key][id] = v
+					end
+				end
+			end
+		end
+	end
+	for _, id in ipairs(Cosmetics.starting) do
+		d.owned[id] = true
+	end
+	if type(saved.owned) == "table" then
+		for id, v in pairs(saved.owned) do
+			if v == true and Cosmetics.get(id) then
+				d.owned[id] = true
+			end
+		end
+	end
+	for kind, id in pairs(Cosmetics.defaults) do
+		d.equipped[kind] = id
+	end
+	if type(saved.equipped) == "table" then
+		for kind, id in pairs(saved.equipped) do
+			local item = Cosmetics.get(id)
+			if item and item.kind == kind and d.owned[id] then
+				d.equipped[kind] = id
+			end
+		end
+	end
+	if type(saved.settings) == "table" then
+		for key, default in pairs(d.settings) do
+			local v = saved.settings[key]
+			d.settings[key] = if type(v) == "boolean" then v else default
+		end
+	end
+	if type(saved.receipts) == "table" then
+		for _, id in ipairs(saved.receipts) do
+			if type(id) == "string" then
+				table.insert(d.receipts, id)
+			end
+		end
+	end
+	return d
+end
+
+local function key(player)
+	return "u_" .. player.UserId
+end
+
+local function load(player)
+	if not store then
+		return DataManager.fresh(nil), false
+	end
+	for attempt = 1, Config.LoadRetries do
+		local ok, saved = pcall(store.GetAsync, store, key(player))
+		if ok then
+			return DataManager.fresh(saved), true
+		end
+		warn("[Data] load failed for " .. player.Name .. " (try " .. attempt .. "): " .. tostring(saved))
+		task.wait(2 ^ attempt)
+	end
+	return DataManager.fresh(nil), false
+end
+
+-- Shows the data to the player: attributes for the HUD, leaderstats, and the Profile remote.
+local function publish(player, d)
+	player:SetAttribute("Coins", d.coins)
+	player:SetAttribute("Level", d.level)
+	player:SetAttribute("XP", d.xp)
+	player:SetAttribute("XPNeed", Rules.xpNeed(d.level))
+	player:SetAttribute("Needles", d.needles)
+	player:SetAttribute("Wins", d.wins)
+	player:SetAttribute("BestTime", d.bestTime)
+	player:SetAttribute("LoginStreak", d.loginStreak)
+	player:SetAttribute("HintsUsed", if d.hintsDay == math.floor(os.time() / 86400) then d.hintsUsed else 0) -- hints reset each day (UTC)
+	local stats = player:FindFirstChild("leaderstats")
+	if stats then
+		stats.Level.Value, stats.Needles.Value = d.level, d.needles
+	end
+	Remotes.Profile:FireClient(player, { owned = d.owned, equipped = d.equipped, quests = d.quests, settings = d.settings })
+end
+
+function DataManager.get(player)
+	local s = sessions[player]
+	return s and s.data
+end
+
+function DataManager.unsaved(player)
+	local s = sessions[player]
+	return s ~= nil and s.unsaved
+end
+
+-- Changes a player's data: change(data) edits it in place.
+function DataManager.update(player, change)
+	local s = sessions[player]
+	if not s then
+		return false
+	end
+	change(s.data)
+	s.dirty = true
+	publish(player, s.data)
+	return true
+end
+
+-- Saves now (UpdateAsync, so a newer save on another server is never lost to an older one).
+function DataManager.save(player)
+	local s = sessions[player]
+	if not s or s.unsaved or not store then
+		return false
+	end
+	local data = s.data
+	local ok, err = pcall(store.UpdateAsync, store, key(player), function()
+		return data
+	end)
+	if ok then
+		s.dirty = false
+	else
+		warn("[Data] save failed for " .. player.Name .. ": " .. tostring(err))
+	end
+	return ok
+end
+
+function DataManager.onLoaded(callback)
+	table.insert(loadedCallbacks, callback)
+end
+
+local function added(player)
+	local stats = Instance.new("Folder")
+	stats.Name = "leaderstats"
+	for _, name in ipairs({ "Level", "Needles" }) do
+		Instance.new("IntValue", stats).Name = name
+	end
+	stats.Parent = player
+	local data, ok = load(player)
+	if player.Parent == nil then
+		return
+	end
+	sessions[player] = { data = data, dirty = false, unsaved = not ok }
+	publish(player, data)
+	if not ok then
+		Remotes.Notify:FireClient(player, { text = "We couldn't load your save, so this visit won't be saved. Try rejoining later.", tone = "bad" })
+	end
+	for _, callback in ipairs(loadedCallbacks) do
+		task.spawn(callback, player, data)
+	end
+end
+
+function DataManager.init()
+	local ok, result = pcall(DataStoreService.GetDataStore, DataStoreService, Config.DataStoreName)
+	store = if ok then result else nil
+	if not store then
+		warn("[Data] DataStores unavailable (in Studio: Game Settings > Security > Enable Studio Access to API Services)")
+	end
+	Players.PlayerAdded:Connect(added)
+	for _, player in ipairs(Players:GetPlayers()) do
+		task.spawn(added, player)
+	end
+	Players.PlayerRemoving:Connect(function(player)
+		DataManager.save(player)
+		sessions[player] = nil
+	end)
+	game:BindToClose(function()
+		local pending = 0
+		for player in pairs(sessions) do
+			pending += 1
+			task.spawn(function()
+				DataManager.save(player)
+				pending -= 1
+			end)
+		end
+		local waited = 0
+		while pending > 0 and waited < 25 do
+			waited += task.wait(0.5)
+		end
+	end)
+	task.spawn(function()
+		while true do
+			task.wait(Config.AutosaveSeconds)
+			for player, s in pairs(sessions) do
+				if s.dirty then
+					task.spawn(DataManager.save, player)
+				end
+			end
+		end
+	end)
+end
+
+return DataManager
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00014">
+				<Properties>
+					<string name="Name">LeaderboardManager</string>
+					<ProtectedString name="Source"><![CDATA[-- Global leaderboards (Config.Boards), each an OrderedDataStore: most needles, fastest find,
+-- highest level, most coins earned and this week's winners. Writes are batched: a player is
+-- marked when a stat changes and written every Config.BoardFlushSeconds (and when they leave),
+-- never more than the DataStore budget allows. Each board is read every Config.BoardReadSeconds
+-- into a cache that the lobby boards and the Leaderboard screen show; clients never read stores.
+local DataStoreService = game:GetService("DataStoreService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Rules = require(Shared:WaitForChild("Rules"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local DataManager = require(script.Parent.DataManager)
+
+local LeaderboardManager = {}
+local dirty = {} -- [player] = true
+local cache = {} -- [board id] = { { name, value } }
+local names = {} -- [userId] = name
+local listeners = {}
+
+local function storeFor(board)
+	local name = board.store .. (if board.weekly then tostring(Rules.week()) else "")
+	local ok, store = pcall(DataStoreService.GetOrderedDataStore, DataStoreService, name)
+	return if ok then store else nil
+end
+
+-- The value a player has on a board (nil = nothing to write).
+local function valueFor(board, d)
+	if board.id == "needles" then
+		return d.needles
+	elseif board.id == "fastest" then
+		return if d.bestTime > 0 then math.floor(d.bestTime * 10) else nil -- tenths of a second
+	elseif board.id == "level" then
+		return d.level
+	elseif board.id == "coins" then
+		return d.coinsEarned
+	elseif board.id == "weekly" then
+		return if d.weekly.week == Rules.week() and d.weekly.wins > 0 then d.weekly.wins else nil
+	end
+	return nil
+end
+
+function LeaderboardManager.mark(player)
+	dirty[player] = true
+end
+
+local function budget()
+	return DataStoreService:GetRequestBudgetForRequestType(Enum.DataStoreRequestType.SetIncrementSortedAsync)
+end
+
+local function write(player)
+	local d = DataManager.get(player)
+	if not d or DataManager.unsaved(player) then
+		return
+	end
+	for _, board in ipairs(Config.Boards) do
+		local value = valueFor(board, d)
+		local store = value and budget() > 2 and storeFor(board)
+		if store then
+			pcall(store.SetAsync, store, tostring(player.UserId), value)
+		end
+	end
+	dirty[player] = nil
+end
+
+local function nameOf(userId)
+	if not names[userId] then
+		local ok, name = pcall(Players.GetNameFromUserIdAsync, Players, userId)
+		names[userId] = if ok then name else "Player"
+	end
+	return names[userId]
+end
+
+local function read()
+	for _, board in ipairs(Config.Boards) do
+		local store = storeFor(board)
+		local ok, pages = false, nil
+		if store then
+			ok, pages = pcall(store.GetSortedAsync, store, board.ascending, Config.BoardRows)
+		end
+		if ok and pages then
+			local rows = {}
+			for _, entry in ipairs(pages:GetCurrentPage()) do
+				local value = if board.seconds then entry.value / 10 else entry.value
+				table.insert(rows, { name = nameOf(tonumber(entry.key)), value = value })
+			end
+			cache[board.id] = rows
+		end
+	end
+	for _, listener in ipairs(listeners) do
+		task.spawn(listener, cache)
+	end
+end
+
+-- This server's players on a board (shown when the global store can't be reached, and on the
+-- "This server" tab, where friends you play with appear).
+function LeaderboardManager.serverRows(boardId)
+	local board
+	for _, b in ipairs(Config.Boards) do
+		if b.id == boardId then
+			board = b
+		end
+	end
+	local rows = {}
+	for _, p in ipairs(Players:GetPlayers()) do
+		local d = DataManager.get(p)
+		local v = board and d and valueFor(board, d)
+		if v then
+			table.insert(rows, { name = p.DisplayName, value = if board.seconds then v / 10 else v })
+		end
+	end
+	table.sort(rows, function(a, b)
+		if board.ascending then
+			return a.value < b.value
+		end
+		return a.value > b.value
+	end)
+	return rows
+end
+
+function LeaderboardManager.cache()
+	return cache
+end
+
+-- callback(cache) runs after each read (the lobby boards).
+function LeaderboardManager.onUpdate(callback)
+	table.insert(listeners, callback)
+end
+
+function LeaderboardManager.init()
+	Remotes.Boards.OnServerInvoke = function(_player, boardId)
+		if type(boardId) ~= "string" then
+			return nil
+		end
+		return { global = cache[boardId] or {}, server = LeaderboardManager.serverRows(boardId) }
+	end
+	Players.PlayerRemoving:Connect(function(player)
+		if dirty[player] then
+			write(player)
+		end
+		dirty[player] = nil
+	end)
+	task.spawn(function()
+		while true do
+			read()
+			task.wait(Config.BoardReadSeconds)
+		end
+	end)
+	task.spawn(function()
+		while true do
+			task.wait(Config.BoardFlushSeconds)
+			for player in pairs(dirty) do
+				if player.Parent then
+					write(player)
+				end
+			end
+		end
+	end)
+end
+
+return LeaderboardManager
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00015">
+				<Properties>
+					<string name="Name">LobbyBuilder</string>
+					<ProtectedString name="Source"><![CDATA[-- The lobby, built once at Config.LobbyCentre: a wooden plaza in a field, the animated title sign
+-- (a giant needle turns above it), the glowing Play pad with the next round's countdown, a
+-- leaderboard that cycles through every board, the Daily Challenge board, a Shop stall and a
+-- Wardrobe (their prompts open those screens on the player's own UI), and haystacks round the edge.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Quests = require(Shared:WaitForChild("Quests"))
+local Rules = require(Shared:WaitForChild("Rules"))
+local MapKit = require(script.Parent.MapKit)
+local LeaderboardManager = require(script.Parent.LeaderboardManager)
+
+local LobbyBuilder = {}
+local ctx = nil
+
+-- A board at map-local (x, y, z) facing the plaza, with a SurfaceGui on its front (a part's
+-- Front face looks down its LookVector); returns the frame to write on.
+local function board(name, x, y, z, w, h)
+	local pos = MapKit.at(ctx, x, y, z)
+	local cf = CFrame.lookAt(pos, MapKit.at(ctx, 0, y, 10))
+	local p = MapKit.part(ctx, { Name = name, Size = Vector3.new(w, h, 0.6), CFrame = cf, Color = { 120, 84, 50 }, Material = "WoodPlanks" })
+	for _, dx in ipairs({ -w / 2 + 0.6, w / 2 - 0.6 }) do
+		MapKit.part(ctx, { Name = "Post", Size = Vector3.new(0.8, h + cf.Position.Y, 0.8), CFrame = cf * CFrame.new(dx, -(cf.Position.Y) / 2, 0.5), Color = { 96, 66, 40 }, Material = "Wood" })
+	end
+	local gui = Instance.new("SurfaceGui")
+	gui.Face, gui.SizingMode, gui.PixelsPerStud, gui.LightInfluence = Enum.NormalId.Front, Enum.SurfaceGuiSizingMode.PixelsPerStud, 30, 0.1
+	gui.Parent = p
+	local paper = Instance.new("Frame")
+	paper.Size, paper.Position, paper.BackgroundColor3 = UDim2.new(1, -24, 1, -24), UDim2.fromOffset(12, 12), Color3.fromRGB(30, 34, 44)
+	Instance.new("UICorner", paper).CornerRadius = UDim.new(0, 18)
+	paper.Parent = gui
+	return paper
+end
+
+local function text(parent, props)
+	local l = Instance.new("TextLabel")
+	l.BackgroundTransparency, l.Font, l.TextScaled, l.TextColor3 = 1, Enum.Font.BuilderSansBold, true, Color3.new(1, 1, 1)
+	for k, v in pairs(props) do
+		l[k] = v
+	end
+	l.Parent = parent
+	return l
+end
+
+local function stall(name, x, z, opens, colour)
+	local base = MapKit.at(ctx, x, 0, z)
+	MapKit.part(ctx, { Name = name, Size = Vector3.new(10, 3, 5), CFrame = CFrame.new(base + Vector3.new(0, 1.5, 0)), Color = { 150, 106, 64 }, Material = "WoodPlanks" })
+	for _, dx in ipairs({ -4.6, 4.6 }) do
+		MapKit.part(ctx, { Name = "Post", Size = Vector3.new(0.6, 8, 0.6), CFrame = CFrame.new(base + Vector3.new(dx, 4, -2)), Color = { 96, 66, 40 }, Material = "Wood" })
+	end
+	local roof = MapKit.part(ctx, { Name = "Awning", Size = Vector3.new(11, 0.5, 6), CFrame = CFrame.new(base + Vector3.new(0, 8.2, -0.5)) * CFrame.Angles(math.rad(-12), 0, 0), Color = colour, Material = "Fabric" })
+	local sign = Instance.new("SurfaceGui")
+	sign.Face, sign.PixelsPerStud, sign.SizingMode = Enum.NormalId.Top, 20, Enum.SurfaceGuiSizingMode.PixelsPerStud
+	sign.Parent = roof
+	text(sign, { Size = UDim2.fromScale(1, 1), Text = opens:upper() })
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText, prompt.ObjectText, prompt.HoldDuration, prompt.MaxActivationDistance = "Open", opens, 0, 12
+	prompt:SetAttribute("Opens", opens)
+	prompt.Parent = ctx.model:FindFirstChild(name)
+end
+
+function LobbyBuilder.spawnPoint(i)
+	local a = (i or 1) * 2.399 -- spread out round the pad
+	return CFrame.new(MapKit.at(ctx, math.cos(a) * 10, 3, 18 + math.sin(a) * 6))
+end
+
+function LobbyBuilder.build()
+	local model = Instance.new("Model")
+	model.Name = "Lobby"
+	model.Parent = workspace
+	ctx = { model = model, rng = Random.new(7), centre = Config.LobbyCentre, def = { straw = { 226, 188, 92 } }, spots = {}, spawns = {}, floorY = 0 }
+	MapKit.ground(ctx, 260, 260, { 104, 160, 76 }, "Grass")
+	MapKit.part(ctx, { Name = "Plaza", Size = Vector3.new(90, 0.4, 90), CFrame = CFrame.new(MapKit.at(ctx, 0, 0.2, 0)), Color = { 170, 128, 86 }, Material = "WoodPlanks" })
+	local spawn = Instance.new("SpawnLocation")
+	spawn.Anchored, spawn.Size, spawn.Duration, spawn.Neutral = true, Vector3.new(12, 1, 12), 0, true
+	spawn.CFrame, spawn.Color, spawn.Material = CFrame.new(MapKit.at(ctx, 0, 0.5, 30)), Color3.fromRGB(196, 150, 92), Enum.Material.WoodPlanks
+	spawn.Parent = model
+	for _, edge in ipairs({ { -45, -45, 45, -45 }, { 45, -45, 45, 45 }, { -45, -45, -45, 45 } }) do
+		MapKit.fence(ctx, edge[1], edge[2], edge[3], edge[4])
+	end
+	-- the title sign and its turning needle
+	local title = board("TitleSign", 0, 12, -38, 40, 9)
+	text(title, { Size = UDim2.new(1, -40, 0.62, 0), Position = UDim2.new(0, 20, 0.06, 0), Text = "A NEEDLE IN A HAYSTACK", TextColor3 = Color3.fromRGB(255, 214, 90) })
+	text(title, { Size = UDim2.new(1, -40, 0.26, 0), Position = UDim2.new(0, 20, 0.68, 0), Text = "Find it first. Win the round.", TextColor3 = Color3.fromRGB(220, 226, 240) })
+	local needle = MapKit.part(ctx, { Name = "BigNeedle", Shape = "Cylinder", Size = Vector3.new(16, 0.6, 0.6), CFrame = CFrame.new(MapKit.at(ctx, 0, 21, -38)), Color = { 210, 214, 224 }, Material = "Metal", CanCollide = false })
+	TweenService:Create(needle, TweenInfo.new(6, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { CFrame = needle.CFrame * CFrame.Angles(math.pi, 0, 0) }):Play()
+	TweenService:Create(needle, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = needle.Position + Vector3.new(0, 1.2, 0) }):Play()
+	-- the Play pad
+	local pad = MapKit.part(ctx, { Name = "PlayPad", Shape = "Cylinder", Size = Vector3.new(0.4, 18, 18), CFrame = CFrame.new(MapKit.at(ctx, 0, 0.6, 6)) * CFrame.Angles(0, 0, math.rad(90)), Color = { 255, 206, 80 }, Material = "Neon", CanCollide = false })
+	local above = Instance.new("BillboardGui")
+	above.Size, above.StudsOffset, above.AlwaysOnTop = UDim2.fromOffset(420, 120), Vector3.new(0, 8, 0), false
+	above.Parent = pad
+	local status = text(above, { Size = UDim2.fromScale(1, 1), TextStrokeTransparency = 0.3, Text = "" })
+	task.spawn(function()
+		while true do
+			local phase = ReplicatedStorage:GetAttribute("Phase")
+			local left = (ReplicatedStorage:GetAttribute("EndsAt") or 0) - workspace:GetServerTimeNow()
+			status.Text = if phase == "lobby" then "NEXT ROUND IN " .. Rules.clock(left) elseif phase == "search" then "ROUND IN PLAY: " .. Rules.clock(left) else "GET READY..."
+			task.wait(0.5)
+		end
+	end)
+	-- the leaderboard: cycles through every board
+	local lb = board("Leaderboard", -34, 9, -8, 18, 16)
+	local lbTitle = text(lb, { Size = UDim2.new(1, -30, 0.11, 0), Position = UDim2.new(0, 15, 0.02, 0), TextColor3 = Color3.fromRGB(255, 214, 90) })
+	local lbRows = {}
+	for i = 1, Config.BoardRows do
+		lbRows[i] = text(lb, { Size = UDim2.new(1, -40, 0.075, 0), Position = UDim2.new(0, 20, 0.14 + (i - 1) * 0.084, 0), TextXAlignment = Enum.TextXAlignment.Left, Font = Enum.Font.BuilderSans })
+	end
+	task.spawn(function()
+		local i = 0
+		while true do
+			i = i % #Config.Boards + 1
+			local b = Config.Boards[i]
+			local rows = LeaderboardManager.cache()[b.id]
+			if not rows or #rows == 0 then
+				rows = LeaderboardManager.serverRows(b.id)
+			end
+			lbTitle.Text = b.name
+			for r = 1, Config.BoardRows do
+				local row = rows[r]
+				lbRows[r].Text = if row then r .. ".  " .. row.name .. "  ·  " .. (if b.seconds then string.format("%.1fs", row.value) else Rules.commas(row.value)) else ""
+			end
+			task.wait(8)
+		end
+	end)
+	-- the daily challenge board
+	local dc = board("DailyChallenge", 34, 9, -8, 18, 12)
+	text(dc, { Size = UDim2.new(1, -30, 0.16, 0), Position = UDim2.new(0, 15, 0.03, 0), Text = "DAILY CHALLENGE", TextColor3 = Color3.fromRGB(255, 214, 90) })
+	local dcRows = {}
+	for i = 1, Quests.perDay do
+		dcRows[i] = text(dc, { Size = UDim2.new(1, -40, 0.18, 0), Position = UDim2.new(0, 20, 0.22 + (i - 1) * 0.25, 0), TextXAlignment = Enum.TextXAlignment.Left, Font = Enum.Font.BuilderSans })
+	end
+	task.spawn(function()
+		while true do
+			for i, q in ipairs(Quests.forDay(Quests.today())) do
+				dcRows[i].Text = "• " .. q.text .. "  (+" .. q.coins .. " coins)"
+			end
+			task.wait(60)
+		end
+	end)
+	stall("ShopStall", -18, 30, "Shop", { 196, 64, 50 })
+	stall("Wardrobe", 18, 30, "Inventory", { 76, 106, 170 })
+	-- the countryside
+	for _, h in ipairs({ { -70, -60 }, { 70, -64 }, { -80, 40 }, { 82, 50 }, { 0, -90 }, { -50, 90 }, { 56, 96 } }) do
+		MapKit.haystack(ctx, h[1], h[2], 7, 12)
+	end
+	for _, b in ipairs({ { -30, 0, -30 }, { 30, 0, -32 }, { -40, 0, 36 }, { 40, 0, 38 } }) do
+		MapKit.bale(ctx, b[1], b[2], b[3], ctx.rng:NextNumber() * 3)
+	end
+	Players.PlayerAdded:Connect(function(player)
+		player.RespawnLocation = spawn
+	end)
+end
+
+return LobbyBuilder
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="Script" referent="RBX00016">
+				<Properties>
+					<string name="Name">Main</string>
+					<ProtectedString name="Source"><![CDATA[-- Starts A Needle in a Haystack on the server. Systems that react to a player's save loading are
+-- started before DataManager, so none of them misses the first players. Each starts in a pcall:
+-- one failing is reported in the Output window instead of stopping the rest.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local LobbyBuilder = require(script.Parent.LobbyBuilder)
+local DataManager = require(script.Parent.DataManager)
+local QuestManager = require(script.Parent.QuestManager)
+local RewardManager = require(script.Parent.RewardManager)
+local ShopManager = require(script.Parent.ShopManager)
+local LeaderboardManager = require(script.Parent.LeaderboardManager)
+local AntiCheat = require(script.Parent.AntiCheat)
+local Requests = require(script.Parent.Requests)
+local RoundManager = require(script.Parent.RoundManager)
+
+-- While testing in Studio, server errors also show on screen.
+if RunService:IsStudio() then
+	game:GetService("ScriptContext").Error:Connect(function(message)
+		ReplicatedStorage.Remotes.Notify:FireAllClients({ text = "SERVER ERROR: " .. tostring(message), tone = "bad" })
+	end)
+end
+
+for _, step in ipairs({
+	{ "Lobby", LobbyBuilder.build },
+	{ "AntiCheat", AntiCheat.init },
+	{ "Quests", QuestManager.init },
+	{ "Rewards", RewardManager.init },
+	{ "Shop", ShopManager.init },
+	{ "Leaderboards", LeaderboardManager.init },
+	{ "Requests", Requests.init },
+	{ "Data", DataManager.init },
+	{ "Rounds", RoundManager.start },
+}) do
+	local ok, err = pcall(step[2])
+	if not ok then
+		warn("[Start] " .. step[1] .. " failed: " .. tostring(err))
+	end
+end
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00017">
+				<Properties>
+					<string name="Name">MapKit</string>
+					<ProtectedString name="Source"><![CDATA[-- The building kit for maps (server/MapsA, MapsB): ground, hay bales, haystacks, crates, fences,
+-- trees, walls, lamps, loose straw and tumbling hay. Each prop records the hiding spots it makes
+-- (on its top, or on the ground beside it) as it is placed, so a needle only ever goes on a real
+-- surface; server/NeedleSpawner checks each spot again before using it.
+-- ctx: { model, rng, centre = Vector3, def = a Maps row, spots = {}, spawns = {}, floorY }
+local TweenService = game:GetService("TweenService")
+
+local MapKit = {}
+
+local function rgb(c)
+	return Color3.fromRGB(c[1], c[2], c[3])
+end
+MapKit.rgb = rgb
+
+-- An anchored, smooth part in the map. props: Size, CFrame, Color ({r,g,b} or Color3), Material, Shape...
+function MapKit.part(ctx, props)
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
+	for k, v in pairs(props) do
+		if k == "Color" and type(v) == "table" then
+			v = rgb(v)
+		elseif k == "Material" and type(v) == "string" then
+			v = Enum.Material[v]
+		elseif k == "Shape" and type(v) == "string" then
+			v = Enum.PartType[v]
+		end
+		p[k] = v
+	end
+	p.Parent = props.Parent or ctx.model
+	return p
+end
+
+-- A world position from map-local x, y (height above the floor), z.
+function MapKit.at(ctx, x, y, z)
+	return ctx.centre + Vector3.new(x, ctx.floorY + y, z)
+end
+
+-- A hiding spot: the needle lies flat on a surface at `pos` (its top), turned any way.
+-- climb = true for spots up high that stairs or a ladder reach.
+function MapKit.spot(ctx, pos, climb)
+	table.insert(ctx.spots, { cf = CFrame.new(pos), climb = climb == true })
+end
+
+-- Spots on the top face of a part, and on the ground round its foot.
+function MapKit.spotsOn(ctx, part, onTop, around, climb)
+	local cf, size = part.CFrame, part.Size
+	for _ = 1, onTop do
+		local x = (ctx.rng:NextNumber() - 0.5) * size.X * 0.7
+		local z = (ctx.rng:NextNumber() - 0.5) * size.Z * 0.7
+		MapKit.spot(ctx, (cf * CFrame.new(x, size.Y / 2, z)).Position, climb)
+	end
+	for _ = 1, around do
+		local a = ctx.rng:NextNumber() * math.pi * 2
+		local r = math.max(size.X, size.Z) / 2 + 1.0 -- clear of the prop's corners
+		local p = cf.Position + Vector3.new(math.cos(a) * r, 0, math.sin(a) * r)
+		MapKit.spot(ctx, Vector3.new(p.X, ctx.centre.Y + ctx.floorY, p.Z))
+	end
+end
+
+function MapKit.ground(ctx, sx, sz, colour, material)
+	return MapKit.part(ctx, { Name = "Ground", Size = Vector3.new(sx, 2, sz), CFrame = CFrame.new(MapKit.at(ctx, 0, -1, 0)), Color = colour, Material = material or "Grass" })
+end
+
+function MapKit.spawnAt(ctx, x, z)
+	table.insert(ctx.spawns, CFrame.new(MapKit.at(ctx, x, 3, z)) * CFrame.Angles(0, ctx.rng:NextNumber() * math.pi * 2, 0))
+end
+
+-- A rectangular hay bale with two twine bands. y = the height of its base above the floor.
+function MapKit.bale(ctx, x, y, z, turn, climb)
+	local cf = CFrame.new(MapKit.at(ctx, x, y + 1.25, z)) * CFrame.Angles(0, turn or 0, 0)
+	local straw = ctx.def.straw
+	local bale = MapKit.part(ctx, { Name = "Bale", Size = Vector3.new(4, 2.5, 2.5), CFrame = cf, Color = straw, Material = "Grass" })
+	for _, dx in ipairs({ -1, 1 }) do
+		MapKit.part(ctx, { Name = "Twine", Size = Vector3.new(0.15, 2.56, 2.56), CFrame = cf * CFrame.new(dx, 0, 0), Color = { 150, 100, 60 }, Material = "Fabric", CanCollide = false, CanQuery = false })
+	end
+	MapKit.spotsOn(ctx, bale, 1, if y > 0 then 0 else 1, climb)
+	return bale
+end
+
+-- A round haystack: stacked, shrinking cylinders under a dome. Spots round its foot.
+function MapKit.haystack(ctx, x, z, radius, height)
+	local straw = ctx.def.straw
+	local layers = 4
+	for i = 0, layers - 1 do
+		local r = radius * (1 - i / (layers + 1.5))
+		MapKit.part(ctx, { Name = "Haystack", Shape = "Cylinder", Size = Vector3.new(height / layers, r * 2, r * 2), CFrame = CFrame.new(MapKit.at(ctx, x, (i + 0.5) * height / layers, z)) * CFrame.Angles(0, 0, math.rad(90)), Color = straw, Material = "Grass" })
+	end
+	MapKit.part(ctx, { Name = "Haystack", Shape = "Ball", Size = Vector3.one * radius * 1.1, CFrame = CFrame.new(MapKit.at(ctx, x, height, z)), Color = straw, Material = "Grass" })
+	for _ = 1, 3 do
+		local a = ctx.rng:NextNumber() * math.pi * 2
+		MapKit.spot(ctx, MapKit.at(ctx, x + math.cos(a) * (radius + 1.4), 0, z + math.sin(a) * (radius + 1.4)))
+	end
+end
+
+function MapKit.crate(ctx, x, y, z, size, climb)
+	size = size or 3
+	local c = MapKit.part(ctx, { Name = "Crate", Size = Vector3.one * size, CFrame = CFrame.new(MapKit.at(ctx, x, y + size / 2, z)) * CFrame.Angles(0, ctx.rng:NextNumber() * 0.6, 0), Color = { 150, 106, 64 }, Material = "WoodPlanks" })
+	MapKit.spotsOn(ctx, c, 1, if y > 0 then 0 else 1, climb)
+	return c
+end
+
+-- A wall or floor panel (collides). cf is its centre.
+function MapKit.wall(ctx, cf, size, colour, material)
+	return MapKit.part(ctx, { Name = "Wall", Size = size, CFrame = cf, Color = colour, Material = material or "WoodPlanks" })
+end
+
+-- A fence from a to b (map-local x, z pairs): posts and two rails.
+function MapKit.fence(ctx, ax, az, bx, bz)
+	local a, b = MapKit.at(ctx, ax, 0, az), MapKit.at(ctx, bx, 0, bz)
+	local length = (b - a).Magnitude
+	for i = 0, math.floor(length / 8) do
+		local p = a:Lerp(b, i * 8 / length)
+		MapKit.part(ctx, { Name = "Post", Size = Vector3.new(0.6, 4, 0.6), CFrame = CFrame.new(p + Vector3.new(0, 2, 0)), Color = { 120, 84, 50 }, Material = "Wood" })
+	end
+	for _, h in ipairs({ 1.6, 3.2 }) do
+		local mid = (a + b) / 2 + Vector3.new(0, h, 0)
+		MapKit.part(ctx, { Name = "Rail", Size = Vector3.new(0.3, 0.4, length), CFrame = CFrame.lookAt(mid, mid + (b - a)), Color = { 140, 100, 60 }, Material = "Wood" })
+	end
+end
+
+-- A tree: a trunk and a few leafy balls. Spots among its roots.
+function MapKit.tree(ctx, x, z, height, leaf)
+	local h = height or 14
+	MapKit.part(ctx, { Name = "Trunk", Shape = "Cylinder", Size = Vector3.new(h, 1.8, 1.8), CFrame = CFrame.new(MapKit.at(ctx, x, h / 2, z)) * CFrame.Angles(0, 0, math.rad(90)), Color = { 96, 70, 46 }, Material = "Wood" })
+	for i = 1, 3 do
+		local o = Vector3.new((ctx.rng:NextNumber() - 0.5) * 4, h - 1 + i, (ctx.rng:NextNumber() - 0.5) * 4)
+		MapKit.part(ctx, { Name = "Leaves", Shape = "Ball", Size = Vector3.one * (8 - i), CFrame = CFrame.new(MapKit.at(ctx, x, 0, z) + o), Color = leaf or { 60, 110, 60 }, Material = "Grass", CanCollide = false })
+	end
+	for _ = 1, 2 do
+		local a = ctx.rng:NextNumber() * math.pi * 2
+		MapKit.spot(ctx, MapKit.at(ctx, x + math.cos(a) * 2.2, 0, z + math.sin(a) * 2.2))
+	end
+end
+
+-- A lamp: a small glowing block with a warm light.
+function MapKit.lamp(ctx, pos, colour, range)
+	local p = MapKit.part(ctx, { Name = "Lamp", Size = Vector3.new(0.8, 1.2, 0.8), CFrame = CFrame.new(pos), Color = colour or { 255, 200, 120 }, Material = "Neon", CanCollide = false })
+	local light = Instance.new("PointLight")
+	light.Color, light.Range, light.Brightness = p.Color, range or 22, 1.6
+	light.Parent = p
+	return p
+end
+
+-- Loose straws scattered on the floor: the haystack's busyness. Half land near hiding spots,
+-- so a needle never sits alone on bare ground. They can't be clicked or stood on.
+function MapKit.clutter(ctx, count, halfX, halfZ)
+	local straw = ctx.def.straw
+	for i = 1, count do
+		local pos
+		if i % 2 == 0 and #ctx.spots > 0 then
+			local s = ctx.spots[ctx.rng:NextInteger(1, #ctx.spots)].cf.Position
+			pos = s + Vector3.new((ctx.rng:NextNumber() - 0.5) * 5, 0, (ctx.rng:NextNumber() - 0.5) * 5)
+		else
+			pos = MapKit.at(ctx, (ctx.rng:NextNumber() * 2 - 1) * halfX, 0, (ctx.rng:NextNumber() * 2 - 1) * halfZ)
+		end
+		local shade = 0.75 + ctx.rng:NextNumber() * 0.4
+		MapKit.part(ctx, { Name = "Straw", Size = Vector3.new(0.12, 0.08, 0.8 + ctx.rng:NextNumber() * 1.4), CFrame = CFrame.new(pos + Vector3.new(0, 0.05, 0)) * CFrame.Angles(0, ctx.rng:NextNumber() * math.pi * 2, 0),
+			Color = Color3.fromRGB(math.min(255, straw[1] * shade), math.min(255, straw[2] * shade), math.min(255, straw[3] * shade)), Material = "SmoothPlastic", CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false })
+	end
+end
+
+-- Hay bundles that drift slowly to and fro and turn (Hard rounds). They can't be clicked.
+function MapKit.moving(ctx, count, halfX, halfZ)
+	for _ = 1, count do
+		local from = MapKit.at(ctx, (ctx.rng:NextNumber() * 2 - 1) * halfX, 1.2, (ctx.rng:NextNumber() * 2 - 1) * halfZ)
+		local bundle = MapKit.part(ctx, { Name = "Tumble", Shape = "Ball", Size = Vector3.one * 2.4, CFrame = CFrame.new(from), Color = ctx.def.straw, Material = "Grass", CanCollide = false, CanQuery = false, CanTouch = false })
+		local to = from + Vector3.new((ctx.rng:NextNumber() - 0.5) * 30, 0, (ctx.rng:NextNumber() - 0.5) * 30)
+		TweenService:Create(bundle, TweenInfo.new(6 + ctx.rng:NextNumber() * 4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { CFrame = CFrame.new(to) * CFrame.Angles(0, math.pi, math.pi) }):Play()
+	end
+end
+
+return MapKit
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00018">
+				<Properties>
+					<string name="Name">MapsA</string>
+					<ProtectedString name="Source"><![CDATA[-- Map builders: Classic Haystack Field, Barn Interior and Farm at Sunset (shared/Maps holds their
+-- names, light and colours). Each builds round ctx.centre with MapKit, records its hiding spots
+-- as it goes, adds at least six spawn points, then scatters the round's loose straw
+-- (ctx.diff.clutter) and, on Hard, tumbling hay (ctx.diff.moving).
+local MapKit = require(script.Parent.MapKit)
+
+local MapsA = {}
+
+local function ring(ctx, count, radius)
+	for i = 1, count do
+		local a = i / count * math.pi * 2
+		MapKit.spawnAt(ctx, math.cos(a) * radius, math.sin(a) * radius)
+	end
+end
+
+local function finish(ctx, half)
+	MapKit.clutter(ctx, ctx.diff.clutter, half, half)
+	MapKit.moving(ctx, ctx.diff.moving, half * 0.8, half * 0.8)
+end
+
+-- Classic Haystack Field: open grass, round haystacks, bales in heaps, a cart and fences.
+function MapsA.field(ctx)
+	local r = ctx.rng
+	MapKit.ground(ctx, 140, 140, ctx.def.ground, "Grass")
+	for _, e in ipairs({ { -60, -60, 60, -60 }, { 60, -60, 60, 60 }, { 60, 60, -60, 60 }, { -60, 60, -60, -60 } }) do
+		MapKit.fence(ctx, e[1], e[2], e[3], e[4])
+	end
+	for _ = 1, 9 do
+		MapKit.haystack(ctx, r:NextNumber(-48, 48), r:NextNumber(-48, 48), r:NextNumber(5, 7.5), r:NextNumber(9, 13))
+	end
+	for _ = 1, 7 do -- heaps of bales: a row of three with one on top
+		local x, z, turn = r:NextNumber(-50, 50), r:NextNumber(-50, 50), r:NextNumber() * math.pi
+		local along = Vector3.new(math.cos(turn), 0, -math.sin(turn)) * 4.1
+		for i = -1, 1 do
+			MapKit.bale(ctx, x + along.X * i, 0, z + along.Z * i, turn)
+		end
+		MapKit.bale(ctx, x, 2.5, z, turn)
+	end
+	for _ = 1, 4 do -- a hay cart: a crate on wheels
+		local x, z = r:NextNumber(-45, 45), r:NextNumber(-45, 45)
+		MapKit.crate(ctx, x, 0.8, z, 4)
+		for _, d in ipairs({ { -2, -2 }, { 2, -2 }, { -2, 2 }, { 2, 2 } }) do
+			MapKit.part(ctx, { Name = "Wheel", Shape = "Cylinder", Size = Vector3.new(0.4, 1.6, 1.6), CFrame = CFrame.new(MapKit.at(ctx, x + d[1], 0.8, z + d[2])), Color = { 90, 64, 40 }, Material = "Wood" })
+		end
+	end
+	ring(ctx, 8, 30)
+	finish(ctx, 55)
+end
+
+-- Barn Interior: a big wooden barn with stalls, stacked bales, crates, a hay loft up the stairs
+-- along one side, and warm hanging lamps.
+function MapsA.barn(ctx)
+	local r = ctx.rng
+	local W, D, H = 76, 52, 24
+	local wood, dark = { 150, 96, 60 }, { 110, 70, 44 }
+	MapKit.ground(ctx, W + 10, D + 10, ctx.def.ground, "WoodPlanks")
+	for _, w in ipairs({ { 0, -D / 2, W, 1 }, { 0, D / 2, W, 1 }, { -W / 2, 0, 1, D }, { W / 2, 0, 1, D } }) do
+		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, w[1], H / 2, w[2])), Vector3.new(w[3], H, w[4]), { 168, 70, 56 }, "WoodPlanks")
+	end
+	MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, 0, H + 0.5, 0)), Vector3.new(W, 1, D), dark, "WoodPlanks")
+	-- the loft along the back wall, at 10 studs, and stairs up to it
+	local loftZ = -D / 2 + 7
+	MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, 0, 10, loftZ)), Vector3.new(W - 2, 1, 14), wood, "WoodPlanks")
+	for i = 0, 11 do
+		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, -W / 2 + 4, 0.4 + i * 0.8, loftZ + 7 + 19 - i * 1.6)), Vector3.new(6, 0.8, 1.7), wood, "WoodPlanks")
+	end
+	for _ = 1, 8 do
+		MapKit.bale(ctx, r:NextNumber(-W / 2 + 10, W / 2 - 6), 10.5, loftZ + r:NextNumber(-4, 4), r:NextNumber() * 3, true)
+	end
+	for i = 0, 4 do -- the loft's edge spots
+		MapKit.spot(ctx, MapKit.at(ctx, -W / 2 + 12 + i * 12, 10.5, loftZ + 6), true)
+	end
+	-- stalls down the front: low walls with bales and crates between
+	for i = 0, 4 do
+		local x = -W / 2 + 12 + i * 13
+		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, x, 2, D / 2 - 7)), Vector3.new(0.6, 4, 12), dark, "WoodPlanks")
+		MapKit.bale(ctx, x + 4, 0, D / 2 - 5, math.pi / 2)
+		MapKit.bale(ctx, x + 4, 2.5, D / 2 - 5, math.pi / 2)
+		MapKit.crate(ctx, x + 7.5, 0, D / 2 - 10, 2.5)
+	end
+	for _ = 1, 10 do
+		MapKit.crate(ctx, r:NextNumber(-W / 2 + 8, W / 2 - 8), 0, r:NextNumber(-4, 10), r:NextNumber(2, 3.5))
+	end
+	for _ = 1, 6 do
+		MapKit.bale(ctx, r:NextNumber(-W / 2 + 8, W / 2 - 8), 0, r:NextNumber(-6, 12), r:NextNumber() * 3)
+	end
+	for i = 0, 3 do
+		MapKit.lamp(ctx, MapKit.at(ctx, -W / 2 + 12 + i * 17, H - 3, 0), { 255, 196, 120 }, 30)
+	end
+	ring(ctx, 8, 12)
+	finish(ctx, 32)
+end
+
+-- Farm at Sunset: a farmhouse, a tractor, a scarecrow over rows of crops, haystacks and bales
+-- in long orange light.
+function MapsA.sunset(ctx)
+	local r = ctx.rng
+	MapKit.ground(ctx, 140, 140, ctx.def.ground, "Grass")
+	local house = MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, -38, 8, -38)), Vector3.new(24, 16, 18), { 236, 226, 200 }, "WoodPlanks")
+	MapKit.part(ctx, { Name = "Roof", Size = Vector3.new(26, 2, 20), CFrame = CFrame.new(house.Position + Vector3.new(0, 9, 0)), Color = { 150, 60, 50 }, Material = "Slate" })
+	MapKit.spotsOn(ctx, house, 0, 4)
+	-- the tractor
+	local body = MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, 30, 2.5, -30)), Vector3.new(8, 3, 4.5), { 196, 52, 40 }, "SmoothPlastic")
+	MapKit.part(ctx, { Name = "Cab", Size = Vector3.new(3.5, 3.5, 4), CFrame = body.CFrame * CFrame.new(-2, 3, 0), Color = { 196, 52, 40 }, Material = "SmoothPlastic" })
+	for _, w in ipairs({ { -3, 2.2, 3.6 }, { 3, 1.4, 2.2 } }) do
+		for _, side in ipairs({ -1, 1 }) do
+			MapKit.part(ctx, { Name = "Wheel", Shape = "Cylinder", Size = Vector3.new(1, w[3] * 2, w[3] * 2), CFrame = CFrame.new(MapKit.at(ctx, 30 + w[1], w[3], -30 + side * 2.8)) * CFrame.Angles(0, math.pi / 2, 0), Color = { 40, 40, 44 }, Material = "Fabric" })
+		end
+	end
+	MapKit.spotsOn(ctx, body, 1, 4)
+	-- rows of crops and a scarecrow
+	for row = 0, 7 do
+		local x = -10 + row * 5
+		MapKit.part(ctx, { Name = "Crops", Size = Vector3.new(2, 1.2, 36), CFrame = CFrame.new(MapKit.at(ctx, x, 0.6, 30)), Color = { 90, 140, 60 }, Material = "Grass" })
+		for _ = 1, 2 do
+			MapKit.spot(ctx, MapKit.at(ctx, x + 2.5, 0, 30 + r:NextNumber(-16, 16)))
+		end
+	end
+	MapKit.part(ctx, { Name = "Pole", Size = Vector3.new(0.5, 9, 0.5), CFrame = CFrame.new(MapKit.at(ctx, 7, 4.5, 30)), Color = { 120, 84, 50 }, Material = "Wood" })
+	MapKit.part(ctx, { Name = "Scarecrow", Shape = "Ball", Size = Vector3.one * 2.4, CFrame = CFrame.new(MapKit.at(ctx, 7, 9.5, 30)), Color = { 214, 186, 140 }, Material = "Fabric" })
+	for _ = 1, 7 do
+		MapKit.haystack(ctx, r:NextNumber(-50, 50), r:NextNumber(-50, 10), r:NextNumber(5, 7), r:NextNumber(9, 12))
+	end
+	for _ = 1, 10 do
+		MapKit.bale(ctx, r:NextNumber(-50, 50), 0, r:NextNumber(-50, 50), r:NextNumber() * 3)
+	end
+	for _, e in ipairs({ { -60, 60, 60, 60 }, { 60, -60, 60, 60 } }) do
+		MapKit.fence(ctx, e[1], e[2], e[3], e[4])
+	end
+	ring(ctx, 8, 26)
+	finish(ctx, 55)
+end
+
+return MapsA
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00019">
+				<Properties>
+					<string name="Name">MapsB</string>
+					<ProtectedString name="Source"><![CDATA[-- Map builders: Night Forest and Abandoned Attic (see MapsA for how a builder works).
+local MapKit = require(script.Parent.MapKit)
+
+local MapsB = {}
+
+local function ring(ctx, count, radius)
+	for i = 1, count do
+		local a = i / count * math.pi * 2
+		MapKit.spawnAt(ctx, math.cos(a) * radius, math.sin(a) * radius)
+	end
+end
+
+-- Night Forest: tall trees in fog, fallen logs, mossy rocks, glowing mushrooms and a few lanterns
+-- so the paths stay readable in the dark.
+function MapsB.forest(ctx)
+	local r = ctx.rng
+	MapKit.ground(ctx, 130, 130, ctx.def.ground, "Grass")
+	for _ = 1, 26 do
+		MapKit.tree(ctx, r:NextNumber(-55, 55), r:NextNumber(-55, 55), r:NextNumber(14, 22), { 40, 76, 50 })
+	end
+	for _ = 1, 9 do -- fallen logs: spots along their tops
+		local x, z, turn = r:NextNumber(-48, 48), r:NextNumber(-48, 48), r:NextNumber() * math.pi
+		local log = MapKit.part(ctx, { Name = "Log", Shape = "Cylinder", Size = Vector3.new(r:NextNumber(8, 14), 2.2, 2.2), CFrame = CFrame.new(MapKit.at(ctx, x, 1.1, z)) * CFrame.Angles(0, turn, 0), Color = { 92, 66, 44 }, Material = "Wood" })
+		for _ = 1, 2 do
+			MapKit.spot(ctx, (log.CFrame * CFrame.new(r:NextNumber(-3, 3), 1.1, 0)).Position)
+		end
+		MapKit.spotsOn(ctx, log, 0, 2)
+	end
+	for _ = 1, 12 do -- rocks
+		local rock = MapKit.part(ctx, { Name = "Rock", Shape = "Ball", Size = Vector3.one * r:NextNumber(2.5, 5), CFrame = CFrame.new(MapKit.at(ctx, r:NextNumber(-50, 50), 0.6, r:NextNumber(-50, 50))), Color = { 96, 104, 100 }, Material = "Slate" })
+		MapKit.spotsOn(ctx, rock, 0, 2)
+	end
+	for _ = 1, 16 do -- glowing mushrooms
+		local x, z = r:NextNumber(-50, 50), r:NextNumber(-50, 50)
+		MapKit.part(ctx, { Name = "Stalk", Size = Vector3.new(0.3, 0.8, 0.3), CFrame = CFrame.new(MapKit.at(ctx, x, 0.4, z)), Color = { 230, 226, 210 }, Material = "SmoothPlastic", CanCollide = false })
+		MapKit.part(ctx, { Name = "Cap", Shape = "Ball", Size = Vector3.new(1.1, 1.1, 1.1), CFrame = CFrame.new(MapKit.at(ctx, x, 0.9, z)), Color = { 120, 200, 255 }, Material = "Neon", CanCollide = false })
+	end
+	for i = 1, 6 do
+		local a = i / 6 * math.pi * 2
+		MapKit.part(ctx, { Name = "LanternPost", Size = Vector3.new(0.4, 6, 0.4), CFrame = CFrame.new(MapKit.at(ctx, math.cos(a) * 30, 3, math.sin(a) * 30)), Color = { 60, 50, 40 }, Material = "Wood" })
+		MapKit.lamp(ctx, MapKit.at(ctx, math.cos(a) * 30, 6.4, math.sin(a) * 30), { 255, 190, 110 }, 34)
+	end
+	ring(ctx, 8, 20)
+	MapKit.clutter(ctx, ctx.diff.clutter, 52, 52)
+	MapKit.moving(ctx, ctx.diff.moving, 40, 40)
+end
+
+-- Abandoned Attic: a long, low room under a sloping roof, full of boxes, trunks, an old table,
+-- a wardrobe, sheet-covered furniture and dusty lamps, lit by a round window at each end.
+function MapsB.attic(ctx)
+	local r = ctx.rng
+	local L, Wd, H = 72, 32, 16
+	local wood, dark = { 132, 98, 66 }, { 96, 70, 48 }
+	MapKit.ground(ctx, L + 6, Wd + 6, ctx.def.ground, "WoodPlanks")
+	for _, side in ipairs({ -1, 1 }) do -- the sloping roof
+		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, 0, H / 2 + 2, side * Wd / 4)) * CFrame.Angles(side * math.rad(-55), 0, 0), Vector3.new(L, 1, Wd * 0.9), dark, "WoodPlanks")
+		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, 0, 1.5, side * Wd / 2)), Vector3.new(L, 3, 1), wood, "WoodPlanks")
+	end
+	for _, side in ipairs({ -1, 1 }) do -- end walls with a round window
+		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, side * L / 2, H / 2, 0)), Vector3.new(1, H, Wd), wood, "WoodPlanks")
+		local win = MapKit.part(ctx, { Name = "Window", Shape = "Cylinder", Size = Vector3.new(1.2, 6, 6), CFrame = CFrame.new(MapKit.at(ctx, side * (L / 2 - 0.2), 9, 0)), Color = { 255, 236, 190 }, Material = "Neon", CanCollide = false })
+		local light = Instance.new("SpotLight")
+		light.Face, light.Range, light.Angle, light.Brightness = if side > 0 then Enum.NormalId.Left else Enum.NormalId.Right, 50, 70, 2
+		light.Color = Color3.fromRGB(255, 226, 170)
+		light.Parent = win
+	end
+	for _ = 1, 22 do -- boxes, some stacked
+		local x, z = r:NextNumber(-L / 2 + 5, L / 2 - 5), r:NextNumber(-Wd / 2 + 4, Wd / 2 - 4)
+		local s = r:NextNumber(2, 3.4)
+		MapKit.crate(ctx, x, 0, z, s)
+		if r:NextNumber() < 0.4 then
+			MapKit.crate(ctx, x, s, z, s * 0.8)
+		end
+	end
+	for _ = 1, 5 do -- trunks
+		local t = MapKit.part(ctx, { Name = "Trunk", Size = Vector3.new(4.5, 2.6, 2.6), CFrame = CFrame.new(MapKit.at(ctx, r:NextNumber(-30, 30), 1.3, r:NextNumber(-10, 10))) * CFrame.Angles(0, r:NextNumber() * math.pi, 0), Color = { 110, 70, 46 }, Material = "Wood" })
+		MapKit.spotsOn(ctx, t, 1, 1)
+	end
+	-- an old table, a wardrobe and furniture under dust sheets
+	local top = MapKit.part(ctx, { Name = "Table", Size = Vector3.new(8, 0.5, 4.5), CFrame = CFrame.new(MapKit.at(ctx, 6, 3, 2)), Color = wood, Material = "Wood" })
+	for _, d in ipairs({ { -3.6, -1.9 }, { 3.6, -1.9 }, { -3.6, 1.9 }, { 3.6, 1.9 } }) do
+		MapKit.part(ctx, { Name = "Leg", Size = Vector3.new(0.5, 2.8, 0.5), CFrame = CFrame.new(MapKit.at(ctx, 6 + d[1], 1.4, 2 + d[2])), Color = dark, Material = "Wood" })
+	end
+	MapKit.spotsOn(ctx, top, 3, 2)
+	local wardrobe = MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, -26, 4.5, -10)), Vector3.new(6, 9, 3), dark, "Wood")
+	MapKit.spotsOn(ctx, wardrobe, 0, 3)
+	for _ = 1, 4 do
+		local sheet = MapKit.part(ctx, { Name = "DustSheet", Size = Vector3.new(r:NextNumber(4, 6), r:NextNumber(3, 4.5), r:NextNumber(3, 4)), CFrame = CFrame.new(MapKit.at(ctx, r:NextNumber(-28, 28), 2, r:NextNumber(-9, 9))), Color = { 226, 222, 210 }, Material = "Fabric" })
+		MapKit.spotsOn(ctx, sheet, 1, 2)
+	end
+	for i = 0, 2 do
+		MapKit.lamp(ctx, MapKit.at(ctx, -24 + i * 24, 11, 0), { 255, 214, 150 }, 26)
+	end
+	ring(ctx, 8, 8)
+	MapKit.clutter(ctx, ctx.diff.clutter, L / 2 - 4, Wd / 2 - 4)
+	MapKit.moving(ctx, ctx.diff.moving, L / 2 - 8, Wd / 2 - 6)
+end
+
+return MapsB
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX0001A">
+				<Properties>
+					<string name="Name">NeedleSpawner</string>
+					<ProtectedString name="Source"><![CDATA[-- Hides the needle(s) each round and decides, on the server, who found them.
+-- A spot is used only if (1) there's a real surface just under it, (2) nothing solid is in the
+-- way where the needle would lie, and (3) it's within jumping height of the floor unless the map
+-- marked it reachable by stairs (climb). The needle then moves a little (Config.Find.jitter) and
+-- turns, so spots can't be memorised.
+-- Claims come from a ClickDetector (mouse or tap) or walking into the needle, and only count if
+-- RoundManager's canClaim(player) agrees, the character is within reach, the player isn't
+-- clicking too fast or locked out by a decoy, and AntiCheat hasn't flagged them.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local MapKit = require(script.Parent.MapKit)
+local AntiCheat = require(script.Parent.AntiCheat)
+
+local NeedleSpawner = {}
+NeedleSpawner.onClaim = function(_player, _needle) end -- RoundManager sets these
+NeedleSpawner.canClaim = function(_player)
+	return false
+end
+
+local folder = nil
+local needles = {} -- { model, hitbox, position, golden, index }
+local clicks = {} -- [player] = { times }
+local lockedUntil = {} -- [player] = os.clock() a decoy locks them out until
+
+local function validSpot(spot, ctx)
+	local pos = spot.cf.Position
+	if not spot.climb and pos.Y - (ctx.centre.Y + ctx.floorY) > Config.Find.maxSpotHeight then
+		return false
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { ctx.model }
+	local hit = workspace:Raycast(pos + Vector3.new(0, 1, 0), Vector3.new(0, -2.5, 0), params)
+	if not hit then
+		return false -- nothing to lie on
+	end
+	local overlap = OverlapParams.new()
+	overlap.FilterType = Enum.RaycastFilterType.Include
+	overlap.FilterDescendantsInstances = { ctx.model }
+	local inside = workspace:GetPartBoundsInBox(CFrame.new(hit.Position + Vector3.new(0, 0.35, 0)), Vector3.new(1.4, 0.4, 1.4), overlap)
+	for _, part in ipairs(inside) do
+		if part.CanCollide and part ~= hit.Instance then
+			return false -- inside a wall or another prop
+		end
+	end
+	return true, hit.Position
+end
+
+local function rate(player)
+	local now, list = os.clock(), clicks[player] or {}
+	local kept = {}
+	for _, t in ipairs(list) do
+		if now - t < 1 then
+			table.insert(kept, t)
+		end
+	end
+	table.insert(kept, now)
+	clicks[player] = kept
+	return #kept <= Config.Find.clicksPerSecond
+end
+
+local function claim(player, needle, decoy)
+	if not rate(player) or (lockedUntil[player] or 0) > os.clock() or not NeedleSpawner.canClaim(player) or AntiCheat.flagged(player) then
+		return
+	end
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not root or (root.Position - needle.position).Magnitude > Config.Find.reach + 2 then
+		return -- too far: the click came from somewhere it couldn't
+	end
+	if decoy then
+		lockedUntil[player] = os.clock() + Config.Find.decoyLockout
+		ReplicatedStorage.Remotes.Notify:FireClient(player, { text = "A decoy! Your hands are shaking for " .. Config.Find.decoyLockout .. " seconds...", tone = "bad" })
+		return
+	end
+	NeedleSpawner.onClaim(player, needle)
+end
+
+-- Builds one needle (or a decoy) lying at `pos`: a thin shaft, an eye, and an invisible hitbox
+-- you click, tap or walk into.
+local function build(pos, diff, round, ctx, decoy)
+	local rng = ctx.rng
+	local turn = CFrame.Angles(0, rng:NextNumber() * math.pi * 2, 0)
+	local base = CFrame.new(pos + Vector3.new(0, 0.06, 0)) * turn
+	local length = diff.needle
+	local colour, material = Color3.fromRGB(205, 210, 220), Enum.Material.Metal
+	if round.golden and not decoy then
+		colour = Color3.fromRGB(255, 205, 70)
+	elseif round.modifiers.camo or decoy then
+		colour, material = MapKit.rgb(ctx.def.straw), Enum.Material.SmoothPlastic
+	end
+	local model = Instance.new("Model")
+	model.Name = if decoy then "Decoy" else "Needle"
+	local shaft = MapKit.part(ctx, { Name = "Shaft", Shape = "Cylinder", Size = Vector3.new(length, 0.09, 0.09), CFrame = base, Color = colour, Material = material, CanCollide = false, Parent = model })
+	MapKit.part(ctx, { Name = "Eye", Size = Vector3.new(0.2, 0.05, 0.14), CFrame = base * CFrame.new(-length / 2 + 0.1, 0, 0), Color = colour:Lerp(Color3.new(0, 0, 0), 0.25), Material = material, CanCollide = false, Parent = model })
+	local hitbox = MapKit.part(ctx, { Name = "Hitbox", Size = Vector3.new(length + 0.5, Config.Find.hitbox, Config.Find.hitbox), CFrame = base, Transparency = 0.99, CanCollide = false, Parent = model })
+	local detector = Instance.new("ClickDetector")
+	detector.MaxActivationDistance = Config.Find.reach
+	detector.Parent = hitbox
+	if (diff.glint or round.golden) and not decoy then
+		local e = Instance.new("ParticleEmitter")
+		e.Rate, e.Lifetime, e.Speed = if round.golden then 3 else 0.6, NumberRange.new(0.4, 0.7), NumberRange.new(0)
+		e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 0.35), NumberSequenceKeypoint.new(1, 0) })
+		e.Color, e.LightEmission = ColorSequence.new(if round.golden then Color3.fromRGB(255, 230, 140) else Color3.new(1, 1, 1)), 0.8
+		e.Parent = shaft
+	end
+	model.Parent = folder
+	local record = { model = model, position = shaft.Position, golden = round.golden and not decoy, index = #needles + 1 }
+	detector.MouseClick:Connect(function(player)
+		claim(player, record, decoy)
+	end)
+	hitbox.Touched:Connect(function(hit)
+		local player = Players:GetPlayerFromCharacter(hit.Parent)
+		if player then
+			claim(player, record, decoy)
+		end
+	end)
+	return record
+end
+
+-- Hides the round's needles (two for Double Needle) and Hard round decoys. Returns the needles.
+function NeedleSpawner.spawn(ctx, diff, round)
+	NeedleSpawner.clear()
+	folder = Instance.new("Folder")
+	folder.Name = "Needles"
+	folder.Parent = ctx.model
+	local spots = table.clone(ctx.spots)
+	local function take()
+		while #spots > 0 do
+			local spot = table.remove(spots, ctx.rng:NextInteger(1, #spots))
+			local j = Config.Find.jitter
+			spot = { cf = spot.cf * CFrame.new((ctx.rng:NextNumber() - 0.5) * 2 * j, 0, (ctx.rng:NextNumber() - 0.5) * 2 * j), climb = spot.climb }
+			local ok, at = validSpot(spot, ctx)
+			if ok then
+				return at
+			end
+		end
+		return nil
+	end
+	for _ = 1, if round.modifiers.double then 2 else 1 do
+		local at = take()
+		if at then
+			table.insert(needles, build(at, diff, round, ctx, false))
+		end
+	end
+	for _ = 1, diff.decoys do
+		local at = take()
+		if at then
+			build(at, diff, round, ctx, true)
+		end
+	end
+	return needles
+end
+
+-- A hint for `player`: roughly where the nearest needle they haven't found is.
+function NeedleSpawner.hint(player, foundBy)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return nil
+	end
+	local best, dist = nil, math.huge
+	for _, n in ipairs(needles) do
+		local d = (n.position - root.Position).Magnitude
+		if not (foundBy[n.index] and foundBy[n.index][player]) and d < dist then
+			best, dist = n, d
+		end
+	end
+	if not best then
+		return nil
+	end
+	local offset = best.position - root.Position
+	local rel = root.CFrame:VectorToObjectSpace(offset) -- relative to where you face: -Z is ahead
+	local dirs = { "straight ahead", "ahead, to your right", "to your right", "behind you, to the right", "behind you", "behind you, to the left", "to your left", "ahead, to your left" }
+	local angle = math.atan2(rel.X, -rel.Z)
+	local dir = dirs[(math.floor((angle / (math.pi * 2)) * 8 + 0.5) % 8) + 1]
+	local far = if dist < Config.Hints.nearStuds then "very close" elseif dist < Config.Hints.farStuds then "not far" else "a long way off"
+	local height = if offset.Y > 4 then ", up high" elseif offset.Y < -4 then ", down low" else ""
+	return "The needle is " .. far .. ", " .. dir .. height .. "."
+end
+
+function NeedleSpawner.clear()
+	if folder then
+		folder:Destroy()
+	end
+	folder, needles = nil, {}
+end
+
+Players.PlayerRemoving:Connect(function(player)
+	clicks[player], lockedUntil[player] = nil, nil
+end)
+
+return NeedleSpawner
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX0001B">
+				<Properties>
+					<string name="Name">QuestManager</string>
+					<ProtectedString name="Source"><![CDATA[-- Daily quests: three a day, the same for everyone (shared/Quests.forDay). Progress is saved;
+-- a new day (UTC) starts fresh. When a quest is done its reward is paid straight away (coins,
+-- XP and sometimes a cosmetic) and the player is told.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Quests = require(Shared:WaitForChild("Quests"))
+local Cosmetics = require(Shared:WaitForChild("Cosmetics"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local DataManager = require(script.Parent.DataManager)
+
+local QuestManager = {}
+QuestManager.grant = function(_player, _coins, _xp, _why) end -- RewardManager sets this (no circular require)
+
+-- Starts a new day's quests if the saved ones are from an earlier day.
+local function fresh(d)
+	local today = Quests.today()
+	if d.quests.day ~= today then
+		d.quests = { day = today, progress = {}, done = {} }
+	end
+end
+
+-- Records progress of `kind` (see shared/Quests) for today's quests. info.seconds for "fast".
+function QuestManager.record(player, kind, amount, info)
+	local d = DataManager.get(player)
+	if not d then
+		return
+	end
+	local finished = {}
+	DataManager.update(player, function(data)
+		fresh(data)
+		for _, q in ipairs(Quests.forDay(data.quests.day)) do
+			local counts = q.kind == kind and not data.quests.done[q.id] and (kind ~= "fast" or (info and info.seconds < q.under))
+			if counts then
+				local now = math.min(q.n, (data.quests.progress[q.id] or 0) + amount)
+				data.quests.progress[q.id] = now
+				if now >= q.n then
+					data.quests.done[q.id] = true
+					table.insert(finished, q)
+					if q.cosmetic and Cosmetics.get(q.cosmetic) then
+						data.owned[q.cosmetic] = true
+					end
+				end
+			end
+		end
+	end)
+	for _, q in ipairs(finished) do
+		QuestManager.grant(player, q.coins, q.xp, "Quest done: " .. q.text)
+		if q.cosmetic and Cosmetics.get(q.cosmetic) then
+			Remotes.Notify:FireClient(player, { text = "New cosmetic: " .. Cosmetics.get(q.cosmetic).name .. "! Equip it in your Inventory.", tone = "good" })
+		end
+	end
+end
+
+function QuestManager.init()
+	DataManager.onLoaded(function(player)
+		DataManager.update(player, fresh)
+	end)
+end
+
+return QuestManager
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX0001C">
+				<Properties>
+					<string name="Name">Requests</string>
+					<ProtectedString name="Source"><![CDATA[-- Small requests from players, checked on the server: a hint (Remotes.Hint) and saving their
+-- settings (Remotes.SaveSettings: only known settings, only true/false).
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local DataManager = require(script.Parent.DataManager)
+local NeedleSpawner = require(script.Parent.NeedleSpawner)
+local RewardManager = require(script.Parent.RewardManager)
+local RoundManager = require(script.Parent.RoundManager)
+
+local Requests = {}
+
+-- A hint: one free a day (two with the Extra Hint pass), only during a round you're in.
+local function hint(player)
+	local r = RoundManager.current()
+	local d = DataManager.get(player)
+	if not r or not d or not r.participants[player] or ReplicatedStorage:GetAttribute("Phase") ~= "search" then
+		return nil, "Hints work during a round."
+	end
+	local today = math.floor(os.time() / 86400)
+	local used = if d.hintsDay == today then d.hintsUsed else 0
+	local allowed = Config.Hints.free + (if RewardManager.hasPass(player, "ExtraHint") then Config.Hints.pass else 0)
+	if used >= allowed then
+		return nil, "No hints left today. They come back tomorrow."
+	end
+	local text = NeedleSpawner.hint(player, r.foundBy)
+	if not text then
+		return nil, "You've found them all!"
+	end
+	DataManager.update(player, function(data)
+		data.hintsDay, data.hintsUsed = today, used + 1
+	end)
+	return text, nil
+end
+
+function Requests.init()
+	Remotes.Hint.OnServerInvoke = hint
+	Remotes.SaveSettings.OnServerEvent:Connect(function(player, settings)
+		if type(settings) ~= "table" then
+			return
+		end
+		DataManager.update(player, function(d)
+			for key, value in pairs(settings) do
+				if type(value) == "boolean" and d.settings[key] ~= nil then
+					d.settings[key] = value
+				end
+			end
+		end)
+	end)
+end
+
+return Requests
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX0001D">
+				<Properties>
+					<string name="Name">RewardManager</string>
+					<ProtectedString name="Source"><![CDATA[-- Every coin and XP point is given here, on the server: needle finds (faster = more), places,
+-- playing a round to the end, win streaks, the daily login streak and quest rewards. Level-ups
+-- and rewards are announced to the player. Stats for the leaderboards are kept up to date.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Rules = require(Shared:WaitForChild("Rules"))
+local Quests = require(Shared:WaitForChild("Quests"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local DataManager = require(script.Parent.DataManager)
+local QuestManager = require(script.Parent.QuestManager)
+local LeaderboardManager = require(script.Parent.LeaderboardManager)
+
+local RewardManager = {}
+
+local function hasPass(player, name)
+	return player:GetAttribute("Pass_" .. name) == true
+end
+RewardManager.hasPass = hasPass
+
+-- Gives coins and XP (already multiplied) and announces any level-up. Returns the levels gained.
+function RewardManager.grant(player, coins, xp, why)
+	local gained = 0
+	DataManager.update(player, function(d)
+		d.coins += coins
+		d.coinsEarned += coins
+		d.level, d.xp, gained = Rules.addXp(d.level, d.xp, xp)
+	end)
+	LeaderboardManager.mark(player)
+	if why then
+		Remotes.Notify:FireClient(player, { text = why .. ": +" .. Rules.commas(coins) .. " coins, +" .. xp .. " XP", tone = "good" })
+	end
+	if gained > 0 then
+		Remotes.Notify:FireClient(player, { text = "LEVEL UP! You're level " .. player:GetAttribute("Level") .. ".", tone = "level" })
+	end
+	return gained
+end
+
+-- A needle claimed (each needle counts, so two in a Double Needle round).
+function RewardManager.found(player, elapsed, golden)
+	DataManager.update(player, function(d)
+		d.needles += 1
+		if d.bestTime == 0 or elapsed < d.bestTime then
+			d.bestTime = math.floor(elapsed * 10 + 0.5) / 10
+		end
+	end)
+	LeaderboardManager.mark(player)
+	QuestManager.record(player, "find", 1)
+	QuestManager.record(player, "fast", 1, { seconds = elapsed })
+	if golden then
+		QuestManager.record(player, "golden", 1)
+	end
+end
+
+-- A player finished the round in `place` (1 = first to find every needle). Returns coins, xp.
+function RewardManager.placed(player, place, elapsed, duration, diff, golden, playerCount)
+	local d = DataManager.get(player)
+	if not d then
+		return 0, 0
+	end
+	local coins, xp = Rules.findReward(place, elapsed, duration, diff, golden, d.winStreak, hasPass(player, "DoubleCoins"))
+	if place == 1 and playerCount >= Config.Round.winsNeedPlayers then
+		DataManager.update(player, function(data)
+			data.wins += 1
+			data.winStreak += 1
+			local week = Rules.week()
+			if data.weekly.week ~= week then
+				data.weekly = { week = week, wins = 0 }
+			end
+			data.weekly.wins += 1
+		end)
+		QuestManager.record(player, "win", 1)
+	end
+	RewardManager.grant(player, coins, xp, nil)
+	return coins, xp
+end
+
+-- Everyone still in the map at the end of a round. `won` = they placed first.
+function RewardManager.played(player, diff, won)
+	local mult = if hasPass(player, "DoubleCoins") then 2 else 1
+	DataManager.update(player, function(d)
+		d.rounds += 1
+		if not won then
+			d.winStreak = 0
+		end
+	end)
+	RewardManager.grant(player, Config.Rewards.playCoins * mult, Config.Rewards.playXp, nil)
+	QuestManager.record(player, "play", 1)
+	if diff.id == "hard" then
+		QuestManager.record(player, "hard", 1)
+	end
+end
+
+-- The daily login streak: the first visit each day (UTC) pays loginCoins x the streak day.
+local function login(player, d)
+	local today = Quests.today()
+	if d.lastDay == today then
+		return
+	end
+	local streak = if d.lastDay == today - 1 then d.loginStreak + 1 else 1
+	DataManager.update(player, function(data)
+		data.loginStreak, data.lastDay = streak, today
+	end)
+	local coins = Config.Rewards.loginCoins * math.min(streak, Config.Rewards.loginStreakMax)
+	RewardManager.grant(player, coins, 0, "Day " .. streak .. " login bonus")
+end
+
+function RewardManager.init()
+	DataManager.onLoaded(login)
+	QuestManager.grant = RewardManager.grant
+end
+
+return RewardManager
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX0001E">
+				<Properties>
+					<string name="Name">RoundManager</string>
+					<ProtectedString name="Source"><![CDATA[-- The round loop, all on the server:
+--   lobby (Config.Round.lobbyCountdown) -> loading: pick a map, difficulty, modifier and maybe a
+--   Golden Needle, build the map, hide the needle(s), move everyone in -> countdown (3, 2, 1;
+--   nobody moves) -> search (the timer runs; a player "finishes" when they've found every
+--   needle; after the first finish, everyone else has Config.Round.grace seconds) -> results ->
+--   back to the lobby. A lone player still gets rounds (practice).
+-- The phase is published as attributes on ReplicatedStorage (Phase, EndsAt, MapName,
+-- Difficulty, Modifiers, Golden, NeedleCount) and announced with Remotes.RoundState.
+local Lighting = game:GetService("Lighting")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Rules = require(Shared:WaitForChild("Rules"))
+local Maps = require(Shared:WaitForChild("Maps"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local DataManager = require(script.Parent.DataManager)
+local NeedleSpawner = require(script.Parent.NeedleSpawner)
+local RewardManager = require(script.Parent.RewardManager)
+local AntiCheat = require(script.Parent.AntiCheat)
+local LobbyBuilder = require(script.Parent.LobbyBuilder)
+local builders = require(script.Parent.MapsA)
+for name, fn in pairs(require(script.Parent.MapsB)) do
+	builders[name] = fn
+end
+
+local RoundManager = {}
+local rng = Random.new()
+local round = nil -- the round in play: { participants, finished, foundBy, needles, started, duration, diff, golden, ... }
+local lastMap = nil
+
+local function now()
+	return workspace:GetServerTimeNow()
+end
+
+local function phase(name, seconds, extra)
+	ReplicatedStorage:SetAttribute("Phase", name)
+	ReplicatedStorage:SetAttribute("EndsAt", now() + (seconds or 0))
+	Remotes.RoundState:FireAllClients({ phase = name, endsAt = now() + (seconds or 0), extra = extra })
+end
+
+local function light(spec, dim)
+	for key, value in pairs(spec) do
+		Lighting[key] = if type(value) == "table" then Color3.fromRGB(value[1], value[2], value[3]) else value
+	end
+	if dim and dim > 0 then
+		Lighting.Brightness *= 1 - dim
+		Lighting.Ambient = Lighting.Ambient:Lerp(Color3.new(0, 0, 0), dim)
+		Lighting.OutdoorAmbient = Lighting.OutdoorAmbient:Lerp(Color3.new(0, 0, 0), dim)
+	end
+end
+
+local function humanoid(player)
+	local c = player.Character
+	return c and c:FindFirstChildOfClass("Humanoid"), c
+end
+
+local function freeze(player, on)
+	local h = humanoid(player)
+	if h then
+		h.WalkSpeed = if on then 0 else 16
+		h.JumpHeight = if on then 0 else 7.2
+	end
+end
+
+local function move(player, cf)
+	local h, c = humanoid(player)
+	if h and c and h.Health > 0 then
+		AntiCheat.allow(player, 3)
+		c:PivotTo(cf)
+	end
+end
+
+-- Players who'll play this round: loaded, alive, and not sitting out (Settings: Auto-join).
+local function players()
+	local list = {}
+	for _, p in ipairs(Players:GetPlayers()) do
+		local d = DataManager.get(p)
+		local h = humanoid(p)
+		if d and d.settings.autoJoin and h and h.Health > 0 then
+			table.insert(list, p)
+		end
+	end
+	return list
+end
+
+-- A claim on needle `n` by `player` (already checked by NeedleSpawner).
+local function onClaim(player, n)
+	local r = round
+	if not r or not r.participants[player] or r.finished[player] then
+		return
+	end
+	r.foundBy[n.index] = r.foundBy[n.index] or {}
+	if r.foundBy[n.index][player] then
+		return
+	end
+	r.foundBy[n.index][player] = true
+	local elapsed = now() - r.started
+	RewardManager.found(player, elapsed, n.golden)
+	local count = 0
+	for i = 1, #r.needles do
+		if r.foundBy[i] and r.foundBy[i][player] then
+			count += 1
+		end
+	end
+	if count < #r.needles then
+		Remotes.Notify:FireClient(player, { text = "One down! " .. (#r.needles - count) .. " to go.", tone = "good" })
+		return
+	end
+	table.insert(r.order, player)
+	r.finished[player] = elapsed
+	local place = #r.order
+	local coins, xp = RewardManager.placed(player, place, elapsed, r.duration, r.diff, r.golden, r.count)
+	r.rewards[player] = { coins = coins, xp = xp }
+	Remotes.Found:FireAllClients({ userId = player.UserId, name = player.DisplayName, place = place, seconds = elapsed, golden = r.golden, position = n.position, coins = coins, xp = xp })
+	if place == 1 then
+		r.graceEnds = now() + Config.Round.grace
+		ReplicatedStorage:SetAttribute("EndsAt", math.min(r.ends, r.graceEnds))
+	end
+end
+
+local function pickModifiers()
+	local mods = {}
+	if rng:NextNumber() < Config.ModifierChance then
+		mods[Rules.pick(Config.Modifiers, rng).id] = true
+	end
+	return mods
+end
+
+local function playRound()
+	-- choose and build
+	local options = {}
+	for _, m in ipairs(Maps.list) do
+		if m.id ~= lastMap or #Maps.list == 1 then
+			table.insert(options, m)
+		end
+	end
+	local def = Rules.pick(options, rng)
+	lastMap = def.id
+	local diff = Rules.pick(Config.Difficulty, rng)
+	local mods = pickModifiers()
+	local golden = rng:NextNumber() < Config.GoldenChance
+	local old = workspace:FindFirstChild("Arena")
+	if old then
+		old:Destroy()
+	end
+	local model = Instance.new("Model")
+	model.Name = "Arena"
+	model.Parent = workspace
+	local ctx = { model = model, rng = Random.new(rng:NextInteger(1, 2 ^ 30)), centre = Config.ArenaCentre, def = def, spots = {}, spawns = {}, floorY = 0, diff = diff }
+	local modNames = {}
+	for _, m in ipairs(Config.Modifiers) do
+		if mods[m.id] then
+			table.insert(modNames, m.name)
+		end
+	end
+	ReplicatedStorage:SetAttribute("MapName", def.name)
+	ReplicatedStorage:SetAttribute("Difficulty", diff.name)
+	ReplicatedStorage:SetAttribute("Modifiers", table.concat(modNames, ", "))
+	ReplicatedStorage:SetAttribute("Golden", golden)
+	phase("loading", 3)
+	builders[def.builder](ctx)
+	local needles = NeedleSpawner.spawn(ctx, diff, { modifiers = mods, golden = golden })
+	ReplicatedStorage:SetAttribute("NeedleCount", #needles)
+	light(def.lighting, diff.dim + (if mods.lowlight then 0.45 else 0))
+	-- move everyone in
+	local list = players()
+	if #list == 0 or #needles == 0 then
+		light(Maps.lobbyLighting)
+		model:Destroy()
+		return
+	end
+	local duration = if mods.speed then Config.Round.speedDuration else Config.Round.duration
+	round = { participants = {}, finished = {}, foundBy = {}, order = {}, rewards = {}, needles = needles, diff = diff, golden = golden, duration = duration, count = #list, spawns = ctx.spawns }
+	for i, p in ipairs(list) do
+		round.participants[p] = true
+		move(p, ctx.spawns[(i - 1) % #ctx.spawns + 1])
+		freeze(p, true)
+	end
+	phase("countdown", Config.Round.loadCountdown)
+	task.wait(Config.Round.loadCountdown)
+	for p in pairs(round.participants) do
+		freeze(p, false)
+	end
+	round.started = now()
+	round.ends = round.started + duration
+	phase("search", duration)
+	-- search until time is up, the grace window closes or everyone has finished
+	while true do
+		task.wait(0.25)
+		local remaining = 0
+		for p in pairs(round.participants) do
+			if p.Parent and not round.finished[p] then
+				remaining += 1
+			end
+		end
+		local t = now()
+		if t >= round.ends or (round.graceEnds and t >= round.graceEnds) or remaining == 0 then
+			break
+		end
+	end
+	-- results and rewards for playing
+	local rows = {}
+	for place, p in ipairs(round.order) do
+		local r = round.rewards[p] or { coins = 0, xp = 0 }
+		table.insert(rows, { name = p.DisplayName, userId = p.UserId, place = place, seconds = round.finished[p], coins = r.coins, xp = r.xp })
+	end
+	for p in pairs(round.participants) do
+		if p.Parent then
+			RewardManager.played(p, diff, round.order[1] == p)
+		end
+	end
+	phase("results", Config.Round.results, { rows = rows, map = def.name, golden = golden })
+	NeedleSpawner.clear()
+	task.wait(Config.Round.results)
+	for i, p in ipairs(Players:GetPlayers()) do
+		if round.participants[p] then
+			move(p, LobbyBuilder.spawnPoint(i))
+		end
+	end
+	round = nil
+	model:Destroy()
+	light(Maps.lobbyLighting)
+end
+
+-- The round in play (nil between rounds), for server/Requests.
+function RoundManager.current()
+	return round
+end
+
+function RoundManager.start()
+	NeedleSpawner.onClaim = onClaim
+	NeedleSpawner.canClaim = function(player)
+		return round ~= nil and round.participants[player] == true and ReplicatedStorage:GetAttribute("Phase") == "search"
+	end
+	Players.PlayerRemoving:Connect(function(player)
+		if round then
+			round.participants[player] = nil
+		end
+	end)
+	Players.PlayerAdded:Connect(function(player)
+		player.CharacterAdded:Connect(function()
+			task.wait(0.3) -- a participant who respawns goes back into the round's map
+			if round and round.participants[player] and round.spawns and #round.spawns > 0 then
+				move(player, round.spawns[rng:NextInteger(1, #round.spawns)])
+			end
+		end)
+	end)
+	light(Maps.lobbyLighting)
+	task.spawn(function()
+		while true do
+			phase("lobby", Config.Round.lobbyCountdown)
+			task.wait(Config.Round.lobbyCountdown)
+			if #players() >= Config.Round.minPlayers then
+				local ok, err = pcall(playRound)
+				if not ok then
+					warn("[Round] " .. tostring(err))
+					for i, p in ipairs(Players:GetPlayers()) do -- nobody is left in a broken map
+						freeze(p, false)
+						move(p, LobbyBuilder.spawnPoint(i))
+					end
+					round = nil
+					NeedleSpawner.clear()
+					light(Maps.lobbyLighting)
+				end
+			end
+		end
+	end)
+end
+
+return RoundManager
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX0001F">
+				<Properties>
+					<string name="Name">ShopManager</string>
+					<ProtectedString name="Source"><![CDATA[-- Cosmetics and purchases. With Haystack Coins: buy a cosmetic (Remotes.Shop "buy"), and wear
+-- what you own ("equip"); the server checks the price, your coins and that you own it. With
+-- Robux (MarketplaceService): game passes (2x Coins, Extra Hint, Supporter) are checked on join
+-- and after a purchase; the Starter Bundle product goes through ProcessReceipt, which records
+-- each receipt in the save so a repeated receipt is never paid twice, and only reports success
+-- once the save has been written. What you wear shows on your character: a trail and a title.
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Cosmetics = require(Shared:WaitForChild("Cosmetics"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local DataManager = require(script.Parent.DataManager)
+
+local ShopManager = {}
+
+local function rgb(c)
+	return Color3.fromRGB(c[1], c[2], c[3])
+end
+
+-- Puts on (or takes off) the trail and title a player wears.
+function ShopManager.dress(player)
+	local d = DataManager.get(player)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local head = character and character:FindFirstChild("Head")
+	if not d or not root or not head then
+		return
+	end
+	for _, name in ipairs({ "CosmeticTrail", "CosmeticA0", "CosmeticA1" }) do
+		local old = root:FindFirstChild(name)
+		if old then
+			old:Destroy()
+		end
+	end
+	local trail = Cosmetics.get(d.equipped.trail or "")
+	if trail then
+		local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
+		a0.Name, a1.Name = "CosmeticA0", "CosmeticA1"
+		a0.Position, a1.Position = Vector3.new(0, 0.8, 0.4), Vector3.new(0, -0.8, 0.4)
+		a0.Parent, a1.Parent = root, root
+		local t = Instance.new("Trail")
+		t.Name = "CosmeticTrail"
+		t.Attachment0, t.Attachment1 = a0, a1
+		t.Color = ColorSequence.new(rgb(trail.colours[1]), rgb(trail.colours[2]))
+		t.Transparency = NumberSequence.new(0.3, 1)
+		t.Lifetime, t.LightEmission = 0.6, 0.4
+		t.Parent = root
+	end
+	local old = head:FindFirstChild("CosmeticTitle")
+	if old then
+		old:Destroy()
+	end
+	local title = Cosmetics.get(d.equipped.title or "")
+	if title then
+		local board = Instance.new("BillboardGui")
+		board.Name = "CosmeticTitle"
+		board.Size, board.StudsOffset, board.MaxDistance = UDim2.fromOffset(200, 30), Vector3.new(0, 2.4, 0), 60
+		local label = Instance.new("TextLabel")
+		label.Size, label.BackgroundTransparency = UDim2.fromScale(1, 1), 1
+		label.Font, label.TextScaled, label.Text = Enum.Font.BuilderSansBold, true, title.name
+		label.TextColor3, label.TextStrokeTransparency = rgb(title.colours[1]), 0.4
+		label.Parent = board
+		board.Parent = head
+	end
+end
+
+local function buy(player, id)
+	local item = Cosmetics.get(id)
+	local d = DataManager.get(player)
+	if not item or not d then
+		return false, "That isn't for sale."
+	elseif d.owned[id] then
+		return false, "You already own " .. item.name .. "."
+	elseif item.price <= 0 then
+		return false, item.name .. " comes from " .. (item.source or "somewhere else") .. "."
+	elseif d.coins < item.price then
+		return false, "You need " .. (item.price - d.coins) .. " more coins."
+	end
+	DataManager.update(player, function(data)
+		data.coins -= item.price
+		data.owned[id] = true
+		data.equipped[item.kind] = id
+	end)
+	ShopManager.dress(player)
+	return true, "You bought " .. item.name .. "!"
+end
+
+local function equip(player, id)
+	local item = Cosmetics.get(id)
+	local d = DataManager.get(player)
+	if not item or not d or not d.owned[id] then
+		return false, "You don't own that."
+	end
+	DataManager.update(player, function(data)
+		data.equipped[item.kind] = if data.equipped[item.kind] == id and not Cosmetics.defaults[item.kind] then nil else id
+	end)
+	ShopManager.dress(player)
+	return true, nil
+end
+
+-- Game passes: owned ones become attributes (Pass_DoubleCoins...) the rest of the game reads.
+local function passOwned(player, name, owned)
+	player:SetAttribute("Pass_" .. name, owned)
+	if owned and name == "Supporter" then
+		DataManager.update(player, function(d)
+			d.owned.t_supporter, d.owned.ti_supporter = true, true
+		end)
+	end
+end
+
+local function checkPasses(player)
+	for name, id in pairs(Config.GamePasses) do
+		if id ~= 0 then
+			local ok, owned = pcall(MarketplaceService.UserOwnsGamePassAsync, MarketplaceService, player.UserId, id)
+			passOwned(player, name, ok and owned)
+		end
+	end
+end
+
+-- Robux products: grant once per receipt, then save before telling Roblox it's done.
+local function processReceipt(receipt)
+	local player = Players:GetPlayerByUserId(receipt.PlayerId)
+	local d = player and DataManager.get(player)
+	if not d then
+		return Enum.ProductPurchaseDecision.NotProcessedYet -- tried again when they're back
+	end
+	if table.find(d.receipts, receipt.PurchaseId) then
+		return Enum.ProductPurchaseDecision.PurchaseGranted -- already given
+	end
+	if receipt.ProductId ~= Config.Products.StarterBundle or Config.Products.StarterBundle == 0 then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	local bundle = Config.StarterBundle
+	DataManager.update(player, function(data)
+		data.coins += bundle.coins
+		data.coinsEarned += bundle.coins
+		if Cosmetics.get(bundle.cosmetic) then
+			data.owned[bundle.cosmetic] = true
+		end
+		table.insert(data.receipts, receipt.PurchaseId)
+		while #data.receipts > 50 do
+			table.remove(data.receipts, 1)
+		end
+	end)
+	-- not saved (or a session that can't save): Roblox offers the receipt again later, and the
+	-- receipt list above stops it paying twice in this session
+	if DataManager.unsaved(player) or not DataManager.save(player) then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	Remotes.Notify:FireClient(player, { text = "Starter Bundle: +" .. bundle.coins .. " coins and a new needle skin. Thank you!", tone = "good" })
+	return Enum.ProductPurchaseDecision.PurchaseGranted
+end
+
+function ShopManager.init()
+	Remotes.Shop.OnServerInvoke = function(player, action, id)
+		if type(action) ~= "string" or type(id) ~= "string" then
+			return false, "?"
+		end
+		if action == "buy" then
+			return buy(player, id)
+		elseif action == "equip" then
+			return equip(player, id)
+		end
+		return false, "?"
+	end
+	MarketplaceService.ProcessReceipt = processReceipt
+	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, bought)
+		for name, id in pairs(Config.GamePasses) do
+			if bought and id == passId then
+				passOwned(player, name, true)
+				Remotes.Notify:FireClient(player, { text = "Thank you! Your pass is active.", tone = "good" })
+			end
+		end
+	end)
+	DataManager.onLoaded(function(player)
+		checkPasses(player)
+		player.CharacterAdded:Connect(function()
+			task.wait(0.5)
+			ShopManager.dress(player)
+		end)
+		if player.Character then
+			ShopManager.dress(player)
+		end
+	end)
+end
+
+return ShopManager
+]]></ProtectedString>
+				</Properties>
+			</Item>
+		</Item>
+	</Item>
+	<Item class="ServerStorage" referent="RBX00020">
+		<Properties>
+			<string name="Name">ServerStorage</string>
+		</Properties>
+	</Item>
+	<Item class="StarterPlayer" referent="RBX00021">
+		<Properties>
+			<string name="Name">StarterPlayer</string>
+		</Properties>
+		<Item class="StarterPlayerScripts" referent="RBX00022">
+			<Properties>
+				<string name="Name">StarterPlayerScripts</string>
+			</Properties>
+			<Item class="Folder" referent="RBX00023">
+				<Properties>
+					<string name="Name">Client</string>
+				</Properties>
+				<Item class="ModuleScript" referent="RBX00024">
+					<Properties>
+						<string name="Name">Effects</string>
+						<ProtectedString name="Source"><![CDATA[-- Feedback you can see and hear, on your own screen only: sounds, a burst of particles where a
+-- needle was found, a soft flash and a little camera kick. "Reduce effects" in Settings turns the
+-- flash, the kick and the big bursts off. Nothing here strobes.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
+local Debris = game:GetService("Debris")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local UiKit = require(script.Parent.UiKit)
+
+local Effects = {}
+Effects.settings = { sfx = true, reduceEffects = false, music = true }
+local gui = nil
+
+function Effects.mount(screen)
+	gui = screen
+end
+
+function Effects.sound(name, pitch)
+	local id = Config.Sounds[name]
+	if not Effects.settings.sfx or type(id) ~= "string" or id == "" then
+		return
+	end
+	local s = Instance.new("Sound")
+	s.SoundId, s.Volume, s.PlaybackSpeed = id, 0.6, pitch or 1
+	s.Parent = SoundService
+	s:Play()
+	Debris:AddItem(s, 4)
+end
+
+-- A burst of sparkles in a cosmetic's colours at a world position.
+function Effects.burst(position, colours, count)
+	if Effects.settings.reduceEffects then
+		count = math.floor((count or 40) / 4)
+	end
+	local anchor = UiKit.make("Part", { Anchored = true, CanCollide = false, CanQuery = false, CanTouch = false, Transparency = 1, Size = Vector3.one, CFrame = CFrame.new(position), Parent = workspace })
+	local e = UiKit.make("ParticleEmitter", {
+		Rate = 0, Lifetime = NumberRange.new(0.6, 1.2), Speed = NumberRange.new(10, 22), SpreadAngle = Vector2.new(180, 180),
+		Acceleration = Vector3.new(0, -24, 0), Drag = 2, LightEmission = 0.5,
+		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 0) }),
+		Color = ColorSequence.new(colours[1], colours[2] or colours[1]), Parent = anchor,
+	})
+	e:Emit(count or 40)
+	Debris:AddItem(anchor, 2)
+end
+
+-- A soft white glow over the screen that fades out (not a strobe), and a small FOV kick.
+function Effects.flash()
+	if Effects.settings.reduceEffects or not gui then
+		return
+	end
+	local f = UiKit.make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.55, ZIndex = 50, Parent = gui })
+	UiKit.ease(f, 0.5, { BackgroundTransparency = 1 })
+	Debris:AddItem(f, 0.6)
+	local camera = workspace.CurrentCamera
+	if camera then
+		camera.FieldOfView = 62
+		UiKit.ease(camera, 0.4, { FieldOfView = 70 }, Enum.EasingStyle.Back)
+	end
+end
+
+-- Confetti falling across the screen.
+function Effects.confetti()
+	if not gui or Effects.settings.reduceEffects then
+		return
+	end
+	local colours = { UiKit.colors.gold, UiKit.colors.red, UiKit.colors.green, UiKit.colors.blue }
+	for i = 1, 36 do
+		local bit = UiKit.make("Frame", { Size = UDim2.fromOffset(8, 14), Position = UDim2.new(math.random(), 0, 0, -20), Rotation = math.random(0, 360), BackgroundColor3 = colours[i % 4 + 1], ZIndex = 40, Parent = gui }, { UiKit.corner(3) })
+		UiKit.ease(bit, 1.6 + math.random() * 1.2, { Position = UDim2.new(bit.Position.X.Scale + (math.random() - 0.5) * 0.2, 0, 1.05, 0), Rotation = bit.Rotation + math.random(-360, 360) }, Enum.EasingStyle.Sine)
+		Debris:AddItem(bit, 3)
+	end
+end
+
+return Effects
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX00025">
+					<Properties>
+						<string name="Name">Hud</string>
+						<ProtectedString name="Source"><![CDATA[-- The always-on screen: your coins and level (with an XP bar) at the top left; the round's
+-- banner at the top centre (what's happening, the timer, the map, difficulty and modifiers);
+-- the menu buttons down the right; the Hint button during a round; and toasts.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Rules = require(Shared:WaitForChild("Rules"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local UiKit = require(script.Parent.UiKit)
+local Effects = require(script.Parent.Effects)
+
+local player = Players.LocalPlayer
+local Hud = {}
+local toasts = nil
+
+local TONES = { good = UiKit.colors.green, bad = UiKit.colors.red, level = UiKit.colors.gold }
+
+function Hud.toast(text, tone)
+	if not toasts then
+		return
+	end
+	local card = UiKit.make("Frame", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = UiKit.colors.panel, BackgroundTransparency = 0.1, Parent = toasts }, {
+		UiKit.corner(10), UiKit.stroke(TONES[tone] or UiKit.colors.line, 2), UiKit.pad(10),
+	})
+	UiKit.make("TextLabel", { Text = text, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Font = UiKit.font, TextSize = 18, TextWrapped = true, TextColor3 = UiKit.colors.text, TextXAlignment = Enum.TextXAlignment.Left, Parent = card })
+	UiKit.pop(card, 0.85)
+	task.delay(5, function()
+		card:Destroy()
+	end)
+	local n = 0
+	for _, c in ipairs(toasts:GetChildren()) do
+		if c:IsA("Frame") then
+			n += 1
+		end
+	end
+	if n > 4 then
+		for _, c in ipairs(toasts:GetChildren()) do
+			if c:IsA("Frame") then
+				c:Destroy()
+				break
+			end
+		end
+	end
+end
+
+function Hud.mount(gui, open)
+	-- coins and level, top left
+	local chip = UiKit.make("Frame", { Position = UDim2.fromOffset(16, 16), Size = UDim2.fromOffset(250, 84), BackgroundColor3 = UiKit.colors.panel, BackgroundTransparency = 0.15, Parent = gui }, { UiKit.corner(14), UiKit.stroke() })
+	UiKit.autoScale(chip)
+	local coins = UiKit.label({ Font = UiKit.bold, Size = UDim2.new(1, -24, 0, 30), Position = UDim2.fromOffset(14, 8), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UiKit.colors.gold, Parent = chip }, 26)
+	local level = UiKit.label({ Size = UDim2.new(1, -24, 0, 20), Position = UDim2.fromOffset(14, 40), TextXAlignment = Enum.TextXAlignment.Left, Parent = chip }, 18)
+	local _, xpFill = UiKit.bar(chip, { Size = UDim2.new(1, -28, 0, 8), Position = UDim2.fromOffset(14, 66) }, UiKit.colors.gold)
+	local function stats()
+		coins.Text = "● " .. Rules.commas(player:GetAttribute("Coins") or 0) .. " Haystack Coins"
+		local xp, need = player:GetAttribute("XP") or 0, player:GetAttribute("XPNeed") or 1
+		level.Text = "Level " .. (player:GetAttribute("Level") or 1) .. "  ·  " .. Rules.commas(xp) .. " / " .. Rules.commas(need) .. " XP"
+		UiKit.ease(xpFill, 0.3, { Size = UDim2.fromScale(math.clamp(xp / need, 0, 1), 1) })
+	end
+	player.AttributeChanged:Connect(stats)
+	stats()
+	-- the round banner, top centre
+	local banner = UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 14), Size = UDim2.fromOffset(460, 104), BackgroundColor3 = UiKit.colors.panel, BackgroundTransparency = 0.15, Parent = gui }, { UiKit.corner(16), UiKit.stroke() })
+	UiKit.autoScale(banner)
+	local headline = UiKit.label({ Font = UiKit.bold, Size = UDim2.new(1, -20, 0, 34), Position = UDim2.fromOffset(10, 6), Parent = banner }, 30)
+	local timer = UiKit.label({ Font = UiKit.bold, Size = UDim2.new(1, -20, 0, 30), Position = UDim2.fromOffset(10, 40), TextColor3 = UiKit.colors.gold, Parent = banner }, 28)
+	local info = UiKit.label({ Size = UDim2.new(1, -20, 0, 22), Position = UDim2.fromOffset(10, 74), TextColor3 = UiKit.colors.soft, Parent = banner }, 18)
+	-- the menu, down the right
+	local menu = UiKit.make("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0), Size = UDim2.fromOffset(150, 330), BackgroundTransparency = 1, Parent = gui }, {
+		UiKit.make("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Right }),
+	})
+	UiKit.autoScale(menu)
+	for i, item in ipairs({ { "Shop", UiKit.colors.gold }, { "Inventory", UiKit.colors.purple }, { "Quests", UiKit.colors.green }, { "Leaderboard", UiKit.colors.blue }, { "Settings", UiKit.colors.card } }) do
+		local b = UiKit.button(item[1], item[2], { LayoutOrder = i, Size = UDim2.fromOffset(150, 54), Parent = menu })
+		b.Activated:Connect(function()
+			Effects.sound("click")
+			open(item[1])
+		end)
+	end
+	-- the hint button, bottom centre, only while you're searching
+	local hint = UiKit.button("💡 Hint", UiKit.colors.purple, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -20), Size = UDim2.fromOffset(170, 54), Visible = false, Parent = gui })
+	UiKit.autoScale(hint)
+	hint.Activated:Connect(function()
+		local text, why = Remotes.Hint:InvokeServer()
+		Hud.toast(text or why or "No hint.", if text then "good" else "bad")
+	end)
+	-- toasts, under the banner
+	toasts = UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 130), Size = UDim2.fromOffset(440, 260), BackgroundTransparency = 1, Parent = gui }, {
+		UiKit.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
+	})
+	UiKit.autoScale(toasts)
+	-- keep the banner up to date
+	task.spawn(function()
+		while true do
+			local phase = ReplicatedStorage:GetAttribute("Phase") or "lobby"
+			local left = (ReplicatedStorage:GetAttribute("EndsAt") or 0) - workspace:GetServerTimeNow()
+			local mods = ReplicatedStorage:GetAttribute("Modifiers") or ""
+			local golden = ReplicatedStorage:GetAttribute("Golden")
+			local inRound = player.Character and player.Character.PrimaryPart and (player.Character.PrimaryPart.Position - Config.ArenaCentre).Magnitude < 200
+			if phase == "lobby" then
+				headline.Text, timer.Text = "Next round in", Rules.clock(left)
+				info.Text = if #game:GetService("Players"):GetPlayers() == 1 then "Practice round: invite friends to race!" else "Get ready to search!"
+			elseif phase == "loading" or phase == "countdown" then
+				headline.Text, timer.Text = ReplicatedStorage:GetAttribute("MapName") or "Loading...", if phase == "countdown" then tostring(math.max(1, math.ceil(left))) else "..."
+				info.Text = (ReplicatedStorage:GetAttribute("Difficulty") or "") .. (if mods ~= "" then "  ·  " .. mods else "") .. (if golden then "  ·  ✦ GOLDEN NEEDLE ✦" else "")
+			elseif phase == "search" then
+				local count = ReplicatedStorage:GetAttribute("NeedleCount") or 1
+				headline.Text = if count > 1 then "Find both needles!" else "Find the needle!"
+				timer.Text = Rules.clock(left)
+				timer.TextColor3 = if left < 15 then UiKit.colors.red else UiKit.colors.gold
+				info.Text = (ReplicatedStorage:GetAttribute("MapName") or "") .. "  ·  " .. (ReplicatedStorage:GetAttribute("Difficulty") or "") .. (if mods ~= "" then "  ·  " .. mods else "") .. (if golden then "  ·  ✦ GOLDEN ✦" else "")
+			else
+				headline.Text, timer.Text, info.Text = "Round over", Rules.clock(left), "Back to the lobby soon"
+			end
+			hint.Visible = phase == "search" and inRound == true
+			task.wait(0.2)
+		end
+	end)
+	Remotes.Notify.OnClientEvent:Connect(function(message)
+		Hud.toast(message.text, message.tone)
+		if message.tone == "level" then
+			Effects.sound("found", 1.3)
+			Effects.confetti()
+		end
+	end)
+end
+
+return Hud
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="LocalScript" referent="RBX00026">
+					<Properties>
+						<string name="Name">Main</string>
+						<ProtectedString name="Source"><![CDATA[-- Starts the client: the whole UI (UIController). The client only shows things and asks the
+-- server; it never decides who found the needle or what anyone earns.
+local UIController = require(script.Parent:WaitForChild("UIController"))
+UIController.start()
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX00027">
+					<Properties>
+						<string name="Name">Results</string>
+						<ProtectedString name="Source"><![CDATA[-- The round's big moments on screen: the 3, 2, 1 before searching; NEEDLE FOUND! when you find it
+-- (your needle skin held up, your place, time and rewards, your found effect where the needle
+-- was); a note when someone else finds it; and the results screen at the end of the round.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Rules = require(Shared:WaitForChild("Rules"))
+local Cosmetics = require(Shared:WaitForChild("Cosmetics"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local UiKit = require(script.Parent.UiKit)
+local Effects = require(script.Parent.Effects)
+local Hud = require(script.Parent.Hud)
+
+local player = Players.LocalPlayer
+local Results = {}
+local PLACES = { "1st", "2nd", "3rd" }
+
+local function rgb(c)
+	return Color3.fromRGB(c[1], c[2], c[3])
+end
+
+local function placeName(n)
+	return PLACES[n] or (n .. "th")
+end
+
+-- Your needle skin, drawn as a tilted needle with an eye (for the popup).
+local function needleArt(parent, skin)
+	local holder = UiKit.make("Frame", { Size = UDim2.fromOffset(240, 60), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 40), BackgroundTransparency = 1, Rotation = -18, Parent = parent })
+	local shaft = UiKit.make("Frame", { Size = UDim2.new(1, -20, 0, 12), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 10, 0.5, 0), BackgroundColor3 = rgb(skin.colours[1]), Parent = holder }, { UiKit.corner(6) })
+	if skin.rainbow then
+		UiKit.make("UIGradient", { Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 110, 110)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(120, 230, 140)), ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 160, 255)) }), Parent = shaft })
+	end
+	UiKit.make("Frame", { Size = UDim2.fromOffset(26, 18), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = rgb(skin.colours[2]), Parent = holder }, { UiKit.corner(9) })
+	UiKit.make("Frame", { Size = UDim2.fromOffset(12, 6), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 9, 0.5, 0), BackgroundColor3 = UiKit.colors.panel, Parent = holder }, { UiKit.corner(3) })
+	UiKit.pop(holder, 0.3)
+end
+
+function Results.mount(gui, getProfile)
+	-- the 3, 2, 1
+	local count = UiKit.label({ Font = UiKit.bold, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Size = UDim2.fromOffset(300, 200), TextColor3 = UiKit.colors.gold, TextStrokeTransparency = 0.4, Visible = false, ZIndex = 30, Parent = gui }, 180)
+	-- the NEEDLE FOUND! popup
+	local popup = UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(520, 230), BackgroundColor3 = UiKit.colors.panel, BackgroundTransparency = 0.05, Visible = false, ZIndex = 30, Parent = gui }, { UiKit.corner(22), UiKit.stroke(UiKit.colors.gold, 3) })
+	UiKit.autoScale(popup)
+	local art = UiKit.make("Frame", { Size = UDim2.new(1, 0, 0, 80), BackgroundTransparency = 1, ZIndex = 31, Parent = popup })
+	local big = UiKit.label({ Font = UiKit.bold, Text = "NEEDLE FOUND!", Size = UDim2.new(1, -30, 0, 64), Position = UDim2.fromOffset(15, 78), TextColor3 = UiKit.colors.gold, ZIndex = 31, Parent = popup }, 60)
+	local line = UiKit.label({ Size = UDim2.new(1, -30, 0, 50), Position = UDim2.fromOffset(15, 146), ZIndex = 31, Parent = popup }, 24)
+	-- the results screen
+	local results, body = UiKit.window(gui, "Round results", 560, 440)
+	results.ZIndex = 25
+
+	Remotes.Found.OnClientEvent:Connect(function(m)
+		local mine = m.userId == player.UserId
+		if not mine then
+			Hud.toast(m.name .. " found it! (" .. placeName(m.place) .. ")" .. (if m.place == 1 then "  " .. Config.Round.grace .. " seconds left for everyone else!" else ""), "level")
+			Effects.sound("whoosh")
+			return
+		end
+		local profile = getProfile() or {}
+		local equipped = profile.equipped or {}
+		local skin = Cosmetics.get(equipped.needle or "n_silver") or Cosmetics.get("n_silver")
+		local effect = Cosmetics.get(equipped.effect or "e_confetti") or Cosmetics.get("e_confetti")
+		for _, c in ipairs(art:GetChildren()) do
+			c:Destroy()
+		end
+		needleArt(art, skin)
+		big.Text = if m.golden then "GOLDEN NEEDLE!" else "NEEDLE FOUND!"
+		line.Text = placeName(m.place) .. "  ·  " .. string.format("%.1f s", m.seconds) .. "  ·  +" .. Rules.commas(m.coins) .. " coins  ·  +" .. m.xp .. " XP"
+		popup.Visible = true
+		UiKit.pop(popup, 0.5)
+		Effects.sound("found")
+		Effects.flash()
+		Effects.burst(m.position, { rgb(effect.colours[1]), rgb(effect.colours[2] or effect.colours[1]) }, if m.golden then 90 else 50)
+		Effects.confetti()
+		task.delay(3.2, function()
+			popup.Visible = false
+		end)
+	end)
+
+	Remotes.RoundState.OnClientEvent:Connect(function(state)
+		if state.phase == "countdown" then
+			count.Visible = true
+			for n = Config.Round.loadCountdown, 1, -1 do
+				count.Text = tostring(n)
+				UiKit.pop(count, 1.6)
+				Effects.sound("countdown")
+				task.wait(1)
+			end
+			count.Text = "GO!"
+			UiKit.pop(count, 1.6)
+			task.delay(0.8, function()
+				count.Visible = false
+			end)
+		elseif state.phase == "results" then
+			for _, c in ipairs(body:GetChildren()) do
+				if c:IsA("GuiObject") then
+					c:Destroy()
+				end
+			end
+			local extra = state.extra or {}
+			local rows = extra.rows or {}
+			UiKit.label({ LayoutOrder = 0, Text = (extra.map or "") .. (if extra.golden then "  ·  Golden Needle round" else ""), Size = UDim2.new(1, 0, 0, 26), TextColor3 = UiKit.colors.soft, Parent = body }, 20)
+			if #rows == 0 then
+				UiKit.label({ LayoutOrder = 1, Text = "Nobody found it this time. The hay wins!", Size = UDim2.new(1, 0, 0, 40), Parent = body }, 24)
+			end
+			for i, r in ipairs(rows) do
+				local card = UiKit.make("Frame", { LayoutOrder = i, Size = UDim2.new(1, -8, 0, 52), BackgroundColor3 = if r.userId == player.UserId then UiKit.colors.line else UiKit.colors.card, Parent = body }, { UiKit.corner(10) })
+				local medal = if r.place == 1 then UiKit.colors.gold elseif r.place == 2 then Color3.fromRGB(200, 206, 216) elseif r.place == 3 then Color3.fromRGB(205, 140, 90) else UiKit.colors.soft
+				UiKit.label({ Font = UiKit.bold, Text = placeName(r.place), Size = UDim2.new(0, 70, 1, 0), TextColor3 = medal, Parent = card }, 24)
+				UiKit.label({ Text = r.name, Size = UDim2.new(0.45, 0, 1, 0), Position = UDim2.fromOffset(76, 0), TextXAlignment = Enum.TextXAlignment.Left, Parent = card }, 22)
+				UiKit.label({ Text = string.format("%.1f s  ·  +%d coins", r.seconds or 0, r.coins or 0), Size = UDim2.new(0.42, 0, 1, 0), Position = UDim2.new(0.58, -10, 0, 0), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = UiKit.colors.soft, Parent = card }, 20)
+			end
+			results.Visible = true
+			UiKit.pop(results, 0.8)
+		elseif state.phase == "lobby" then
+			results.Visible = false
+		end
+	end)
+end
+
+return Results
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX00028">
+					<Properties>
+						<string name="Name">Screens</string>
+						<ProtectedString name="Source"><![CDATA[-- The Shop and Inventory screens. The Shop sells cosmetics for Haystack Coins (needle skins,
+-- trails, found effects) and shows the optional Robux items when they're on sale; the Inventory
+-- lists what you own to wear. Every buy and equip is asked of the server (Remotes.Shop), which
+-- decides.
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Cosmetics = require(Shared:WaitForChild("Cosmetics"))
+local Rules = require(Shared:WaitForChild("Rules"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local UiKit = require(script.Parent.UiKit)
+local Hud = require(script.Parent.Hud)
+local Effects = require(script.Parent.Effects)
+
+local player = Players.LocalPlayer
+local Screens = {}
+local shop, shopBody, inv, invBody
+local getProfile = function()
+	return {}
+end
+
+local function rgb(c)
+	return Color3.fromRGB(c[1], c[2], c[3])
+end
+
+-- A small picture of an item: a needle, a trail streak, a title tag or a burst of colour.
+local function swatch(parent, item)
+	local box = UiKit.make("Frame", { Size = UDim2.fromOffset(64, 64), BackgroundColor3 = UiKit.colors.panel, Parent = parent }, { UiKit.corner(10) })
+	local a, b = rgb(item.colours[1]), rgb(item.colours[2] or item.colours[1])
+	if item.kind == "needle" then
+		local shaft = UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(52, 7), Rotation = -35, BackgroundColor3 = a, Parent = box }, { UiKit.corner(4) })
+		UiKit.make("Frame", { Size = UDim2.fromOffset(12, 9), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.fromScale(0, 0.5), BackgroundColor3 = b, Parent = shaft }, { UiKit.corner(4) })
+	elseif item.kind == "trail" then
+		UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(50, 14), BackgroundColor3 = Color3.new(1, 1, 1), Parent = box }, {
+			UiKit.corner(7), UiKit.make("UIGradient", { Color = ColorSequence.new(a, b), Transparency = NumberSequence.new(0, 0.8) }),
+		})
+	else
+		UiKit.label({ Text = if item.kind == "title" then "Aa" else "✦", Font = UiKit.bold, Size = UDim2.fromScale(1, 1), TextColor3 = a, Parent = box }, 34)
+	end
+	return box
+end
+
+local function card(parent, order, item, buttonText, buttonColour, onPress)
+	local c = UiKit.make("Frame", { LayoutOrder = order, Size = UDim2.new(1, -8, 0, 80), BackgroundColor3 = UiKit.colors.card, Parent = parent }, { UiKit.corner(12) })
+	local s = swatch(c, item)
+	s.Position = UDim2.fromOffset(8, 8)
+	UiKit.label({ Font = UiKit.bold, Text = item.name, Size = UDim2.new(0.5, -80, 0, 30), Position = UDim2.fromOffset(84, 10), TextXAlignment = Enum.TextXAlignment.Left, Parent = c }, 22)
+	UiKit.label({ Text = Cosmetics.kindNames[item.kind], Size = UDim2.new(0.5, -80, 0, 22), Position = UDim2.fromOffset(84, 44), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UiKit.colors.soft, Parent = c }, 16)
+	local b = UiKit.button(buttonText, buttonColour, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(160, 50), Parent = c })
+	b.Activated:Connect(onPress)
+end
+
+local function ask(action, id)
+	Effects.sound("click")
+	local ok, message = Remotes.Shop:InvokeServer(action, id)
+	if message then
+		Hud.toast(message, if ok then "good" else "bad")
+	end
+end
+
+local function heading(parent, order, text)
+	UiKit.label({ LayoutOrder = order, Font = UiKit.bold, Text = text, Size = UDim2.new(1, 0, 0, 30), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UiKit.colors.gold, Parent = parent }, 22)
+end
+
+local function clear(body)
+	for _, c in ipairs(body:GetChildren()) do
+		if c:IsA("GuiObject") then
+			c:Destroy()
+		end
+	end
+end
+
+function Screens.refresh()
+	local profile = getProfile()
+	local owned, equipped = profile.owned or {}, profile.equipped or {}
+	local coins = player:GetAttribute("Coins") or 0
+	if shop.Visible then
+		clear(shopBody)
+		local order = 0
+		for _, kind in ipairs(Cosmetics.kinds) do
+			local any = false
+			for _, item in ipairs(Cosmetics.items) do
+				if item.kind == kind and item.price > 0 then
+					if not any then
+						order += 1
+						heading(shopBody, order, Cosmetics.kindNames[kind])
+						any = true
+					end
+					order += 1
+					if owned[item.id] then
+						card(shopBody, order, item, if equipped[kind] == item.id then "Equipped" else "Equip", UiKit.colors.purple, function()
+							ask("equip", item.id)
+						end)
+					else
+						card(shopBody, order, item, "● " .. Rules.commas(item.price), if coins >= item.price then UiKit.colors.green else UiKit.colors.red, function()
+							ask("buy", item.id)
+						end)
+					end
+				end
+			end
+		end
+		-- optional Robux items (only those that are on sale)
+		local robux = {
+			{ id = Config.GamePasses.DoubleCoins, pass = true, name = "2x Coins (pass)", text = "Every coin you earn, doubled. Forever." },
+			{ id = Config.GamePasses.ExtraHint, pass = true, name = "Extra Daily Hint (pass)", text = "One more hint every day." },
+			{ id = Config.GamePasses.Supporter, pass = true, name = "Supporter (pass)", text = "The Supporter title and trail. Thank you!" },
+			{ id = Config.Products.StarterBundle, pass = false, name = "Starter Bundle", text = Config.StarterBundle.coins .. " coins and the Rose Gold needle skin." },
+		}
+		for _, r in ipairs(robux) do
+			if r.id ~= 0 then
+				if order < 100 then
+					order = 100
+					heading(shopBody, order, "Support the game (Robux)")
+				end
+				order += 1
+				local c = UiKit.make("Frame", { LayoutOrder = order, Size = UDim2.new(1, -8, 0, 70), BackgroundColor3 = UiKit.colors.card, Parent = shopBody }, { UiKit.corner(12) })
+				UiKit.label({ Font = UiKit.bold, Text = r.name, Size = UDim2.new(0.6, 0, 0, 28), Position = UDim2.fromOffset(14, 8), TextXAlignment = Enum.TextXAlignment.Left, Parent = c }, 20)
+				UiKit.label({ Text = r.text, Size = UDim2.new(0.6, 0, 0, 24), Position = UDim2.fromOffset(14, 38), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UiKit.colors.soft, Parent = c }, 16)
+				local b = UiKit.button("Buy", UiKit.colors.green, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(120, 46), Parent = c })
+				b.Activated:Connect(function()
+					if r.pass then
+						MarketplaceService:PromptGamePassPurchase(player, r.id)
+					else
+						MarketplaceService:PromptProductPurchase(player, r.id)
+					end
+				end)
+			end
+		end
+	end
+	if inv.Visible then
+		clear(invBody)
+		local order = 0
+		for _, kind in ipairs(Cosmetics.kinds) do
+			order += 1
+			heading(invBody, order, Cosmetics.kindNames[kind])
+			for _, item in ipairs(Cosmetics.items) do
+				if item.kind == kind and owned[item.id] then
+					order += 1
+					local on = equipped[kind] == item.id
+					card(invBody, order, item, if on then "Equipped ✓" else "Equip", if on then UiKit.colors.green else UiKit.colors.purple, function()
+						ask("equip", item.id)
+					end)
+				end
+			end
+		end
+	end
+end
+
+function Screens.mount(gui, profileGetter)
+	getProfile = profileGetter
+	shop, shopBody = UiKit.window(gui, "Shop", 620, 500)
+	inv, invBody = UiKit.window(gui, "Inventory", 620, 500)
+	player:GetAttributeChangedSignal("Coins"):Connect(function()
+		if shop.Visible then
+			Screens.refresh()
+		end
+	end)
+	return { Shop = shop, Inventory = inv }
+end
+
+return Screens
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX00029">
+					<Properties>
+						<string name="Name">Screens2</string>
+						<ProtectedString name="Source"><![CDATA[-- The Quests, Leaderboard and Settings screens.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Quests = require(Shared:WaitForChild("Quests"))
+local Cosmetics = require(Shared:WaitForChild("Cosmetics"))
+local Rules = require(Shared:WaitForChild("Rules"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local UiKit = require(script.Parent.UiKit)
+local Effects = require(script.Parent.Effects)
+
+local Screens2 = {}
+local quests, questBody, boards, boardBody, settings, settingsBody
+local getProfile = function()
+	return {}
+end
+local boardId, scope = "needles", "global"
+
+local function clear(body)
+	for _, c in ipairs(body:GetChildren()) do
+		if c:IsA("GuiObject") then
+			c:Destroy()
+		end
+	end
+end
+
+local function questsPage()
+	clear(questBody)
+	local profile = getProfile()
+	local q = profile.quests or {}
+	local today = Quests.today()
+	local progress = if q.day == today then q.progress or {} else {}
+	local done = if q.day == today then q.done or {} else {}
+	local left = 86400 - os.time() % 86400
+	UiKit.label({ LayoutOrder = 0, Text = string.format("New quests in %dh %02dm", left // 3600, left % 3600 // 60), Size = UDim2.new(1, 0, 0, 24), TextColor3 = UiKit.colors.soft, Parent = questBody }, 18)
+	for i, quest in ipairs(Quests.forDay(today)) do
+		local have = math.min(quest.n, progress[quest.id] or 0)
+		local c = UiKit.make("Frame", { LayoutOrder = i, Size = UDim2.new(1, -8, 0, 96), BackgroundColor3 = UiKit.colors.card, Parent = questBody }, { UiKit.corner(12) })
+		UiKit.label({ Font = UiKit.bold, Text = (if done[quest.id] then "✓ " else "") .. quest.text, Size = UDim2.new(1, -24, 0, 30), Position = UDim2.fromOffset(14, 8), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = if done[quest.id] then UiKit.colors.green else UiKit.colors.text, Parent = c }, 22)
+		local reward = "+" .. quest.coins .. " coins · +" .. quest.xp .. " XP" .. (if quest.cosmetic and Cosmetics.get(quest.cosmetic) then " · " .. Cosmetics.get(quest.cosmetic).name else "")
+		UiKit.label({ Text = reward, Size = UDim2.new(1, -24, 0, 22), Position = UDim2.fromOffset(14, 38), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UiKit.colors.gold, Parent = c }, 18)
+		local _, fill = UiKit.bar(c, { Size = UDim2.new(1, -110, 0, 12), Position = UDim2.fromOffset(14, 70) }, UiKit.colors.green)
+		fill.Size = UDim2.fromScale(have / quest.n, 1)
+		UiKit.label({ Text = have .. " / " .. quest.n, Size = UDim2.fromOffset(80, 22), Position = UDim2.new(1, -90, 0, 64), Parent = c }, 18)
+	end
+end
+
+local function boardsPage()
+	clear(boardBody)
+	local tabs = UiKit.make("Frame", { LayoutOrder = 0, Size = UDim2.new(1, 0, 0, 44), BackgroundTransparency = 1, Parent = boardBody }, {
+		UiKit.make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6) }),
+	})
+	for _, b in ipairs(Config.Boards) do
+		local t = UiKit.button(b.name, if b.id == boardId then UiKit.colors.gold else UiKit.colors.card, { Size = UDim2.new(1 / #Config.Boards, -6, 1, 0), Parent = tabs })
+		t.Activated:Connect(function()
+			boardId = b.id
+			boardsPage()
+		end)
+	end
+	local scopes = UiKit.make("Frame", { LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1, Parent = boardBody }, {
+		UiKit.make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6) }),
+	})
+	for _, s in ipairs({ { "global", "Everyone" }, { "server", "This server (friends)" } }) do
+		local b = UiKit.button(s[2], if scope == s[1] then UiKit.colors.blue else UiKit.colors.card, { Size = UDim2.new(0.5, -6, 1, 0), Parent = scopes })
+		b.Activated:Connect(function()
+			scope = s[1]
+			boardsPage()
+		end)
+	end
+	local data = Remotes.Boards:InvokeServer(boardId) or {}
+	local rows = data[scope] or {}
+	local seconds = false
+	for _, b in ipairs(Config.Boards) do
+		if b.id == boardId then
+			seconds = b.seconds == true
+		end
+	end
+	if #rows == 0 then
+		UiKit.label({ LayoutOrder = 2, Text = "No one here yet. Be the first!", Size = UDim2.new(1, 0, 0, 40), TextColor3 = UiKit.colors.soft, Parent = boardBody }, 20)
+	end
+	for i, r in ipairs(rows) do
+		local c = UiKit.make("Frame", { LayoutOrder = 1 + i, Size = UDim2.new(1, -8, 0, 40), BackgroundColor3 = UiKit.colors.card, Parent = boardBody }, { UiKit.corner(8) })
+		UiKit.label({ Font = UiKit.bold, Text = i .. ".", Size = UDim2.fromOffset(50, 40), TextColor3 = if i <= 3 then UiKit.colors.gold else UiKit.colors.soft, Parent = c }, 20)
+		UiKit.label({ Text = r.name, Size = UDim2.new(0.6, -50, 1, 0), Position = UDim2.fromOffset(54, 0), TextXAlignment = Enum.TextXAlignment.Left, Parent = c }, 20)
+		UiKit.label({ Text = if seconds then string.format("%.1f s", r.value) else Rules.commas(r.value), Size = UDim2.new(0.35, 0, 1, 0), Position = UDim2.new(0.62, 0, 0, 0), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = UiKit.colors.gold, Parent = c }, 20)
+	end
+end
+
+local LABELS = { { "music", "Music" }, { "sfx", "Sound effects" }, { "reduceEffects", "Reduce effects (no flash or shake)" }, { "autoJoin", "Join rounds automatically" } }
+
+local function settingsPage()
+	clear(settingsBody)
+	local current = getProfile().settings or {}
+	for i, row in ipairs(LABELS) do
+		local key = row[1]
+		local on = current[key] == true
+		local c = UiKit.make("Frame", { LayoutOrder = i, Size = UDim2.new(1, -8, 0, 64), BackgroundColor3 = UiKit.colors.card, Parent = settingsBody }, { UiKit.corner(12) })
+		UiKit.label({ Text = row[2], Size = UDim2.new(1, -150, 1, 0), Position = UDim2.fromOffset(16, 0), TextXAlignment = Enum.TextXAlignment.Left, Parent = c }, 22)
+		local b = UiKit.button(if on then "On" else "Off", if on then UiKit.colors.green else UiKit.colors.line, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.fromOffset(110, 46), Parent = c })
+		b.Activated:Connect(function()
+			Effects.sound("click")
+			current[key] = not on
+			Remotes.SaveSettings:FireServer({ [key] = not on })
+			Effects.settings[key] = not on
+			settingsPage()
+		end)
+	end
+end
+
+function Screens2.refresh()
+	if quests.Visible then
+		questsPage()
+	end
+	if settings.Visible then
+		settingsPage()
+	end
+end
+
+function Screens2.mount(gui, profileGetter)
+	getProfile = profileGetter
+	quests, questBody = UiKit.window(gui, "Daily Quests", 560, 440)
+	boards, boardBody = UiKit.window(gui, "Leaderboard", 680, 520)
+	settings, settingsBody = UiKit.window(gui, "Settings", 520, 400)
+	return { Quests = quests, Leaderboard = boards, Settings = settings }, { Leaderboard = boardsPage }
+end
+
+return Screens2
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX0002A">
+					<Properties>
+						<string name="Name">UIController</string>
+						<ProtectedString name="Source"><![CDATA[-- Puts the whole UI together: one ScreenGui with the HUD, the round moments (Results), and the
+-- Shop, Inventory, Quests, Leaderboard and Settings windows. It keeps your latest profile (sent
+-- by the server on every change), opens one window at a time from the menu or a lobby stall's
+-- prompt, and applies your settings (sound, effects, music).
+local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local UiKit = require(script.Parent.UiKit)
+local Effects = require(script.Parent.Effects)
+local Hud = require(script.Parent.Hud)
+local Results = require(script.Parent.Results)
+local Screens = require(script.Parent.Screens)
+local Screens2 = require(script.Parent.Screens2)
+
+local player = Players.LocalPlayer
+local UIController = {}
+local profile = {}
+local windows, openers = {}, {}
+local music = nil
+
+local function getProfile()
+	return profile
+end
+
+function UIController.open(name)
+	for n, w in pairs(windows) do
+		if n ~= name then
+			w.Visible = false
+		end
+	end
+	local w = windows[name]
+	if not w then
+		return
+	end
+	w.Visible = not w.Visible
+	if w.Visible then
+		UiKit.pop(w, 0.9)
+		if openers[name] then
+			task.spawn(openers[name])
+		end
+		Screens.refresh()
+		Screens2.refresh()
+	end
+end
+
+local function applySettings()
+	local s = profile.settings or {}
+	Effects.settings.sfx = s.sfx ~= false
+	Effects.settings.reduceEffects = s.reduceEffects == true
+	Effects.settings.music = s.music ~= false
+	if music then
+		music.Volume = if Effects.settings.music then 0.3 else 0
+	end
+end
+
+function UIController.start()
+	local gui = UiKit.make("ScreenGui", { Name = "NeedleUi", ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
+	Effects.mount(gui)
+	Hud.mount(gui, UIController.open)
+	Results.mount(gui, getProfile)
+	for name, w in pairs(Screens.mount(gui, getProfile)) do
+		windows[name] = w
+	end
+	local more, extra = Screens2.mount(gui, getProfile)
+	for name, w in pairs(more) do
+		windows[name] = w
+	end
+	for name, fn in pairs(extra) do
+		openers[name] = fn
+	end
+	Remotes.Profile.OnClientEvent:Connect(function(p)
+		profile = p
+		applySettings()
+		Screens.refresh()
+		Screens2.refresh()
+	end)
+	-- the lobby's Shop stall and Wardrobe open their screens
+	ProximityPromptService.PromptTriggered:Connect(function(prompt)
+		local opens = prompt:GetAttribute("Opens")
+		if opens and windows[opens] and not windows[opens].Visible then
+			UIController.open(opens)
+		end
+	end)
+	if Config.Music ~= "" then
+		music = UiKit.make("Sound", { SoundId = Config.Music, Looped = true, Volume = 0.3, Parent = SoundService })
+		music:Play()
+	end
+	applySettings()
+end
+
+return UIController
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX0002B">
+					<Properties>
+						<string name="Name">UiKit</string>
+						<ProtectedString name="Source"><![CDATA[-- The UI's look in one place: a clean, modern dark-glass style with warm gold accents, big
+-- readable text and large touch targets. Every screen builds from these helpers.
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+local UiKit = {}
+
+UiKit.colors = {
+	panel = Color3.fromRGB(24, 28, 38), -- window backgrounds (slightly see-through)
+	card = Color3.fromRGB(38, 44, 58),
+	line = Color3.fromRGB(70, 78, 96),
+	text = Color3.fromRGB(240, 242, 248),
+	soft = Color3.fromRGB(168, 176, 196),
+	gold = Color3.fromRGB(255, 200, 70),
+	green = Color3.fromRGB(80, 190, 120),
+	red = Color3.fromRGB(230, 90, 80),
+	blue = Color3.fromRGB(90, 150, 240),
+	purple = Color3.fromRGB(160, 120, 240),
+}
+UiKit.font = Enum.Font.BuilderSans
+UiKit.bold = Enum.Font.BuilderSansBold
+
+function UiKit.make(class, props, children)
+	local o = Instance.new(class)
+	for k, v in pairs(props or {}) do
+		if k ~= "Parent" then
+			o[k] = v
+		end
+	end
+	for _, c in ipairs(children or {}) do
+		c.Parent = o
+	end
+	if props and props.Parent then
+		o.Parent = props.Parent
+	end
+	return o
+end
+
+function UiKit.corner(r)
+	return UiKit.make("UICorner", { CornerRadius = UDim.new(0, r or 12) })
+end
+
+function UiKit.stroke(colour, thickness)
+	return UiKit.make("UIStroke", { Color = colour or UiKit.colors.line, Thickness = thickness or 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+end
+
+function UiKit.pad(px)
+	return UiKit.make("UIPadding", { PaddingTop = UDim.new(0, px), PaddingBottom = UDim.new(0, px), PaddingLeft = UDim.new(0, px), PaddingRight = UDim.new(0, px) })
+end
+
+function UiKit.label(props, maxSize)
+	local defaults = { BackgroundTransparency = 1, Font = UiKit.font, TextColor3 = UiKit.colors.text, TextScaled = true, TextWrapped = true, Text = "" }
+	for k, v in pairs(props) do
+		defaults[k] = v
+	end
+	return UiKit.make("TextLabel", defaults, { UiKit.make("UITextSizeConstraint", { MaxTextSize = maxSize or 28 }) })
+end
+
+function UiKit.button(text, colour, props)
+	local defaults = { Text = text, Font = UiKit.bold, TextScaled = true, TextColor3 = Color3.new(1, 1, 1), BackgroundColor3 = colour or UiKit.colors.blue, AutoButtonColor = true, Size = UDim2.fromOffset(140, 44) }
+	for k, v in pairs(props or {}) do
+		defaults[k] = v
+	end
+	local b = UiKit.make("TextButton", defaults, { UiKit.corner(10), UiKit.make("UITextSizeConstraint", { MaxTextSize = 22 }), UiKit.make("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }) })
+	b.Activated:Connect(function()
+		UiKit.pop(b, 0.92)
+	end)
+	return b
+end
+
+-- A soft spring: scales from `from` back to 1.
+function UiKit.pop(obj, from)
+	local s = obj:FindFirstChildOfClass("UIScale") or UiKit.make("UIScale", { Parent = obj })
+	s.Scale = from
+	TweenService:Create(s, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+end
+
+function UiKit.ease(obj, seconds, goal, style)
+	local t = TweenService:Create(obj, TweenInfo.new(seconds, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out), goal)
+	t:Play()
+	return t
+end
+
+-- True on phones and tablets (no mouse): screens use bigger targets there.
+function UiKit.touch()
+	return UserInputService.TouchEnabled and not UserInputService.MouseEnabled
+end
+
+-- Keeps a frame readable on every screen: scales it with the viewport (0.65x on a small phone,
+-- up to 1.15x on a big monitor).
+function UiKit.autoScale(frame)
+	local scale = frame:FindFirstChild("AutoScale") or UiKit.make("UIScale", { Name = "AutoScale", Parent = frame })
+	local function fit()
+		local v = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
+		scale.Scale = math.clamp(math.min(v.X / 1280, v.Y / 720), 0.65, 1.15)
+	end
+	fit()
+	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
+	return scale
+end
+
+-- A centred window with a title and a close button. Returns the window and its body.
+function UiKit.window(gui, title, w, h)
+	local win = UiKit.make("Frame", { Name = title, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(w or 620, h or 460), BackgroundColor3 = UiKit.colors.panel, BackgroundTransparency = 0.06, Visible = false, ZIndex = 10, Parent = gui }, { UiKit.corner(18), UiKit.stroke() })
+	UiKit.autoScale(win)
+	UiKit.label({ Text = title, Font = UiKit.bold, Size = UDim2.new(1, -100, 0, 40), Position = UDim2.fromOffset(22, 14), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 11, Parent = win }, 30)
+	local close = UiKit.button("X", UiKit.colors.card, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -14, 0, 14), Size = UDim2.fromOffset(44, 40), ZIndex = 11, Parent = win })
+	close.Activated:Connect(function()
+		win.Visible = false
+	end)
+	local body = UiKit.make("ScrollingFrame", { Size = UDim2.new(1, -36, 1, -78), Position = UDim2.fromOffset(18, 64), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 6, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = 11, Parent = win }, {
+		UiKit.make("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
+	})
+	return win, body
+end
+
+-- A rounded progress bar; returns the bar and its fill.
+function UiKit.bar(parent, props, colour)
+	local back = UiKit.make("Frame", props, { UiKit.corner(6) })
+	back.BackgroundColor3 = UiKit.colors.line
+	back.Parent = parent
+	local fill = UiKit.make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = colour or UiKit.colors.gold, ZIndex = back.ZIndex + 1, Parent = back }, { UiKit.corner(6) })
+	return back, fill
+end
+
+UiKit.player = Players.LocalPlayer
+return UiKit
+]]></ProtectedString>
+					</Properties>
+				</Item>
+			</Item>
+		</Item>
+	</Item>
+	<Item class="Workspace" referent="RBX0002C">
+		<Properties>
+			<string name="Name">Workspace</string>
+		</Properties>
+	</Item>
+</roblox>
