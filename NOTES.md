@@ -782,3 +782,6 @@ this game's own style. Nothing copied from that game.
   "1 free spin" badge with a cream edge sits above the level bar while SpinBank > 0 (spins from
   achievements too); clicking or tapping it opens the Wheel of Fortune, odds first. The server's
   plain brown notice is gone (client/LevelBar says it instead).
+- Stamina bar restyled (client/Stamina): 150 x 9 (was 140 x 6) with a cream outline like the XP
+  bar's; sage green while you harvest and rust red when you're out of breath (were mint and
+  orange: the orange nearly matched the hay). It still fades in only once you've used some.
