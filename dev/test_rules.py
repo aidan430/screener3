@@ -129,6 +129,9 @@ class StoryScript(unittest.TestCase):
         clumps = [int(n) for n in re.findall(r'kind = "clumps", n = (\d+)', text)]
         self.assertEqual(clumps, sorted(clumps), "heap beats come in order")
         self.assertLessEqual(clumps[0], 2, "the first find comes within minutes")
+        scenes = set(re.findall(r"^Cinematics\.(\w+) = ", (SHARED / "Cinematics.luau").read_text(), re.M))
+        used = set(re.findall(r'cinematic = "(\w+)"', text))
+        self.assertTrue(used and used <= scenes, used - scenes)
 
 
 class Milestones(unittest.TestCase):

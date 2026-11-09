@@ -45,6 +45,7 @@ Config.SkinGleamSeconds = 0.9 -- how long a skin's shine takes to sweep along th
 Config.EarlyBoost = { straws = 20000, factor = 3 }
 Config.LobbyAfterSearches = 200 -- new farmers start on their farm; after this many harvests, they arrive in Sky Meadow
 Config.CameraZoom = { near = 6, far = 18 } -- the optional over-the-shoulder view (V): studs from your head
+Config.CinematicsOn = true -- the story's camera scenes (shared/Cinematics); false = talk only
 Config.ToolScale = 0.5 -- the built tools' size: 1 = the 6-stud pitchfork, which held out too far in first person
 Config.ToolFanSpin = 9 -- radians a second the Twin Turbines' fans turn while held
 

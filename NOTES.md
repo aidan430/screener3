@@ -717,3 +717,12 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   only in Roblox Studio (RunService:IsStudio()). fastHours = 10 makes one hour of play take 10
   seconds (the 24-hour reward after 4 minutes); unlockAll gives every cosmetic on joining. A test
   keeps both off in the repository. Play time now ticks every 10 seconds.
+
+## Story cinematics (2026-11-09)
+- shared/Cinematics: camera scenes as shots (from/to positions and look points, seconds; "around"
+  circles the look point), anchored to your heap's base or to you. client/Cinematic plays one on
+  your screen only: black widescreen bars ease in, the scene's title fades up and away, the
+  camera glides through the shots and holds the last while the characters talk, then glides back
+  to your eyes. Ten story scenes use them (shared/Story `cinematic = ...`): the storm (opening),
+  the red thread, stairs, haystacks in the sky, halfway, the silver needle, and each world's
+  arrival. Skip ends the scene and the camera at once. Config.CinematicsOn = false turns them off.

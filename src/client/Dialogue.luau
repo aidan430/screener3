@@ -11,6 +11,7 @@ local StoryData = require(Shared:WaitForChild("Story"))
 local Ui = require(script.Parent.Ui)
 local Cursor = require(script.Parent.Cursor)
 local Juice = require(script.Parent.Juice)
+local Cinematic = require(script.Parent.Cinematic)
 
 local Dialogue = {}
 local queue, playing = {}, false
@@ -101,12 +102,16 @@ local function playBeat(beat)
 	if beat.found then
 		Juice.sound("coins", 0.9)
 	end
+	local filmed = beat.cinematic ~= nil and Cinematic.play(beat.cinematic, beat.title)
 	for _, line in ipairs(beat.lines) do
 		if not playing then
 			break
 		end
 		speak(line.who, line.text, line.choices)
 		foundLabel.Visible = false
+	end
+	if filmed then
+		Cinematic.stop()
 	end
 	playing = false
 	box.Visible = false
@@ -133,6 +138,7 @@ function Dialogue.play(id)
 end
 
 function Dialogue.mount(gui, Remotes, notify)
+	Cinematic.mount(gui)
 	box = Ui.card({ Name = "Dialogue", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -96), Size = UDim2.fromOffset(640, 168), Visible = false, ZIndex = 20, Parent = gui })
 	Ui.autoScale(box)
 	portrait = Ui.make("Frame", { Size = UDim2.fromOffset(64, 64), Position = UDim2.fromOffset(18, 30), ZIndex = 21, Parent = box }, { Ui.corner(32) })

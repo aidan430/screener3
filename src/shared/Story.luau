@@ -5,6 +5,7 @@
 --   trigger kinds: start, stat (key), clumps (whole clumps cleared from this heap), tool, truck
 --   (key), placed (key), machines, needles, world (key = a Config.Worlds id).
 --   found: an item the player turns up in the hay (shown before the talk). reward: coins.
+--   cinematic: a camera scene (shared/Cinematics) that plays while they talk.
 local Story = {}
 
 Story.cast = {
@@ -17,7 +18,7 @@ Story.cast = {
 }
 
 Story.beats = {
-	{ id = "arrival", title = "The storm", trigger = { kind = "start" }, reward = 0, lines = {
+	{ id = "arrival", title = "The storm", cinematic = "opening", trigger = { kind = "start" }, reward = 0, lines = {
 		{ who = "mabel", text = "There you are, love! Thank goodness. Did you see what last night's storm did?" },
 		{ who = "mabel", text = "The wind blew every loose bit of hay in the valley onto our stack. It's taller than the barn now." },
 		{ who = "mabel", text = "And somewhere in there is my silver needle. My gran's needle. I've stitched every quilt in Hollow Creek with it.",
@@ -63,12 +64,12 @@ Story.beats = {
 		{ who = "tobias", text = "A van! Now we're talking. It'll come by and take the hay to market while I serve customers." },
 		{ who = "tobias", text = "The more trucks you have, the faster your hay turns into coins. I'm not complaining. Much." },
 	} },
-	{ id = "thread", title = "The red thread", trigger = { kind = "clumps", n = 10 }, found = "A long red thread", reward = 500, lines = {
+	{ id = "thread", title = "The red thread", cinematic = "upAndIn", trigger = { kind = "clumps", n = 10 }, found = "A long red thread", reward = 500, lines = {
 		{ who = "mabel", text = "Red thread! I had the needle threaded with red when it flew off. It must have trailed behind it." },
 		{ who = "mabel", text = "Look how it runs: up, and in. Follow the thread and you'll follow the needle." },
 		{ who = "patch", text = "Told you. Up and in. Nobody listens to the scarecrow." },
 	} },
-	{ id = "stairs", title = "Up the stack", trigger = { kind = "placed", key = "stairs", n = 1 }, reward = 400, lines = {
+	{ id = "stairs", title = "Up the stack", cinematic = "climb", trigger = { kind = "placed", key = "stairs", n = 1 }, reward = 400, lines = {
 		{ who = "mabel", text = "Stairs! Clever thing. Be careful up there, the top's wobbly after a storm." },
 		{ who = "patch", text = "Bring me back a view. I've been stuck on this pole for eleven years." },
 	} },
@@ -97,7 +98,7 @@ Story.beats = {
 		{ who = "clem", text = "Guess who found his horseshoe? Me! I win the bet!" },
 		{ who = "clem", text = "Don't worry, I'll still help. Here, take some coins for your trouble. And I'm keeping the pie." },
 	} },
-	{ id = "sky", title = "Haystacks in the sky", trigger = { kind = "clumps", n = 600 }, reward = 40000, lines = {
+	{ id = "sky", title = "Haystacks in the sky", cinematic = "sky", trigger = { kind = "clumps", n = 600 }, reward = 40000, lines = {
 		{ who = "patch", text = "Ever looked up at night? There's a haystack on the moon, you know. And in stranger places." },
 		{ who = "patch", text = "Every one of them hides a needle. The arches in Sky Meadow lead to them, if you save up." },
 	} },
@@ -105,28 +106,28 @@ Story.beats = {
 		{ who = "mabel", text = "The thread loops round on itself here. It must have tangled as it fell. It can't be far now." },
 		{ who = "mabel", text = "Mind you, 'not far' in this stack could still be a long way. Keep your chin up." },
 	} },
-	{ id = "halfway", title = "Halfway", trigger = { kind = "clumps", n = 2500 }, reward = 150000, lines = {
+	{ id = "halfway", title = "Halfway", cinematic = "pullback", trigger = { kind = "clumps", n = 2500 }, reward = 150000, lines = {
 		{ who = "mabel", text = "Half the stack gone! I've baked you an apple pie. Clem had a slice. Several slices." },
 		{ who = "clem", text = "It's a very good pie." },
 	} },
-	{ id = "found", title = "The silver needle", trigger = { kind = "needles", n = 1 }, reward = 0, lines = {
+	{ id = "found", title = "The silver needle", cinematic = "needle", trigger = { kind = "needles", n = 1 }, reward = 0, lines = {
 		{ who = "mabel", text = "You found it! My gran's needle, still threaded with red. Oh, come here, you." },
 		{ who = "mabel", text = "I'll stitch the Great Quilt for the harvest fair, and your name's going right in the middle." },
 		{ who = "patch", text = "Lovely. Wonderful. One small thing: the storm's back, and it's blowing a fresh stack in." },
 		{ who = "mabel", text = "And I've just remembered I had TWO needles in my pocket that night. Shall we go again?" },
 	} },
-	{ id = "moon", title = "The Moon", trigger = { kind = "world", key = "moon", n = 1 }, reward = 0, lines = {
+	{ id = "moon", title = "The Moon", cinematic = "arrive", trigger = { kind = "world", key = "moon", n = 1 }, reward = 0, lines = {
 		{ who = "luna", text = "Oh! A visitor from below. I'm Luna. I keep the moon tidy, and the hay up here is moon-dust soft." },
 		{ who = "luna", text = "My needle's hidden in it somewhere. Hay here sells for three times as much down below. Happy hunting." },
 	} },
-	{ id = "lava", title = "Ember Lands", trigger = { kind = "world", key = "lava", n = 1 }, reward = 0, lines = {
+	{ id = "lava", title = "Ember Lands", cinematic = "arrive", trigger = { kind = "world", key = "lava", n = 1 }, reward = 0, lines = {
 		{ who = "patch", text = "Hot, hot, hot! Don't stand too close to the lava, and don't let your hay catch fire." },
 		{ who = "patch", text = "Somebody lost a needle here too. Must have been a very warm sewing circle." },
 	} },
-	{ id = "atlantis", title = "Bubble City", trigger = { kind = "world", key = "atlantis", n = 1 }, reward = 0, lines = {
+	{ id = "atlantis", title = "Bubble City", cinematic = "arrive", trigger = { kind = "world", key = "atlantis", n = 1 }, reward = 0, lines = {
 		{ who = "luna", text = "A city in a bubble, under the sea! The hay here is a bit soggy, but it pays twelve times as much." },
 	} },
-	{ id = "field", title = "Haystack Stadium", trigger = { kind = "world", key = "field", n = 1 }, reward = 0, lines = {
+	{ id = "field", title = "Haystack Stadium", cinematic = "arrive", trigger = { kind = "world", key = "field", n = 1 }, reward = 0, lines = {
 		{ who = "clem", text = "A whole stadium of hay! I'll be in the stands, cheering. Loudly. Embarrassingly loudly." },
 	} },
 }
