@@ -210,5 +210,18 @@ class Collection(unittest.TestCase):
         self.assertIn("Needles.roll", (SERVER / "CollectionManager.luau").read_text())
 
 
+class Powerups(unittest.TestCase):
+    def test_only_helpful_powerups_and_each_is_handled(self):
+        block = CONFIG[CONFIG.index("Config.Powerups = {"):]
+        block = block[: block.index("} }")]
+        kinds = re.findall(r'\{ id = "(\w+)"', block)
+        self.assertEqual(set(kinds), {"speed", "compass", "birdseye", "glint", "coins"})
+        server = (SERVER / "Powerups.luau").read_text()
+        client = (ROOT / "src" / "client" / "PowerupFx.luau").read_text()
+        for k in kinds:
+            self.assertIn(f'"{k}"', server + client, k)
+        self.assertNotIn("Robux", server, "power-ups are found on the map, never bought")
+
+
 if __name__ == "__main__":
     unittest.main()

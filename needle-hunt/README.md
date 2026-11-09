@@ -88,6 +88,7 @@ ServerStorage.
 | Shop | RemoteFunction | player → server | `"buy"` or `"equip"` a cosmetic; the server decides |
 | Hint | RemoteFunction | player → server | a hint during a round (limited per day) |
 | Boards | RemoteFunction | player → server | the cached leaderboard rows |
+| Powerup | RemoteEvent | server → player | the power-up you just took, for your screen |
 | ShowOff | RemoteEvent | player → server | hold your showcase needle up (lobby only, cooldown) |
 | LobbyInfo | RemoteFunction | player → server | `"best"`: who has the most valuable needle here |
 | Collection | RemoteFunction | player → server | `"get"` a collection (yours or a player's in the server), `"list"` who's here, `"showcase"` a needle you own |
@@ -211,6 +212,23 @@ scanning one open field. A new layout is generated every round, so nobody can le
 - **Hiding spots:** at the back of dead ends and along the foot of walls, as well as on and
   beside the props.
 - **Spawns:** players start spread out through the maze.
+
+## Power-ups
+
+Each round, 8 glowing orbs float in the maze's corridors (`Config.Powerups`). Walk into one to
+take it; another appears somewhere else 20 seconds later. All of them help you, none slows or
+blinds anyone else, and they're only ever found on the map, never bought.
+
+| Power-up | What it does |
+|---|---|
+| » Hay Boots | Walk at 26 instead of 16 for 12 seconds |
+| ▲ Compass | An arrow points to the nearest needle you haven't found, with its distance, for 6 seconds |
+| ◉ Bird's Eye | Your camera rises above the maze for 5 seconds |
+| ✦ Glint | Needles **and decoys** within 40 studs sparkle for 8 seconds |
+| ● Coin Pouch | +25 coins (+50 with 2x Coins) and a little XP |
+
+The server checks every pickup (you're in the round, it's the search, you're really at the orb)
+and applies it (`server/Powerups.luau`); your screen shows it (`client/PowerupFx.luau`).
 
 ## Haystacks
 

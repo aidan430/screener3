@@ -225,6 +225,19 @@ if (VIEW === 'needle') { // a close look at the hiding place, as a player kneeli
   eye = np.clone().add(dir.multiplyScalar(4.2)).add(V(0, 2.4, 0)); at = np.clone();
   camera.fov = 45;
 }
+if (q.get('powerups') && ctx.maze) { // power-up orbs (server/Powerups): one just ahead of you, the rest in random cells
+  const kinds = [['»', 'Hay Boots', [255, 170, 60]], ['▲', 'Compass', [90, 170, 255]], ['◉', "Bird's Eye", [170, 120, 255]], ['✦', 'Glint', [255, 240, 140]], ['●', 'Coin Pouch', [255, 205, 70]]];
+  const pr = NH.rng(3), places = [];
+  if (VIEW === 'player' && q.get('ahead') !== '0') { const d = at.clone().sub(eye).setY(0).normalize(); places.push(eye.clone().add(d.multiplyScalar(9)).setY(2.9)); }
+  for (let i = 0; i < 8; i++) { const c = ctx.maze.cells[pr.NextInteger(0, ctx.maze.cells.length - 1)]; places.push(new THREE.Vector3(c.x, 2.9, c.z)); }
+  places.forEach((p, i) => { const k = kinds[i % kinds.length], col = c3(k[2]);
+    const orb = new THREE.Mesh(new THREE.SphereGeometry(1.1, 24, 16), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 1, transparent: true, opacity: 0.9 })); orb.position.copy(p); scene.add(orb);
+    const ring = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.7, 0.2, 32), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.8, transparent: true, opacity: 0.55 })); ring.position.copy(p).add(new THREE.Vector3(0, -2.4, 0)); scene.add(ring);
+    const l = new THREE.PointLight(col, 1.6, 14); l.position.copy(p); scene.add(l);
+    const cv = document.createElement('canvas'); cv.width = 240; cv.height = 140; const g = cv.getContext('2d'); g.textAlign = 'center'; g.lineWidth = 8; g.strokeStyle = 'rgba(0,0,0,0.5)'; g.fillStyle = '#fff';
+    g.font = 'bold 80px sans-serif'; g.strokeText(k[0], 120, 78); g.fillText(k[0], 120, 78); g.font = 'bold 34px sans-serif'; g.strokeText(k[1], 120, 128); g.fillText(k[1], 120, 128);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv) })); sp.scale.set(4.4, 2.6, 1); sp.position.copy(p).add(new THREE.Vector3(0, 2.8, 0)); scene.add(sp); });
+}
 camera.updateProjectionMatrix();
 camera.position.copy(eye); camera.lookAt(at);
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });

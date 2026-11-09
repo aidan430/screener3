@@ -107,6 +107,7 @@ function MazeKit.build(ctx, o)
 		end
 	end
 	local maze = { cols = cols, rows = rows, size = size, cells = {}, deadEnds = {}, rooms = {} }
+	ctx.maze = maze -- for server/Powerups
 	local x0, z0 = (o.ox or 0) - cols * size / 2, (o.oz or 0) - rows * size / 2
 	function maze.cellCentre(c, r)
 		return x0 + (c - 0.5) * size, z0 + (r - 0.5) * size

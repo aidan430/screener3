@@ -7,7 +7,7 @@ const { chromium } = require('playwright');
   const jobs = process.argv.slice(2);
   for (const job of jobs) {
     const [map, view] = job.split(':');
-    await page.goto(`file://${__dirname}/render.html?map=${map}&view=${view}&needleSeed=${process.env.NS || 5}`);
+    await page.goto(`file://${__dirname}/render.html?map=${map}&view=${view}&needleSeed=${process.env.NS || 5}&powerups=${process.env.PU || ''}&spawn=${process.env.SP || 0}&ahead=${process.env.AH || 1}`);
     await page.waitForFunction(() => window.DONE, null, { timeout: 120000 });
     const info = await page.evaluate(() => ({ done: window.DONE, needle: window.NEEDLE_SCREEN }));
     await page.screenshot({ path: `${map}_${view}.png` });

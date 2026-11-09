@@ -40,6 +40,9 @@
         },
         "LobbyInfo": {
           "$className": "RemoteFunction"
+        },
+        "Powerup": {
+          "$className": "RemoteEvent"
         }
       }
     },

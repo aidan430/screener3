@@ -66,6 +66,20 @@ Config.Find = {
 -- needle through walls and prints where it is, so you can test finding it.
 Config.Testing = { revealNeedle = false }
 
+-- Power-ups (server/Powerups): `count` glowing pickups float in the maze's corridors each round;
+-- walk into one to take it, and another appears somewhere else `respawn` seconds later. Only
+-- helpful ones (nothing slows or blinds anyone else), picked by weight. icon = shown on the orb.
+--   speed: walk at `walkSpeed` for `seconds`     compass: an arrow to the nearest needle
+--   birdseye: a look down from above the maze    glint: needles (and decoys!) within `range` sparkle
+--   coins: a pouch of coins (doubled with 2x Coins) and a little XP
+Config.Powerups = { count = 8, respawn = 20, kinds = {
+	{ id = "speed", name = "Hay Boots", icon = "»", colour = { 255, 170, 60 }, weight = 30, seconds = 12, walkSpeed = 26 },
+	{ id = "compass", name = "Compass", icon = "▲", colour = { 90, 170, 255 }, weight = 20, seconds = 6 },
+	{ id = "birdseye", name = "Bird's Eye", icon = "◉", colour = { 170, 120, 255 }, weight = 15, seconds = 5, height = 55 },
+	{ id = "glint", name = "Glint", icon = "✦", colour = { 255, 240, 140 }, weight = 20, seconds = 8, range = 40 },
+	{ id = "coins", name = "Coin Pouch", icon = "●", colour = { 255, 205, 70 }, weight = 15, coins = 25, xp = 10 },
+} }
+
 Config.AntiCheat = {
 	checkEvery = 0.5, -- seconds between movement checks
 	maxSpeed = 70, -- studs a second a character may move (walking, jumping, falling) outside a teleport

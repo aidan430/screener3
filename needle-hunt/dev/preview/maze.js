@@ -40,6 +40,7 @@ function build(ctx, o) {
   const x1 = x0 + cols * size, z1 = z0 + rows * size;
   for (const w of [[x0, z0, x1, z0], [x0, z1, x1, z1], [x0, z0, x0, z1], [x1, z0, x1, z1]]) wall(ctx, o.style, at(w[0], w[1]), at(w[2], w[3]), o.height);
   const maze = { size, cells: [], rooms: [] }, inRoom = {};
+  ctx.maze = maze;
   for (const rm of rooms) { const [cx, cz] = centre(rm.c, rm.r); maze.rooms.push({ x: cx + size / 2, z: cz + size / 2 }); for (const d of [[0, 0], [1, 0], [0, 1], [1, 1]]) inRoom[(rm.c + d[0]) + ',' + (rm.r + d[1])] = true; }
   for (let c = 1; c <= cols; c++) for (let r = 1; r <= rows; r++) if (!inRoom[c + ',' + r]) { const [x, z] = centre(c, r); maze.cells.push({ c, r, x, z }); K.spot(ctx, at(x + size / 2 - 2, z)); }
   maze.randomCell = () => maze.cells[rng.NextInteger(0, maze.cells.length - 1)];
