@@ -677,3 +677,18 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   Config.LobbyAfterSearches (200) times.
 - Worlds cost less: Moon 75K, Ember Lands 750K, Bubble City 5M, Haystack Stadium 25M (were
   250K, 2M, 10M, 50M); the unlock card says how far along you are.
+
+## Story mode: The Silver Needle of Hollow Creek (2026-11-09)
+- shared/Story.luau holds the whole script (easy to edit): six characters (Grandma Mabel, Patch
+  the talking scarecrow, Pip the crow, Tobias the trader, Clem Burdock the neighbour, Luna on the
+  Moon) and 25 beats. Each plays once when its trigger is reached: start, first harvest, first
+  sale, 1/3/6/10/20/40/80/150/300/600/1200/2500 clumps (most with an item "found in the hay"),
+  first pitchfork, van, stairs, machine, coins sold, the first needle, and opening each world.
+  Rewards are coins, front-loaded so something happens every few minutes early on.
+- server/Story checks every 2 s, plays one beat at a time in order (world beats whenever that
+  world opens; heap beats raced past by finding the needle are skipped), pays, saves seen ids
+  (d.storySeen) and fires Remotes.Story. client/Dialogue shows a paper dialogue box above the
+  stamps: round portrait in the speaker's colour, name, typed-out words, Next (click, E, Enter),
+  two-reply choices, Skip. The journal's Skins & finds page lists "The story so far" to replay.
+- Existing players see the story from the start on their next visit (beats they've already
+  passed queue up; Skip closes each one).

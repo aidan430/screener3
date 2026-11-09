@@ -58,6 +58,9 @@
         },
         "Detect": {
           "$className": "RemoteFunction"
+        },
+        "Story": {
+          "$className": "RemoteEvent"
         }
       }
     },

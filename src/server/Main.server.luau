@@ -31,6 +31,7 @@ local Machines = require(script.Parent.Machines)
 local Shop = require(script.Parent.Shop)
 local Loft = require(script.Parent.Loft)
 local Wheel = require(script.Parent.Wheel)
+local Story = require(script.Parent.Story)
 local Monetization = require(script.Parent.Monetization)
 local Carry = require(script.Parent.Carry)
 local Hauling = require(script.Parent.Hauling)
@@ -166,6 +167,7 @@ local parts = {
 	{ "Machines", Machines.init },
 	{ "Shop", Shop.init },
 	{ "Wheel", Wheel.init },
+	{ "Story", Story.init },
 	{ "Loft", Loft.init },
 	{ "Carry", Carry.init },
 	{ "Hauling", Hauling.init },

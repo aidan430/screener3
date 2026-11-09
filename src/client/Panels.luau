@@ -13,6 +13,8 @@ local Ui = require(script.Parent.Ui)
 local Shop = require(script.Parent.Shop)
 local Cursor = require(script.Parent.Cursor)
 local Juice = require(script.Parent.Juice)
+local Dialogue = require(script.Parent.Dialogue)
+local StoryData = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Story"))
 
 local player = Players.LocalPlayer
 local Panels = {}
@@ -104,6 +106,30 @@ function Panels.mount(gui, notify, actions)
 			end)
 		end
 	end
+	-- the story so far: every beat you've seen, to play again
+	local taleHeader = Ui.paragraph("The story so far", { LayoutOrder = 40, Font = Ui.font, TextSize = 18, Parent = findsBody })
+	local tale = Ui.make("Frame", { LayoutOrder = 41, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = findsBody }, { Ui.make("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }) })
+	local function refreshTale()
+		local seen = {}
+		for id in string.gmatch(player:GetAttribute("StorySeen") or "", "[^,]+") do
+			seen[id] = true
+		end
+		for _, child in ipairs(tale:GetChildren()) do
+			if child:IsA("TextButton") then
+				child:Destroy()
+			end
+		end
+		for i, beat in ipairs(StoryData.beats) do
+			if seen[beat.id] then
+				Ui.button(beat.title .. "  ·  play again", Ui.colors.paper, { LayoutOrder = i, TextColor3 = Ui.colors.ink, TextXAlignment = Enum.TextXAlignment.Left, Size = UDim2.new(1, 0, 0, 30), Parent = tale }).Activated:Connect(function()
+					Dialogue.play(beat.id)
+				end)
+			end
+		end
+		taleHeader.Visible = next(seen) ~= nil
+	end
+	player:GetAttributeChangedSignal("StorySeen"):Connect(refreshTale)
+	task.defer(refreshTale)
 	local storyHeader = Ui.paragraph("Lucky finds: odd things in the hay, and what they tell you.", { LayoutOrder = 50, Font = Ui.font, TextSize = 20, Parent = findsBody })
 	refreshers.Finds = function()
 		for _, prize in ipairs(Config.Wheel) do

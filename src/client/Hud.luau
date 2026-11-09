@@ -14,6 +14,7 @@ local Juice = require(script.Parent.Juice)
 local Notify = require(script.Parent.Notify)
 local CameraView = require(script.Parent.CameraView)
 local Farmers = require(script.Parent.Farmers)
+local Dialogue = require(script.Parent.Dialogue)
 
 local player = Players.LocalPlayer
 
@@ -170,6 +171,7 @@ function Hud.mount(gui, open)
 	Hud.refresh = refresh
 	CameraView.start(gui)
 	Farmers.start(gui)
+	Dialogue.mount(gui, ReplicatedStorage:WaitForChild("Remotes"), Notify)
 	return { refresh = refresh, coins = coinsLabel, earn = earnLabel, crosshair = crosshair }
 end
 

@@ -114,6 +114,23 @@ class Heap(unittest.TestCase):
         self.assertGreater(foot["to"] - foot["from"], 4, "a slope, not a step")
 
 
+class StoryScript(unittest.TestCase):
+    def test_every_beat_has_a_known_speaker_and_trigger(self):
+        text = (SHARED / "Story.luau").read_text()
+        cast = set(re.findall(r"^\t(\w+) = \{ name = ", text, re.M))
+        speakers = set(re.findall(r'who = "(\w+)"', text))
+        self.assertTrue(speakers <= cast, speakers - cast)
+        ids = re.findall(r'\{ id = "(\w+)", title = ', text)
+        self.assertEqual(len(ids), len(set(ids)), "beat ids are unique")
+        kinds = set(re.findall(r'trigger = \{ kind = "(\w+)"', text))
+        self.assertTrue(kinds <= {"start", "stat", "clumps", "tool", "truck", "placed", "machines", "needles", "world"}, kinds)
+        worlds = {w["id"] for w in pacing.rows("Worlds")}
+        self.assertTrue(set(re.findall(r'kind = "world", key = "(\w+)"', text)) <= worlds)
+        clumps = [int(n) for n in re.findall(r'kind = "clumps", n = (\d+)', text)]
+        self.assertEqual(clumps, sorted(clumps), "heap beats come in order")
+        self.assertLessEqual(clumps[0], 2, "the first find comes within minutes")
+
+
 class Wheel(unittest.TestCase):
     def test_slices_are_sized_by_their_odds(self):
         """Mirrors Economy.wheelSlice: share of the face by weight, the smallest kept visible."""

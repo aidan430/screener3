@@ -58,6 +58,7 @@ function Profile.fresh(saved)
 		inventory = {},
 		placed = {},
 		skins = {},
+		storySeen = {}, -- [beat id] = true (shared/Story)
 		trucks = {},
 		stats = {},
 		achievements = {},
@@ -121,6 +122,13 @@ function Profile.fresh(saved)
 	end
 	for name in pairs(Config.Products) do
 		d.boosts[name] = number(saved.boosts, name, 0)
+	end
+	if type(saved.storySeen) == "table" then
+		for id, seen in pairs(saved.storySeen) do
+			if type(id) == "string" and seen == true then
+				d.storySeen[id] = true
+			end
+		end
 	end
 	if type(saved.receipts) == "table" then
 		for _, id in ipairs(saved.receipts) do
