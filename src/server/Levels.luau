@@ -37,22 +37,18 @@ function Levels.gain(player, xp)
 	if not d or xp <= 0 then
 		return 0
 	end
-	local before, spins = d.level, 0
+	local before = d.level
 	PlayerData.update(player, function(data)
 		data.xp += xp
 		while data.level < L.maxLevel and data.xp >= Economy.levelNeed(data.level) do
 			data.xp -= Economy.levelNeed(data.level)
 			data.level += 1
 			if data.level % L.spinEvery == 0 then
-				data.spinBank += 1
-				spins += 1
+				data.spinBank += 1 -- the screen says so (client/LevelBar) and shows a spin badge
 			end
 		end
 	end)
 	show(player, d)
-	if spins > 0 then
-		ReplicatedStorage.Remotes.Announce:FireClient(player, { kind = "notice", text = "Level " .. d.level .. "! A free wheel spin is waiting for you." })
-	end
 	return d.level - before
 end
 

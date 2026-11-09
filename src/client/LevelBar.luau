@@ -17,7 +17,8 @@ local Harvest = require(script.Parent.Harvest)
 local player = Players.LocalPlayer
 local LevelBar = {}
 local OUTLINE = Color3.fromRGB(59, 36, 14)
-local bar, fill, levelText, xpText, big, sub, luckyText, luckyHolder, autoButton
+local bar, fill, levelText, xpText, big, sub, luckyText, luckyHolder, autoButton, spinBadge
+local openPanel = function(_) end -- opens a journal page (Main passes panels.open)
 local auto = false
 
 local function pop(label, from)
@@ -84,6 +85,13 @@ local function levelChanged()
 		big.Text = if level % Config.Levels.bigEvery == 0 then "LEVEL " .. level .. "!" else "LEVEL UP!"
 		local more = math.min(Config.Levels.carryMax, Config.Levels.carryPerLevel * (level - 1))
 		sub.Text = "Strength " .. (level - 1) .. " (+" .. gained .. ") · you carry " .. string.format("%.1f", more * 100) .. "% more" .. (if more >= Config.Levels.carryMax then " (the most)" else "")
+		local spins = level // Config.Levels.spinEvery - lastLevel // Config.Levels.spinEvery -- free spins this level-up gave
+		if spins > 0 then
+			sub.Text = "+" .. spins .. " free wheel spin" .. (if spins > 1 then "s" else "") .. "! · Strength " .. (level - 1) .. " (+" .. gained .. ")"
+			task.delay(2.2, function() -- once LEVEL UP! has faded, so the note never covers it
+				Notify.toast("Your free wheel spin is saved. Click the gold spin badge, or press Q and pick Wheel.", Ui.colors.hay)
+			end)
+		end
 		reveal(big, true)
 		reveal(sub, true)
 		pop(big, 0.4)
@@ -125,6 +133,18 @@ function LevelBar.lucky()
 	Juice.sound("pop", 1.4)
 end
 
+-- The spin badge above the level bar: shows while you have saved free spins; click or tap it to
+-- open the Wheel of Fortune (its odds come first, as always).
+local function setBadge()
+	local bank = player:GetAttribute("SpinBank") or 0
+	local was = spinBadge.Visible
+	spinBadge.Visible = bank > 0
+	spinBadge.Text = bank .. " free spin" .. (if bank > 1 then "s" else "")
+	if spinBadge.Visible and not was then
+		pop(spinBadge, 0.5)
+	end
+end
+
 local function setAuto(on, why)
 	auto = on
 	autoButton.Text = if on then "STOP  " .. Config.AutoKey else "AUTO  " .. Config.AutoKey
@@ -152,7 +172,8 @@ local function autoLoop()
 	end
 end
 
-function LevelBar.mount(gui)
+function LevelBar.mount(gui, open)
+	openPanel = open or openPanel
 	local holder = Ui.make("Frame", { Name = "LevelBar", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -14), Size = UDim2.fromOffset(380, 58), BackgroundTransparency = 1, Parent = gui })
 	Ui.autoScale(holder)
 	bar = Ui.make("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, -96, 0, 24), BackgroundColor3 = Ui.colors.woodDark, BackgroundTransparency = 0.15, Parent = holder }, { Ui.corner(12) })
@@ -162,6 +183,13 @@ function LevelBar.mount(gui)
 	xpText = Ui.label({ Font = Ui.body, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 0), Size = UDim2.new(0.5, 0, 1, 0), TextColor3 = Ui.colors.white, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 3, Parent = bar }, 14)
 	autoButton = Ui.button("AUTO  " .. Config.AutoKey, Ui.colors.green, { AnchorPoint = Vector2.new(1, 1), Position = UDim2.fromScale(1, 1), Size = UDim2.fromOffset(86, 30), Parent = holder })
 	creamEdge(autoButton) -- so the green button stands out against the grass
+	spinBadge = Ui.button("1 free spin", Ui.colors.hay, { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, -30), Size = UDim2.fromOffset(112, 24), Visible = false, Parent = holder })
+	creamEdge(spinBadge)
+	spinBadge.Activated:Connect(function()
+		openPanel("Wheel")
+	end)
+	player:GetAttributeChangedSignal("SpinBank"):Connect(setBadge)
+	setBadge()
 	big = shout({ AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.26), Size = UDim2.fromOffset(520, 70), ZIndex = 30, Parent = gui }, 64, Vector2.new(220, 90)) -- one shadow behind both lines
 	sub = shout({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.26, 38), Size = UDim2.fromOffset(520, 30), ZIndex = 30, Parent = gui }, 24, Vector2.zero)
 	luckyText, luckyHolder = shout({ Text = "x2 XP!", AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(170, 52), ZIndex = 30, Parent = gui }, 46, Vector2.new(80, 26))

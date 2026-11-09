@@ -126,7 +126,7 @@ step("goals", function()
 	Goals.start(gui, hud, Notify)
 end)
 step("stamina", function()
-	StaminaBar.mount(gui); require(script.Parent:WaitForChild("LevelBar")).mount(gui) -- Farmer Level, LEVEL UP!, x2 and AUTO
+	StaminaBar.mount(gui); require(script.Parent:WaitForChild("LevelBar")).mount(gui, function(name) if panels then panels.open(name) end end) -- Farmer Level, LEVEL UP!, x2, AUTO, spin badge
 end)
 step("metal detector", function()
 	Detector.start(gui, Notify)

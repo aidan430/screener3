@@ -776,3 +776,9 @@ this game's own style. Nothing copied from that game.
   light gold with "Level N · LEVEL UP!" in dark brown for 0.6 s, then empties and fills again.
 - Player list: Level is now the first leaderstats column (then Coins, Needles), so Roblox ranks
   the list by Farmer Level, which only goes up, instead of coins, which drop when you spend.
+- Free spin from levelling, made noticeable: on every 50th level the line under LEVEL 50! reads
+  "+1 free wheel spin! · Strength 49 (+1)"; 2.2 s later (after the words fade) a gold note says
+  "Your free wheel spin is saved. Click the gold spin badge, or press Q and pick Wheel." A gold
+  "1 free spin" badge with a cream edge sits above the level bar while SpinBank > 0 (spins from
+  achievements too); clicking or tapping it opens the Wheel of Fortune, odds first. The server's
+  plain brown notice is gone (client/LevelBar says it instead).
