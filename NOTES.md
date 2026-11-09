@@ -800,3 +800,8 @@ this game's own style. Nothing copied from that game.
 - The owner's own icon (blocky gloved hand reaching for the needle in chunky hay) is now
   assets/marketing/store/icon-512.png; it reads best at small sizes. The drawn one is kept as
   icon-512-drawn.png and the owner's softer painted version as icon-alt-soft.png.
+- assets/marketing/video-1-one-needle.mp4: an animated 20-second upright promo (1080 x 1920,
+  30 fps, with a synthesised backing track and sound effects) of video script 1: the pull-back
+  to the giant haystack, lifting with the combo, LEVEL UP! and x2 XP!, climbing the stairs, the
+  magnifying glass finding the needle, and an end card with the icon. Drawn in code
+  (dev/tools/store/video1.py; run from dev/tools/store with the icon path and an output path).
