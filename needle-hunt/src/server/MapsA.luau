@@ -22,6 +22,7 @@ end
 function MapsA.field(ctx)
 	local r = ctx.rng
 	MapKit.ground(ctx, 140, 140, ctx.def.ground, "Grass")
+	MapKit.edges(ctx, 68, 68, ctx.def.ground)
 	for _, e in ipairs({ { -60, -60, 60, -60 }, { 60, -60, 60, 60 }, { 60, 60, -60, 60 }, { -60, 60, -60, -60 } }) do
 		MapKit.fence(ctx, e[1], e[2], e[3], e[4])
 	end
@@ -96,6 +97,7 @@ end
 function MapsA.sunset(ctx)
 	local r = ctx.rng
 	MapKit.ground(ctx, 140, 140, ctx.def.ground, "Grass")
+	MapKit.edges(ctx, 68, 68, ctx.def.ground)
 	local house = MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, -38, 8, -38)), Vector3.new(24, 16, 18), { 236, 226, 200 }, "WoodPlanks")
 	MapKit.part(ctx, { Name = "Roof", Size = Vector3.new(26, 2, 20), CFrame = CFrame.new(house.Position + Vector3.new(0, 9, 0)), Color = { 150, 60, 50 }, Material = "Slate" })
 	MapKit.spotsOn(ctx, house, 0, 4)

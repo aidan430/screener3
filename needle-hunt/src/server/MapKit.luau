@@ -62,6 +62,16 @@ function MapKit.ground(ctx, sx, sz, colour, material)
 	return MapKit.part(ctx, { Name = "Ground", Size = Vector3.new(sx, 2, sz), CFrame = CFrame.new(MapKit.at(ctx, 0, -1, 0)), Color = colour, Material = material or "Grass" })
 end
 
+-- The edge of an outdoor map: countryside running off to the horizon (so the map never ends in
+-- mid-air) and invisible walls round the play area, half sizes halfX, halfZ, so nobody walks or
+-- jumps off it. The walls can't be clicked through to (they ignore clicks and raycasts).
+function MapKit.edges(ctx, halfX, halfZ, colour)
+	MapKit.part(ctx, { Name = "Countryside", Size = Vector3.new(900, 2, 900), CFrame = CFrame.new(MapKit.at(ctx, 0, -1.1, 0)), Color = colour, Material = "Grass", CanQuery = false })
+	for _, w in ipairs({ { 0, -halfZ, halfX * 2, 1 }, { 0, halfZ, halfX * 2, 1 }, { -halfX, 0, 1, halfZ * 2 }, { halfX, 0, 1, halfZ * 2 } }) do
+		MapKit.part(ctx, { Name = "Edge", Size = Vector3.new(w[3], 60, w[4]), CFrame = CFrame.new(MapKit.at(ctx, w[1], 30, w[2])), Transparency = 1, CanQuery = false, CastShadow = false })
+	end
+end
+
 function MapKit.spawnAt(ctx, x, z)
 	table.insert(ctx.spawns, CFrame.new(MapKit.at(ctx, x, 3, z)) * CFrame.Angles(0, ctx.rng:NextNumber() * math.pi * 2, 0))
 end

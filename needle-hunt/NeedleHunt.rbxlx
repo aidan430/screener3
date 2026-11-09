@@ -986,6 +986,7 @@ function LobbyBuilder.build()
 	model.Parent = workspace
 	ctx = { model = model, rng = Random.new(7), centre = Config.LobbyCentre, def = { straw = { 226, 188, 92 } }, spots = {}, spawns = {}, floorY = 0 }
 	MapKit.ground(ctx, 260, 260, { 104, 160, 76 }, "Grass")
+	MapKit.edges(ctx, 125, 125, { 104, 160, 76 })
 	MapKit.part(ctx, { Name = "Plaza", Size = Vector3.new(90, 0.4, 90), CFrame = CFrame.new(MapKit.at(ctx, 0, 0.2, 0)), Color = { 170, 128, 86 }, Material = "WoodPlanks" })
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Anchored, spawn.Size, spawn.Duration, spawn.Neutral = true, Vector3.new(12, 1, 12), 0, true
@@ -1004,7 +1005,7 @@ function LobbyBuilder.build()
 	-- the Play pad
 	local pad = MapKit.part(ctx, { Name = "PlayPad", Shape = "Cylinder", Size = Vector3.new(0.4, 18, 18), CFrame = CFrame.new(MapKit.at(ctx, 0, 0.6, 6)) * CFrame.Angles(0, 0, math.rad(90)), Color = { 255, 206, 80 }, Material = "Neon", CanCollide = false })
 	local above = Instance.new("BillboardGui")
-	above.Size, above.StudsOffset, above.AlwaysOnTop = UDim2.fromOffset(420, 120), Vector3.new(0, 8, 0), false
+	above.Size, above.StudsOffset, above.AlwaysOnTop = UDim2.fromOffset(420, 120), Vector3.new(0, 4, 0), false -- low over the pad, clear of the title sign
 	above.Parent = pad
 	local status = text(above, { Size = UDim2.fromScale(1, 1), TextStrokeTransparency = 0.3, Text = "" })
 	task.spawn(function()
@@ -1184,6 +1185,16 @@ function MapKit.ground(ctx, sx, sz, colour, material)
 	return MapKit.part(ctx, { Name = "Ground", Size = Vector3.new(sx, 2, sz), CFrame = CFrame.new(MapKit.at(ctx, 0, -1, 0)), Color = colour, Material = material or "Grass" })
 end
 
+-- The edge of an outdoor map: countryside running off to the horizon (so the map never ends in
+-- mid-air) and invisible walls round the play area, half sizes halfX, halfZ, so nobody walks or
+-- jumps off it. The walls can't be clicked through to (they ignore clicks and raycasts).
+function MapKit.edges(ctx, halfX, halfZ, colour)
+	MapKit.part(ctx, { Name = "Countryside", Size = Vector3.new(900, 2, 900), CFrame = CFrame.new(MapKit.at(ctx, 0, -1.1, 0)), Color = colour, Material = "Grass", CanQuery = false })
+	for _, w in ipairs({ { 0, -halfZ, halfX * 2, 1 }, { 0, halfZ, halfX * 2, 1 }, { -halfX, 0, 1, halfZ * 2 }, { halfX, 0, 1, halfZ * 2 } }) do
+		MapKit.part(ctx, { Name = "Edge", Size = Vector3.new(w[3], 60, w[4]), CFrame = CFrame.new(MapKit.at(ctx, w[1], 30, w[2])), Transparency = 1, CanQuery = false, CastShadow = false })
+	end
+end
+
 function MapKit.spawnAt(ctx, x, z)
 	table.insert(ctx.spawns, CFrame.new(MapKit.at(ctx, x, 3, z)) * CFrame.Angles(0, ctx.rng:NextNumber() * math.pi * 2, 0))
 end
@@ -1323,6 +1334,7 @@ end
 function MapsA.field(ctx)
 	local r = ctx.rng
 	MapKit.ground(ctx, 140, 140, ctx.def.ground, "Grass")
+	MapKit.edges(ctx, 68, 68, ctx.def.ground)
 	for _, e in ipairs({ { -60, -60, 60, -60 }, { 60, -60, 60, 60 }, { 60, 60, -60, 60 }, { -60, 60, -60, -60 } }) do
 		MapKit.fence(ctx, e[1], e[2], e[3], e[4])
 	end
@@ -1397,6 +1409,7 @@ end
 function MapsA.sunset(ctx)
 	local r = ctx.rng
 	MapKit.ground(ctx, 140, 140, ctx.def.ground, "Grass")
+	MapKit.edges(ctx, 68, 68, ctx.def.ground)
 	local house = MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, -38, 8, -38)), Vector3.new(24, 16, 18), { 236, 226, 200 }, "WoodPlanks")
 	MapKit.part(ctx, { Name = "Roof", Size = Vector3.new(26, 2, 20), CFrame = CFrame.new(house.Position + Vector3.new(0, 9, 0)), Color = { 150, 60, 50 }, Material = "Slate" })
 	MapKit.spotsOn(ctx, house, 0, 4)
@@ -1456,6 +1469,7 @@ end
 function MapsB.forest(ctx)
 	local r = ctx.rng
 	MapKit.ground(ctx, 130, 130, ctx.def.ground, "Grass")
+	MapKit.edges(ctx, 63, 63, ctx.def.ground)
 	for _ = 1, 26 do
 		MapKit.tree(ctx, r:NextNumber(-55, 55), r:NextNumber(-55, 55), r:NextNumber(14, 22), { 40, 76, 50 })
 	end
@@ -1490,13 +1504,17 @@ end
 -- a wardrobe, sheet-covered furniture and dusty lamps, lit by a round window at each end.
 function MapsB.attic(ctx)
 	local r = ctx.rng
-	local L, Wd, H = 72, 32, 16
+	local L, Wd, H = 72, 32, 20
 	local wood, dark = { 132, 98, 66 }, { 96, 70, 48 }
 	MapKit.ground(ctx, L + 6, Wd + 6, ctx.def.ground, "WoodPlanks")
-	for _, side in ipairs({ -1, 1 }) do -- the sloping roof
-		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, 0, H / 2 + 2, side * Wd / 4)) * CFrame.Angles(side * math.rad(-55), 0, 0), Vector3.new(L, 1, Wd * 0.9), dark, "WoodPlanks")
+	-- the roof: two slopes, low (3 studs) at the side walls and meeting a flat ridge at 19.6
+	local slope, tilt = 20, math.rad(55)
+	for _, side in ipairs({ -1, 1 }) do
+		local run, rise = slope / 2 * math.cos(tilt), slope / 2 * math.sin(tilt)
+		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, 0, 3 + rise, side * (Wd / 2 - run))) * CFrame.Angles(side * tilt, 0, 0), Vector3.new(L, 1, slope), dark, "WoodPlanks")
 		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, 0, 1.5, side * Wd / 2)), Vector3.new(L, 3, 1), wood, "WoodPlanks")
 	end
+	MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, 0, 3 + slope * math.sin(tilt) + 0.2, 0)), Vector3.new(L, 1, Wd - 4 * slope / 2 * math.cos(tilt) + 2), dark, "WoodPlanks")
 	for _, side in ipairs({ -1, 1 }) do -- end walls with a round window
 		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, side * L / 2, H / 2, 0)), Vector3.new(1, H, Wd), wood, "WoodPlanks")
 		local win = MapKit.part(ctx, { Name = "Window", Shape = "Cylinder", Size = Vector3.new(1.2, 6, 6), CFrame = CFrame.new(MapKit.at(ctx, side * (L / 2 - 0.2), 9, 0)), Color = { 255, 236, 190 }, Material = "Neon", CanCollide = false })
@@ -3351,7 +3369,7 @@ end
 
 -- A centred window with a title and a close button. Returns the window and its body.
 function UiKit.window(gui, title, w, h)
-	local win = UiKit.make("Frame", { Name = title, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(w or 620, h or 460), BackgroundColor3 = UiKit.colors.panel, BackgroundTransparency = 0.06, Visible = false, ZIndex = 10, Parent = gui }, { UiKit.corner(18), UiKit.stroke() })
+	local win = UiKit.make("Frame", { Name = title, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.57), -- clear of the round banner Size = UDim2.fromOffset(w or 620, h or 460), BackgroundColor3 = UiKit.colors.panel, BackgroundTransparency = 0.06, Visible = false, ZIndex = 10, Parent = gui }, { UiKit.corner(18), UiKit.stroke() })
 	UiKit.autoScale(win)
 	UiKit.label({ Text = title, Font = UiKit.bold, Size = UDim2.new(1, -100, 0, 40), Position = UDim2.fromOffset(22, 14), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 11, Parent = win }, 30)
 	local close = UiKit.button("X", UiKit.colors.card, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -14, 0, 14), Size = UDim2.fromOffset(44, 40), ZIndex = 11, Parent = win })

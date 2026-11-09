@@ -210,3 +210,17 @@ remotes, but it can't run Roblox. Play mode in Studio is the real test.
 3. **Weekly events:** a Golden Needle weekend, a Night Forest week and a festive map, with event-only cosmetics for coins.
 4. **More maps and moving maps:** a windy rooftop, a market stall, and a hay maze whose walls shift between rounds.
 5. **Seasons:** a season pass track of free and cosmetic rewards, plus a season leaderboard with title rewards.
+
+## Previews
+
+`previews/` holds renders of the lobby and maps (`maps.png`), close-ups of hidden needles
+(`needles.png`) and the UI (`ui.png`). They come from a JavaScript port of the map builders
+rendered with three.js (`dev/preview`), not from Studio, so Roblox's lighting and materials will
+look a little different.
+
+The previews led to these fixes:
+- the open maps and the lobby now run into countryside with invisible walls at the edge
+  (`MapKit.edges`)
+- the attic roof slopes the right way
+- the lobby countdown sits low over the Play pad
+- windows open a little lower, clear of the round banner

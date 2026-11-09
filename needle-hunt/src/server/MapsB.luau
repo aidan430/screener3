@@ -15,6 +15,7 @@ end
 function MapsB.forest(ctx)
 	local r = ctx.rng
 	MapKit.ground(ctx, 130, 130, ctx.def.ground, "Grass")
+	MapKit.edges(ctx, 63, 63, ctx.def.ground)
 	for _ = 1, 26 do
 		MapKit.tree(ctx, r:NextNumber(-55, 55), r:NextNumber(-55, 55), r:NextNumber(14, 22), { 40, 76, 50 })
 	end
@@ -49,13 +50,17 @@ end
 -- a wardrobe, sheet-covered furniture and dusty lamps, lit by a round window at each end.
 function MapsB.attic(ctx)
 	local r = ctx.rng
-	local L, Wd, H = 72, 32, 16
+	local L, Wd, H = 72, 32, 20
 	local wood, dark = { 132, 98, 66 }, { 96, 70, 48 }
 	MapKit.ground(ctx, L + 6, Wd + 6, ctx.def.ground, "WoodPlanks")
-	for _, side in ipairs({ -1, 1 }) do -- the sloping roof
-		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, 0, H / 2 + 2, side * Wd / 4)) * CFrame.Angles(side * math.rad(-55), 0, 0), Vector3.new(L, 1, Wd * 0.9), dark, "WoodPlanks")
+	-- the roof: two slopes, low (3 studs) at the side walls and meeting a flat ridge at 19.6
+	local slope, tilt = 20, math.rad(55)
+	for _, side in ipairs({ -1, 1 }) do
+		local run, rise = slope / 2 * math.cos(tilt), slope / 2 * math.sin(tilt)
+		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, 0, 3 + rise, side * (Wd / 2 - run))) * CFrame.Angles(side * tilt, 0, 0), Vector3.new(L, 1, slope), dark, "WoodPlanks")
 		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, 0, 1.5, side * Wd / 2)), Vector3.new(L, 3, 1), wood, "WoodPlanks")
 	end
+	MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, 0, 3 + slope * math.sin(tilt) + 0.2, 0)), Vector3.new(L, 1, Wd - 4 * slope / 2 * math.cos(tilt) + 2), dark, "WoodPlanks")
 	for _, side in ipairs({ -1, 1 }) do -- end walls with a round window
 		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, side * L / 2, H / 2, 0)), Vector3.new(1, H, Wd), wood, "WoodPlanks")
 		local win = MapKit.part(ctx, { Name = "Window", Shape = "Cylinder", Size = Vector3.new(1.2, 6, 6), CFrame = CFrame.new(MapKit.at(ctx, side * (L / 2 - 0.2), 9, 0)), Color = { 255, 236, 190 }, Material = "Neon", CanCollide = false })

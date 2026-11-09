@@ -102,7 +102,7 @@ end
 
 -- A centred window with a title and a close button. Returns the window and its body.
 function UiKit.window(gui, title, w, h)
-	local win = UiKit.make("Frame", { Name = title, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(w or 620, h or 460), BackgroundColor3 = UiKit.colors.panel, BackgroundTransparency = 0.06, Visible = false, ZIndex = 10, Parent = gui }, { UiKit.corner(18), UiKit.stroke() })
+	local win = UiKit.make("Frame", { Name = title, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.57), -- clear of the round banner Size = UDim2.fromOffset(w or 620, h or 460), BackgroundColor3 = UiKit.colors.panel, BackgroundTransparency = 0.06, Visible = false, ZIndex = 10, Parent = gui }, { UiKit.corner(18), UiKit.stroke() })
 	UiKit.autoScale(win)
 	UiKit.label({ Text = title, Font = UiKit.bold, Size = UDim2.new(1, -100, 0, 40), Position = UDim2.fromOffset(22, 14), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 11, Parent = win }, 30)
 	local close = UiKit.button("X", UiKit.colors.card, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -14, 0, 14), Size = UDim2.fromOffset(44, 40), ZIndex = 11, Parent = win })
