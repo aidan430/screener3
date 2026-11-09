@@ -75,11 +75,11 @@ Config.Testing = { revealNeedle = false }
 -- image = the uploaded icon's asset ID (assets/powerups/<id>.png: Studio > Asset Manager > Images,
 -- or Creator Dashboard > Decals; copy its ID here). 0 = show the `icon` glyph instead.
 Config.Powerups = { count = 8, respawn = 20, kinds = {
-	{ id = "speed", name = "Hay Boots", icon = "»", image = 0, colour = { 110, 190, 70 }, weight = 30, seconds = 12, walkSpeed = 26 },
-	{ id = "compass", name = "Compass", icon = "▲", image = 0, colour = { 240, 130, 40 }, weight = 20, seconds = 6 },
-	{ id = "birdseye", name = "Bird's Eye", icon = "◉", image = 0, colour = { 70, 160, 240 }, weight = 15, seconds = 5, height = 55 },
-	{ id = "glint", name = "Glint", icon = "✦", image = 0, colour = { 170, 110, 240 }, weight = 20, seconds = 8, range = 40 },
-	{ id = "coins", name = "Coin Pouch", icon = "●", image = 0, colour = { 255, 205, 70 }, weight = 15, coins = 25, xp = 10 },
+	{ id = "speed", name = "Hay Boots", icon = "»", image = 78113734507119, colour = { 110, 190, 70 }, weight = 30, seconds = 12, walkSpeed = 26 },
+	{ id = "compass", name = "Compass", icon = "▲", image = 90767287093904, colour = { 240, 130, 40 }, weight = 20, seconds = 6 },
+	{ id = "birdseye", name = "Bird's Eye", icon = "◉", image = 79032355368145, colour = { 70, 160, 240 }, weight = 15, seconds = 5, height = 55 },
+	{ id = "glint", name = "Glint", icon = "✦", image = 127033997986783, colour = { 170, 110, 240 }, weight = 20, seconds = 8, range = 40 },
+	{ id = "coins", name = "Coin Pouch", icon = "●", image = 133288309337957, colour = { 255, 205, 70 }, weight = 15, coins = 25, xp = 10 },
 } }
 
 Config.AntiCheat = {
