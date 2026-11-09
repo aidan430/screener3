@@ -785,3 +785,7 @@ this game's own style. Nothing copied from that game.
 - Stamina bar restyled (client/Stamina): 150 x 9 (was 140 x 6) with a cream outline like the XP
   bar's; sage green while you harvest and rust red when you're out of breath (were mint and
   orange: the orange nearly matched the hay). It still fades in only once you've used some.
+- Combo counter restyled (client/Juice): left of the crosshair at its height (x2 XP! keeps the
+  upper right, the floating straw count rises above), in the same bold rounded font with a dark
+  outline on a soft dark shadow (Config.LevelShadow) as LEVEL UP! and x2 XP!; gold shifting to
+  orange by x60. It used to sit where x2 XP! lands, in a soft-shadowed serif that blended into hay.
