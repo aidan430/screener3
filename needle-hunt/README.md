@@ -232,7 +232,7 @@ and applies it (`server/Powerups.luau`); your screen shows it (`client/PowerupFx
 
 **Icons.** The round power-up icons are in `assets/powerups/` (speed, compass, birdseye, glint,
 coins: 512×512 PNGs with see-through corners). Upload each in Studio (Asset Manager > Images >
-Bulk Import), copy its ID into that power-up's `image` in `Config.Powerups`, and the icon shows
+Bulk Import), copy its ID into that power-up's `image` in `Config.Powerups` (all five are in), and the icon shows
 over the orb and on the countdown chip. While `image = 0` the glyph (», ▲, ◉, ✦, ●) shows instead.
 
 ## Haystacks
