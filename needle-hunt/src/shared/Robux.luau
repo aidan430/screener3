@@ -11,6 +11,8 @@ Robux.items = {
 	{ key = "CoinsMedium", pass = false, name = "Sack of Coins", text = Config.CoinPacks.CoinsMedium .. " Haystack Coins for trails, titles and effects." },
 	{ key = "CoinsLarge", pass = false, name = "Cart of Coins", text = Config.CoinPacks.CoinsLarge .. " Haystack Coins for trails, titles and effects." },
 	{ key = "CoinShower", pass = false, name = "Coin Shower", text = "Everyone in this server, you too, gets " .. Config.CoinShower.coins .. " coins." },
+	{ key = "HarvestBox", pass = false, box = "harvest", name = "Harvest Box", text = "Opens one Harvest Box: one needle, odds shown in Boxes." },
+	{ key = "StarlightBox", pass = false, box = "starlight", name = "Starlight Box", text = "Opens one Starlight Box: one needle, odds shown in Boxes." },
 	{ key = "DoubleCoins", pass = true, name = "2x Coins", text = "Every coin you earn, doubled. Forever." },
 	{ key = "ExtraHint", pass = true, name = "Extra Daily Hint", text = "One more hint every day." },
 	{ key = "GrandBooth", pass = true, name = "Grand Booth", text = "Your lobby booth shows your " .. Config.GrandBooth.needles .. " best needles, with a gold sign." },

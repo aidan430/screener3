@@ -18,6 +18,8 @@ local Screens2 = require(script.Parent.Screens2)
 local Screens3 = require(script.Parent.Screens3)
 local LobbyUi = require(script.Parent.LobbyUi)
 local PowerupFx = require(script.Parent.PowerupFx)
+local BoxScreen = require(script.Parent.BoxScreen)
+local CombatFx = require(script.Parent.CombatFx)
 
 local player = Players.LocalPlayer
 local UIController = {}
@@ -82,7 +84,14 @@ function UIController.start()
 	for name, fn in pairs(colOpen) do
 		openers[name] = fn
 	end
+	for _, screen in ipairs({ BoxScreen }) do
+		local w, opener = screen.mount(gui)
+		for name, frame in pairs(w) do
+			windows[name], openers[name] = frame, opener[name]
+		end
+	end
 	PowerupFx.start(gui)
+	CombatFx.start(gui)
 	LobbyUi.start(gui, function(userId) -- a booth's prompt: that player's collection
 		Screens3.view(userId)
 		if windows.Collection.Visible then

@@ -15,6 +15,15 @@ local LeaderboardManager = require(script.Parent.LeaderboardManager)
 
 local RewardManager = {}
 
+-- Match stats (server/MatchXp sets this while a round runs): track(player, "coins" | "needles" |
+-- "elims", amount). Does nothing between rounds.
+RewardManager.tracker = nil
+function RewardManager.track(player, what, amount)
+	if RewardManager.tracker then
+		RewardManager.tracker(player, what, amount)
+	end
+end
+
 local function hasPass(player, name)
 	return player:GetAttribute("Pass_" .. name) == true
 end
@@ -23,6 +32,9 @@ RewardManager.hasPass = hasPass
 -- Gives coins and XP (already multiplied) and announces any level-up. Returns the levels gained.
 function RewardManager.grant(player, coins, xp, why)
 	local gained = 0
+	if coins > 0 then
+		RewardManager.track(player, "coins", coins)
+	end
 	DataManager.update(player, function(d)
 		d.coins += coins
 		d.coinsEarned += coins
@@ -47,6 +59,7 @@ function RewardManager.found(player, elapsed, golden)
 		end
 	end)
 	LeaderboardManager.mark(player)
+	RewardManager.track(player, "needles", 1)
 	QuestManager.record(player, "find", 1)
 	QuestManager.record(player, "fast", 1, { seconds = elapsed })
 	if golden then

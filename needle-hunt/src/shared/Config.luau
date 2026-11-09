@@ -82,6 +82,35 @@ Config.Powerups = { count = 8, respawn = 20, kinds = {
 	{ id = "coins", name = "Coin Pouch", icon = "●", image = 133288309337957, colour = { 255, 205, 70 }, weight = 15, coins = 25, xp = 10 },
 } }
 
+-- XP after each match (server/MatchXp), shown as a breakdown on the results screen.
+--   place: finishers 1st, 2nd, 3rd, then everyone else who finished; played: everyone at the end
+--   perCoin: for each coin collected in the match; perNeedle: each needle found; perElimination
+Config.MatchXp = { place = { 120, 90, 70, 50 }, played = 20, perCoin = 0.5, perNeedle = 40, perElimination = 25 }
+
+-- Needle combat (server/Combat, client/CombatFx): during the search everyone carries their
+-- showcase needle and can poke others. Three pokes and you're tagged out: you pop back at a maze
+-- start after `respawn` seconds, with `safe` seconds when nobody can poke you. Hearts come back one
+-- every `regen` seconds. Every skin pokes the same (looks only). reach is in studs.
+Config.Combat = { hearts = 3, regen = 8, cooldown = 0.7, reach = 8, respawn = 5, safe = 3, eliminationCoins = 10 }
+-- How the Needle tool sits in the hand, in degrees (X, Y, Z): turn it here if it points the wrong
+-- way in Studio. scale = the needle's size in the hand. inspect = seconds the inspect lasts.
+Config.NeedleTool = { grip = { 0, 90, 0 }, scale = 1.6, inspect = 2.4 }
+
+-- Boxes (server/BoxManager, client/BoxScreen): open one for a needle for your collection. odds are
+-- each rarity's chance in percent (shown in the game before you open one). series = the box's own
+-- skins (Needles.skins with that series); a rarity the series doesn't have comes from the regular
+-- skins. product = the Config.Products name that opens it for Robux (nil = coins only). pity:
+-- every this many opens without Rare or better, the next is Rare or better (also shown).
+Config.Boxes = { pity = 10, list = {
+	{ id = "hay", name = "Hay Box", coins = 400, colour = { 226, 186, 88 }, odds = { common = 60, uncommon = 25, rare = 10, epic = 4, legendary = 0.9, mythic = 0.1 } },
+	{ id = "harvest", name = "Harvest Box", coins = 1500, product = "HarvestBox", series = "harvest", colour = { 230, 120, 50 }, odds = { common = 40, uncommon = 30, rare = 18, epic = 8, legendary = 3.5, mythic = 0.5 } },
+	{ id = "starlight", name = "Starlight Box", coins = 5000, product = "StarlightBox", series = "starlight", colour = { 120, 110, 240 }, odds = { common = 0, uncommon = 45, rare = 30, epic = 16, legendary = 7, mythic = 2 } },
+} }
+
+-- Trading (server/TradeManager, client/TradeScreen): in the lobby, two players swap needles.
+-- Both must press Ready; any change un-readies both; then a `countdown` before it happens.
+Config.Trading = { maxItems = 6, countdown = 5, requestCooldown = 10 }
+
 Config.AntiCheat = {
 	checkEvery = 0.5, -- seconds between movement checks
 	maxSpeed = 70, -- studs a second a character may move (walking, jumping, falling) outside a teleport
@@ -91,10 +120,10 @@ Config.AntiCheat = {
 
 -- Rewards (server/RewardManager). Coins and XP.
 Config.Rewards = {
-	findCoins = 60, findXp = 80, -- the first finder, at the very start of a round (halves by the end)
+	findCoins = 60, findXp = 0, -- the first finder, at the very start of a round (halves by the end); XP comes from Config.MatchXp
 	place = { 1, 0.6, 0.4, 0.25 }, -- 1st, 2nd, 3rd, the rest
-	top3Coins = 15, top3Xp = 20,
-	playCoins = 5, playXp = 10, -- for being there at the end of a round
+	top3Coins = 15, top3Xp = 0,
+	playCoins = 5, playXp = 0, -- for being there at the end of a round
 	golden = 3, -- times everything for a Golden Needle
 	winStreakStep = 0.1, winStreakMax = 0.5, -- +10% per win in a row, up to +50%
 	loginCoins = 25, loginStreakMax = 7, -- daily login: 25 x streak day, up to day 7
@@ -128,9 +157,10 @@ Config.BoardReadSeconds = 180
 
 -- Robux (server/ShopManager, shared/Robux for what the shop says). 0 = not on sale yet: create the
 -- pass or product on the Creator Dashboard (README: Selling with Robux), then put its ID here.
--- Nothing here is a random reward, and Robux never buys a needle, a power-up or a hint mid-round.
+-- The only random things Robux can buy are boxes (Config.Boxes: odds always shown, hidden where
+-- paid random items are restricted). Robux never buys a power-up, a hint mid-round or combat power.
 Config.GamePasses = { DoubleCoins = 0, ExtraHint = 0, Supporter = 0, GrandBooth = 0 }
-Config.Products = { StarterBundle = 0, CoinsSmall = 0, CoinsMedium = 0, CoinsLarge = 0, CoinShower = 0 }
+Config.Products = { StarterBundle = 0, CoinsSmall = 0, CoinsMedium = 0, CoinsLarge = 0, CoinShower = 0, HarvestBox = 0, StarlightBox = 0 }
 Config.CoinPacks = { CoinsSmall = 500, CoinsMedium = 1500, CoinsLarge = 4000 } -- coins each pack gives
 Config.CoinShower = { coins = 100 } -- every player in the server gets this, the buyer too
 Config.GrandBooth = { needles = 6 } -- needles on show at a Grand Booth (3 otherwise)

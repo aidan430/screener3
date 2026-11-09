@@ -36,6 +36,8 @@ function DataManager.fresh(saved)
 		hintsDay = number(saved, "hintsDay", 0), hintsUsed = number(saved, "hintsUsed", 0),
 		weekly = { week = 0, wins = 0 }, quests = { day = 0, progress = {}, done = {} },
 		owned = {}, equipped = {}, receipts = {}, starterBought = saved.starterBought == true, -- the Starter Bundle is once each
+		boxPity = number(saved, "boxPity", 0), boxesOpened = number(saved, "boxesOpened", 0), -- opens since the last Rare or better
+		eliminations = number(saved, "eliminations", 0),
 		collection = {}, showcase = "", -- needles kept: ["type:skin"] = how many; the one on show
 		settings = { music = true, sfx = true, reduceEffects = false, autoJoin = true },
 	}
@@ -128,6 +130,7 @@ local function publish(player, d)
 	player:SetAttribute("XPNeed", Rules.xpNeed(d.level))
 	player:SetAttribute("Needles", d.needles)
 	player:SetAttribute("Wins", d.wins)
+	player:SetAttribute("Showcase", d.showcase) -- server/Combat rebuilds your Needle tool when it changes
 	player:SetAttribute("BestTime", d.bestTime)
 	player:SetAttribute("LoginStreak", d.loginStreak)
 	local kinds = 0

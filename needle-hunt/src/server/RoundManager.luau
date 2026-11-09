@@ -22,7 +22,7 @@ local RewardManager = require(script.Parent.RewardManager)
 local CollectionManager = require(script.Parent.CollectionManager)
 local AntiCheat = require(script.Parent.AntiCheat)
 local MapKit = require(script.Parent.MapKit)
-local Powerups = require(script.Parent.Powerups)
+local RoundExtras = require(script.Parent.RoundExtras)
 local LobbyBuilder = require(script.Parent.LobbyBuilder)
 local builders = require(script.Parent.MapsA)
 for name, fn in pairs(require(script.Parent.MapsB)) do
@@ -195,7 +195,7 @@ local function playRound()
 	round.started = now()
 	round.ends = round.started + duration
 	phase("search", duration)
-	Powerups.start(ctx, round)
+	RoundExtras.start(ctx, round)
 	-- search until time is up, the grace window closes or everyone has finished
 	while true do
 		task.wait(0.25)
@@ -221,9 +221,10 @@ local function playRound()
 			RewardManager.played(p, diff, round.order[1] == p)
 		end
 	end
-	phase("results", Config.Round.results, { rows = rows, map = def.name, golden = golden })
+	local xp = RoundExtras.finish(round) -- everyone's match XP, with their breakdown for the results
+	phase("results", Config.Round.results, { rows = rows, map = def.name, golden = golden, xp = xp })
 	NeedleSpawner.clear()
-	Powerups.stop()
+	RoundExtras.stop()
 	task.wait(Config.Round.results)
 	for i, p in ipairs(Players:GetPlayers()) do
 		if round.participants[p] then
@@ -274,7 +275,7 @@ function RoundManager.start()
 					end
 					round = nil
 					NeedleSpawner.clear()
-					Powerups.stop()
+					RoundExtras.stop()
 					light(Maps.lobbyLighting)
 				end
 			end

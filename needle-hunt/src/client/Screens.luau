@@ -126,7 +126,7 @@ function Screens.refresh()
 		for _, r in ipairs(Robux.items) do
 			local id = Robux.id(r)
 			local have = r.pass and player:GetAttribute("Pass_" .. r.key) == true
-			if id ~= 0 and not (r.once and getProfile().starterBought) then
+			if id ~= 0 and not r.box and not (r.once and getProfile().starterBought) then -- boxes sell in the Boxes screen, beside their odds
 				if order < 100 then
 					order = 100
 					heading(shopBody, order, "Support the game (Robux)")

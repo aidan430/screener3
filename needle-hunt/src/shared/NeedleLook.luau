@@ -1,7 +1,8 @@
 -- Builds a needle of any type in any skin out of parts (shared/Needles): for the NEEDLE FOUND!
 -- reveal, the Collection screen (inside ViewportFrames) and the lobby's showcase pedestals.
 -- The needle lies along X, eye end at -X, point at +X, about 2-3 studs long at scale 1.
--- The shaft is cut into segments so patterns (stripes, gradient, rainbow) show along it.
+-- The shaft is cut into segments so patterns (stripes, gradient, rainbow, bands, sheen, split,
+-- tri, candy) show along it.
 -- fat (1 = true to life) thickens it for display: the UI and pedestals use about 2, so a needle
 -- reads as a bold little trophy instead of a hairline.
 local Needles = require(script.Parent.Needles)
@@ -16,12 +17,23 @@ end
 local function colourAt(skin, i, n)
 	local a, b = rgb(skin.colours[1]), rgb(skin.colours[2] or skin.colours[1])
 	local t = (i - 0.5) / n
-	if skin.pattern == "stripes" then
+	local pattern = skin.pattern
+	if pattern == "stripes" then
 		return if i % 2 == 1 then a else b
-	elseif skin.pattern == "gradient" then
+	elseif pattern == "gradient" then
 		return a:Lerp(b, t)
-	elseif skin.pattern == "rainbow" then
+	elseif pattern == "rainbow" then
 		return Color3.fromHSV(t * 0.85, 0.65, 1)
+	elseif pattern == "bands" then -- thin bands of the second colour
+		return if i % 3 == 0 then b else a
+	elseif pattern == "sheen" then -- light running along the middle
+		return a:Lerp(b, 1 - math.abs(2 * t - 1))
+	elseif pattern == "split" then
+		return if t < 0.5 then a else b
+	elseif pattern == "tri" then -- three colours along it (the third is also the eye)
+		return rgb(skin.colours[math.min(3, math.floor(t * 2) + 1)] or skin.colours[1])
+	elseif pattern == "candy" then -- every colour in turn
+		return rgb(skin.colours[(i - 1) % #skin.colours + 1])
 	end
 	return a
 end
@@ -29,6 +41,8 @@ end
 local function accent(skin)
 	if skin.pattern == "rainbow" then
 		return Color3.fromHSV(0.85, 0.5, 1)
+	elseif skin.pattern == "tri" then
+		return rgb(skin.colours[3] or skin.colours[2] or skin.colours[1])
 	end
 	return if skin.pattern == "solid" then rgb(skin.colours[1]) else rgb(skin.colours[2] or skin.colours[1])
 end

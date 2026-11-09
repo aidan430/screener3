@@ -43,6 +43,27 @@
         },
         "Powerup": {
           "$className": "RemoteEvent"
+        },
+        "Box": {
+          "$className": "RemoteFunction"
+        },
+        "BoxResult": {
+          "$className": "RemoteEvent"
+        },
+        "Poke": {
+          "$className": "RemoteEvent"
+        },
+        "Hit": {
+          "$className": "RemoteEvent"
+        },
+        "Inspect": {
+          "$className": "RemoteEvent"
+        },
+        "Trade": {
+          "$className": "RemoteFunction"
+        },
+        "TradeState": {
+          "$className": "RemoteEvent"
         }
       }
     },

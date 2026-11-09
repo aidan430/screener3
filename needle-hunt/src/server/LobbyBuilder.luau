@@ -216,6 +216,7 @@ function LobbyBuilder.build()
 	LobbyBuilder.showcase()
 	stall("ShopStall", -18, 30, "Shop", { 196, 64, 50 })
 	stall("Wardrobe", 18, 30, "Inventory", { 76, 106, 170 })
+	stall("BoxStall", -34, 30, "Boxes", { 230, 120, 50 })
 	require(script.Parent.LobbySocial).build(ctx, text)
 	require(script.Parent.LobbyDecor).build(ctx)
 	-- the countryside beyond the hedge, and a few bales on the plaza

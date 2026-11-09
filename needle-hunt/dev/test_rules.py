@@ -114,8 +114,11 @@ class Rewards(unittest.TestCase):
 
     def test_levels_take_longer_as_you_go(self):
         self.assertLess(xp_need(1), xp_need(10))
-        first_win_xp = find_reward(1, 30, 180, DIFFS[1])[1]
+        mx = block_table("MatchXp")
+        place = [float(v) for v in re.search(r"MatchXp = \{ place = \{ ([\d., ]+) \}", CONFIG).group(1).split(",")]
+        first_win_xp = place[0] + mx["played"] + 60 * mx["perCoin"] + mx["perNeedle"]  # 1st, ~60 coins, one needle
         self.assertLess(xp_need(1) / first_win_xp, 3, "a couple of good rounds reach level 2")
+        self.assertGreater(mx["perElimination"], 0, "tagging players out earns XP")
 
 
 class Content(unittest.TestCase):
@@ -202,7 +205,7 @@ class Collection(unittest.TestCase):
             if t["id"] != "sewing":  # the default shape
                 self.assertIn(f'typeId == "{t["id"]}"', look, t["id"])
         for s in SKINS:
-            self.assertIn(s["pattern"], ("solid", "two", "stripes", "gradient", "rainbow"), s["id"])
+            self.assertIn(s["pattern"], ("solid", "two", "stripes", "gradient", "rainbow", "bands", "sheen", "split", "tri", "candy"), s["id"])
 
     def test_needles_are_earned_never_bought(self):
         shop = (SERVER / "ShopManager.luau").read_text()
@@ -233,10 +236,11 @@ class RobuxShop(unittest.TestCase):
         self.assertEqual({k for k, p in listed if p == "false"}, set(products), "every product is in the shop")
         shop = (SERVER / "ShopManager.luau").read_text()
         packs = table("CoinPacks")
+        box_products = set(re.findall(r'product = "(\w+)"', CONFIG))
         for name in products:
-            self.assertTrue(f'"{name}"' in shop or name in packs, f"{name} gives something")
+            self.assertTrue(f'"{name}"' in shop or name in packs or name in box_products, f"{name} gives something")
         code = "\n".join(line.split("--")[0] for line in shop.splitlines())  # not the comments
-        for word in ("Powerup", "Needles", "Hint", "NextNumber", "math.random"):
+        for word in ("Powerup", "Hint", "Combat", "Hearts"):
             self.assertNotIn(word, code, f"Robux never buys {word}")
         self.assertIn("Pass_GrandBooth", (SERVER / "LobbySocial.luau").read_text())
         self.assertIn("starterBought", shop, "the Starter Bundle is once per player")
@@ -245,6 +249,49 @@ class RobuxShop(unittest.TestCase):
         priced = [i for i in ITEMS if i["price"] > 0]
         self.assertGreaterEqual(len(priced), 12)
         self.assertGreater(sum(i["price"] for i in priced), max(table("CoinPacks").values()) * 5, "packs don't buy the whole shop")
+
+
+BOXES = rows(CONFIG, "Config.Boxes = {")
+
+
+class BoxOpenings(unittest.TestCase):
+    def test_odds_add_up_and_every_rarity_has_skins(self):
+        self.assertEqual({b["id"] for b in BOXES}, {"hay", "harvest", "starlight"})
+        rarity_ids = [r["id"] for r in RARITIES]
+        for line in CONFIG[CONFIG.index("Config.Boxes = {"):].splitlines()[1:4]:
+            box = re.search(r'id = "(\w+)"', line).group(1)
+            series = re.search(r'series = "(\w+)"', line)
+            odds = dict((k, float(v)) for k, v in re.findall(r"(\w+) = ([\d.]+)", line.split("odds = {")[1]))
+            self.assertAlmostEqual(sum(odds.values()), 100, msg=box)
+            for rid in rarity_ids:
+                if odds.get(rid, 0) > 0:
+                    own = [x for x in SKINS if x["rarity"] == rid and series and x.get("series") == series.group(1)]
+                    regular = [x for x in SKINS if x["rarity"] == rid and "series" not in x]
+                    self.assertTrue(own or regular, f"{box} {rid}")
+        top = [b for b in BOXES if b["id"] == "starlight"][0]
+        self.assertGreater(top["coins"], [b for b in BOXES if b["id"] == "hay"][0]["coins"], "dearer boxes cost more")
+
+    def test_series_skins_only_from_their_box(self):
+        series = {x["series"] for x in SKINS if "series" in x}
+        self.assertEqual(series, {"harvest", "starlight"})
+        self.assertIn("not s.series", NEEDLES, "finds never give a box's own skins")
+
+    def test_odds_shown_restricted_regions_and_pity(self):
+        server = (SERVER / "BoxManager.luau").read_text()
+        screen = (ROOT / "src" / "client" / "BoxScreen.luau").read_text()
+        self.assertIn("ArePaidRandomItemsRestricted", server)
+        self.assertIn("BoxesAllowed", server)
+        self.assertIn("Boxes.odds", screen, "the exact odds are on the Boxes screen")
+        self.assertIn("pity", server)
+        pity = int(re.search(r"Config\.Boxes = \{ pity = (\d+)", CONFIG).group(1))
+        self.assertTrue(5 <= pity <= 20, "a Rare-or-better guarantee comes round reasonably often")
+        reel = (ROOT / "src" / "client" / "BoxReel.luau").read_text()
+        self.assertIn("result.skin", reel, "the reel lands on what the server rolled")
+
+    def test_combat_is_the_same_for_every_skin(self):
+        combat = (SERVER / "Combat.luau").read_text()
+        self.assertNotIn("rarity", combat)
+        self.assertNotIn("Robux", combat)
 
 
 if __name__ == "__main__":

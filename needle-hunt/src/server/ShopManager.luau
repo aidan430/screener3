@@ -2,7 +2,7 @@
 -- what you own ("equip"); the server checks the price, your coins and that you own it. With
 -- Robux (MarketplaceService): game passes (2x Coins, Extra Hint, Grand Booth, Supporter) are
 -- checked on join and after a purchase; products (Starter Bundle, coin packs, Coin Shower) go
--- through ProcessReceipt, which records
+-- through ProcessReceipt (and the Harvest and Starlight Boxes, via server/BoxManager), which records
 -- each receipt in the save so a repeated receipt is never paid twice, and only reports success
 -- once the save has been written. What you wear shows on your character: a trail and a title.
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -16,6 +16,8 @@ local Rules = require(Shared:WaitForChild("Rules"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local DataManager = require(script.Parent.DataManager)
+local BoxManager = require(script.Parent.BoxManager)
+local CollectionManager = require(script.Parent.CollectionManager)
 
 local ShopManager = {}
 
@@ -141,6 +143,12 @@ local function give(player, name, data)
 		data.coins += Config.CoinShower.coins
 		return "Your Coin Shower: +" .. Config.CoinShower.coins .. " coins for everyone here. Thank you!"
 	end
+	for _, box in ipairs(Config.Boxes.list) do
+		if box.product == name then -- a box opened with Robux: the reel shows what came out
+			local result = BoxManager.openInto(data, box)
+			return "Thank you! Your " .. box.name .. " is opening...", result
+		end
+	end
 	return nil
 end
 
@@ -176,9 +184,9 @@ local function processReceipt(receipt)
 	if table.find(d.receipts, receipt.PurchaseId) then
 		return Enum.ProductPurchaseDecision.PurchaseGranted -- already given
 	end
-	local thanks
+	local thanks, opened
 	DataManager.update(player, function(data)
-		thanks = give(player, name, data)
+		thanks, opened = give(player, name, data)
 		table.insert(data.receipts, receipt.PurchaseId)
 		while #data.receipts > 50 do
 			table.remove(data.receipts, 1)
@@ -191,6 +199,10 @@ local function processReceipt(receipt)
 	end
 	if name == "CoinShower" then
 		shower(player)
+	end
+	if opened then
+		CollectionManager.after(player, opened)
+		Remotes.BoxResult:FireClient(player, opened)
 	end
 	Remotes.Notify:FireClient(player, { text = thanks or "Thank you!", tone = "good" })
 	return Enum.ProductPurchaseDecision.PurchaseGranted

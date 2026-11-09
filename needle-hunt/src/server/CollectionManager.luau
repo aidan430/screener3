@@ -1,7 +1,7 @@
 -- The needle collection, on the server. Each player who finishes a round keeps the needle they
 -- found: the server rolls its type and skin (shared/Needles.roll), with a little more luck for
--- 1st place and Hard rounds, and a Golden skin in a Golden Needle round. Nothing paid changes the
--- odds. The collection is saved; its value (each different needle once) is shown, ranked on a
+-- 1st place and Hard rounds, and a Golden skin in a Golden Needle round. Boxes (server/BoxManager)
+-- and trades (server/TradeManager) add needles too, through addTo. The collection is saved; its value (each different needle once) is shown, ranked on a
 -- leaderboard and on the lobby's showcase pedestals. Remotes.Collection lets anyone look at the
 -- collection of a player in the same server ("get") and set their own showcase needle ("showcase").
 local Players = game:GetService("Players")
@@ -28,24 +28,36 @@ function CollectionManager.award(player, place, diff, golden)
 	local C = Config.Collection
 	local luck = 1 + (if place == 1 then C.firstLuck else 0) + (if diff.id == "hard" then C.hardLuck else 0)
 	local typeId, skinId = Needles.roll(rng, luck, golden)
-	local key = Needles.key(typeId, skinId)
-	local isNew = (d.collection[key] or 0) == 0
+	local result
 	DataManager.update(player, function(data)
-		data.collection[key] = (data.collection[key] or 0) + 1
-		if data.showcase == "" or Needles.value(typeId, skinId) > Needles.value(Needles.split(data.showcase)) then
-			data.showcase = key -- your best needle goes on show until you pick one
-		end
+		result = CollectionManager.addTo(data, typeId, skinId)
 	end)
+	CollectionManager.after(player, result)
+	return result
+end
+
+-- Puts a needle in a player's saved data (inside DataManager.update) and says what it was, for
+-- the reveal: finds, boxes and trades all add needles this way.
+function CollectionManager.addTo(data, typeId, skinId)
+	local key = Needles.key(typeId, skinId)
+	local isNew = (data.collection[key] or 0) == 0
+	data.collection[key] = (data.collection[key] or 0) + 1
+	if data.showcase == "" or Needles.value(typeId, skinId) > Needles.value(Needles.split(data.showcase)) then
+		data.showcase = key -- your best needle goes on show until you pick one
+	end
+	local rarity = Needles.rarity(Needles.skin(skinId).rarity)
+	return { type = typeId, skin = skinId, name = Needles.name(typeId, skinId), rarity = rarity.name, rarityId = rarity.id, value = Needles.value(typeId, skinId), new = isNew }
+end
+
+-- After a needle is added: boards and quests.
+function CollectionManager.after(player, result)
 	LeaderboardManager.mark(player)
-	local skin = Needles.skin(skinId)
-	local rarity = Needles.rarity(skin.rarity)
-	if isNew then
+	if result.new then
 		QuestManager.record(player, "collect", 1)
 	end
-	if rarity.mult >= Needles.rarity("rare").mult then
+	if Needles.rarity(result.rarityId).mult >= Needles.rarity("rare").mult then
 		QuestManager.record(player, "rare", 1)
 	end
-	return { type = typeId, skin = skinId, name = Needles.name(typeId, skinId), rarity = rarity.name, rarityId = rarity.id, value = Needles.value(typeId, skinId), new = isNew }
 end
 
 -- What a player's collection looks like to anyone in the server.

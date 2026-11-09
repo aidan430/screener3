@@ -1,12 +1,15 @@
 -- The needle collection. Everyone hunts the same plain needle (fair); when you find it, it turns
 -- out to be one TYPE (its shape) in one SKIN (its look), and it's yours to keep. Every type comes
--- in every skin, so the collection has types x skins entries (12 x 32 = 384).
+-- in every skin, so the collection has types x skins entries (12 x 57 = 684).
 --   value: what one is worth = type.value x the skin's rarity multiplier. A collection's value
 --   is the sum of the different needles in it (duplicates show as x2, x3 but add nothing).
 -- Skins are recipes, not pictures: colours, a material and a pattern, drawn by shared/NeedleLook.
---   pattern: solid | two (eye/tip in the second colour) | stripes | gradient | rainbow
+--   pattern: solid | two (eye/tip in the second colour) | stripes | gradient | rainbow | bands
+--   (thin bands of the second colour) | sheen (light running along it) | split (two halves) |
+--   tri (three colours, the third on the eye) | candy (all its colours in turn)
 --   glow = true lights it up; sparkle = true adds twinkles. Add a skin or a type with a line.
--- Collectibles are only earned by finding needles: never sold, never from anything paid.
+--   series = a box's own skin: only from that box (Config.Boxes), never from a find.
+-- Needles come from finds and from boxes (odds shown before opening), and can be traded.
 local Needles = {}
 
 Needles.rarities = {
@@ -72,7 +75,34 @@ Needles.skins = {
 	{ id = "rainbow", name = "Rainbow", rarity = "legendary", colours = { { 255, 255, 255 }, { 255, 255, 255 } }, material = "Neon", pattern = "rainbow" },
 	-- Mythic
 	{ id = "starlight", name = "Starlight", rarity = "mythic", colours = { { 255, 255, 255 }, { 180, 220, 255 } }, material = "Neon", pattern = "gradient", glow = true, sparkle = true },
-	{ id = "prism", name = "Prism", rarity = "mythic", colours = { { 255, 255, 255 }, { 255, 255, 255 } }, material = "Glass", pattern = "rainbow", glow = true, sparkle = true },
+	{ id = "prism", name = "Prism", rarity = "mythic", colours = { { 255, 255, 255 }, { 255, 255, 255 } }, material = "Glass", pattern = "rainbow", glow = true, sparkle = true },	-- the newer regular skins
+	{ id = "denim", name = "Denim", rarity = "common", colours = { { 70, 100, 150 }, { 230, 200, 120 } }, material = "Fabric", pattern = "bands" },
+	{ id = "chrome", name = "Chrome", rarity = "uncommon", colours = { { 150, 156, 170 }, { 250, 252, 255 } }, material = "Metal", pattern = "sheen" },
+	{ id = "koi", name = "Koi", rarity = "rare", colours = { { 255, 120, 50 }, { 250, 248, 240 } }, material = "SmoothPlastic", pattern = "split" },
+	{ id = "peppermint", name = "Peppermint", rarity = "rare", colours = { { 230, 40, 60 }, { 255, 255, 255 }, { 60, 180, 110 } }, material = "SmoothPlastic", pattern = "candy" },
+	{ id = "thunder", name = "Thunder", rarity = "epic", colours = { { 255, 220, 60 }, { 40, 50, 100 } }, material = "Neon", pattern = "split", sparkle = true },
+	-- Harvest Series (the Harvest Box only)
+	{ id = "twine", name = "Twine", rarity = "common", series = "harvest", colours = { { 200, 160, 100 }, { 130, 90, 50 } }, material = "Fabric", pattern = "bands" },
+	{ id = "barnwood", name = "Barnwood", rarity = "common", series = "harvest", colours = { { 150, 60, 50 }, { 230, 220, 200 } }, material = "Wood", pattern = "two" },
+	{ id = "pumpkin", name = "Pumpkin", rarity = "uncommon", series = "harvest", colours = { { 250, 140, 40 }, { 80, 140, 60 } }, material = "SmoothPlastic", pattern = "two" },
+	{ id = "clover", name = "Clover", rarity = "uncommon", series = "harvest", colours = { { 90, 180, 90 }, { 245, 250, 240 } }, material = "SmoothPlastic", pattern = "bands" },
+	{ id = "sunflower", name = "Sunflower", rarity = "rare", series = "harvest", colours = { { 255, 210, 50 }, { 120, 70, 30 } }, material = "SmoothPlastic", pattern = "sheen" },
+	{ id = "orchard", name = "Orchard", rarity = "rare", series = "harvest", colours = { { 210, 40, 50 }, { 120, 190, 70 } }, material = "SmoothPlastic", pattern = "split" },
+	{ id = "harvestmoon", name = "Harvest Moon", rarity = "epic", series = "harvest", colours = { { 255, 150, 50 }, { 255, 230, 160 } }, material = "Neon", pattern = "sheen", glow = true },
+	{ id = "scarecrow", name = "Scarecrow", rarity = "epic", series = "harvest", colours = { { 230, 190, 90 }, { 70, 100, 160 }, { 200, 50, 50 } }, material = "Fabric", pattern = "tri" },
+	{ id = "goldenwheat", name = "Golden Wheat", rarity = "legendary", series = "harvest", colours = { { 255, 200, 70 }, { 200, 140, 40 } }, material = "Metal", pattern = "bands", glow = true, sparkle = true },
+	{ id = "cornucopia", name = "Cornucopia", rarity = "mythic", series = "harvest", colours = { { 255, 120, 40 }, { 220, 40, 60 }, { 255, 210, 70 } }, material = "Neon", pattern = "candy", glow = true, sparkle = true },
+	-- Starlight Series (the Starlight Box only)
+	{ id = "moonstone", name = "Moonstone", rarity = "uncommon", series = "starlight", colours = { { 200, 210, 235 }, { 255, 255, 255 } }, material = "Glass", pattern = "sheen" },
+	{ id = "dusk", name = "Dusk", rarity = "uncommon", series = "starlight", colours = { { 120, 70, 170 }, { 255, 150, 90 } }, material = "SmoothPlastic", pattern = "gradient" },
+	{ id = "comet", name = "Comet", rarity = "rare", series = "starlight", colours = { { 255, 255, 255 }, { 80, 150, 255 } }, material = "Neon", pattern = "split", sparkle = true },
+	{ id = "nebula", name = "Nebula", rarity = "rare", series = "starlight", colours = { { 130, 60, 200 }, { 240, 110, 200 }, { 90, 170, 255 } }, material = "Neon", pattern = "tri" },
+	{ id = "supernova", name = "Supernova", rarity = "epic", series = "starlight", colours = { { 255, 255, 240 }, { 255, 130, 40 } }, material = "Neon", pattern = "sheen", sparkle = true },
+	{ id = "constellation", name = "Constellation", rarity = "epic", series = "starlight", colours = { { 30, 36, 80 }, { 240, 240, 255 } }, material = "SmoothPlastic", pattern = "bands", sparkle = true },
+	{ id = "eclipse", name = "Eclipse", rarity = "legendary", series = "starlight", colours = { { 20, 20, 26 }, { 255, 200, 70 } }, material = "Metal", pattern = "split", glow = true },
+	{ id = "borealis", name = "Borealis", rarity = "legendary", series = "starlight", colours = { { 80, 255, 160 }, { 70, 200, 255 }, { 180, 100, 255 } }, material = "Neon", pattern = "tri", sparkle = true },
+	{ id = "celestial", name = "Celestial", rarity = "mythic", series = "starlight", colours = { { 255, 255, 255 }, { 255, 210, 90 }, { 120, 170, 255 } }, material = "Glass", pattern = "tri", glow = true, sparkle = true },
+	{ id = "wishingstar", name = "Wishing Star", rarity = "mythic", series = "starlight", colours = { { 255, 255, 255 }, { 255, 255, 255 } }, material = "Neon", pattern = "rainbow", glow = true, sparkle = true },
 }
 
 local byType, bySkin, byRarity = {}, {}, {}
@@ -130,7 +160,7 @@ function Needles.total(collection)
 	return sum
 end
 
-local function pick(list, weightOf, rng)
+function Needles.pick(list, weightOf, rng)
 	local total = 0
 	for _, row in ipairs(list) do
 		total += weightOf(row)
@@ -148,18 +178,18 @@ end
 -- Which needle a find turns out to be. luck (1 = normal) multiplies the chance of every rarity
 -- above Common; golden = the Golden Needle event, which is always a Golden skin.
 function Needles.roll(rng, luck, golden)
-	local t = pick(Needles.types, function(row)
+	local t = Needles.pick(Needles.types, function(row)
 		return row.weight
 	end, rng)
 	if golden then
 		return t.id, "golden"
 	end
-	local rarity = pick(Needles.rarities, function(row)
+	local rarity = Needles.pick(Needles.rarities, function(row)
 		return if row.id == "common" then row.weight else row.weight * luck
 	end, rng)
 	local skins = {}
 	for _, s in ipairs(Needles.skins) do
-		if s.rarity == rarity.id then
+		if s.rarity == rarity.id and not s.series then -- a box's own skins never come from a find
 			table.insert(skins, s)
 		end
 	end

@@ -65,7 +65,7 @@ function Results.mount(gui, getProfile)
 			keep.Text = "It's yours to keep: worth " .. Rules.commas(k.value) .. " in your Collection."
 		end
 		big.Text = if m.golden then "GOLDEN NEEDLE!" else "NEEDLE FOUND!"
-		line.Text = placeName(m.place) .. "  ·  " .. string.format("%.1f s", m.seconds) .. "  ·  +" .. Rules.commas(m.coins) .. " coins  ·  +" .. m.xp .. " XP"
+		line.Text = placeName(m.place) .. "  ·  " .. string.format("%.1f s", m.seconds) .. "  ·  +" .. Rules.commas(m.coins) .. " coins  ·  XP at the end"
 		popup.Visible = true
 		UiKit.pop(popup, 0.5)
 		Effects.sound("found")
@@ -113,6 +113,18 @@ function Results.mount(gui, getProfile)
 					local rarity = Needles.rarity(r.kept.rarityId)
 					UiKit.label({ Text = r.kept.rarity .. " " .. r.kept.name, Size = UDim2.new(0.62, 0, 0.5, 0), Position = UDim2.new(0.38, -10, 0.5, -2), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.fromRGB(rarity.colour[1], rarity.colour[2], rarity.colour[3]), Parent = card }, 16)
 				end
+			end
+			local mine = (extra.xp or {})[tostring(player.UserId)] -- your match XP and where it came from
+			if mine then
+				local box = UiKit.make("Frame", { LayoutOrder = 100, Size = UDim2.new(1, -8, 0, 76), BackgroundColor3 = UiKit.colors.card, Parent = body }, { UiKit.corner(10), UiKit.stroke(UiKit.colors.gold, 2) })
+				UiKit.label({ Font = UiKit.bold, Text = "MATCH XP  +" .. Rules.commas(mine.total), TextColor3 = UiKit.colors.gold, Size = UDim2.new(1, -20, 0, 30), Position = UDim2.fromOffset(10, 6), TextXAlignment = Enum.TextXAlignment.Left, Parent = box }, 24)
+				local parts = {
+					(if mine.place then placeName(mine.place) else "Played") .. " +" .. mine.placeXp,
+					mine.coins .. " coins +" .. mine.coinXp,
+					mine.needles .. (if mine.needles == 1 then " needle +" else " needles +") .. mine.needleXp,
+					mine.elims .. " tagged out +" .. mine.elimXp,
+				}
+				UiKit.label({ Text = table.concat(parts, "   ·   "), TextColor3 = UiKit.colors.soft, Size = UDim2.new(1, -20, 0, 26), Position = UDim2.fromOffset(10, 40), TextXAlignment = Enum.TextXAlignment.Left, Parent = box }, 18)
 			end
 			results.Visible = true
 			UiKit.pop(results, 0.8)
