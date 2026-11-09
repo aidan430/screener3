@@ -143,6 +143,23 @@ def check_blocks(tokens: list[Token]) -> list[str]:
     return errors
 
 
+def check_brackets(tokens: list[Token]) -> list[str]:
+    """Every ( { [ is closed by its partner, in order (catches code hidden after a -- comment)."""
+    pairs, stack, errors = {")": "(", "}": "{", "]": "["}, [], []
+    for t in tokens:
+        if t.kind in ("string", "number", "name", "keyword"):
+            continue
+        if t.text in ("(", "{", "["):
+            stack.append((t.text, t.line))
+        elif t.text in pairs:
+            if not stack or stack[-1][0] != pairs[t.text]:
+                errors.append(f"line {t.line}: '{t.text}' doesn't close anything open")
+                break
+            stack.pop()
+    errors += [f"line {line}: '{b}' is never closed" for b, line in stack[:1]]
+    return errors
+
+
 def check_names(tokens: list[Token]) -> list[str]:
     """Flag names that are used but never declared anywhere in the file (typos, globals)."""
     declared, errors = set(), []
@@ -194,7 +211,7 @@ def check(src: str) -> list[str]:
         tokens = tokenize(src)
     except SyntaxError as e:
         return [str(e)]
-    return check_blocks(tokens) + check_names(tokens)
+    return check_blocks(tokens) + check_brackets(tokens) + check_names(tokens)
 
 
 REF = r"(?::WaitForChild\(\"(\w+)\"\)|\.(\w+))"
