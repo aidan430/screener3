@@ -118,9 +118,14 @@ spawnOne = function() -- (declared above, so take() can call it)
 	tag.Size, tag.StudsOffset, tag.MaxDistance, tag.AlwaysOnTop = UDim2.fromOffset(120, 70), Vector3.new(0, 2.4, 0), 60, false
 	tag.Parent = orb
 	for i, t in ipairs({ { kind.icon, 40 }, { kind.name, 20 } }) do
-		local l = Instance.new("TextLabel")
+		local picture = i == 1 and (kind.image or 0) > 0 -- the owner's icon, once uploaded
+		local l = Instance.new(if picture then "ImageLabel" else "TextLabel")
 		l.BackgroundTransparency, l.Size, l.Position = 1, UDim2.new(1, 0, 0, if i == 1 then 44 else 24), UDim2.fromOffset(0, if i == 1 then 0 else 44)
-		l.Text, l.Font, l.TextScaled, l.TextColor3, l.TextStrokeTransparency = t[1], Enum.Font.BuilderSansBold, true, Color3.new(1, 1, 1), 0.3
+		if picture then
+			l.Image, l.ScaleType = "rbxassetid://" .. kind.image, Enum.ScaleType.Fit
+		else
+			l.Text, l.Font, l.TextScaled, l.TextColor3, l.TextStrokeTransparency = t[1], Enum.Font.BuilderSansBold, true, Color3.new(1, 1, 1), 0.3
+		end
 		l.Parent = tag
 	end
 	TweenService:Create(orb, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { CFrame = CFrame.new(pos + Vector3.new(0, 0.8, 0)) }):Play()

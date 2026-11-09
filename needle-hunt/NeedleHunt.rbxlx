@@ -84,12 +84,14 @@ Config.Testing = { revealNeedle = false }
 --   speed: walk at `walkSpeed` for `seconds`     compass: an arrow to the nearest needle
 --   birdseye: a look down from above the maze    glint: needles (and decoys!) within `range` sparkle
 --   coins: a pouch of coins (doubled with 2x Coins) and a little XP
+-- image = the uploaded icon's asset ID (assets/powerups/<id>.png: Studio > Asset Manager > Images,
+-- or Creator Dashboard > Decals; copy its ID here). 0 = show the `icon` glyph instead.
 Config.Powerups = { count = 8, respawn = 20, kinds = {
-	{ id = "speed", name = "Hay Boots", icon = "»", colour = { 255, 170, 60 }, weight = 30, seconds = 12, walkSpeed = 26 },
-	{ id = "compass", name = "Compass", icon = "▲", colour = { 90, 170, 255 }, weight = 20, seconds = 6 },
-	{ id = "birdseye", name = "Bird's Eye", icon = "◉", colour = { 170, 120, 255 }, weight = 15, seconds = 5, height = 55 },
-	{ id = "glint", name = "Glint", icon = "✦", colour = { 255, 240, 140 }, weight = 20, seconds = 8, range = 40 },
-	{ id = "coins", name = "Coin Pouch", icon = "●", colour = { 255, 205, 70 }, weight = 15, coins = 25, xp = 10 },
+	{ id = "speed", name = "Hay Boots", icon = "»", image = 0, colour = { 110, 190, 70 }, weight = 30, seconds = 12, walkSpeed = 26 },
+	{ id = "compass", name = "Compass", icon = "▲", image = 0, colour = { 240, 130, 40 }, weight = 20, seconds = 6 },
+	{ id = "birdseye", name = "Bird's Eye", icon = "◉", image = 0, colour = { 70, 160, 240 }, weight = 15, seconds = 5, height = 55 },
+	{ id = "glint", name = "Glint", icon = "✦", image = 0, colour = { 170, 110, 240 }, weight = 20, seconds = 8, range = 40 },
+	{ id = "coins", name = "Coin Pouch", icon = "●", image = 0, colour = { 255, 205, 70 }, weight = 15, coins = 25, xp = 10 },
 } }
 
 Config.AntiCheat = {
@@ -3166,9 +3168,14 @@ spawnOne = function() -- (declared above, so take() can call it)
 	tag.Size, tag.StudsOffset, tag.MaxDistance, tag.AlwaysOnTop = UDim2.fromOffset(120, 70), Vector3.new(0, 2.4, 0), 60, false
 	tag.Parent = orb
 	for i, t in ipairs({ { kind.icon, 40 }, { kind.name, 20 } }) do
-		local l = Instance.new("TextLabel")
+		local picture = i == 1 and (kind.image or 0) > 0 -- the owner's icon, once uploaded
+		local l = Instance.new(if picture then "ImageLabel" else "TextLabel")
 		l.BackgroundTransparency, l.Size, l.Position = 1, UDim2.new(1, 0, 0, if i == 1 then 44 else 24), UDim2.fromOffset(0, if i == 1 then 0 else 44)
-		l.Text, l.Font, l.TextScaled, l.TextColor3, l.TextStrokeTransparency = t[1], Enum.Font.BuilderSansBold, true, Color3.new(1, 1, 1), 0.3
+		if picture then
+			l.Image, l.ScaleType = "rbxassetid://" .. kind.image, Enum.ScaleType.Fit
+		else
+			l.Text, l.Font, l.TextScaled, l.TextColor3, l.TextStrokeTransparency = t[1], Enum.Font.BuilderSansBold, true, Color3.new(1, 1, 1), 0.3
+		end
 		l.Parent = tag
 	end
 	TweenService:Create(orb, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { CFrame = CFrame.new(pos + Vector3.new(0, 0.8, 0)) }):Play()
@@ -4397,7 +4404,11 @@ end
 
 local function chip(kind, seconds)
 	local c = UiKit.make("Frame", { Size = UDim2.fromOffset(200, 40), BackgroundColor3 = UiKit.colors.panel, BackgroundTransparency = 0.1, Parent = chips }, { UiKit.corner(10), UiKit.stroke(Color3.fromRGB(kind.colour[1], kind.colour[2], kind.colour[3]), 2) })
-	UiKit.label({ Font = UiKit.bold, Text = kind.icon .. "  " .. kind.name, Size = UDim2.new(1, -16, 0, 26), Position = UDim2.fromOffset(8, 2), TextXAlignment = Enum.TextXAlignment.Left, Parent = c }, 18)
+	local picture = (kind.image or 0) > 0
+	if picture then -- the owner's round icon at the chip's left
+		UiKit.make("ImageLabel", { Image = "rbxassetid://" .. kind.image, BackgroundTransparency = 1, Size = UDim2.fromOffset(30, 30), Position = UDim2.fromOffset(6, 1), Parent = c })
+	end
+	UiKit.label({ Font = UiKit.bold, Text = if picture then kind.name else kind.icon .. "  " .. kind.name, Size = UDim2.new(1, if picture then -48 else -16, 0, 26), Position = UDim2.fromOffset(if picture then 40 else 8, 2), TextXAlignment = Enum.TextXAlignment.Left, Parent = c }, 18)
 	local _, fill = UiKit.bar(c, { Size = UDim2.new(1, -16, 0, 5), Position = UDim2.new(0, 8, 1, -9) }, Color3.fromRGB(kind.colour[1], kind.colour[2], kind.colour[3]))
 	fill.Size = UDim2.fromScale(1, 1)
 	UiKit.ease(fill, seconds, { Size = UDim2.fromScale(0, 1) }, Enum.EasingStyle.Linear)

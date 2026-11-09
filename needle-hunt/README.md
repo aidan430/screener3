@@ -230,6 +230,11 @@ blinds anyone else, and they're only ever found on the map, never bought.
 The server checks every pickup (you're in the round, it's the search, you're really at the orb)
 and applies it (`server/Powerups.luau`); your screen shows it (`client/PowerupFx.luau`).
 
+**Icons.** The round power-up icons are in `assets/powerups/` (speed, compass, birdseye, glint,
+coins: 512×512 PNGs with see-through corners). Upload each in Studio (Asset Manager > Images >
+Bulk Import), copy its ID into that power-up's `image` in `Config.Powerups`, and the icon shows
+over the orb and on the countdown chip. While `image = 0` the glyph (», ▲, ◉, ✦, ●) shows instead.
+
 ## Haystacks
 
 Haystacks are smooth, lumpy terrain domes: a drum, a rounded peak and a few bulges, coloured

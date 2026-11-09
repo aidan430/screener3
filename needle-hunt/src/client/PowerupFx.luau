@@ -31,7 +31,11 @@ end
 
 local function chip(kind, seconds)
 	local c = UiKit.make("Frame", { Size = UDim2.fromOffset(200, 40), BackgroundColor3 = UiKit.colors.panel, BackgroundTransparency = 0.1, Parent = chips }, { UiKit.corner(10), UiKit.stroke(Color3.fromRGB(kind.colour[1], kind.colour[2], kind.colour[3]), 2) })
-	UiKit.label({ Font = UiKit.bold, Text = kind.icon .. "  " .. kind.name, Size = UDim2.new(1, -16, 0, 26), Position = UDim2.fromOffset(8, 2), TextXAlignment = Enum.TextXAlignment.Left, Parent = c }, 18)
+	local picture = (kind.image or 0) > 0
+	if picture then -- the owner's round icon at the chip's left
+		UiKit.make("ImageLabel", { Image = "rbxassetid://" .. kind.image, BackgroundTransparency = 1, Size = UDim2.fromOffset(30, 30), Position = UDim2.fromOffset(6, 1), Parent = c })
+	end
+	UiKit.label({ Font = UiKit.bold, Text = if picture then kind.name else kind.icon .. "  " .. kind.name, Size = UDim2.new(1, if picture then -48 else -16, 0, 26), Position = UDim2.fromOffset(if picture then 40 else 8, 2), TextXAlignment = Enum.TextXAlignment.Left, Parent = c }, 18)
 	local _, fill = UiKit.bar(c, { Size = UDim2.new(1, -16, 0, 5), Position = UDim2.new(0, 8, 1, -9) }, Color3.fromRGB(kind.colour[1], kind.colour[2], kind.colour[3]))
 	fill.Size = UDim2.fromScale(1, 1)
 	UiKit.ease(fill, seconds, { Size = UDim2.fromScale(0, 1) }, Enum.EasingStyle.Linear)
