@@ -734,6 +734,14 @@ Config.CinematicsOn = true -- the story's camera scenes (shared/Cinematics); fal
 Config.ToolScale = 0.5 -- the built tools' size: 1 = the 6-stud pitchfork, which held out too far in first person
 Config.ToolFanSpin = 9 -- radians a second the Twin Turbines' fans turn while held
 
+-- The shop's tool pictures: the owner's tool sheet (an uploaded image, 1408 x 768 as drawn) and,
+-- for each tool in Config.Tools order, the square of it to show: { left, top, width, height } as
+-- shares of the sheet. image = "" shows no pictures.
+Config.ToolSheet = { image = "rbxassetid://137332962726664", cells = {
+	{ 0.025, 0.091, 0.192, 0.352 }, { 0.170, 0.111, 0.206, 0.378 }, { 0.330, 0.111, 0.206, 0.378 }, { 0.487, 0.091, 0.206, 0.378 }, { 0.636, 0.091, 0.206, 0.378 },
+	{ 0.799, 0.072, 0.199, 0.365 }, { 0.028, 0.527, 0.227, 0.417 }, { 0.256, 0.527, 0.234, 0.430 }, { 0.497, 0.527, 0.241, 0.443 }, { 0.735, 0.534, 0.234, 0.430 },
+} }
+
 return Config
 ]]></ProtectedString>
 				</Properties>
@@ -14996,7 +15004,7 @@ function Shop.mount(gui, notify)
 	page("Tools", Ui.colors.green, function(list)
 		local rows = {}
 		for level, tool in ipairs(Config.Tools) do
-			rows[level] = row(list, level, tool.name, tool.power .. " a click, carries " .. Format.commas(tool.capacity))
+			rows[level] = row(list, level, tool.name, tool.power .. " a click, carries " .. Format.commas(tool.capacity)); require(script.Parent.ToolPics).add(rows[level].Parent, level) -- its picture
 			rows[level].Activated:Connect(function()
 				buy("tool", level, rows[level])
 			end)
@@ -15502,6 +15510,46 @@ return Teleport
 				</Item>
 				<Item class="ModuleScript" referent="RBX0008A">
 					<Properties>
+						<string name="Name">ToolPics</string>
+						<ProtectedString name="Source"><![CDATA[-- A picture of each tool on its Shop row, cut from the owner's tool sheet (Config.ToolSheet): the
+-- whole sheet sits inside a small clipped square, moved and sized so only that tool shows. It
+-- works whatever size Roblox stores the image at, because it's all in shares of the sheet.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Ui = require(script.Parent.Ui)
+
+local ToolPics = {}
+
+-- Adds the picture for tool `level` to the left of a Shop row, nudging the row's words right.
+function ToolPics.add(row, level)
+	local sheet = Config.ToolSheet
+	local cell = sheet and sheet.image ~= "" and sheet.cells[level]
+	if not cell then
+		return
+	end
+	for _, child in ipairs(row:GetChildren()) do
+		if child:IsA("TextLabel") then
+			child.Position += UDim2.fromOffset(62, 0)
+			child.Size -= UDim2.fromOffset(62, 0)
+		end
+	end
+	local clip = Ui.make("Frame", { Size = UDim2.fromOffset(56, 56), Position = UDim2.fromOffset(6, 4), BackgroundColor3 = Color3.fromRGB(236, 236, 238), ClipsDescendants = true, Parent = row }, { Ui.corner(6) })
+	Ui.make("ImageLabel", {
+		Image = sheet.image,
+		BackgroundTransparency = 1,
+		Size = UDim2.fromScale(1 / cell[3], 1 / cell[4]),
+		Position = UDim2.fromScale(-cell[1] / cell[3], -cell[2] / cell[4]),
+		Parent = clip,
+	})
+end
+
+return ToolPics
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX0008B">
+					<Properties>
 						<string name="Name">TouchAim</string>
 						<ProtectedString name="Source"><![CDATA[-- Harvesting on touch screens. In first person a finger dragged across the screen turns the
 -- camera, so only a touch that stays put counts: lift it quickly for one swing at the
@@ -15565,7 +15613,7 @@ return TouchAim
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0008B">
+				<Item class="ModuleScript" referent="RBX0008C">
 					<Properties>
 						<string name="Name">TouchPad</string>
 						<ProtectedString name="Source"><![CDATA[-- The action pad on touch screens: the keyboard's shortcuts (shop, build, drop, home, tool,
@@ -15712,7 +15760,7 @@ return TouchPad
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0008C">
+				<Item class="ModuleScript" referent="RBX0008D">
 					<Properties>
 						<string name="Name">Ui</string>
 						<ProtectedString name="Source"><![CDATA[-- A small UI kit in the "farm journal" style: cream paper cards, ink-brown text, serif headings,
@@ -15924,7 +15972,7 @@ return Ui
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0008D">
+				<Item class="ModuleScript" referent="RBX0008E">
 					<Properties>
 						<string name="Name">UiJournal</string>
 						<ProtectedString name="Source"><![CDATA[-- The farm journal's own pieces for the UI kit: paper cards, pins, thin bars, round stamp
@@ -16042,7 +16090,7 @@ end
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0008E">
+				<Item class="ModuleScript" referent="RBX0008F">
 					<Properties>
 						<string name="Name">Wardrobe</string>
 						<ProtectedString name="Source"><![CDATA[-- The Wardrobe, a page of the farm journal: every milestone cosmetic (titles, hats, trails,
@@ -16133,7 +16181,7 @@ return Wardrobe
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0008F">
+				<Item class="ModuleScript" referent="RBX00090">
 					<Properties>
 						<string name="Name">WorldFx</string>
 						<ProtectedString name="Source"><![CDATA[-- World effects on your screen: the glowing needle clump (Wheel jackpot), the wheel turning
@@ -16266,7 +16314,7 @@ return WorldFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00090">
+				<Item class="ModuleScript" referent="RBX00091">
 					<Properties>
 						<string name="Name">Worlds</string>
 						<ProtectedString name="Source"><![CDATA[-- The portal worlds and the lobby on your own screen: each world's light (and the lobby's,
@@ -16533,29 +16581,29 @@ return Worlds
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX00091">
+	<Item class="Workspace" referent="RBX00092">
 		<Properties>
 			<string name="Name">Workspace</string>
 			<bool name="StreamingEnabled">false</bool>
 		</Properties>
 	</Item>
-	<Item class="ServerStorage" referent="RBX00092">
+	<Item class="ServerStorage" referent="RBX00093">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
-		<Item class="Folder" referent="RBX00093">
+		<Item class="Folder" referent="RBX00094">
 			<Properties>
 				<string name="Name">Designs</string>
 			</Properties>
 		</Item>
 	</Item>
-	<Item class="MaterialService" referent="RBX00094">
+	<Item class="MaterialService" referent="RBX00095">
 		<Properties>
 			<string name="Name">MaterialService</string>
 			<bool name="Use2022Materials">true</bool>
 			<string name="LeafyGrassName">Field</string>
 		</Properties>
-		<Item class="MaterialVariant" referent="RBX00095">
+		<Item class="MaterialVariant" referent="RBX00096">
 			<Properties>
 				<string name="Name">Field</string>
 				<token name="BaseMaterial">1284</token>

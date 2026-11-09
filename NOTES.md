@@ -832,3 +832,7 @@ this game's own style. Nothing copied from that game.
 - Twin Turbines: two amber pods with black bands and ten-blade fans turning at the front, joined
   by a black bar and a loop handle behind. Needle Detector: grip, silver body with a glowing
   screen, slim neck and a dish with two glowing rings.
+- Shop tool pictures: each Tools row shows its tool, cut from the owner's uploaded tool sheet
+  (Config.ToolSheet = { image = "rbxassetid://137332962726664", cells = ... } in ConfigPlayer;
+  client/ToolPics). Cells are shares of the sheet, so they work at any stored image size; set
+  image = "" to hide the pictures.

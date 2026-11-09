@@ -99,7 +99,7 @@ function Shop.mount(gui, notify)
 	page("Tools", Ui.colors.green, function(list)
 		local rows = {}
 		for level, tool in ipairs(Config.Tools) do
-			rows[level] = row(list, level, tool.name, tool.power .. " a click, carries " .. Format.commas(tool.capacity))
+			rows[level] = row(list, level, tool.name, tool.power .. " a click, carries " .. Format.commas(tool.capacity)); require(script.Parent.ToolPics).add(rows[level].Parent, level) -- its picture
 			rows[level].Activated:Connect(function()
 				buy("tool", level, rows[level])
 			end)

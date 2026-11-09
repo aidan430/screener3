@@ -49,4 +49,12 @@ Config.CinematicsOn = true -- the story's camera scenes (shared/Cinematics); fal
 Config.ToolScale = 0.5 -- the built tools' size: 1 = the 6-stud pitchfork, which held out too far in first person
 Config.ToolFanSpin = 9 -- radians a second the Twin Turbines' fans turn while held
 
+-- The shop's tool pictures: the owner's tool sheet (an uploaded image, 1408 x 768 as drawn) and,
+-- for each tool in Config.Tools order, the square of it to show: { left, top, width, height } as
+-- shares of the sheet. image = "" shows no pictures.
+Config.ToolSheet = { image = "rbxassetid://137332962726664", cells = {
+	{ 0.025, 0.091, 0.192, 0.352 }, { 0.170, 0.111, 0.206, 0.378 }, { 0.330, 0.111, 0.206, 0.378 }, { 0.487, 0.091, 0.206, 0.378 }, { 0.636, 0.091, 0.206, 0.378 },
+	{ 0.799, 0.072, 0.199, 0.365 }, { 0.028, 0.527, 0.227, 0.417 }, { 0.256, 0.527, 0.234, 0.430 }, { 0.497, 0.527, 0.241, 0.443 }, { 0.735, 0.534, 0.234, 0.430 },
+} }
+
 return Config
