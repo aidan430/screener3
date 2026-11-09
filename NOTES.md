@@ -805,3 +805,8 @@ this game's own style. Nothing copied from that game.
   to the giant haystack, lifting with the combo, LEVEL UP! and x2 XP!, climbing the stairs, the
   magnifying glass finding the needle, and an end card with the icon. Drawn in code
   (dev/tools/store/video1.py; run from dev/tools/store with the icon path and an output path).
+- Videos 2-5 of the scripts, animated the same way (assets/marketing): video-2-level-up.mp4
+  (15 s), video-3-day1-vs-day30.mp4 (25 s), video-4-grandmas-needle.mp4 (30 s, Grandma Mabel,
+  Patch, Pip and the first finds in the game's dialogue box) and video-5-found-it.mp4 (20 s,
+  the last clump, YOU FOUND THE NEEDLE!, the Golden Straw Crown). Code: dev/tools/store
+  (kit.py, kit2.py, videos.py; run `python3 videos.py ICON OUTDIR [2 3 4 5]` from there).
