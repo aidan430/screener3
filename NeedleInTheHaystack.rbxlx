@@ -13014,10 +13014,15 @@ local function creamEdge(frame)
 	Ui.make("UIStroke", { Color = Ui.colors.cream, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = frame })
 end
 
+local holdUntil = 0 -- after a level-up the bar stays full and glowing until then
 local function setFill()
 	local xp, need = player:GetAttribute("Xp") or 0, player:GetAttribute("XpNeed") or 1
+	if os.clock() < holdUntil then
+		return -- setFill runs again when the hold ends
+	end
 	levelText.Text = "Level " .. (player:GetAttribute("Level") or 1)
 	xpText.Text = Format.commas(xp) .. " / " .. Format.commas(need) .. " XP"
+	levelText.TextColor3, xpText.TextColor3 = Ui.colors.white, Ui.colors.white
 	Juice.ease(fill, 0.2, { Size = UDim2.fromScale(math.clamp(xp / need, 0, 1), 1) })
 end
 
@@ -13035,10 +13040,15 @@ local function levelChanged()
 		reveal(big, true)
 		reveal(sub, true)
 		pop(big, 0.4)
-		fill.Size = UDim2.fromScale(1, 1) -- the bar tops up, then starts again
-		Juice.ease(bar, 0.5, { BackgroundColor3 = Color3.fromRGB(255, 226, 140) }, Enum.EasingStyle.Sine)
+		Juice.ease(fill, 0.15, { Size = UDim2.fromScale(1, 1) }) -- the bar tops up, glows, then starts again
+		levelText.Text, xpText.Text = "Level " .. level, "LEVEL UP!"
+		levelText.TextColor3, xpText.TextColor3 = Ui.colors.ink, Ui.colors.ink -- dark on the light glow
+		holdUntil = os.clock() + 0.6
+		task.delay(0.65, setFill)
+		-- the full bar glows light gold, then settles (the fill covers the bar, so the fill glows)
+		Juice.ease(fill, 0.4, { BackgroundColor3 = Color3.fromRGB(255, 226, 140) }, Enum.EasingStyle.Sine)
 		task.delay(0.5, function()
-			Juice.ease(bar, 0.6, { BackgroundColor3 = Ui.colors.woodDark }, Enum.EasingStyle.Sine)
+			Juice.ease(fill, 0.6, { BackgroundColor3 = Ui.colors.hay }, Enum.EasingStyle.Sine)
 		end)
 		Juice.sound("cheer", 1.1)
 		if level % Config.Levels.bigEvery == 0 then

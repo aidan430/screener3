@@ -771,3 +771,6 @@ this game's own style. Nothing copied from that game.
 - The AUTO/STOP button and the XP bar have a solid 2 px cream border (client/LevelBar
   creamEdge). The green button had blended into the grass, and Ui.stroke's faint pencil line
   (78% see-through, at most 1.5 px) was too soft over grass and hay.
+- XP bar level-up fixed: the glow lit the bar's background, hidden under the topped-up fill, and
+  the new XP shrank the bar again within 0.2 s, so neither showed. Now the fill tops up, glows
+  light gold with "Level N · LEVEL UP!" in dark brown for 0.6 s, then empties and fills again.
