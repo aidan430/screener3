@@ -810,3 +810,25 @@ this game's own style. Nothing copied from that game.
   Patch, Pip and the first finds in the game's dialogue box) and video-5-found-it.mp4 (20 s,
   the last clump, YOU FOUND THE NEEDLE!, the Golden Straw Crown). Code: dev/tools/store
   (kit.py, kit2.py, videos.py; run `python3 videos.py ICON OUTDIR [2 3 4 5]` from there).
+
+## Tools redesigned from the owner's tool sheet (2026-11-09)
+- All ten tools rebuilt from parts to match the owner's Gemini sheet (assets/marketing/
+  tools_redesign.png shows the sheet beside the builds). Shapes now live in server/ToolHand
+  (trowel, fork3, fork4, rake, goldrake, sifter) and server/ToolGadgets (blower, magnet,
+  turbines, detector); server/ToolParts keeps the shared helpers (piece, bar, ring, emitter,
+  light). A shape can return hidden = true to hide the plain handle rod (now honoured).
+- Garden Trowel: twine-wrapped wooden handle, ferrule, rusty pointed scoop with raised sides.
+  It is now built (shape = "trowel") instead of the owner's earlier uploaded model; to go back,
+  set `model = 139238222017221, length = 3` on it in Config.Tools.
+- Wooden Pitchfork: three chunky wooden prongs, rope lashing and a rope cross. Iron Pitchfork:
+  three thick iron prongs, riveted collar, dark handle (shaft 92,58,36). Both have round tips.
+- Steel Rake (shaft 196,154,98) and Golden Rake (shaft 90,56,34, gold end cap, sparkle): a
+  socket, a flat head that widens to ten straight round-ended teeth; the steel one has a blue grip.
+- Hay Blower: chunky rounded body with charcoal underside, carry handle on top, pistol grip, a
+  big round nozzle with a turning five-blade fan. The hay rides on top, in front of the handle.
+- Super Sifter: held like a pan; dark round frame, glowing mesh, eight little rim lights, trigger.
+- Magnet Gloves: a pair, palms out, silver cuffs and knuckle bands, a horseshoe magnet on each
+  palm; the hay floats between them in a blue shimmer.
+- Twin Turbines: two amber pods with black bands and ten-blade fans turning at the front, joined
+  by a black bar and a loop handle behind. Needle Detector: grip, silver body with a glowing
+  screen, slim neck and a dish with two glowing rings.

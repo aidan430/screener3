@@ -11,6 +11,7 @@ local Build = require(script.Parent.Build)
 local ToolLook = require(script.Parent.ToolLook)
 local ToolParts = require(script.Parent.ToolParts)
 local ToolGadgets = require(script.Parent.ToolGadgets)
+local ToolHand = require(script.Parent.ToolHand)
 
 local Tools = {}
 
@@ -129,7 +130,7 @@ function Tools.make(level, skinId)
 		seat = CFrame.new(0, def.bladeTop or 0.15, -length * (def.loadAt or 0.3))
 		maxLoad = def.loadSize or length * 0.45
 	else
-		local build = ToolParts[def.shape] or ToolGadgets[def.shape] or ToolParts.fork3
+		local build = ToolHand[def.shape] or ToolGadgets[def.shape] or ToolHand.fork3
 		local spec = build({
 			tool = tool,
 			handle = handle,
@@ -140,6 +141,7 @@ function Tools.make(level, skinId)
 		local scale = Config.ToolScale
 		handle.Size = Vector3.new(0.3 * scale, spec.length * scale, 0.3 * scale)
 		handle.Material = Enum.Material[spec.material or "Wood"]
+		handle.Transparency = if spec.hidden then 1 else 0 -- the shape draws its own handle
 		tool.Grip = CFrame.new(0, spec.hold * scale, 0) * CFrame.Angles(math.rad(90), 0, 0)
 		seat, maxLoad = ToolParts.scaled({ scale = scale }, spec.seat), spec.load * scale
 	end

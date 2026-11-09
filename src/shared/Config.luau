@@ -74,11 +74,11 @@ Config.CoinsPerStraw = 1
 -- middle of the blade to where hay sits on it, loadAt = how far along the hay sits (0..0.5),
 -- loadSize = how big the hay on it gets. Without a model a tool is built as a pitchfork.
 Config.Tools = {
-	{ name = "Garden Trowel", model = 139238222017221, length = 3, power = 1, capacity = 300, price = 0, shaft = { 112, 82, 58 }, head = { 128, 98, 78 }, material = "CorrodedMetal" },
+	{ name = "Garden Trowel", shape = "trowel", power = 1, capacity = 300, price = 0, shaft = { 150, 105, 62 }, head = { 150, 112, 86 }, material = "CorrodedMetal" },
 	{ name = "Wooden Pitchfork", shape = "fork3", power = 2, capacity = 1000, price = 380, shaft = { 160, 116, 72 }, head = { 176, 128, 82 }, material = "Wood" },
-	{ name = "Iron Pitchfork", shape = "fork4", power = 3, capacity = 2500, price = 2280, shaft = { 150, 108, 66 }, head = { 165, 170, 178 }, material = "Metal" },
-	{ name = "Steel Rake", shape = "rake", power = 5, capacity = 5000, price = 9500, shaft = { 120, 84, 50 }, head = { 190, 196, 204 }, material = "Metal" },
-	{ name = "Golden Rake", shape = "goldrake", power = 7, capacity = 9000, price = 38000, shaft = { 120, 84, 50 }, head = { 245, 200, 66 }, material = "Metal" },
+	{ name = "Iron Pitchfork", shape = "fork4", power = 3, capacity = 2500, price = 2280, shaft = { 92, 58, 36 }, head = { 165, 170, 178 }, material = "Metal" },
+	{ name = "Steel Rake", shape = "rake", power = 5, capacity = 5000, price = 9500, shaft = { 196, 154, 98 }, head = { 190, 196, 204 }, material = "Metal" },
+	{ name = "Golden Rake", shape = "goldrake", power = 7, capacity = 9000, price = 38000, shaft = { 90, 56, 34 }, head = { 245, 200, 66 }, material = "Metal" },
 	{ name = "Hay Blower", shape = "blower", power = 9, capacity = 18000, price = 114000, shaft = { 70, 72, 84 }, head = { 232, 92, 60 }, material = "SmoothPlastic" },
 	{ name = "Super Sifter", shape = "sifter", power = 12, capacity = 32000, price = 304000, shaft = { 60, 64, 78 }, head = { 90, 200, 255 }, material = "Neon" },
 	{ name = "Magnet Gloves", shape = "magnet", power = 15, capacity = 50000, price = 760000, shaft = { 200, 200, 210 }, head = { 220, 40, 40 }, material = "SmoothPlastic" },

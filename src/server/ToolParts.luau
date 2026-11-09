@@ -78,89 +78,24 @@ function ToolParts.ring(k, centre, radius, count, thick, height, colour, materia
 	return parts
 end
 
--- A rubber grip where the hand holds, and a cap on the back end.
-local function grip(k, y, back)
-	ToolParts.trim(k, Vector3.new(1.1, 0.4, 0.4), CFrame.new(0, y, 0) * ROLL, RUBBER, "Fabric", "Cylinder")
-	ToolParts.trim(k, Vector3.new(0.18, 0.42, 0.42), CFrame.new(0, back, 0) * ROLL, DARK, "Metal", "Cylinder")
+-- Little effects: drifting sparkles or puffs, and a soft glow.
+function ToolParts.emitter(part, colour, rate, speed, size, direction)
+	local e = Instance.new("ParticleEmitter")
+	e.Color = ColorSequence.new(colour)
+	e.Rate, e.Speed, e.Lifetime = rate, NumberRange.new(speed * 0.5, speed), NumberRange.new(0.4, 0.8)
+	e.Size = NumberSequence.new(size[1], size[2])
+	e.Transparency = NumberSequence.new(0.6, 1)
+	e.LightEmission = 0.6
+	e.SpreadAngle = Vector2.new(15, 15)
+	e.EmitDirection = direction or Enum.NormalId.Top
+	e.Parent = part
+	return e
 end
 
--- A metal collar where the handle meets the head.
-local function collar(k, y)
-	ToolParts.trim(k, Vector3.new(0.55, 0.4, 0.4), CFrame.new(0, y, 0) * ROLL, GREY, "Metal", "Cylinder")
-end
-
--- Pitchforks: tines that run forward and curl up at the tips. Wooden: 3; Iron: 4 and a D-grip.
-local function fork(k, tines, dgrip)
-	grip(k, -1.5, -3)
-	collar(k, 2.75)
-	local gap = 0.45
-	ToolParts.head(k, Vector3.new((tines - 1) * gap + 0.3, 0.3, 0.3), CFrame.new(0, 3.05, 0))
-	for i = 1, tines do
-		local x = (i - (tines + 1) / 2) * gap
-		ToolParts.head(k, Vector3.new(0.13, 1.4, 0.13), CFrame.new(x, 3.85, 0))
-		ToolParts.bar(k, Vector3.new(x, 4.5, 0), Vector3.new(x, 5.05, 0.28), 0.11)
-	end
-	if dgrip then -- a D-shaped handle on the back end, for two-handed lifting
-		ToolParts.trim(k, Vector3.new(0.8, 0.14, 0.14), CFrame.new(0, -3.75, 0), DARK, "Metal")
-		ToolParts.bar(k, Vector3.new(-0.08, -3.0, 0), Vector3.new(-0.4, -3.75, 0), 0.13, DARK, "Metal")
-		ToolParts.bar(k, Vector3.new(0.08, -3.0, 0), Vector3.new(0.4, -3.75, 0), 0.13, DARK, "Metal")
-	end
-	return { length = 6, hold = -1.5, seat = CFrame.new(0, 4.0, 0.08) * UPRIGHT, load = 1.2 + tines * 0.35 }
-end
-
-function ToolParts.fork3(k)
-	return fork(k, 3, false)
-end
-
-function ToolParts.fork4(k)
-	return fork(k, 4, true)
-end
-
--- Rakes: a wide bar braced by a bow, nine teeth that run forward and curl up. The golden rake
--- adds gold knobs and a gold collar.
-local function rake(k, golden)
-	grip(k, -1.5, -3)
-	collar(k, 2.55)
-	local trim = if golden then { 255, 214, 90 } else GREY
-	ToolParts.head(k, Vector3.new(2.7, 0.3, 0.3), CFrame.new(0, 3.3, 0))
-	for _, side in ipairs({ -1, 1 }) do
-		ToolParts.bar(k, Vector3.new(side * 0.12, 2.75, 0), Vector3.new(side * 1.2, 3.3, 0), 0.14)
-		if golden then
-			ToolParts.trim(k, Vector3.new(0.42, 0.42, 0.42), CFrame.new(side * 1.45, 3.3, 0), trim, "Metal", "Ball")
-		end
-	end
-	for i = -4, 4 do
-		local x = i * 0.3
-		ToolParts.head(k, Vector3.new(0.11, 0.9, 0.11), CFrame.new(x, 3.85, 0))
-		ToolParts.bar(k, Vector3.new(x, 4.25, 0), Vector3.new(x, 4.6, 0.3), 0.1)
-	end
-	if golden then
-		ToolParts.trim(k, Vector3.new(0.3, 0.46, 0.46), CFrame.new(0, 2.3, 0) * ROLL, trim, "Metal", "Cylinder")
-	end
-	return { length = 6, hold = -1.5, seat = CFrame.new(0, 3.85, 0.06) * UPRIGHT, load = 2.5 }
-end
-
-function ToolParts.rake(k)
-	return rake(k, false)
-end
-
-function ToolParts.goldrake(k)
-	return rake(k, true)
-end
-
--- The Super Sifter: a round sieve with a crossed mesh and a glowing rim on a long handle.
-function ToolParts.sifter(k)
-	grip(k, -1.5, -3)
-	collar(k, 2.6)
-	local r, y = 1.2, 4.0
-	ToolParts.trim(k, Vector3.new(0.06, r * 2, r * 2), CFrame.new(0, y, 0) * FLAT, { 210, 214, 220 }, "DiamondPlate", "Cylinder").Transparency = 0.2
-	for _, x in ipairs({ -0.6, 0, 0.6 }) do -- the mesh, both ways
-		local span = 2 * math.sqrt(r * r - x * x)
-		ToolParts.trim(k, Vector3.new(0.05, span, 0.05), CFrame.new(x, y, 0.05), DARK, "Metal")
-		ToolParts.trim(k, Vector3.new(span, 0.05, 0.05), CFrame.new(0, y + x, 0.05), DARK, "Metal")
-	end
-	ToolParts.ring(k, CFrame.new(0, y, 0.12), r, 16, 0.18, 0.32)
-	return { length = 6, hold = -1.5, seat = CFrame.new(0, y, 0.06) * UPRIGHT, load = 2.1 }
+function ToolParts.light(part, colour, range)
+	local l = Instance.new("PointLight")
+	l.Color, l.Range, l.Brightness = colour, range, 0.8
+	l.Parent = part
 end
 
 return ToolParts

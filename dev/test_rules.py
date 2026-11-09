@@ -58,7 +58,7 @@ class Pile(unittest.TestCase):
 
     def test_every_tool_has_its_own_look(self):
         server = ROOT / "src" / "server"
-        built = set(re.findall(r"^function Tool(?:Parts|Gadgets)\.(\w+)\(k\)", (server / "ToolParts.luau").read_text() + (server / "ToolGadgets.luau").read_text(), re.M))
+        built = set(re.findall(r"^function Tool(?:Hand|Gadgets)\.(\w+)\(k\)", (server / "ToolHand.luau").read_text() + (server / "ToolGadgets.luau").read_text(), re.M))
         shapes = [t.get("shape") for t in pacing.rows("Tools") if "model" not in t]
         self.assertTrue(all(s in built for s in shapes), shapes)
         self.assertEqual(len(shapes), len(set(shapes)), "two tools share a shape")

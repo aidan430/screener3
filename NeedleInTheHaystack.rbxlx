@@ -138,11 +138,11 @@ Config.CoinsPerStraw = 1
 -- middle of the blade to where hay sits on it, loadAt = how far along the hay sits (0..0.5),
 -- loadSize = how big the hay on it gets. Without a model a tool is built as a pitchfork.
 Config.Tools = {
-	{ name = "Garden Trowel", model = 139238222017221, length = 3, power = 1, capacity = 300, price = 0, shaft = { 112, 82, 58 }, head = { 128, 98, 78 }, material = "CorrodedMetal" },
+	{ name = "Garden Trowel", shape = "trowel", power = 1, capacity = 300, price = 0, shaft = { 150, 105, 62 }, head = { 150, 112, 86 }, material = "CorrodedMetal" },
 	{ name = "Wooden Pitchfork", shape = "fork3", power = 2, capacity = 1000, price = 380, shaft = { 160, 116, 72 }, head = { 176, 128, 82 }, material = "Wood" },
-	{ name = "Iron Pitchfork", shape = "fork4", power = 3, capacity = 2500, price = 2280, shaft = { 150, 108, 66 }, head = { 165, 170, 178 }, material = "Metal" },
-	{ name = "Steel Rake", shape = "rake", power = 5, capacity = 5000, price = 9500, shaft = { 120, 84, 50 }, head = { 190, 196, 204 }, material = "Metal" },
-	{ name = "Golden Rake", shape = "goldrake", power = 7, capacity = 9000, price = 38000, shaft = { 120, 84, 50 }, head = { 245, 200, 66 }, material = "Metal" },
+	{ name = "Iron Pitchfork", shape = "fork4", power = 3, capacity = 2500, price = 2280, shaft = { 92, 58, 36 }, head = { 165, 170, 178 }, material = "Metal" },
+	{ name = "Steel Rake", shape = "rake", power = 5, capacity = 5000, price = 9500, shaft = { 196, 154, 98 }, head = { 190, 196, 204 }, material = "Metal" },
+	{ name = "Golden Rake", shape = "goldrake", power = 7, capacity = 9000, price = 38000, shaft = { 90, 56, 34 }, head = { 245, 200, 66 }, material = "Metal" },
 	{ name = "Hay Blower", shape = "blower", power = 9, capacity = 18000, price = 114000, shaft = { 70, 72, 84 }, head = { 232, 92, 60 }, material = "SmoothPlastic" },
 	{ name = "Super Sifter", shape = "sifter", power = 12, capacity = 32000, price = 304000, shaft = { 60, 64, 78 }, head = { 90, 200, 255 }, material = "Neon" },
 	{ name = "Magnet Gloves", shape = "magnet", power = 15, capacity = 50000, price = 760000, shaft = { 200, 200, 210 }, head = { 220, 40, 40 }, material = "SmoothPlastic" },
@@ -8553,123 +8553,133 @@ return Structures
 			<Item class="ModuleScript" referent="RBX00055">
 				<Properties>
 					<string name="Name">ToolGadgets</string>
-					<ProtectedString name="Source"><![CDATA[-- The gadget tools' shapes (Config.Tools[n].shape): Hay Blower, Magnet Gloves, Twin Turbines
--- and the Needle Detector. Same space and return value as ToolParts (see there).
+					<ProtectedString name="Source"><![CDATA[-- The gadget tools' shapes (Config.Tools[n].shape), drawn from the owner's tool sheet: the Hay
+-- Blower, Magnet Gloves, Twin Turbines and the Needle Detector. Same space and return value as
+-- ToolParts (see there). Fans turn on every screen: client/WorldFx spins each "Spin" weld.
 local P = require(script.Parent.ToolParts)
 
 local ToolGadgets = {}
 local ROLL, FLAT, UPRIGHT = P.ROLL, P.FLAT, P.UPRIGHT
 local GREY, DARK, RUBBER = P.GREY, P.DARK, P.RUBBER
+local SILVER = { 214, 218, 226 }
 
-local function emitter(part, colour, rate, speed, size, direction)
-	local e = Instance.new("ParticleEmitter")
-	e.Color = ColorSequence.new(colour)
-	e.Rate, e.Speed, e.Lifetime = rate, NumberRange.new(speed * 0.5, speed), NumberRange.new(0.4, 0.8)
-	e.Size = NumberSequence.new(size[1], size[2])
-	e.Transparency = NumberSequence.new(0.6, 1)
-	e.LightEmission = 0.6
-	e.SpreadAngle = Vector2.new(15, 15)
-	e.EmitDirection = direction or Enum.NormalId.Top
-	e.Parent = part
-	return e
+-- A fan that turns: a hub at `front` (facing +Y) with `count` blades, on a "Spin" weld.
+local function fan(k, front, radius, count, colour)
+	local hub = P.trim(k, Vector3.new(0.16, radius * 0.4, radius * 0.4), front * ROLL, GREY, "Metal", "Cylinder")
+	local nose = P.trim(k, Vector3.new(radius * 0.35, radius * 0.35, radius * 0.35), front * CFrame.new(0, 0.08, 0), GREY, "Metal", "Ball")
+	nose:FindFirstChildOfClass("WeldConstraint").Part0 = hub
+	for i = 0, count - 1 do
+		local cf = front * CFrame.Angles(0, i * math.pi * 2 / count, 0) * CFrame.new(0, 0, radius * 0.55) * CFrame.Angles(0, 0, math.rad(30))
+		local blade = if colour then P.trim(k, Vector3.new(radius * 0.38, 0.04, radius * 0.75), cf, colour, "Metal") else P.head(k, Vector3.new(radius * 0.38, 0.04, radius * 0.75), cf)
+		blade:FindFirstChildOfClass("WeldConstraint").Part0 = hub -- turns with the hub
+	end
+	hub:FindFirstChildOfClass("WeldConstraint"):Destroy()
+	local spin = Instance.new("Weld")
+	spin.Name = "Spin"
+	spin.Part0, spin.Part1 = k.handle, hub
+	spin.C0 = P.scaled(k, front * ROLL)
+	spin:SetAttribute("Base", spin.C0)
+	spin.Parent = hub
+	return hub
 end
 
-local function light(part, colour, range)
-	local l = Instance.new("PointLight")
-	l.Color, l.Range, l.Brightness = colour, range, 0.8
-	l.Parent = part
-end
-
--- Hay Blower: held by its pistol grip; a motor body with side vents, the fan's round intake
--- and grille on its back (facing you), a long nozzle that puffs a little air, and a hopper on
--- top where the hay rides.
+-- Hay Blower: a chunky rounded body with charcoal panels, a carry handle on top, a pistol grip
+-- below, and a big round nozzle at the front with its fan turning inside.
 function ToolGadgets.blower(k)
-	P.trim(k, Vector3.new(0.12, 0.22, 0.3), CFrame.new(0, 0.42, 0.05), { 200, 60, 50 }, "SmoothPlastic") -- trigger
-	P.head(k, Vector3.new(1.1, 1.8, 0.9), CFrame.new(0, 0.2, 0.65))
-	for _, x in ipairs({ -0.56, 0.56 }) do -- vents along both sides
-		for i = 0, 2 do
-			P.trim(k, Vector3.new(0.04, 0.9, 0.08), CFrame.new(x, 0.2, 0.42 + i * 0.2), DARK, "SmoothPlastic")
-		end
+	P.trim(k, Vector3.new(0.7, 0.36, 0.36), CFrame.new(0, -0.05, -0.15) * CFrame.Angles(math.rad(20), 0, 0) * ROLL, RUBBER, "Fabric", "Cylinder")
+	P.trim(k, Vector3.new(0.12, 0.2, 0.26), CFrame.new(0, 0.3, -0.05), { 200, 60, 50 }, "SmoothPlastic") -- trigger
+	P.head(k, Vector3.new(1.25, 1.5, 1.0), CFrame.new(0, 0.45, 0.62))
+	P.head(k, Vector3.new(1.25, 1.0, 1.0), CFrame.new(0, -0.3, 0.62) * ROLL, "Cylinder") -- the rounded back
+	P.trim(k, Vector3.new(1.28, 1.6, 0.34), CFrame.new(0, 0.3, 0.2), DARK, "SmoothPlastic") -- charcoal underside
+	P.trim(k, Vector3.new(1.27, 0.5, 0.5), CFrame.new(0, -0.55, 0.62), DARK, "SmoothPlastic") -- the motor's end
+	for _, y in ipairs({ -0.05, 0.75 }) do -- the carry handle
+		P.trim(k, Vector3.new(0.18, 0.18, 0.42), CFrame.new(0, y, 1.3), DARK, "SmoothPlastic")
 	end
-	P.trim(k, Vector3.new(0.22, 0.95, 0.95), CFrame.new(0, -0.8, 0.65) * ROLL, DARK, "SmoothPlastic", "Cylinder")
-	for i = -1, 1 do -- the intake's grille
-		P.trim(k, Vector3.new(0.8 - math.abs(i) * 0.25, 0.04, 0.06), CFrame.new(0, -0.92, 0.65 + i * 0.22), GREY, "Metal")
-	end
-	P.trim(k, Vector3.new(2.6, 0.48, 0.48), CFrame.new(0, 2.35, 0.6) * ROLL, { 225, 225, 230 }, "SmoothPlastic", "Cylinder")
-	local mouth = P.head(k, Vector3.new(0.35, 0.75, 0.75), CFrame.new(0, 3.75, 0.6) * ROLL, "Cylinder")
-	emitter(mouth, Color3.fromRGB(245, 240, 225), 5, 6, { 0.3, 0.8 }, Enum.NormalId.Right)
-	P.trim(k, Vector3.new(1.2, 1.3, 0.08), CFrame.new(0, 0.2, 1.14), GREY, "Metal")
-	for _, s in ipairs({ -1, 1 }) do
-		P.trim(k, Vector3.new(1.2, 0.08, 0.35), CFrame.new(0, 0.2 + s * 0.65, 1.3), GREY, "Metal")
-		P.trim(k, Vector3.new(0.08, 1.3, 0.35), CFrame.new(s * 0.6, 0.2, 1.3), GREY, "Metal")
-	end
-	return { length = 1, hold = 0, seat = CFrame.new(0, 0.2, 1.18) * UPRIGHT, load = 1.15, material = "SmoothPlastic" }
+	P.trim(k, Vector3.new(0.2, 1.0, 0.2), CFrame.new(0, 0.35, 1.5), DARK, "SmoothPlastic")
+	local front = CFrame.new(0, 1.55, 0.72)
+	P.head(k, Vector3.new(0.7, 1.15, 1.15), CFrame.new(0, 1.3, 0.72) * ROLL, "Cylinder")
+	P.ring(k, front * UPRIGHT, 0.62, 18, 0.16, 0.24, DARK, "SmoothPlastic") -- the nozzle's lip
+	P.trim(k, Vector3.new(0.04, 1.05, 1.05), CFrame.new(0, 1.62, 0.72) * ROLL, { 34, 36, 42 }, "SmoothPlastic", "Cylinder")
+	local hub = fan(k, CFrame.new(0, 1.58, 0.72), 0.55, 5, { 200, 204, 212 })
+	P.emitter(hub, Color3.fromRGB(245, 240, 225), 4, 6, { 0.3, 0.8 }, Enum.NormalId.Right)
+	-- the hay rides on top, in front of the carry handle, where you can see it from behind
+	return { length = 0.8, hold = -0.05, seat = CFrame.new(0, 1.1, 1.12) * UPRIGHT, load = 1.0, material = "SmoothPlastic", hidden = true }
 end
 
--- Magnet Gloves: a big horseshoe magnet with silver poles, held out front by a rubber grip that
--- covers the whole handle; the hay floats between its arms in a soft blue shimmer.
+-- One magnet glove: a silver cuff, a padded red glove with four fingers and a thumb, silver
+-- knuckle bands, and a horseshoe magnet on the palm (the side facing away from you).
+local function glove(k, x, thumbSide)
+	P.trim(k, Vector3.new(0.5, 0.95, 0.95), CFrame.new(x, -0.45, 0.35) * ROLL, SILVER, "Metal", "Cylinder")
+	P.head(k, Vector3.new(1.0, 0.5, 1.0), CFrame.new(x, 0.05, 0.45))
+	for i = 0, 3 do
+		local fx = x - 0.36 + i * 0.24
+		P.head(k, Vector3.new(0.22, 0.42, 0.55), CFrame.new(fx, 0.05, 1.22))
+		P.head(k, Vector3.new(0.22, 0.22, 0.22), CFrame.new(fx, 0.05, 1.5), "Ball")
+		P.trim(k, Vector3.new(0.24, 0.44, 0.1), CFrame.new(fx, 0.05, 1.0), SILVER, "Metal")
+	end
+	P.head(k, Vector3.new(0.24, 0.42, 0.55), CFrame.new(x + thumbSide * 0.62, 0.05, 0.62) * CFrame.Angles(0, math.rad(thumbSide * 30), 0))
+	-- the horseshoe magnet on the palm, opening upwards, with red-and-silver tips
+	P.ring(k, CFrame.new(x, 0.34, 0.5) * CFrame.Angles(math.rad(90), 0, 0), 0.3, 7, 0.15, 0.12, GREY, "Metal", math.pi, math.pi * 2)
+	for _, s in ipairs({ -1, 1 }) do
+		P.trim(k, Vector3.new(0.15, 0.12, 0.3), CFrame.new(x + s * 0.3, 0.34, 0.65), GREY, "Metal")
+		P.trim(k, Vector3.new(0.16, 0.13, 0.12), CFrame.new(x + s * 0.3, 0.34, 0.84), SILVER, "Metal")
+	end
+end
+
+-- Magnet Gloves: a pair, held up in front of you, palms out; the hay floats between them in a
+-- soft blue shimmer. The right glove is on the tool's grip, the left beside it.
 function ToolGadgets.magnet(k)
-	P.trim(k, Vector3.new(1.75, 0.44, 0.44), CFrame.new(0, -0.05, 0) * ROLL, RUBBER, "Fabric", "Cylinder")
-	P.trim(k, Vector3.new(0.14, 0.5, 0.5), CFrame.new(0, -0.95, 0) * ROLL, DARK, "Metal", "Cylinder")
-	local r = 0.85
-	P.ring(k, CFrame.new(0, 1.5, 0), r, 8, 0.42, 0.42, nil, nil, math.pi, math.pi * 2)
-	for _, s in ipairs({ -1, 1 }) do
-		P.head(k, Vector3.new(0.42, 1.4, 0.42), CFrame.new(s * r, 2.2, 0))
-		P.trim(k, Vector3.new(0.44, 0.5, 0.44), CFrame.new(s * r, 3.15, 0), { 215, 218, 224 }, "Metal")
-	end
-	local field = P.trim(k, Vector3.new(1.4, 0.2, 0.2), CFrame.new(0, 3.2, 0), { 150, 210, 255 }, "SmoothPlastic")
+	glove(k, 0, -1)
+	glove(k, -2.3, 1)
+	local field = P.trim(k, Vector3.new(0.8, 0.2, 0.2), CFrame.new(-1.15, 0.6, 0.6), { 150, 210, 255 }, "SmoothPlastic")
 	field.Transparency = 1
-	emitter(field, Color3.fromRGB(150, 210, 255), 8, 0.4, { 0.15, 0 })
-	light(field, Color3.fromRGB(150, 210, 255), 5)
-	return { length = 1.8, hold = -0.2, seat = CFrame.new(0, 2.5, -0.5) * UPRIGHT, load = 1.1, material = "SmoothPlastic" }
+	P.emitter(field, Color3.fromRGB(150, 210, 255), 8, 0.4, { 0.15, 0 })
+	P.light(field, Color3.fromRGB(150, 210, 255), 5)
+	return { length = 0.8, hold = -0.4, seat = CFrame.new(-1.15, 0.6, 0.15) * UPRIGHT, load = 1.1, material = "SmoothPlastic", hidden = true }
 end
 
--- Twin Turbines: two jet engine pods on a cross frame. Each pod has a coloured lip, four wide
--- blades spinning round a pointed nose at the front (client/WorldFx turns each "Spin" weld) and a
--- soft orange exhaust glow at the back, facing you; the hay rides on a deck between them.
+-- Twin Turbines: two amber pods side by side with black bands, a fan turning at the front of each
+-- and a warm glow at the back, joined by a black bar and a looped handle you hold behind them.
 function ToolGadgets.turbines(k)
-	P.trim(k, Vector3.new(1.1, 0.4, 0.4), CFrame.new(0, -0.8, 0) * ROLL, RUBBER, "Fabric", "Cylinder")
-	P.trim(k, Vector3.new(0.3, 0.3, 0.75), CFrame.new(0, 1.9, -0.4), DARK, "Metal")
-	P.trim(k, Vector3.new(3.2, 0.35, 0.3), CFrame.new(0, 2.0, -0.85), DARK, "Metal")
-	P.trim(k, Vector3.new(0.8, 1.1, 0.12), CFrame.new(0, 1.5, 0.21), { 120, 84, 50 }, "WoodPlanks")
+	P.trim(k, Vector3.new(0.8, 0.36, 0.36), CFrame.new(0, 0, 0) * ROLL, RUBBER, "Fabric", "Cylinder") -- the grip
+	P.trim(k, Vector3.new(1.4, 0.26, 0.26), CFrame.new(0, 0.45, 0), RUBBER, "Fabric") -- the loop behind the pods
 	for _, s in ipairs({ -1, 1 }) do
-		local centre = CFrame.new(s * 1.15, 2.0, 0)
-		P.trim(k, Vector3.new(1.2, 1.36, 1.36), centre * ROLL, DARK, "Metal", "Cylinder") -- the pod
-		P.ring(k, centre * CFrame.new(0, 0.6, 0) * UPRIGHT, 0.7, 18, 0.1, 0.14) -- its coloured lip
-		local exhaust = P.trim(k, Vector3.new(0.04, 0.9, 0.9), centre * CFrame.new(0, -0.61, 0) * ROLL, { 255, 150, 60 }, "Neon", "Cylinder")
-		light(exhaust, Color3.fromRGB(255, 150, 60), 4)
-		local front = centre * CFrame.new(0, 0.7, 0)
-		local hub = P.trim(k, Vector3.new(0.16, 0.3, 0.3), front * ROLL, GREY, "Metal", "Cylinder")
-		local nose = P.trim(k, Vector3.new(0.3, 0.3, 0.3), front * CFrame.new(0, 0.1, 0), GREY, "Metal", "Ball")
-		nose:FindFirstChildOfClass("WeldConstraint").Part0 = hub
-		for i = 0, 3 do
-			local blade = P.head(k, Vector3.new(0.4, 0.05, 0.5), front * CFrame.Angles(0, i * math.pi / 2, 0) * CFrame.new(0, 0, 0.36) * CFrame.Angles(0, 0, math.rad(30)))
-			blade:FindFirstChildOfClass("WeldConstraint").Part0 = hub -- turns with the hub
-		end
-		hub:FindFirstChildOfClass("WeldConstraint"):Destroy()
-		local spin = Instance.new("Weld")
-		spin.Name = "Spin"
-		spin.Part0, spin.Part1 = k.handle, hub
-		spin.C0 = P.scaled(k, front * ROLL)
-		spin:SetAttribute("Base", spin.C0)
-		spin.Parent = hub
+		P.bar(k, Vector3.new(s * 0.62, 0.45, 0), Vector3.new(s * 0.62, 0.95, 0.06), 0.26, RUBBER, "Fabric")
 	end
-	return { length = 4, hold = -0.8, seat = CFrame.new(0, 1.5, 0.27) * UPRIGHT, load = 1.15, material = "Metal" }
+	P.trim(k, Vector3.new(2.1, 0.34, 0.34), CFrame.new(0, 1.0, 0.1), RUBBER, "Fabric")
+	for _, s in ipairs({ -1, 1 }) do
+		local centre = CFrame.new(s * 1.15, 1.0, 0.1)
+		P.head(k, Vector3.new(1.3, 1.3, 1.3), centre * ROLL, "Cylinder")
+		for _, y in ipairs({ -0.5, 0.52 }) do -- black bands
+			P.trim(k, Vector3.new(0.18, 1.36, 1.36), centre * CFrame.new(0, y, 0) * ROLL, { 30, 30, 34 }, "SmoothPlastic", "Cylinder")
+		end
+		P.trim(k, Vector3.new(0.04, 1.05, 1.05), centre * CFrame.new(0, 0.62, 0) * ROLL, { 40, 30, 20 }, "SmoothPlastic", "Cylinder")
+		fan(k, centre * CFrame.new(0, 0.64, 0), 0.6, 10, { 236, 150, 50 })
+		local exhaust = P.trim(k, Vector3.new(0.04, 0.85, 0.85), centre * CFrame.new(0, -0.61, 0) * ROLL, { 255, 150, 60 }, "Neon", "Cylinder")
+		P.light(exhaust, Color3.fromRGB(255, 150, 60), 4)
+	end
+	return { length = 0.6, hold = 0, seat = CFrame.new(0, 1.0, 0.28) * UPRIGHT, load = 1.15, material = "Fabric", hidden = true }
 end
 
--- Needle Detector: an arm cuff, a control box with a glowing screen, and a search coil held
--- low in front, where the hay rides.
+-- Needle Detector: a black grip with a silver end cap, a silver body with a glowing screen, a
+-- slim neck, and a round dish at the end with glowing rings, where the hay rides.
 function ToolGadgets.detector(k)
-	P.trim(k, Vector3.new(1.0, 0.36, 0.36), CFrame.new(0, -1.0, 0) * ROLL, RUBBER, "Fabric", "Cylinder")
-	P.ring(k, CFrame.new(0, -2.2, 0.38) * UPRIGHT, 0.34, 7, 0.08, 0.35, DARK, "SmoothPlastic", math.pi, math.pi * 2)
-	P.trim(k, Vector3.new(0.12, 0.12, 0.12), CFrame.new(0, -2.2, 0.1), DARK, "Metal")
-	P.trim(k, Vector3.new(0.55, 0.9, 0.45), CFrame.new(0, 0.2, 0.35), DARK, "SmoothPlastic")
-	local screen = P.head(k, Vector3.new(0.42, 0.6, 0.04), CFrame.new(0, 0.25, 0.59))
-	light(screen, screen.Color, 4)
-	P.bar(k, Vector3.new(0, 2.4, 0), Vector3.new(0, 3.1, -0.45), 0.2, GREY, "Metal")
-	P.trim(k, Vector3.new(0.12, 1.9, 1.9), CFrame.new(0, 3.55, -0.52) * FLAT, DARK, "SmoothPlastic", "Cylinder")
-	P.ring(k, CFrame.new(0, 3.55, -0.46), 0.95, 16, 0.12, 0.16)
-	return { length = 5, hold = -1.0, seat = CFrame.new(0, 3.55, -0.44) * UPRIGHT, load = 1.5, material = "Metal" }
+	P.trim(k, Vector3.new(1.3, 0.42, 0.42), CFrame.new(0, -1.0, 0) * ROLL, RUBBER, "Fabric", "Cylinder")
+	P.trim(k, Vector3.new(0.46, 0.46, 0.46), CFrame.new(0, -1.7, 0), SILVER, "Metal", "Ball")
+	P.trim(k, Vector3.new(1.1, 0.62, 0.62), CFrame.new(0, 0.1, 0) * ROLL, SILVER, "Metal", "Cylinder")
+	P.trim(k, Vector3.new(0.42, 0.56, 0.06), CFrame.new(0, 0.1, 0.3), DARK, "SmoothPlastic")
+	local screen = P.head(k, Vector3.new(0.32, 0.44, 0.04), CFrame.new(0, 0.1, 0.33))
+	P.light(screen, screen.Color, 4)
+	P.trim(k, Vector3.new(0.04, 0.36, 0.08), CFrame.new(0.31, 0.1, 0.05), GREY, "Metal") -- the needle badge
+	P.trim(k, Vector3.new(1.0, 0.28, 0.28), CFrame.new(0, 1.15, 0) * ROLL, DARK, "SmoothPlastic", "Cylinder")
+	P.trim(k, Vector3.new(0.34, 0.34, 0.34), CFrame.new(0, 1.7, 0), DARK, "Metal", "Ball")
+	local y = 2.75
+	P.trim(k, Vector3.new(0.14, 2.0, 2.0), CFrame.new(0, y, -0.05) * FLAT, SILVER, "Metal", "Cylinder")
+	P.trim(k, Vector3.new(0.05, 1.7, 1.7), CFrame.new(0, y, 0.03) * FLAT, { 40, 44, 52 }, "SmoothPlastic", "Cylinder")
+	P.ring(k, CFrame.new(0, y, 0.06), 0.72, 20, 0.1, 0.05)
+	P.ring(k, CFrame.new(0, y, 0.06), 0.42, 14, 0.1, 0.05)
+	P.head(k, Vector3.new(0.05, 0.22, 0.22), CFrame.new(0, y, 0.07) * FLAT, "Cylinder")
+	return { length = 1.2, hold = -1.0, seat = CFrame.new(0, y, 0.06) * UPRIGHT, load = 1.5, material = "Fabric", hidden = true }
 end
 
 return ToolGadgets
@@ -8677,6 +8687,146 @@ return ToolGadgets
 				</Properties>
 			</Item>
 			<Item class="ModuleScript" referent="RBX00056">
+				<Properties>
+					<string name="Name">ToolHand</string>
+					<ProtectedString name="Source"><![CDATA[-- The hand tools' shapes (Config.Tools[n].shape), drawn from the owner's tool sheet: the Garden
+-- Trowel, the Wooden and Iron Pitchforks, the Steel and Golden Rakes and the Super Sifter. Same
+-- space and return value as ToolParts (see there).
+local P = require(script.Parent.ToolParts)
+
+local ToolHand = {}
+local ROLL, FLAT, UPRIGHT = P.ROLL, P.FLAT, P.UPRIGHT
+local GREY, DARK, RUBBER = P.GREY, P.DARK, P.RUBBER
+local TWINE, WOOD = { 200, 172, 120 }, { 150, 105, 62 }
+
+-- Bands of twine or rope round the handle at each y.
+local function lashing(k, ys, width)
+	for _, y in ipairs(ys) do
+		P.trim(k, Vector3.new(0.12, width, width), CFrame.new(0, y, 0) * ROLL, TWINE, "Fabric", "Cylinder")
+	end
+end
+
+-- A metal collar where the handle meets the head, with rivets if asked.
+local function collar(k, y, rivets)
+	P.trim(k, Vector3.new(0.55, 0.42, 0.42), CFrame.new(0, y, 0) * ROLL, GREY, "Metal", "Cylinder")
+	if rivets then
+		for _, x in ipairs({ -0.21, 0.21 }) do
+			P.trim(k, Vector3.new(0.1, 0.1, 0.1), CFrame.new(x, y, 0), DARK, "Metal", "Ball")
+		end
+	end
+end
+
+-- Garden Trowel: a chunky wooden handle wrapped in twine, a metal ferrule and neck, and a worn,
+-- rusty pointed scoop with raised sides, where the hay sits.
+function ToolHand.trowel(k)
+	P.trim(k, Vector3.new(1.7, 0.52, 0.52), CFrame.new(0, -0.25, 0) * ROLL, WOOD, "Wood", "Cylinder")
+	P.trim(k, Vector3.new(0.56, 0.56, 0.56), CFrame.new(0, -1.1, 0), WOOD, "Wood", "Ball")
+	lashing(k, { -0.75, -0.55, -0.35, -0.15 }, 0.58)
+	P.trim(k, Vector3.new(0.3, 0.34, 0.34), CFrame.new(0, 0.7, 0) * ROLL, GREY, "Metal", "Cylinder")
+	P.bar(k, Vector3.new(0, 0.8, 0), Vector3.new(0, 1.25, 0.12), 0.14, DARK, "Metal")
+	P.head(k, Vector3.new(1.0, 1.3, 0.08), CFrame.new(0, 1.9, 0.14))
+	P.head(k, Vector3.new(0.72, 0.72, 0.08), CFrame.new(0, 2.55, 0.14) * CFrame.Angles(0, 0, math.rad(45))) -- the point
+	for _, side in ipairs({ -1, 1 }) do -- the raised sides of the scoop
+		P.head(k, Vector3.new(0.08, 1.25, 0.2), CFrame.new(side * 0.48, 1.85, 0.22) * CFrame.Angles(0, math.rad(side * 25), 0))
+	end
+	return { length = 1.6, hold = -0.35, seat = CFrame.new(0, 1.85, 0.18) * UPRIGHT, load = 1.0, hidden = true }
+end
+
+-- Pitchforks: a crossbar and three straight prongs with round tips. Wooden: chunky wooden prongs
+-- bound on with rope. Iron: thick iron prongs on a riveted collar and a wooden knob on the end.
+local function fork(k, metal)
+	local thick = if metal then 0.2 else 0.24
+	local gap, top = 0.5, 4.9
+	P.trim(k, Vector3.new(0.4, 0.4, 0.4), CFrame.new(0, -3, 0), WOOD, "Wood", "Ball")
+	if metal then
+		collar(k, 2.75, true)
+		P.bar(k, Vector3.new(0, 2.95, 0), Vector3.new(0, 3.2, 0.02), 0.22)
+	else
+		lashing(k, { 2.45, 2.62, 2.79 }, 0.4)
+		P.bar(k, Vector3.new(-0.2, 2.5, 0.16), Vector3.new(0.2, 3.1, 0.16), 0.07, TWINE, "Fabric") -- the rope's cross
+		P.bar(k, Vector3.new(0.2, 2.5, 0.16), Vector3.new(-0.2, 3.1, 0.16), 0.07, TWINE, "Fabric")
+	end
+	P.head(k, Vector3.new(2 * gap + thick, thick, thick), CFrame.new(0, 3.2, 0))
+	for i = -1, 1 do
+		local x = i * gap
+		P.head(k, Vector3.new(thick, top - 3.2, thick), CFrame.new(x, (top + 3.2) / 2, 0))
+		P.head(k, Vector3.new(thick * 1.25, thick * 1.25, thick * 1.25), CFrame.new(x, top, 0), "Ball")
+	end
+	return { length = 6, hold = -1.5, seat = CFrame.new(0, 4.0, 0.1) * UPRIGHT, load = 1.9 }
+end
+
+function ToolHand.fork3(k)
+	return fork(k, false)
+end
+
+function ToolHand.fork4(k)
+	return fork(k, true)
+end
+
+-- Rakes: a socket and a flat head that widens towards ten straight teeth with round ends. Steel:
+-- a blue grip on the end. Golden: all gold, a gold end cap and a little sparkle.
+local function rake(k, golden)
+	local trim = if golden then { 255, 214, 90 } else GREY
+	if golden then
+		P.trim(k, Vector3.new(0.3, 0.42, 0.42), CFrame.new(0, -2.9, 0) * ROLL, trim, "Metal", "Cylinder")
+	else
+		P.trim(k, Vector3.new(1.0, 0.4, 0.4), CFrame.new(0, -2.55, 0) * ROLL, { 60, 120, 200 }, "Fabric", "Cylinder")
+	end
+	P.trim(k, Vector3.new(0.5, 0.38, 0.38), CFrame.new(0, 2.75, 0) * ROLL, trim, "Metal", "Cylinder")
+	P.bar(k, Vector3.new(0, 2.95, 0), Vector3.new(0, 3.3, 0.02), 0.2, trim, "Metal")
+	P.head(k, Vector3.new(1.3, 0.45, 0.1), CFrame.new(0, 3.5, 0))
+	local plate = P.head(k, Vector3.new(2.1, 0.4, 0.1), CFrame.new(0, 3.9, 0))
+	for _, side in ipairs({ -1, 1 }) do -- the flared shoulders
+		P.head(k, Vector3.new(0.55, 0.12, 0.1), CFrame.new(side * 0.82, 3.68, 0) * CFrame.Angles(0, 0, math.rad(side * 40)))
+	end
+	for i = 0, 9 do
+		local x = -0.99 + i * 0.22
+		P.head(k, Vector3.new(0.11, 0.85, 0.11), CFrame.new(x, 4.5, 0))
+		P.head(k, Vector3.new(0.13, 0.13, 0.13), CFrame.new(x, 4.92, 0), "Ball")
+	end
+	if golden then
+		P.emitter(plate, Color3.fromRGB(255, 240, 180), 3, 0.5, { 0.12, 0 })
+	end
+	return { length = 6, hold = -1.5, seat = CFrame.new(0, 3.95, 0.08) * UPRIGHT, load = 2.3 }
+end
+
+function ToolHand.rake(k)
+	return rake(k, false)
+end
+
+function ToolHand.goldrake(k)
+	return rake(k, true)
+end
+
+-- The Super Sifter: held like a pan by a short grip with a trigger; a dark round frame, a glowing
+-- mesh and little lights round the rim.
+function ToolHand.sifter(k)
+	P.trim(k, Vector3.new(1.2, 0.44, 0.44), CFrame.new(0, -0.3, 0) * ROLL, RUBBER, "Fabric", "Cylinder")
+	P.trim(k, Vector3.new(0.14, 0.3, 0.32), CFrame.new(0, 0.05, -0.28), DARK, "SmoothPlastic") -- the trigger
+	P.trim(k, Vector3.new(0.5, 0.3, 0.4), CFrame.new(0, 0.55, 0.05), DARK, "SmoothPlastic")
+	local r, y = 1.25, 1.95
+	local mesh = P.head(k, Vector3.new(0.04, r * 2, r * 2), CFrame.new(0, y, 0) * FLAT, "Cylinder")
+	mesh.Transparency = 0.3
+	P.light(mesh, mesh.Color, 5)
+	for _, x in ipairs({ -0.75, -0.25, 0.25, 0.75 }) do -- the mesh, both ways
+		local span = 2 * math.sqrt(r * r - x * x)
+		P.trim(k, Vector3.new(0.04, span, 0.04), CFrame.new(x, y, 0.03), DARK, "Metal")
+		P.trim(k, Vector3.new(span, 0.04, 0.04), CFrame.new(0, y + x, 0.03), DARK, "Metal")
+	end
+	P.ring(k, CFrame.new(0, y, 0.06), r + 0.1, 20, 0.26, 0.34, { 64, 68, 80 }, "SmoothPlastic")
+	P.ring(k, CFrame.new(0, y, -0.12), r + 0.14, 20, 0.22, 0.12, { 46, 48, 58 }, "SmoothPlastic")
+	for i = 0, 7 do -- little lights round the rim
+		local a = i / 8 * math.pi * 2 + math.pi / 8
+		P.head(k, Vector3.new(0.13, 0.13, 0.13), CFrame.new(math.cos(a) * (r + 0.1), y + math.sin(a) * (r + 0.1), 0.24), "Ball")
+	end
+	return { length = 1.2, hold = -0.3, seat = CFrame.new(0, y, 0.04) * UPRIGHT, load = 2.0, material = "SmoothPlastic" }
+end
+
+return ToolHand
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00057">
 				<Properties>
 					<string name="Name">ToolLook</string>
 					<ProtectedString name="Source"><![CDATA[-- Tools that wear a model you imported in Studio (Config.Tools[n].model = its asset ID).
@@ -8734,7 +8884,7 @@ return ToolLook
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00057">
+			<Item class="ModuleScript" referent="RBX00058">
 				<Properties>
 					<string name="Name">ToolParts</string>
 					<ProtectedString name="Source"><![CDATA[-- The farm tools' shapes, built from parts welded to the tool's Handle (Config.Tools[n].shape).
@@ -8817,96 +8967,31 @@ function ToolParts.ring(k, centre, radius, count, thick, height, colour, materia
 	return parts
 end
 
--- A rubber grip where the hand holds, and a cap on the back end.
-local function grip(k, y, back)
-	ToolParts.trim(k, Vector3.new(1.1, 0.4, 0.4), CFrame.new(0, y, 0) * ROLL, RUBBER, "Fabric", "Cylinder")
-	ToolParts.trim(k, Vector3.new(0.18, 0.42, 0.42), CFrame.new(0, back, 0) * ROLL, DARK, "Metal", "Cylinder")
+-- Little effects: drifting sparkles or puffs, and a soft glow.
+function ToolParts.emitter(part, colour, rate, speed, size, direction)
+	local e = Instance.new("ParticleEmitter")
+	e.Color = ColorSequence.new(colour)
+	e.Rate, e.Speed, e.Lifetime = rate, NumberRange.new(speed * 0.5, speed), NumberRange.new(0.4, 0.8)
+	e.Size = NumberSequence.new(size[1], size[2])
+	e.Transparency = NumberSequence.new(0.6, 1)
+	e.LightEmission = 0.6
+	e.SpreadAngle = Vector2.new(15, 15)
+	e.EmitDirection = direction or Enum.NormalId.Top
+	e.Parent = part
+	return e
 end
 
--- A metal collar where the handle meets the head.
-local function collar(k, y)
-	ToolParts.trim(k, Vector3.new(0.55, 0.4, 0.4), CFrame.new(0, y, 0) * ROLL, GREY, "Metal", "Cylinder")
-end
-
--- Pitchforks: tines that run forward and curl up at the tips. Wooden: 3; Iron: 4 and a D-grip.
-local function fork(k, tines, dgrip)
-	grip(k, -1.5, -3)
-	collar(k, 2.75)
-	local gap = 0.45
-	ToolParts.head(k, Vector3.new((tines - 1) * gap + 0.3, 0.3, 0.3), CFrame.new(0, 3.05, 0))
-	for i = 1, tines do
-		local x = (i - (tines + 1) / 2) * gap
-		ToolParts.head(k, Vector3.new(0.13, 1.4, 0.13), CFrame.new(x, 3.85, 0))
-		ToolParts.bar(k, Vector3.new(x, 4.5, 0), Vector3.new(x, 5.05, 0.28), 0.11)
-	end
-	if dgrip then -- a D-shaped handle on the back end, for two-handed lifting
-		ToolParts.trim(k, Vector3.new(0.8, 0.14, 0.14), CFrame.new(0, -3.75, 0), DARK, "Metal")
-		ToolParts.bar(k, Vector3.new(-0.08, -3.0, 0), Vector3.new(-0.4, -3.75, 0), 0.13, DARK, "Metal")
-		ToolParts.bar(k, Vector3.new(0.08, -3.0, 0), Vector3.new(0.4, -3.75, 0), 0.13, DARK, "Metal")
-	end
-	return { length = 6, hold = -1.5, seat = CFrame.new(0, 4.0, 0.08) * UPRIGHT, load = 1.2 + tines * 0.35 }
-end
-
-function ToolParts.fork3(k)
-	return fork(k, 3, false)
-end
-
-function ToolParts.fork4(k)
-	return fork(k, 4, true)
-end
-
--- Rakes: a wide bar braced by a bow, nine teeth that run forward and curl up. The golden rake
--- adds gold knobs and a gold collar.
-local function rake(k, golden)
-	grip(k, -1.5, -3)
-	collar(k, 2.55)
-	local trim = if golden then { 255, 214, 90 } else GREY
-	ToolParts.head(k, Vector3.new(2.7, 0.3, 0.3), CFrame.new(0, 3.3, 0))
-	for _, side in ipairs({ -1, 1 }) do
-		ToolParts.bar(k, Vector3.new(side * 0.12, 2.75, 0), Vector3.new(side * 1.2, 3.3, 0), 0.14)
-		if golden then
-			ToolParts.trim(k, Vector3.new(0.42, 0.42, 0.42), CFrame.new(side * 1.45, 3.3, 0), trim, "Metal", "Ball")
-		end
-	end
-	for i = -4, 4 do
-		local x = i * 0.3
-		ToolParts.head(k, Vector3.new(0.11, 0.9, 0.11), CFrame.new(x, 3.85, 0))
-		ToolParts.bar(k, Vector3.new(x, 4.25, 0), Vector3.new(x, 4.6, 0.3), 0.1)
-	end
-	if golden then
-		ToolParts.trim(k, Vector3.new(0.3, 0.46, 0.46), CFrame.new(0, 2.3, 0) * ROLL, trim, "Metal", "Cylinder")
-	end
-	return { length = 6, hold = -1.5, seat = CFrame.new(0, 3.85, 0.06) * UPRIGHT, load = 2.5 }
-end
-
-function ToolParts.rake(k)
-	return rake(k, false)
-end
-
-function ToolParts.goldrake(k)
-	return rake(k, true)
-end
-
--- The Super Sifter: a round sieve with a crossed mesh and a glowing rim on a long handle.
-function ToolParts.sifter(k)
-	grip(k, -1.5, -3)
-	collar(k, 2.6)
-	local r, y = 1.2, 4.0
-	ToolParts.trim(k, Vector3.new(0.06, r * 2, r * 2), CFrame.new(0, y, 0) * FLAT, { 210, 214, 220 }, "DiamondPlate", "Cylinder").Transparency = 0.2
-	for _, x in ipairs({ -0.6, 0, 0.6 }) do -- the mesh, both ways
-		local span = 2 * math.sqrt(r * r - x * x)
-		ToolParts.trim(k, Vector3.new(0.05, span, 0.05), CFrame.new(x, y, 0.05), DARK, "Metal")
-		ToolParts.trim(k, Vector3.new(span, 0.05, 0.05), CFrame.new(0, y + x, 0.05), DARK, "Metal")
-	end
-	ToolParts.ring(k, CFrame.new(0, y, 0.12), r, 16, 0.18, 0.32)
-	return { length = 6, hold = -1.5, seat = CFrame.new(0, y, 0.06) * UPRIGHT, load = 2.1 }
+function ToolParts.light(part, colour, range)
+	local l = Instance.new("PointLight")
+	l.Color, l.Range, l.Brightness = colour, range, 0.8
+	l.Parent = part
 end
 
 return ToolParts
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00058">
+			<Item class="ModuleScript" referent="RBX00059">
 				<Properties>
 					<string name="Name">Tools</string>
 					<ProtectedString name="Source"><![CDATA[-- The search tools: one Tool per level, built in its own shape (ToolParts, ToolGadgets) or
@@ -8922,6 +9007,7 @@ local Build = require(script.Parent.Build)
 local ToolLook = require(script.Parent.ToolLook)
 local ToolParts = require(script.Parent.ToolParts)
 local ToolGadgets = require(script.Parent.ToolGadgets)
+local ToolHand = require(script.Parent.ToolHand)
 
 local Tools = {}
 
@@ -9040,7 +9126,7 @@ function Tools.make(level, skinId)
 		seat = CFrame.new(0, def.bladeTop or 0.15, -length * (def.loadAt or 0.3))
 		maxLoad = def.loadSize or length * 0.45
 	else
-		local build = ToolParts[def.shape] or ToolGadgets[def.shape] or ToolParts.fork3
+		local build = ToolHand[def.shape] or ToolGadgets[def.shape] or ToolHand.fork3
 		local spec = build({
 			tool = tool,
 			handle = handle,
@@ -9051,6 +9137,7 @@ function Tools.make(level, skinId)
 		local scale = Config.ToolScale
 		handle.Size = Vector3.new(0.3 * scale, spec.length * scale, 0.3 * scale)
 		handle.Material = Enum.Material[spec.material or "Wood"]
+		handle.Transparency = if spec.hidden then 1 else 0 -- the shape draws its own handle
 		tool.Grip = CFrame.new(0, spec.hold * scale, 0) * CFrame.Angles(math.rad(90), 0, 0)
 		seat, maxLoad = ToolParts.scaled({ scale = scale }, spec.seat), spec.load * scale
 	end
@@ -9124,7 +9211,7 @@ return Tools
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00059">
+			<Item class="ModuleScript" referent="RBX0005A">
 				<Properties>
 					<string name="Name">Wheel</string>
 					<ProtectedString name="Source"><![CDATA[-- The Wheel of Fortune: every player gets one free spin a day (a new day starts at midnight UTC);
@@ -9246,7 +9333,7 @@ return Wheel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005A">
+			<Item class="ModuleScript" referent="RBX0005B">
 				<Properties>
 					<string name="Name">WheelFace</string>
 					<ProtectedString name="Source"><![CDATA[-- The Wheel of Fortune's face, drawn on the disc's flat side (a SurfaceGui): one pie slice per
@@ -9350,7 +9437,7 @@ return WheelFace
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005B">
+			<Item class="ModuleScript" referent="RBX0005C">
 				<Properties>
 					<string name="Name">World</string>
 					<ProtectedString name="Source"><![CDATA[-- Hollow Creek Farm: four plots around a hub with the merchant, the Wheel of Fortune and the
@@ -9578,7 +9665,7 @@ return World
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005C">
+			<Item class="ModuleScript" referent="RBX0005D">
 				<Properties>
 					<string name="Name">Worlds</string>
 					<ProtectedString name="Source"><![CDATA[-- The portal worlds: four arches in the lobby (server/Lobby.luau) lead to the Moon, the Ember
@@ -9743,7 +9830,7 @@ return Worlds
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005D">
+			<Item class="ModuleScript" referent="RBX0005E">
 				<Properties>
 					<string name="Name">WorldsAtlantis</string>
 					<ProtectedString name="Source"><![CDATA[-- Bubble City: a domed city on the sea floor inside a great air bubble. Sand, coral, kelp,
@@ -9883,7 +9970,7 @@ return Atlantis
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005E">
+			<Item class="ModuleScript" referent="RBX0005F">
 				<Properties>
 					<string name="Name">WorldsField</string>
 					<ProtectedString name="Source"><![CDATA[-- Haystack Stadium: a striped grass pitch with its lines and two goals, stands of seats on three
@@ -10022,7 +10109,7 @@ return Field
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005F">
+			<Item class="ModuleScript" referent="RBX00060">
 				<Properties>
 					<string name="Name">WorldsKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Shared pieces for the portal worlds: the arches, signs, lights, embers and each world's
@@ -10143,7 +10230,7 @@ return Kit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00060">
+			<Item class="ModuleScript" referent="RBX00061">
 				<Properties>
 					<string name="Name">WorldsLava</string>
 					<ProtectedString name="Source"><![CDATA[-- The Ember Lands: dark basalt, a smoking volcano, glowing lava rivers with stone bridges,
@@ -10270,7 +10357,7 @@ return Lava
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00061">
+			<Item class="ModuleScript" referent="RBX00062">
 				<Properties>
 					<string name="Name">WorldsMoon</string>
 					<ProtectedString name="Source"><![CDATA[-- The Moon: grey dust with craters and boulders, a little landed lander with its flag (a
@@ -10395,7 +10482,7 @@ return Moon
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00062">
+			<Item class="ModuleScript" referent="RBX00063">
 				<Properties>
 					<string name="Name">WorldsPortal</string>
 					<ProtectedString name="Source"><![CDATA[-- The portals: the built-in one is shaped by Config.PortalDesign (server/PortalShape; the owner
@@ -10504,19 +10591,19 @@ return Portal
 			</Item>
 		</Item>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX00063">
+	<Item class="StarterPlayer" referent="RBX00064">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX00064">
+		<Item class="StarterPlayerScripts" referent="RBX00065">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX00065">
+			<Item class="Folder" referent="RBX00066">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX00066">
+				<Item class="ModuleScript" referent="RBX00067">
 					<Properties>
 						<string name="Name">Animals</string>
 						<ProtectedString name="Source"><![CDATA[-- Brings the farm's animals to life on this screen only: each one ambles to a new spot in its
@@ -10696,7 +10783,7 @@ return Animals
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00067">
+				<Item class="ModuleScript" referent="RBX00068">
 					<Properties>
 						<string name="Name">BuildMode</string>
 						<ProtectedString name="Source"><![CDATA[-- Free building in first person. Z and C pick from your inventory bar (or press M and click
@@ -11000,7 +11087,7 @@ return BuildMode
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00068">
+				<Item class="ModuleScript" referent="RBX00069">
 					<Properties>
 						<string name="Name">CameraView</string>
 						<ProtectedString name="Source"><![CDATA[-- The optional over-the-shoulder view: V (or the View stamp, or the touch pad's View) switches
@@ -11084,7 +11171,7 @@ return CameraView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00069">
+				<Item class="ModuleScript" referent="RBX0006A">
 					<Properties>
 						<string name="Name">Cinematic</string>
 						<ProtectedString name="Source"><![CDATA[-- Plays a story cinematic (shared/Cinematics): wide black bars ease in, the scene's title fades
@@ -11223,7 +11310,7 @@ return Cinematic
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006A">
+				<Item class="ModuleScript" referent="RBX0006B">
 					<Properties>
 						<string name="Name">Controls</string>
 						<ProtectedString name="Source"><![CDATA[-- The shortcuts: Q shop, T home, G drop hay (or put down a bale), and on touch screens the
@@ -11312,7 +11399,7 @@ return Controls
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006B">
+				<Item class="ModuleScript" referent="RBX0006C">
 					<Properties>
 						<string name="Name">Cursor</string>
 						<ProtectedString name="Source"><![CDATA[-- First person locks the mouse to the centre of the screen. Menus need a pointer, so a
@@ -11364,7 +11451,7 @@ return Cursor
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006C">
+				<Item class="ModuleScript" referent="RBX0006D">
 					<Properties>
 						<string name="Name">Dents</string>
 						<ProtectedString name="Source"><![CDATA[-- Every swing leaves its mark: a dent carved in your haystack where you hit (on your screen;
@@ -11442,7 +11529,7 @@ return Dents
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006D">
+				<Item class="ModuleScript" referent="RBX0006E">
 					<Properties>
 						<string name="Name">Detector</string>
 						<ProtectedString name="Source"><![CDATA[-- The metal detector: hold Config.MetalDetector.key to sweep. The client only says "I'm
@@ -11564,7 +11651,7 @@ return Detector
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006E">
+				<Item class="ModuleScript" referent="RBX0006F">
 					<Properties>
 						<string name="Name">Dialogue</string>
 						<ProtectedString name="Source"><![CDATA[-- The story's dialogue box: a paper card at the bottom of the screen, the speaker's round
@@ -11749,7 +11836,7 @@ return Dialogue
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006F">
+				<Item class="ModuleScript" referent="RBX00070">
 					<Properties>
 						<string name="Name">Farmers</string>
 						<ProtectedString name="Source"><![CDATA[-- "Farmers here": a small paper card at the bottom right listing everyone on this server with how
@@ -11814,7 +11901,7 @@ return Farmers
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00070">
+				<Item class="ModuleScript" referent="RBX00071">
 					<Properties>
 						<string name="Name">Goals</string>
 						<ProtectedString name="Source"><![CDATA[-- The guided goal card (top left) and the coins-a-minute line under the coins counter.
@@ -11959,7 +12046,7 @@ return Goals
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00071">
+				<Item class="ModuleScript" referent="RBX00072">
 					<Properties>
 						<string name="Name">Guide</string>
 						<ProtectedString name="Source"><![CDATA[-- When your tool and bucket are full, a soft golden line runs from you to your trader's
@@ -12021,7 +12108,7 @@ return Guide
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00072">
+				<Item class="ModuleScript" referent="RBX00073">
 					<Properties>
 						<string name="Name">Harvest</string>
 						<ProtectedString name="Source"><![CDATA[-- Aiming in first person: the clump under the crosshair (within reach, on your own pile or the
@@ -12289,7 +12376,7 @@ return Harvest
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00073">
+				<Item class="ModuleScript" referent="RBX00074">
 					<Properties>
 						<string name="Name">HayFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The hay you can see moving: every harvest lifts a lump off the heap onto your tool, and
@@ -12390,7 +12477,7 @@ return HayFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00074">
+				<Item class="ModuleScript" referent="RBX00075">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen, in the farm journal style: a ring crosshair; your heap's progress
@@ -12574,7 +12661,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00075">
+				<Item class="ModuleScript" referent="RBX00076">
 					<Properties>
 						<string name="Name">Jetpack</string>
 						<ProtectedString name="Source"><![CDATA[-- The Jetpack (a Robux game pass; the server sets the "PassJetpack" attribute when you own it).
@@ -12756,7 +12843,7 @@ return Jetpack
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00076">
+				<Item class="ModuleScript" referent="RBX00077">
 					<Properties>
 						<string name="Name">Juice</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback that makes harvesting feel good: straw bursts, floating numbers, a soft camera
@@ -12956,7 +13043,7 @@ return Juice
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00077">
+				<Item class="ModuleScript" referent="RBX00078">
 					<Properties>
 						<string name="Name">LevelBar</string>
 						<ProtectedString name="Source"><![CDATA[-- Farmer Level on screen (server/Levels): a wide bar at the bottom that fills a little with every
@@ -13182,7 +13269,7 @@ return LevelBar
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00078">
+				<Item class="ModuleScript" referent="RBX00079">
 					<Properties>
 						<string name="Name">Lobby</string>
 						<ProtectedString name="Source"><![CDATA[-- The lobby on your screen: a soft fade round every trip through an arch, the gentle card a
@@ -13328,7 +13415,7 @@ return Lobby
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX00079">
+				<Item class="LocalScript" referent="RBX0007A">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- The player's side of the game: first-person harvesting, building, the menus, and all the
@@ -13632,7 +13719,7 @@ end)
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007A">
+				<Item class="ModuleScript" referent="RBX0007B">
 					<Properties>
 						<string name="Name">Milestones</string>
 						<ProtectedString name="Source"><![CDATA[-- The Achievements page's list: open milestones first (name, what to do, a progress bar, and
@@ -13706,7 +13793,7 @@ return Milestones
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007B">
+				<Item class="ModuleScript" referent="RBX0007C">
 					<Properties>
 						<string name="Name">Music</string>
 						<ProtectedString name="Source"><![CDATA[-- Soft background music: the Config.Music playlist in a loop, low and relaxing, fading gently
@@ -13857,7 +13944,7 @@ return Music
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007C">
+				<Item class="ModuleScript" referent="RBX0007D">
 					<Properties>
 						<string name="Name">Notify</string>
 						<ProtectedString name="Source"><![CDATA[-- Messages: small toasts under the haystack counter, and a big banner for case news.
@@ -13964,7 +14051,7 @@ return Notify
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007D">
+				<Item class="ModuleScript" referent="RBX0007E">
 					<Properties>
 						<string name="Name">Offer</string>
 						<ProtectedString name="Source"><![CDATA[-- One gentle Robux suggestion per session: after Config.OfferAfterClumps clumps harvested since
@@ -14070,7 +14157,7 @@ return Offer
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007E">
+				<Item class="ModuleScript" referent="RBX0007F">
 					<Properties>
 						<string name="Name">OnlyMine</string>
 						<ProtectedString name="Source"><![CDATA[-- Every player's farm shares the middle of the map, so on your screen other players' buildings,
@@ -14159,7 +14246,7 @@ return OnlyMine
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007F">
+				<Item class="ModuleScript" referent="RBX00080">
 					<Properties>
 						<string name="Name">OrderCard</string>
 						<ProtectedString name="Source"><![CDATA[-- The current delivery order, on the right of the screen: what the driver wants, how many
@@ -14210,7 +14297,7 @@ return OrderCard
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00080">
+				<Item class="ModuleScript" referent="RBX00081">
 					<Properties>
 						<string name="Name">Panels</string>
 						<ProtectedString name="Source"><![CDATA[-- The windows: Shop, secret Achievements, Finds & Skins, and the Wheel of Fortune (odds first).
@@ -14490,7 +14577,7 @@ return Panels
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00081">
+				<Item class="ModuleScript" referent="RBX00082">
 					<Properties>
 						<string name="Name">PileView</string>
 						<ProtectedString name="Source"><![CDATA[-- Draws your own haystack on your screen. Every player's haystack stands in the same place in
@@ -14545,7 +14632,7 @@ return PileView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00082">
+				<Item class="ModuleScript" referent="RBX00083">
 					<Properties>
 						<string name="Name">RobuxItems</string>
 						<ProtectedString name="Source"><![CDATA[-- Every Robux item the game sells, in shop order, with exactly what it gives (shown in the
@@ -14569,7 +14656,7 @@ return {
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00083">
+				<Item class="ModuleScript" referent="RBX00084">
 					<Properties>
 						<string name="Name">RobuxPads</string>
 						<ProtectedString name="Source"><![CDATA[-- The Robux corner on your screen: each pad server/RobuxPads.luau built gets a floating
@@ -14805,7 +14892,7 @@ return RobuxPads
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00084">
+				<Item class="ModuleScript" referent="RBX00085">
 					<Properties>
 						<string name="Name">Shop</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop window: Tools, Perks, Fitness (stamina, the metal detector), Storage (buckets and
@@ -15109,7 +15196,7 @@ return Shop
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00085">
+				<Item class="ModuleScript" referent="RBX00086">
 					<Properties>
 						<string name="Name">SkinFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Animated skins, drawn on every screen for every equipped skinned tool (Tools.make sets the
@@ -15208,7 +15295,7 @@ return SkinFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00086">
+				<Item class="ModuleScript" referent="RBX00087">
 					<Properties>
 						<string name="Name">Sprint</string>
 						<ProtectedString name="Source"><![CDATA[-- Sprinting on every device: hold Shift on a keyboard, press the left stick (L3) on a controller
@@ -15291,7 +15378,7 @@ return Sprint
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00087">
+				<Item class="ModuleScript" referent="RBX00088">
 					<Properties>
 						<string name="Name">Stamina</string>
 						<ProtectedString name="Source"><![CDATA[-- A slim stamina bar under the crosshair (the server owns stamina: attributes Stamina,
@@ -15342,7 +15429,7 @@ return StaminaBar
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00088">
+				<Item class="ModuleScript" referent="RBX00089">
 					<Properties>
 						<string name="Name">Teleport</string>
 						<ProtectedString name="Source"><![CDATA[-- The teleporter menu: standing on one of your pads, pick any of your other pads (listed by
@@ -15413,7 +15500,7 @@ return Teleport
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00089">
+				<Item class="ModuleScript" referent="RBX0008A">
 					<Properties>
 						<string name="Name">TouchAim</string>
 						<ProtectedString name="Source"><![CDATA[-- Harvesting on touch screens. In first person a finger dragged across the screen turns the
@@ -15478,7 +15565,7 @@ return TouchAim
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0008A">
+				<Item class="ModuleScript" referent="RBX0008B">
 					<Properties>
 						<string name="Name">TouchPad</string>
 						<ProtectedString name="Source"><![CDATA[-- The action pad on touch screens: the keyboard's shortcuts (shop, build, drop, home, tool,
@@ -15625,7 +15712,7 @@ return TouchPad
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0008B">
+				<Item class="ModuleScript" referent="RBX0008C">
 					<Properties>
 						<string name="Name">Ui</string>
 						<ProtectedString name="Source"><![CDATA[-- A small UI kit in the "farm journal" style: cream paper cards, ink-brown text, serif headings,
@@ -15837,7 +15924,7 @@ return Ui
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0008C">
+				<Item class="ModuleScript" referent="RBX0008D">
 					<Properties>
 						<string name="Name">UiJournal</string>
 						<ProtectedString name="Source"><![CDATA[-- The farm journal's own pieces for the UI kit: paper cards, pins, thin bars, round stamp
@@ -15955,7 +16042,7 @@ end
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0008D">
+				<Item class="ModuleScript" referent="RBX0008E">
 					<Properties>
 						<string name="Name">Wardrobe</string>
 						<ProtectedString name="Source"><![CDATA[-- The Wardrobe, a page of the farm journal: every milestone cosmetic (titles, hats, trails,
@@ -16046,7 +16133,7 @@ return Wardrobe
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0008E">
+				<Item class="ModuleScript" referent="RBX0008F">
 					<Properties>
 						<string name="Name">WorldFx</string>
 						<ProtectedString name="Source"><![CDATA[-- World effects on your screen: the glowing needle clump (Wheel jackpot), the wheel turning
@@ -16179,7 +16266,7 @@ return WorldFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0008F">
+				<Item class="ModuleScript" referent="RBX00090">
 					<Properties>
 						<string name="Name">Worlds</string>
 						<ProtectedString name="Source"><![CDATA[-- The portal worlds and the lobby on your own screen: each world's light (and the lobby's,
@@ -16446,29 +16533,29 @@ return Worlds
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX00090">
+	<Item class="Workspace" referent="RBX00091">
 		<Properties>
 			<string name="Name">Workspace</string>
 			<bool name="StreamingEnabled">false</bool>
 		</Properties>
 	</Item>
-	<Item class="ServerStorage" referent="RBX00091">
+	<Item class="ServerStorage" referent="RBX00092">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
-		<Item class="Folder" referent="RBX00092">
+		<Item class="Folder" referent="RBX00093">
 			<Properties>
 				<string name="Name">Designs</string>
 			</Properties>
 		</Item>
 	</Item>
-	<Item class="MaterialService" referent="RBX00093">
+	<Item class="MaterialService" referent="RBX00094">
 		<Properties>
 			<string name="Name">MaterialService</string>
 			<bool name="Use2022Materials">true</bool>
 			<string name="LeafyGrassName">Field</string>
 		</Properties>
-		<Item class="MaterialVariant" referent="RBX00094">
+		<Item class="MaterialVariant" referent="RBX00095">
 			<Properties>
 				<string name="Name">Field</string>
 				<token name="BaseMaterial">1284</token>
