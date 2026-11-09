@@ -20,6 +20,7 @@ local RoundManager = require(script.Parent.RoundManager)
 local BoxManager = require(script.Parent.BoxManager)
 local Combat = require(script.Parent.Combat)
 local CombatThrow = require(script.Parent.CombatThrow)
+local Dash = require(script.Parent.Dash)
 local TradeManager = require(script.Parent.TradeManager)
 
 -- While testing in Studio, server errors also show on screen.
@@ -44,6 +45,7 @@ for _, step in ipairs({
 	{ "Boxes", BoxManager.init },
 	{ "Combat", Combat.init },
 	{ "Throw", CombatThrow.init },
+	{ "Dash", Dash.init },
 	{ "Trading", TradeManager.init },
 	{ "Data", DataManager.init },
 	{ "Rounds", RoundManager.start },

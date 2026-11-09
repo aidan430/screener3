@@ -70,6 +70,9 @@
         },
         "Thrown": {
           "$className": "RemoteEvent"
+        },
+        "Dash": {
+          "$className": "RemoteEvent"
         }
       }
     },

@@ -298,6 +298,12 @@ class BoxOpenings(unittest.TestCase):
         self.assertIn("Combat.damage", throw, "the same safe-time rules as a poke")
         self.assertIn("NeedleAway", (SERVER / "Combat.luau").read_text(), "no pokes while it's flying")
 
+    def test_a_dash_never_trips_the_anticheat(self):
+        dash, ac = table("Dash"), block_table("AntiCheat")
+        moved = dash["speed"] * dash["seconds"] + 26 * (ac["checkEvery"] - dash["seconds"])  # dashing with Hay Boots on
+        self.assertLess(moved / ac["checkEvery"], ac["maxSpeed"])
+        self.assertGreater(dash["cooldown"], 1)
+
     def test_combat_is_the_same_for_every_skin(self):
         combat = (SERVER / "Combat.luau").read_text()
         self.assertNotIn("rarity", combat)
