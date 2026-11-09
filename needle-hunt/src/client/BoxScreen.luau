@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Boxes = require(Shared:WaitForChild("Boxes"))
+local Needles = require(Shared:WaitForChild("Needles"))
 local Rules = require(Shared:WaitForChild("Rules"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local UiKit = require(script.Parent.UiKit)
@@ -78,7 +79,11 @@ local function contents(order, box)
 		fill.Size = UDim2.fromScale(math.max(row.percent / 100, 0.01), 1)
 		UiKit.label({ Text = table.concat(names, ", "), Size = UDim2.new(1, 0, 0, 18), Position = UDim2.fromOffset(0, 24), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UiKit.colors.soft, Parent = line }, 14)
 	end
-	UiKit.label({ LayoutOrder = 99, Text = "Any needle type (Sewing Needle to Sailmaker's Needle) by its usual chance. A needle you already have still counts: keep it or trade it.", Size = UDim2.new(1, 0, 0, 36), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UiKit.colors.soft, Parent = panel }, 15)
+	local shapes = {}
+	for _, row in ipairs(Needles.gradeOdds()) do -- the shape's grade: the same in every box
+		table.insert(shapes, string.format("%s %.1f%%", row.grade.name, row.percent))
+	end
+	UiKit.label({ LayoutOrder = 99, Text = "Shape: " .. table.concat(shapes, "  ·  ") .. " (Classic needles, or the Firework, Jackhammer, Swordfish and Shooting Star). A needle you already have still counts: keep it or trade it.", Size = UDim2.new(1, 0, 0, 40), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UiKit.colors.soft, Parent = panel }, 15)
 end
 
 function BoxScreen.refresh()

@@ -75,7 +75,11 @@ function Screens3.refresh()
 				have += 1
 			end
 		end
-		local b = UiKit.button(t.name .. "  " .. have .. "/" .. #Needles.skinsFor(t.id), if t.id == typeId then UiKit.colors.blue else UiKit.colors.card, { LayoutOrder = i, Size = UDim2.fromOffset(220, 40), Parent = tabs })
+		local grade = Needles.grade(t.grade) or Needles.grade("classic")
+		local b = UiKit.button(t.name .. "  " .. have .. "/" .. #Needles.skinsFor(t.id), if t.id == typeId then UiKit.colors.blue else UiKit.colors.card, { LayoutOrder = i, Size = UDim2.fromOffset(240, 40), Parent = tabs })
+		if t.grade ~= "classic" then -- a novelty shape: its tab is edged in its grade's colour
+			UiKit.stroke(rgb(grade.colour), 2).Parent = b
+		end
 		b.Activated:Connect(function()
 			typeId = t.id
 			Screens3.refresh()

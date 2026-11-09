@@ -210,6 +210,21 @@ class Collection(unittest.TestCase):
         for s in SKINS:
             self.assertIn(s["pattern"], ("solid", "two", "stripes", "gradient", "rainbow", "bands", "sheen", "split", "tri", "candy"), s["id"])
 
+    def test_novelty_shapes_are_graded_rarer_and_worth_more(self):
+        grades = {"classic", "fancy", "exotic", "masterwork"}
+        self.assertTrue(all(t.get("grade") in grades for t in TYPES))
+        classic = [t for t in TYPES if t["grade"] == "classic"]
+        novel = [t for t in TYPES if t["grade"] != "classic"]
+        self.assertEqual({t["id"] for t in novel}, {"swordfish", "firework", "jackhammer", "shootingstar"})
+        top_classic = max(t["value"] for t in classic)
+        order = ["fancy", "exotic", "masterwork"]
+        for t in novel:
+            self.assertGreater(t["value"], top_classic, t["id"] + " is worth more than any classic shape")
+        for lo, hi in zip(order, order[1:]):  # each grade rarer and worth more than the one before
+            self.assertGreater(min(t["weight"] for t in novel if t["grade"] == lo), max(t["weight"] for t in novel if t["grade"] == hi))
+            self.assertLess(max(t["value"] for t in novel if t["grade"] == lo), min(t["value"] for t in novel if t["grade"] == hi))
+        self.assertLess(sum(t["weight"] for t in novel) / sum(t["weight"] for t in TYPES), 0.1, "novelty shapes stay special")
+
     def test_needles_are_earned_never_bought(self):
         shop = (SERVER / "ShopManager.luau").read_text()
         self.assertNotIn("Needles", shop, "the shop and Robux never hand out collectible needles")

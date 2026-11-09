@@ -1,6 +1,6 @@
 -- The needle collection. Everyone hunts the same plain needle (fair); when you find it, it turns
 -- out to be one TYPE (its shape) in one SKIN (its look), and it's yours to keep. Every type comes
--- in every skin, so the collection has types x skins entries (12 x 60 = 720).
+-- in every skin, so the collection has types x skins entries (16 x 60 = 960, plus the 1 of 1).
 --   value: what one is worth = type.value x the skin's rarity multiplier. A collection's value
 --   is the sum of the different needles in it (duplicates show as x2, x3 but add nothing).
 -- Skins are recipes, not pictures: colours, a material and a pattern, drawn by shared/NeedleLook.
@@ -22,20 +22,33 @@ Needles.rarities = {
 	{ id = "unique", name = "1 of 1", weight = 0, mult = 5000, colour = { 225, 240, 255 } }, -- never rolled: see Config.OneOfOne
 }
 
--- Types: the needle's shape (see NeedleLook). weight = how often it turns up; value = its base worth.
+-- Grades: how special a shape is. The novelty shapes turn up far less often and are worth more.
+Needles.grades = {
+	{ id = "classic", name = "Classic", colour = { 190, 196, 206 } },
+	{ id = "fancy", name = "Fancy", colour = { 110, 200, 160 } },
+	{ id = "exotic", name = "Exotic", colour = { 90, 170, 255 } },
+	{ id = "masterwork", name = "Masterwork", colour = { 255, 190, 60 } },
+}
+
+-- Types: the needle's shape (see NeedleLook). weight = how often it turns up (out of all the
+-- weights together); value = its base worth (times the skin's rarity); grade = see above.
 Needles.types = {
-	{ id = "sewing", name = "Sewing Needle", weight = 20, value = 10 },
-	{ id = "pin", name = "Dressmaker's Pin", weight = 16, value = 8 },
-	{ id = "quilting", name = "Quilting Needle", weight = 12, value = 12 },
-	{ id = "darning", name = "Darning Needle", weight = 10, value = 14 },
-	{ id = "embroidery", name = "Embroidery Needle", weight = 9, value = 16 },
-	{ id = "tapestry", name = "Tapestry Needle", weight = 8, value = 18 },
-	{ id = "safety", name = "Safety Pin", weight = 8, value = 15 },
-	{ id = "knitting", name = "Knitting Needle", weight = 6, value = 22 },
-	{ id = "crochet", name = "Crochet Hook", weight = 5, value = 24 },
-	{ id = "bodkin", name = "Bodkin", weight = 3, value = 26 },
-	{ id = "curved", name = "Curved Upholstery Needle", weight = 2, value = 30 },
-	{ id = "sailmaker", name = "Sailmaker's Needle", weight = 1, value = 36 },
+	{ id = "sewing", name = "Sewing Needle", weight = 20, value = 10, grade = "classic" },
+	{ id = "pin", name = "Dressmaker's Pin", weight = 16, value = 8, grade = "classic" },
+	{ id = "quilting", name = "Quilting Needle", weight = 12, value = 12, grade = "classic" },
+	{ id = "darning", name = "Darning Needle", weight = 10, value = 14, grade = "classic" },
+	{ id = "embroidery", name = "Embroidery Needle", weight = 9, value = 16, grade = "classic" },
+	{ id = "tapestry", name = "Tapestry Needle", weight = 8, value = 18, grade = "classic" },
+	{ id = "safety", name = "Safety Pin", weight = 8, value = 15, grade = "classic" },
+	{ id = "knitting", name = "Knitting Needle", weight = 6, value = 22, grade = "classic" },
+	{ id = "crochet", name = "Crochet Hook", weight = 5, value = 24, grade = "classic" },
+	{ id = "bodkin", name = "Bodkin", weight = 3, value = 26, grade = "classic" },
+	{ id = "curved", name = "Curved Upholstery Needle", weight = 2, value = 30, grade = "classic" },
+	{ id = "sailmaker", name = "Sailmaker's Needle", weight = 1, value = 36, grade = "classic" },
+	{ id = "firework", name = "Firework Needle", weight = 2.5, value = 45, grade = "fancy" },
+	{ id = "jackhammer", name = "Jackhammer Needle", weight = 2, value = 50, grade = "fancy" },
+	{ id = "swordfish", name = "Swordfish Needle", weight = 1.2, value = 65, grade = "exotic" },
+	{ id = "shootingstar", name = "Shooting Star Needle", weight = 0.5, value = 90, grade = "masterwork" },
 }
 
 Needles.skins = {
@@ -123,6 +136,29 @@ end
 for _, r in ipairs(Needles.rarities) do
 	byRarity[r.id] = r
 end
+local byGrade = {}
+for _, g in ipairs(Needles.grades) do
+	byGrade[g.id] = g
+end
+
+function Needles.grade(id)
+	return byGrade[id]
+end
+
+-- Each grade's chance (percent) of a needle's shape, from the type weights (shown with box odds).
+function Needles.gradeOdds()
+	local total, by = 0, {}
+	for _, t in ipairs(Needles.types) do
+		total += t.weight
+		by[t.grade] = (by[t.grade] or 0) + t.weight
+	end
+	local out = {}
+	for _, g in ipairs(Needles.grades) do
+		table.insert(out, { grade = g, percent = (by[g.id] or 0) / total * 100 })
+	end
+	return out
+end
+
 function Needles.type(id)
 	return byType[id]
 end

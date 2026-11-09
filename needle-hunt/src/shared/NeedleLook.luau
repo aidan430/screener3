@@ -1,6 +1,8 @@
 -- Builds a needle of any type in any skin out of parts (shared/Needles): for the NEEDLE FOUND!
 -- reveal, the Collection screen (inside ViewportFrames) and the lobby's showcase pedestals.
--- The needle lies along X, eye end at -X, point at +X, about 2-3 studs long at scale 1.
+-- The needle lies along X, eye end at -X, point at +X, about 2-3 studs long at scale 1. The
+-- novelty shapes (swordfish, firework, jackhammer, shooting star) keep that rule: their point (a
+-- bill, a nose cone, a chisel, a star) is at +X.
 -- The shaft is cut into segments so patterns (stripes, gradient, rainbow, bands, sheen, split,
 -- tri, candy) show along it.
 -- fat (1 = true to life) thickens it for display: the UI and pedestals use about 2, so a needle
@@ -60,11 +62,15 @@ function NeedleLook.build(typeId, skinId, scale, fat)
 	root.Parent = model
 	model.PrimaryPart = root
 
-	local function part(size, cf, colour, shape, onCurve)
+	-- onCurve: its position isn't thickened (a curve or a star keeps its shape); keep: nor is its
+	-- size (a flat fin stays a fin)
+	local function part(size, cf, colour, shape, onCurve, keep)
 		local p = Instance.new("Part")
 		p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
 		p.Shape = Enum.PartType[shape or "Block"]
-		if shape == "Ball" then
+		if keep then
+			p.Size = size * scale
+		elseif shape == "Ball" then
 			p.Size = size * scale * fat
 		else
 			p.Size = Vector3.new(size.X, size.Y * fat, size.Z * fat) * scale
@@ -157,6 +163,68 @@ function NeedleLook.build(typeId, skinId, scale, fat)
 		tip(0.9, 0.16, 3)
 		part(Vector3.new(1.6, 0.03, 0.03), CFrame.new(-0.2, 0.08, 0), accent(skin))
 		eye(-1.36, 0.3, 0.07, 0.13)
+	elseif typeId == "swordfish" then -- the bill is the needle; a tapered body, a tall sail, a forked tail
+		shaft(0.42, 1.55, 0.05, 6)
+		tip(1.55, 0.05, 3)
+		local body = { 0.07, 0.15, 0.24, 0.3, 0.31, 0.27, 0.18, 0.1 }
+		for i, d in ipairs(body) do
+			part(Vector3.new(0.23, d, d * 0.75), CFrame.new(-1.45 + i * 0.23, 0, 0), colourAt(i, #body), "Cylinder")
+		end
+		for k = 0, 5 do -- the sail: overlapping panels, tallest at the front, sweeping back
+			local h = 0.6 - k * 0.09
+			part(Vector3.new(0.16, h, 0.02), CFrame.new(-0.08 - k * 0.12, 0.28 + h / 2, 0) * CFrame.Angles(0, 0, math.rad(-14)), accent(skin), nil, true, true)
+		end
+		for _, s in ipairs({ -1, 1 }) do
+			part(Vector3.new(0.55, 0.16, 0.02), CFrame.new(-1.42, s * 0.2, 0) * CFrame.Angles(0, 0, math.rad(s * 58)), accent(skin), nil, true, true) -- the tail
+			part(Vector3.new(0.28, 0.06, 0.02), CFrame.new(-0.1, s * -0.18, 0) * CFrame.Angles(0, 0, math.rad(s * 25)), accent(skin), nil, true, true) -- side fins
+		end
+		part(Vector3.one * 0.07, CFrame.new(0.2, 0.06, 0.1), Color3.fromRGB(20, 20, 26), "Ball", true) -- an eye
+	elseif typeId == "firework" then -- a rocket on its stick: striped tube, nose cone, fins, a spark at the end
+		shaft(-1.65, -0.25, 0.05, 4)
+		for i = 1, 5 do
+			part(Vector3.new(0.22, 0.3, 0.3), CFrame.new(-0.2 + i * 0.2, 0, 0), colourAt(i, 5), "Cylinder")
+		end
+		for i = 1, 4 do -- the nose cone
+			local k = 1 - i / 5
+			part(Vector3.new(0.09, 0.3 * k, 0.3 * k), CFrame.new(0.94 + i * 0.08, 0, 0), accent(skin), "Cylinder")
+		end
+		for _, s in ipairs({ -1, 1 }) do
+			part(Vector3.new(0.38, 0.34, 0.03), CFrame.new(0.0, s * 0.42, 0) * CFrame.Angles(0, 0, math.rad(s * -30)), accent(skin), nil, true, true)
+		end
+		for k = 0, 5 do -- sparks fizzing off the end of the stick
+			local a = k / 6 * math.pi * 2
+			part(Vector3.one * 0.07, CFrame.new(-1.72 + math.cos(a) * 0.16, math.sin(a) * 0.16, 0), Color3.fromRGB(255, 220, 120), "Ball", true, true)
+		end
+		ball(-1.72, 0.12)
+	elseif typeId == "jackhammer" then -- a chisel bit for a point, a ribbed body, a motor and T-handles
+		shaft(0.45, 1.45, 0.08, 4)
+		part(Vector3.new(0.14, 0.14, 0.03), CFrame.new(1.52, 0, 0), colourAt(4, 4)) -- the flat chisel end
+		part(Vector3.new(0.12, 0.22, 0.22), CFrame.new(0.4, 0, 0), accent(skin), "Cylinder") -- the collar
+		for i = 1, 4 do
+			part(Vector3.new(0.26, if i % 2 == 0 then 0.36 else 0.4, if i % 2 == 0 then 0.36 else 0.4), CFrame.new(0.4 - i * 0.25, 0, 0), colourAt(i, 4), "Cylinder")
+		end
+		part(Vector3.new(0.4, 0.46, 0.4), CFrame.new(-0.84, 0, 0), accent(skin)) -- the motor
+		part(Vector3.new(0.22, 0.1, 0.1), CFrame.new(-1.12, 0, 0), accent(skin))
+		part(Vector3.new(1.1, 0.1, 0.1), CFrame.new(-1.26, 0, 0) * CFrame.Angles(0, math.rad(90), 0), Color3.fromRGB(40, 40, 46), "Cylinder", true, true) -- the handle bar
+		for _, s in ipairs({ -1, 1 }) do
+			part(Vector3.new(0.3, 0.18, 0.18), CFrame.new(-1.26, 0, s * 0.45) * CFrame.Angles(0, math.rad(90), 0), Color3.fromRGB(25, 25, 30), "Cylinder", true, true) -- grips
+		end
+	elseif typeId == "shootingstar" then -- a five-pointed star leading a long fading trail
+		local n = 9
+		for i = 1, n do -- the trail, thin at the eye end and widening towards the star
+			local d = 0.03 + 0.1 * (i / n)
+			part(Vector3.new(2.2 / n + 0.01, d, d), CFrame.new(-1.45 + (i - 0.5) * 2.2 / n, 0, 0), colourAt(i, n), "Cylinder")
+		end
+		for _, s in ipairs({ -1, 1 }) do -- two thinner streaks beside it
+			part(Vector3.new(1.2, 0.025, 0.025), CFrame.new(0.1, s * 0.12, 0) * CFrame.Angles(0, 0, math.rad(s * 4)), colourAt(n, n), "Cylinder", true)
+		end
+		local centre = CFrame.new(1.1, 0, 0)
+		for k = 0, 4 do -- the points, each a long and a short bar so it tapers, in the star's own plane
+			local a = math.rad(90 + k * 72)
+			part(Vector3.new(0.5, 0.15, 0.07), centre * CFrame.Angles(0, 0, a) * CFrame.new(0.25, 0, 0), accent(skin), nil, true, true)
+			part(Vector3.new(0.26, 0.26, 0.08), centre * CFrame.Angles(0, 0, a) * CFrame.new(0.13, 0, 0), accent(skin), nil, true, true)
+		end
+		part(Vector3.one * 0.34, centre, accent(skin), "Ball", true, true)
 	else -- sewing
 		shaft(-0.9, 0.85, 0.08, 6)
 		tip(0.85, 0.08, 3)
