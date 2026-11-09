@@ -3335,14 +3335,21 @@ local function build()
 		local label = Instance.new("TextLabel")
 		label.BackgroundTransparency, label.Size, label.Position = 1, UDim2.new(1, -40, 0, h), UDim2.fromOffset(20, y)
 		label.Font, label.TextSize, label.TextColor3 = font or Enum.Font.Merriweather, size, colour
-		label.TextXAlignment = Enum.TextXAlignment.Left
+		label.TextXAlignment, label.TextScaled = Enum.TextXAlignment.Left, true -- a long name shrinks to fit the paper
+		local most = Instance.new("UITextSizeConstraint")
+		most.MaxTextSize = size
+		most.Parent = label
 		label.Parent = paper
 		return label
 	end
 	local title = text(10, 56, 46, Color3.fromRGB(60, 40, 22), Enum.Font.Merriweather)
-	title.Text, title.TextXAlignment = "TOP FARMERS", Enum.TextXAlignment.Center
+	local bold = Font.new("rbxasset://fonts/families/Merriweather.json", Enum.FontWeight.Bold)
+	title.Text, title.TextXAlignment, title.FontFace = "TOP FARMERS", Enum.TextXAlignment.Center, bold
 	for i = 1, B.rows do
 		lines[i] = text(70 + (i - 1) * 40, 38, 30, if i <= 3 then Color3.fromRGB(176, 120, 20) else Color3.fromRGB(70, 52, 36))
+		if i <= 3 then
+			lines[i].FontFace = bold -- the top three stand out in bold gold
+		end
 	end
 	model.Parent = workspace
 end

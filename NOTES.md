@@ -766,3 +766,5 @@ this game's own style. Nothing copied from that game.
 - Top Farmers board fixes: the posts stood inside the board's edges and would have covered the
   list (now at ±8 studs, just outside it); ten rows at 42 px ran past the paper (now 40 px
   apart); the roof sits on the post tops (18 studs wide, at 18.3).
+- Top Farmers board: the title and the top three rows are bold Merriweather (gold); every row
+  shrinks to fit (TextScaled, at most its normal size) so a long name stays on the paper.
