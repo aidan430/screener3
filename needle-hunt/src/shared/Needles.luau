@@ -19,6 +19,7 @@ Needles.rarities = {
 	{ id = "epic", name = "Epic", weight = 6, mult = 12, colour = { 170, 110, 240 } },
 	{ id = "legendary", name = "Legendary", weight = 1.8, mult = 40, colour = { 255, 190, 60 } },
 	{ id = "mythic", name = "Mythic", weight = 0.2, mult = 150, colour = { 255, 110, 170 } },
+	{ id = "unique", name = "1 of 1", weight = 0, mult = 5000, colour = { 225, 240, 255 } }, -- never rolled: see Config.OneOfOne
 }
 
 -- Types: the needle's shape (see NeedleLook). weight = how often it turns up; value = its base worth.
@@ -103,6 +104,9 @@ Needles.skins = {
 	{ id = "borealis", name = "Borealis", rarity = "legendary", series = "starlight", colours = { { 80, 255, 160 }, { 70, 200, 255 }, { 180, 100, 255 } }, material = "Neon", pattern = "tri", sparkle = true },
 	{ id = "celestial", name = "Celestial", rarity = "mythic", series = "starlight", colours = { { 255, 255, 255 }, { 255, 210, 90 }, { 120, 170, 255 } }, material = "Glass", pattern = "tri", glow = true, sparkle = true },
 	{ id = "wishingstar", name = "Wishing Star", rarity = "mythic", series = "starlight", colours = { { 255, 255, 255 }, { 255, 255, 255 } }, material = "Neon", pattern = "rainbow", glow = true, sparkle = true },
+	-- the 1 of 1 (Config.OneOfOne): only one can ever exist, only from a chest, only as a Sewing Needle.
+	-- thin = paper thin; see = how see-through it is (0 solid, 1 invisible)
+	{ id = "gossamer", name = "Gossamer", rarity = "unique", only = "sewing", colours = { { 235, 245, 255 }, { 200, 225, 255 } }, material = "Glass", pattern = "sheen", thin = 0.18, see = 0.82, sparkle = true },
 	-- designed in the Needle Skin Workshop
 	{ id = "thistle", name = "Thistle", rarity = "uncommon", colours = { { 150, 255, 255 }, { 181, 26, 0 } }, material = "SmoothPlastic", pattern = "gradient", glow = true, sparkle = true },
 	{ id = "cornucopiacopy", name = "Cornucopia Copy", rarity = "mythic", series = "harvest", colours = { { 255, 120, 40 }, { 220, 40, 60 } }, material = "Neon", pattern = "gradient", glow = true, sparkle = true },
@@ -131,6 +135,26 @@ function Needles.rarity(id)
 	return byRarity[id]
 end
 
+-- The skins a type comes in (a skin with `only` exists on that one type alone).
+function Needles.skinsFor(typeId)
+	local out = {}
+	for _, s in ipairs(Needles.skins) do
+		if not s.only or s.only == typeId then
+			table.insert(out, s)
+		end
+	end
+	return out
+end
+
+-- How many different needles there are to collect.
+function Needles.count()
+	local n = 0
+	for _, t in ipairs(Needles.types) do
+		n += #Needles.skinsFor(t.id)
+	end
+	return n
+end
+
 -- "darning:ember" for a type and a skin (how a collection saves them), and back.
 function Needles.key(typeId, skinId)
 	return typeId .. ":" .. skinId
@@ -138,7 +162,7 @@ end
 
 function Needles.split(key)
 	local t, s = string.match(key or "", "^(%w+):(%w+)$")
-	if byType[t] and bySkin[s] then
+	if byType[t] and bySkin[s] and (not bySkin[s].only or bySkin[s].only == t) then
 		return t, s
 	end
 	return nil, nil
@@ -193,7 +217,7 @@ function Needles.roll(rng, luck, golden)
 	end, rng)
 	local skins = {}
 	for _, s in ipairs(Needles.skins) do
-		if s.rarity == rarity.id and not s.series then -- a box's own skins never come from a find
+		if s.rarity == rarity.id and not s.series and not s.only then -- a box's own skins never come from a find
 			table.insert(skins, s)
 		end
 	end

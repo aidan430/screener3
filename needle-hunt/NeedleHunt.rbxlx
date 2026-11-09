@@ -137,6 +137,13 @@ Config.Chests = {
 	},
 }
 
+-- The 1 of 1 (server/OneOfOne): the Gossamer Sewing Needle, paper thin and nearly invisible. Every
+-- chest opened has `chance` of holding it, but only one can ever exist: the first finder claims it
+-- in a DataStore shared by every server (Studio uses its own store, so testing never claims the
+-- real one). Thrown, it takes `throwDamage` hearts: an instant tag-out. It never comes from a box
+-- or anything bought. Finding it is announced on every server.
+Config.OneOfOne = { key = "sewing:gossamer", chance = 1 / 12000000, store = "NH_OneOfOne_v1", throwDamage = 3 }
+
 -- Places at the end of a round: by chests opened, then tag-outs, then coins collected. Places
 -- pay coins (placeCoins, 1st to 4th, the rest get the last; times the difficulty's coins).
 
@@ -431,6 +438,7 @@ end
 function NeedleLook.build(typeId, skinId, scale, fat)
 	scale, fat = scale or 1, fat or 1
 	local skin = Needles.skin(skinId) or Needles.skin("steel")
+	fat *= skin.thin or 1 -- a paper-thin skin (the 1 of 1)
 	local model = Instance.new("Model")
 	model.Name = Needles.name(typeId, skin.id)
 	local material = Enum.Material[skin.material] or Enum.Material.Metal
@@ -451,7 +459,7 @@ function NeedleLook.build(typeId, skinId, scale, fat)
 		end
 		local y = if onCurve then cf.Position.Y else cf.Position.Y * fat -- a curve keeps its shape
 		p.CFrame = CFrame.new(Vector3.new(cf.Position.X, y, cf.Position.Z) * scale) * cf.Rotation
-		p.Color, p.Material = colour, material
+		p.Color, p.Material, p.Transparency = colour, material, skin.see or 0
 		p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
 		p.Parent = model
 		return p
@@ -587,6 +595,7 @@ Needles.rarities = {
 	{ id = "epic", name = "Epic", weight = 6, mult = 12, colour = { 170, 110, 240 } },
 	{ id = "legendary", name = "Legendary", weight = 1.8, mult = 40, colour = { 255, 190, 60 } },
 	{ id = "mythic", name = "Mythic", weight = 0.2, mult = 150, colour = { 255, 110, 170 } },
+	{ id = "unique", name = "1 of 1", weight = 0, mult = 5000, colour = { 225, 240, 255 } }, -- never rolled: see Config.OneOfOne
 }
 
 -- Types: the needle's shape (see NeedleLook). weight = how often it turns up; value = its base worth.
@@ -671,6 +680,9 @@ Needles.skins = {
 	{ id = "borealis", name = "Borealis", rarity = "legendary", series = "starlight", colours = { { 80, 255, 160 }, { 70, 200, 255 }, { 180, 100, 255 } }, material = "Neon", pattern = "tri", sparkle = true },
 	{ id = "celestial", name = "Celestial", rarity = "mythic", series = "starlight", colours = { { 255, 255, 255 }, { 255, 210, 90 }, { 120, 170, 255 } }, material = "Glass", pattern = "tri", glow = true, sparkle = true },
 	{ id = "wishingstar", name = "Wishing Star", rarity = "mythic", series = "starlight", colours = { { 255, 255, 255 }, { 255, 255, 255 } }, material = "Neon", pattern = "rainbow", glow = true, sparkle = true },
+	-- the 1 of 1 (Config.OneOfOne): only one can ever exist, only from a chest, only as a Sewing Needle.
+	-- thin = paper thin; see = how see-through it is (0 solid, 1 invisible)
+	{ id = "gossamer", name = "Gossamer", rarity = "unique", only = "sewing", colours = { { 235, 245, 255 }, { 200, 225, 255 } }, material = "Glass", pattern = "sheen", thin = 0.18, see = 0.82, sparkle = true },
 	-- designed in the Needle Skin Workshop
 	{ id = "thistle", name = "Thistle", rarity = "uncommon", colours = { { 150, 255, 255 }, { 181, 26, 0 } }, material = "SmoothPlastic", pattern = "gradient", glow = true, sparkle = true },
 	{ id = "cornucopiacopy", name = "Cornucopia Copy", rarity = "mythic", series = "harvest", colours = { { 255, 120, 40 }, { 220, 40, 60 } }, material = "Neon", pattern = "gradient", glow = true, sparkle = true },
@@ -699,6 +711,26 @@ function Needles.rarity(id)
 	return byRarity[id]
 end
 
+-- The skins a type comes in (a skin with `only` exists on that one type alone).
+function Needles.skinsFor(typeId)
+	local out = {}
+	for _, s in ipairs(Needles.skins) do
+		if not s.only or s.only == typeId then
+			table.insert(out, s)
+		end
+	end
+	return out
+end
+
+-- How many different needles there are to collect.
+function Needles.count()
+	local n = 0
+	for _, t in ipairs(Needles.types) do
+		n += #Needles.skinsFor(t.id)
+	end
+	return n
+end
+
 -- "darning:ember" for a type and a skin (how a collection saves them), and back.
 function Needles.key(typeId, skinId)
 	return typeId .. ":" .. skinId
@@ -706,7 +738,7 @@ end
 
 function Needles.split(key)
 	local t, s = string.match(key or "", "^(%w+):(%w+)$")
-	if byType[t] and bySkin[s] then
+	if byType[t] and bySkin[s] and (not bySkin[s].only or bySkin[s].only == t) then
 		return t, s
 	end
 	return nil, nil
@@ -761,7 +793,7 @@ function Needles.roll(rng, luck, golden)
 	end, rng)
 	local skins = {}
 	for _, s in ipairs(Needles.skins) do
-		if s.rarity == rarity.id and not s.series then -- a box's own skins never come from a find
+		if s.rarity == rarity.id and not s.series and not s.only then -- a box's own skins never come from a find
 			table.insert(skins, s)
 		end
 	end
@@ -1884,7 +1916,9 @@ local function throw(player, aim)
 	setAway(player, tool, true)
 	task.delay(seconds, function()
 		if target then
-			Combat.damage(player, target, T.damage)
+			local d2 = DataManager.get(player)
+			local oneOfOne = d2 and d2.showcase == Config.OneOfOne.key -- the 1 of 1 in hand: one throw tags out
+			Combat.damage(player, target, if oneOfOne then Config.OneOfOne.throwDamage else T.damage)
 		end
 	end)
 	task.delay(T.back, function() -- the needle comes back to your hand
@@ -3160,6 +3194,7 @@ local BoxManager = require(script.Parent.BoxManager)
 local Combat = require(script.Parent.Combat)
 local CombatThrow = require(script.Parent.CombatThrow)
 local Dash = require(script.Parent.Dash)
+local OneOfOne = require(script.Parent.OneOfOne)
 local TradeManager = require(script.Parent.TradeManager)
 
 -- While testing in Studio, server errors also show on screen.
@@ -3184,6 +3219,7 @@ for _, step in ipairs({
 	{ "Combat", Combat.init },
 	{ "Throw", CombatThrow.init },
 	{ "Dash", Dash.init },
+	{ "OneOfOne", OneOfOne.init },
 	{ "Trading", TradeManager.init },
 	{ "Data", DataManager.init },
 	{ "Rounds", RoundManager.start },
@@ -3921,6 +3957,104 @@ return MazeKit
 			</Item>
 			<Item class="ModuleScript" referent="RBX00039">
 				<Properties>
+					<string name="Name">OneOfOne</string>
+					<ProtectedString name="Source"><![CDATA[-- The 1 of 1 (Config.OneOfOne). A chest rolls for it (roll); the first player to roll it claims it
+-- in a DataStore every server shares, with UpdateAsync, so two servers can never both hand it out:
+-- if it's already claimed (or the store can't be reached), the chest is an ordinary chest. The
+-- record follows the needle when it's traded. Finding it is announced on this server and, through
+-- MessagingService, on every other one. In Studio a separate store is used, so testing (set
+-- Config.OneOfOne.chance = 1) never claims the real one.
+local DataStoreService = game:GetService("DataStoreService")
+local MessagingService = game:GetService("MessagingService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Needles = require(Shared:WaitForChild("Needles"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local OneOfOne = {}
+local O = Config.OneOfOne
+local TOPIC = "NH_OneOfOne"
+local rng = Random.new()
+
+local function store()
+	local name = O.store .. (if RunService:IsStudio() then "_Studio" else "")
+	local ok, ds = pcall(DataStoreService.GetDataStore, DataStoreService, name)
+	return if ok then ds else nil
+end
+
+-- True if this player just became the one owner (call only after a roll hits).
+local function claim(player)
+	local ds = store()
+	if not ds then
+		return false
+	end
+	local won = false
+	local ok = pcall(function()
+		ds:UpdateAsync("owner", function(old)
+			if old ~= nil then
+				return nil -- already found by someone: leave it be
+			end
+			won = true
+			return { userId = player.UserId, name = player.Name, at = os.time() }
+		end)
+	end)
+	return ok and won
+end
+
+-- A chest's roll: true if this chest holds the 1 of 1 and `player` has claimed it.
+function OneOfOne.roll(player)
+	return rng:NextNumber() < O.chance and claim(player)
+end
+
+-- The needle changed hands in a trade: the record follows it.
+function OneOfOne.transfer(toPlayer)
+	local ds = store()
+	if ds then
+		pcall(function()
+			ds:UpdateAsync("owner", function(old)
+				if type(old) ~= "table" then
+					return nil
+				end
+				old.userId, old.name, old.tradedAt = toPlayer.UserId, toPlayer.Name, os.time()
+				return old
+			end)
+		end)
+	end
+end
+
+local function message(name)
+	local t, s = Needles.split(O.key)
+	local unique = Needles.rarity("unique")
+	return { name = name, needle = Needles.name(t, s), rarity = unique.name, colour = unique.colour, box = "chest", odds = "1 in 12,000,000", type = t, skin = s }
+end
+
+-- Tells everyone, here and on every other server.
+function OneOfOne.announce(player)
+	local m = message(player.DisplayName)
+	Remotes.Announce:FireAllClients(m)
+	pcall(MessagingService.PublishAsync, MessagingService, TOPIC, { name = player.DisplayName, job = game.JobId })
+end
+
+function OneOfOne.init()
+	pcall(function()
+		MessagingService:SubscribeAsync(TOPIC, function(packet)
+			local data = type(packet) == "table" and packet.Data
+			if type(data) == "table" and type(data.name) == "string" and data.job ~= game.JobId then -- (this server already told its players)
+				Remotes.Announce:FireAllClients(message(string.sub(data.name, 1, 40)))
+			end
+		end)
+	end)
+end
+
+return OneOfOne
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX0003A">
+				<Properties>
 					<string name="Name">Powerups</string>
 					<ProtectedString name="Source"><![CDATA[-- Power-ups on the maps (Config.Powerups). When a round's search starts, glowing orbs float in
 -- random maze cells; walk into one to take it (the server checks you're in the round, it's the
@@ -4088,7 +4222,7 @@ return Powerups
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003A">
+			<Item class="ModuleScript" referent="RBX0003B">
 				<Properties>
 					<string name="Name">QuestManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Daily quests: three a day, the same for everyone (shared/Quests.forDay). Progress is saved;
@@ -4156,7 +4290,7 @@ return QuestManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003B">
+			<Item class="ModuleScript" referent="RBX0003C">
 				<Properties>
 					<string name="Name">Requests</string>
 					<ProtectedString name="Source"><![CDATA[-- Small requests from players, checked on the server: a hint (Remotes.Hint) and saving their
@@ -4216,7 +4350,7 @@ return Requests
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003C">
+			<Item class="ModuleScript" referent="RBX0003D">
 				<Properties>
 					<string name="Name">RewardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Every coin and XP point is given here, on the server: chests, places, playing a round to the
@@ -4233,6 +4367,8 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local DataManager = require(script.Parent.DataManager)
 local QuestManager = require(script.Parent.QuestManager)
 local LeaderboardManager = require(script.Parent.LeaderboardManager)
+local CollectionManager = require(script.Parent.CollectionManager)
+local Needles = require(Shared:WaitForChild("Needles"))
 
 local RewardManager = {}
 
@@ -4277,20 +4413,26 @@ function RewardManager.chest(player, reward)
 	local got = {}
 	DataManager.update(player, function(d)
 		d.chests += 1
-		if reward.key then
+		if reward.oneOfOne then
+			local kept = CollectionManager.addTo(d, Needles.split(Config.OneOfOne.key))
+			got = { oneOfOne = true, name = kept.name, type = kept.type, skin = kept.skin }
+		elseif reward.key then
 			d.keys[reward.key] = (d.keys[reward.key] or 0) + 1
 		end
 	end)
 	RewardManager.track(player, "chests", 1)
 	QuestManager.record(player, "chest", 1)
-	if reward.key then
+	if reward.oneOfOne then
+		DataManager.save(player) -- the only one there is: saved straight away
+		require(script.Parent.OneOfOne).announce(player)
+	elseif reward.key then
 		QuestManager.record(player, "key", 1)
 		for _, k in ipairs(Config.Chests.keys) do
 			if k.id == reward.key then
 				got = { key = k.id, name = k.name }
 			end
 		end
-	else
+	elseif not reward.oneOfOne then
 		local coins = reward.coins * (if hasPass(player, "DoubleCoins") then 2 else 1)
 		RewardManager.grant(player, coins, 0, nil)
 		got = { coins = coins }
@@ -4361,7 +4503,7 @@ return RewardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003D">
+			<Item class="ModuleScript" referent="RBX0003E">
 				<Properties>
 					<string name="Name">RoundExtras</string>
 					<ProtectedString name="Source"><![CDATA[-- What runs alongside a round's search, started and stopped together by server/RoundManager:
@@ -4395,7 +4537,7 @@ return RoundExtras
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003E">
+			<Item class="ModuleScript" referent="RBX0003F">
 				<Properties>
 					<string name="Name">RoundManager</string>
 					<ProtectedString name="Source"><![CDATA[-- The round loop, all on the server:
@@ -4420,6 +4562,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local DataManager = require(script.Parent.DataManager)
 local ChestSpawner = require(script.Parent.ChestSpawner)
+local OneOfOne = require(script.Parent.OneOfOne)
 local RewardManager = require(script.Parent.RewardManager)
 local AntiCheat = require(script.Parent.AntiCheat)
 local MapKit = require(script.Parent.MapKit)
@@ -4497,6 +4640,9 @@ local function onOpen(player, chest, reward)
 	local r = round
 	if not r or not r.participants[player] then
 		return
+	end
+	if OneOfOne.roll(player) then -- 1 in 12 million, and only if nobody, anywhere, has it yet
+		reward = { oneOfOne = true }
 	end
 	local got = RewardManager.chest(player, reward)
 	r.chestsLeft -= 1
@@ -4664,7 +4810,7 @@ return RoundManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003F">
+			<Item class="ModuleScript" referent="RBX00040">
 				<Properties>
 					<string name="Name">ShopManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Cosmetics and purchases. With Haystack Coins: buy a cosmetic (Remotes.Shop "buy"), and wear
@@ -4915,7 +5061,7 @@ return ShopManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00040">
+			<Item class="ModuleScript" referent="RBX00041">
 				<Properties>
 					<string name="Name">TradeManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Trading needles between two players in the lobby (Config.Trading). Remotes.Trade asks; the
@@ -5021,6 +5167,11 @@ local function execute(t)
 	end
 	move(t.a, t.b)
 	move(t.b, t.a)
+	for _, pair in ipairs({ { t.a, t.b }, { t.b, t.a } }) do -- the 1 of 1's record follows it
+		if t.offer[pair[1]][Config.OneOfOne.key] then
+			require(script.Parent.OneOfOne).transfer(pair[2])
+		end
+	end
 	for _, p in ipairs({ t.a, t.b }) do
 		DataManager.update(p, function(data) -- nothing on show? Your best needle goes up
 			if data.showcase == "" then
@@ -5176,24 +5327,24 @@ return TradeManager
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerStorage" referent="RBX00041">
+	<Item class="ServerStorage" referent="RBX00042">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX00042">
+	<Item class="StarterPlayer" referent="RBX00043">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX00043">
+		<Item class="StarterPlayerScripts" referent="RBX00044">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX00044">
+			<Item class="Folder" referent="RBX00045">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX00045">
+				<Item class="ModuleScript" referent="RBX00046">
 					<Properties>
 						<string name="Name">BoxReel</string>
 						<ProtectedString name="Source"><![CDATA[-- The box opening on your screen: a strip of needle cards slides along under a gold marker,
@@ -5296,7 +5447,7 @@ return BoxReel
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00046">
+				<Item class="ModuleScript" referent="RBX00047">
 					<Properties>
 						<string name="Name">BoxScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Boxes screen: each box with its price (coins; the dearer ones also Robux), a key button
@@ -5443,7 +5594,7 @@ return BoxScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00047">
+				<Item class="ModuleScript" referent="RBX00048">
 					<Properties>
 						<string name="Name">CombatFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Needle combat on your screen (server/Combat decides every hit):
@@ -5612,7 +5763,7 @@ return CombatFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00048">
+				<Item class="ModuleScript" referent="RBX00049">
 					<Properties>
 						<string name="Name">DashFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Dashing (Config.Dash): C, B on a controller, or the Dash button on a phone. Your character
@@ -5732,7 +5883,7 @@ return DashFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00049">
+				<Item class="ModuleScript" referent="RBX0004A">
 					<Properties>
 						<string name="Name">Effects</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback you can see and hear, on your own screen only: sounds, a burst of particles where a
@@ -5813,7 +5964,7 @@ return Effects
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004A">
+				<Item class="ModuleScript" referent="RBX0004B">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: your coins and level (with an XP bar) at the top left; the round's
@@ -5949,7 +6100,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004B">
+				<Item class="ModuleScript" referent="RBX0004C">
 					<Properties>
 						<string name="Name">LobbyUi</string>
 						<ProtectedString name="Source"><![CDATA[-- The lobby, on your screen:
@@ -5972,7 +6123,8 @@ local Effects = require(script.Parent.Effects)
 local player = Players.LocalPlayer
 local LobbyUi = {}
 
--- A very rare box opening anywhere in the server (Remotes.Announce): a gold banner across the
+-- A very rare box opening in this server, or the 1 of 1 found on any server (Remotes.Announce):
+-- a banner across the
 -- top for everyone, the needle turning in it, and a line in the chat. It eases in and out.
 local function announce(gui, m)
 	local colour = Color3.fromRGB(m.colour[1], m.colour[2], m.colour[3])
@@ -5980,7 +6132,7 @@ local function announce(gui, m)
 	UiKit.autoScale(card)
 	NeedleView.make(card, m.type, m.skin, { Size = UDim2.fromOffset(150, 100), Position = UDim2.fromOffset(8, 5), ZIndex = 46 }, true)
 	UiKit.label({ Font = UiKit.bold, Text = string.upper(m.rarity) .. " FROM A " .. string.upper(m.box) .. "!", TextColor3 = colour, Size = UDim2.new(1, -180, 0, 32), Position = UDim2.fromOffset(170, 12), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 46, Parent = card }, 26)
-	UiKit.label({ Text = m.name .. " got the " .. m.needle .. string.format("  (a %.1f%% chance)", m.percent), Size = UDim2.new(1, -180, 0, 50), Position = UDim2.fromOffset(170, 48), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 46, Parent = card }, 20)
+	UiKit.label({ Text = m.name .. " got the " .. m.needle .. (if m.odds then "  (" .. m.odds .. ")" else string.format("  (a %.1f%% chance)", m.percent)), Size = UDim2.new(1, -180, 0, 50), Position = UDim2.fromOffset(170, 48), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 46, Parent = card }, 20)
 	UiKit.pop(card, 0.8)
 	Effects.sound("found", 1.2)
 	pcall(function() -- and a line in the chat
@@ -6046,7 +6198,7 @@ return LobbyUi
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX0004C">
+				<Item class="LocalScript" referent="RBX0004D">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- Starts the client: the whole UI (UIController). The client only shows things and asks the
@@ -6056,7 +6208,7 @@ UIController.start()
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004D">
+				<Item class="ModuleScript" referent="RBX0004E">
 					<Properties>
 						<string name="Name">NeedleView</string>
 						<ProtectedString name="Source"><![CDATA[-- A needle in 3D inside the UI: a ViewportFrame with the needle (shared/NeedleLook) lit and
@@ -6103,7 +6255,7 @@ return NeedleView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004E">
+				<Item class="ModuleScript" referent="RBX0004F">
 					<Properties>
 						<string name="Name">PowerupFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Power-ups on your screen (server/Powerups decides; Remotes.Powerup says what you got):
@@ -6237,7 +6389,7 @@ return PowerupFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004F">
+				<Item class="ModuleScript" referent="RBX00050">
 					<Properties>
 						<string name="Name">Results</string>
 						<ProtectedString name="Source"><![CDATA[-- The round's big moments on screen: the 3, 2, 1; CHEST OPENED! when you open one (coins, or a
@@ -6254,6 +6406,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local UiKit = require(script.Parent.UiKit)
 local Effects = require(script.Parent.Effects)
 local Hud = require(script.Parent.Hud)
+local NeedleView = require(script.Parent.NeedleView)
 
 local player = Players.LocalPlayer
 local Results = {}
@@ -6296,7 +6449,7 @@ function Results.mount(gui, getProfile)
 	-- a chest opened: yours gets the popup; anyone else's, a note
 	Remotes.Found.OnClientEvent:Connect(function(m)
 		local got = m.got or {}
-		local what = if got.key then "a " .. got.name else Rules.commas(got.coins or 0) .. " coins"
+		local what = if got.oneOfOne then "THE 1 OF 1, the " .. got.name elseif got.key then "a " .. got.name else Rules.commas(got.coins or 0) .. " coins"
 		if m.userId ~= player.UserId then
 			Hud.toast(m.name .. " opened a " .. (if m.golden then "Golden Chest" else "chest") .. ": " .. what .. "!  (" .. m.left .. " left)", if got.key then "level" else "good")
 			return
@@ -6306,21 +6459,25 @@ function Results.mount(gui, getProfile)
 		for _, c in ipairs(art:GetChildren()) do
 			c:Destroy()
 		end
-		local icon = UiKit.label({ Font = UiKit.bold, Text = if got.key then "🗝" else "●", TextColor3 = if got.key then keyColour(got.key) else UiKit.colors.gold, Size = UDim2.new(1, 0, 1, 0), ZIndex = 32, Parent = art }, 96)
-		UiKit.pop(icon, 0.4)
-		big.Text = if m.golden then "GOLDEN CHEST!" else "CHEST OPENED!"
-		kept.Text = if got.key then got.name .. "!" else "+" .. what
-		kept.TextColor3 = if got.key then keyColour(got.key) else UiKit.colors.gold
-		line.Text = if got.key then "Open a box with it in the lobby (Boxes)." else "Coins buy trails, titles, effects and boxes."
+		if got.oneOfOne then -- the needle itself, turning (it's nearly invisible: look closely)
+			NeedleView.make(art, got.type, got.skin, { Size = UDim2.new(1, -40, 1, 0), Position = UDim2.fromOffset(20, 0), ZIndex = 32 }, true)
+		else
+			local icon = UiKit.label({ Font = UiKit.bold, Text = if got.key then "🗝" else "●", TextColor3 = if got.key then keyColour(got.key) else UiKit.colors.gold, Size = UDim2.new(1, 0, 1, 0), ZIndex = 32, Parent = art }, 96)
+			UiKit.pop(icon, 0.4)
+		end
+		big.Text = if got.oneOfOne then "THE 1 OF 1!" elseif m.golden then "GOLDEN CHEST!" else "CHEST OPENED!"
+		kept.Text = if got.oneOfOne then got.name .. ": the only one there is" elseif got.key then got.name .. "!" else "+" .. what
+		kept.TextColor3 = if got.oneOfOne then Color3.fromRGB(225, 240, 255) elseif got.key then keyColour(got.key) else UiKit.colors.gold
+		line.Text = if got.oneOfOne then "Put it on show to carry it: one throw tags anyone out." elseif got.key then "Open a box with it in the lobby (Boxes)." else "Coins buy trails, titles, effects and boxes."
 		keep.Text = m.left .. (if m.left == 1 then " chest left" else " chests left") .. " on this map  ·  XP at the end"
 		popup.Visible = true
 		UiKit.pop(popup, 0.5)
 		Effects.sound("found")
 		Effects.burst(m.position + Vector3.new(0, 2, 0), { rgb(effect.colours[1]), rgb(effect.colours[2] or effect.colours[1]) }, if m.golden then 90 else 50)
-		if got.key then
+		if got.key or got.oneOfOne then
 			Effects.confetti()
 		end
-		task.delay(3.5, function()
+		task.delay(if got.oneOfOne then 8 else 3.5, function()
 			popup.Visible = false
 		end)
 	end)
@@ -6382,7 +6539,7 @@ return Results
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00050">
+				<Item class="ModuleScript" referent="RBX00051">
 					<Properties>
 						<string name="Name">Screens</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop and Inventory screens. The Shop sells cosmetics for Haystack Coins (needle skins,
@@ -6573,7 +6730,7 @@ return Screens
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00051">
+				<Item class="ModuleScript" referent="RBX00052">
 					<Properties>
 						<string name="Name">Screens2</string>
 						<ProtectedString name="Source"><![CDATA[-- The Quests, Leaderboard and Settings screens.
@@ -6707,7 +6864,7 @@ return Screens2
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00052">
+				<Item class="ModuleScript" referent="RBX00053">
 					<Properties>
 						<string name="Name">Screens3</string>
 						<ProtectedString name="Source"><![CDATA[-- The Collection screen: every needle you've found, by type, shown in 3D with its rarity, value
@@ -6769,7 +6926,7 @@ function Screens3.refresh()
 			Screens3.refresh()
 		end)
 	end
-	local found, total = 0, #Needles.types * #Needles.skins
+	local found, total = 0, Needles.count()
 	for _ in pairs(data.entries) do
 		found += 1
 	end
@@ -6782,12 +6939,12 @@ function Screens3.refresh()
 	})
 	for i, t in ipairs(Needles.types) do
 		local have = 0
-		for _, s in ipairs(Needles.skins) do
+		for _, s in ipairs(Needles.skinsFor(t.id)) do
 			if data.entries[Needles.key(t.id, s.id)] then
 				have += 1
 			end
 		end
-		local b = UiKit.button(t.name .. "  " .. have .. "/" .. #Needles.skins, if t.id == typeId then UiKit.colors.blue else UiKit.colors.card, { LayoutOrder = i, Size = UDim2.fromOffset(220, 40), Parent = tabs })
+		local b = UiKit.button(t.name .. "  " .. have .. "/" .. #Needles.skinsFor(t.id), if t.id == typeId then UiKit.colors.blue else UiKit.colors.card, { LayoutOrder = i, Size = UDim2.fromOffset(220, 40), Parent = tabs })
 		b.Activated:Connect(function()
 			typeId = t.id
 			Screens3.refresh()
@@ -6797,7 +6954,7 @@ function Screens3.refresh()
 	local grid = UiKit.make("Frame", { LayoutOrder = 5, Size = UDim2.new(1, -8, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = body }, {
 		UiKit.make("UIGridLayout", { CellSize = UDim2.fromOffset(132, 150), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
 	})
-	for i, s in ipairs(Needles.skins) do
+	for i, s in ipairs(Needles.skinsFor(typeId)) do
 		local key = Needles.key(typeId, s.id)
 		local count = data.entries[key] or 0
 		local rarity = Needles.rarity(s.rarity)
@@ -6840,7 +6997,7 @@ return Screens3
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00053">
+				<Item class="ModuleScript" referent="RBX00054">
 					<Properties>
 						<string name="Name">ThrowFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Throwing your needle on your screen (server/CombatThrow decides): Q, or the Throw button while
@@ -6953,7 +7110,7 @@ return ThrowFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00054">
+				<Item class="ModuleScript" referent="RBX00055">
 					<Properties>
 						<string name="Name">TradeScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Trade screen (server/TradeManager decides everything). Not trading: everyone in the server
@@ -7148,7 +7305,7 @@ return TradeScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00055">
+				<Item class="ModuleScript" referent="RBX00056">
 					<Properties>
 						<string name="Name">UIController</string>
 						<ProtectedString name="Source"><![CDATA[-- Puts the whole UI together: one ScreenGui with the HUD, the round moments (Results), and the
@@ -7283,7 +7440,7 @@ return UIController
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00056">
+				<Item class="ModuleScript" referent="RBX00057">
 					<Properties>
 						<string name="Name">UiKit</string>
 						<ProtectedString name="Source"><![CDATA[-- The UI's look in one place: a clean, modern dark-glass style with warm gold accents, big
@@ -7421,7 +7578,7 @@ return UiKit
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX00057">
+	<Item class="Workspace" referent="RBX00058">
 		<Properties>
 			<string name="Name">Workspace</string>
 		</Properties>

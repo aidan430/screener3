@@ -289,10 +289,21 @@ model carries them itself.
 
 Needles come out of boxes (opened with coins, keys from chests, or Robux) and trades. Each is
 one of **12 types** (Sewing Needle, Dressmaker's Pin, Darning Needle, Knitting Needle, Crochet
-Hook, Safety Pin, Curved Upholstery Needle and more) in one of **60 skins**: 720 to collect.
+Hook, Safety Pin, Curved Upholstery Needle and more) in one of **60 skins** (720 to collect), plus the one-and-only 1 of 1.
 
 **Skins** come in six rarities, each rarer and worth more: Common x1, Uncommon x2, Rare x5,
 Epic x12, Legendary x40, Mythic x150. Each box has its own exact odds (see Boxes).
+
+**The 1 of 1:** the Gossamer Sewing Needle (`Config.OneOfOne`). Only one can ever exist.
+- Paper thin and nearly see-through: in your hand and in flight it's hard to spot.
+- Every chest opened has a 1 in 12,000,000 chance of holding it. The first finder claims it in a
+  DataStore shared by every server (UpdateAsync), so it can never be handed out twice; after
+  that, chests never hold it again. It's never in a box and never sold, so it can't be bought.
+- Put on show (your showcase) it's the needle you carry: **one throw tags anyone out** (pokes are
+  the same as any needle, and safe time after respawning still protects people).
+- Finding it is announced on every server (MessagingService). It can be traded; the record follows it.
+- Worth x5000 (50,000). To test in Studio, set `Config.OneOfOne.chance = 1`: Studio claims a
+  separate store, never the real one.
 
 **Value:**
 - A needle is worth its type's base value × its rarity.

@@ -12,6 +12,8 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local DataManager = require(script.Parent.DataManager)
 local QuestManager = require(script.Parent.QuestManager)
 local LeaderboardManager = require(script.Parent.LeaderboardManager)
+local CollectionManager = require(script.Parent.CollectionManager)
+local Needles = require(Shared:WaitForChild("Needles"))
 
 local RewardManager = {}
 
@@ -56,20 +58,26 @@ function RewardManager.chest(player, reward)
 	local got = {}
 	DataManager.update(player, function(d)
 		d.chests += 1
-		if reward.key then
+		if reward.oneOfOne then
+			local kept = CollectionManager.addTo(d, Needles.split(Config.OneOfOne.key))
+			got = { oneOfOne = true, name = kept.name, type = kept.type, skin = kept.skin }
+		elseif reward.key then
 			d.keys[reward.key] = (d.keys[reward.key] or 0) + 1
 		end
 	end)
 	RewardManager.track(player, "chests", 1)
 	QuestManager.record(player, "chest", 1)
-	if reward.key then
+	if reward.oneOfOne then
+		DataManager.save(player) -- the only one there is: saved straight away
+		require(script.Parent.OneOfOne).announce(player)
+	elseif reward.key then
 		QuestManager.record(player, "key", 1)
 		for _, k in ipairs(Config.Chests.keys) do
 			if k.id == reward.key then
 				got = { key = k.id, name = k.name }
 			end
 		end
-	else
+	elseif not reward.oneOfOne then
 		local coins = reward.coins * (if hasPass(player, "DoubleCoins") then 2 else 1)
 		RewardManager.grant(player, coins, 0, nil)
 		got = { coins = coins }

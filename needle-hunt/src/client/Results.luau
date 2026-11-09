@@ -12,6 +12,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local UiKit = require(script.Parent.UiKit)
 local Effects = require(script.Parent.Effects)
 local Hud = require(script.Parent.Hud)
+local NeedleView = require(script.Parent.NeedleView)
 
 local player = Players.LocalPlayer
 local Results = {}
@@ -54,7 +55,7 @@ function Results.mount(gui, getProfile)
 	-- a chest opened: yours gets the popup; anyone else's, a note
 	Remotes.Found.OnClientEvent:Connect(function(m)
 		local got = m.got or {}
-		local what = if got.key then "a " .. got.name else Rules.commas(got.coins or 0) .. " coins"
+		local what = if got.oneOfOne then "THE 1 OF 1, the " .. got.name elseif got.key then "a " .. got.name else Rules.commas(got.coins or 0) .. " coins"
 		if m.userId ~= player.UserId then
 			Hud.toast(m.name .. " opened a " .. (if m.golden then "Golden Chest" else "chest") .. ": " .. what .. "!  (" .. m.left .. " left)", if got.key then "level" else "good")
 			return
@@ -64,21 +65,25 @@ function Results.mount(gui, getProfile)
 		for _, c in ipairs(art:GetChildren()) do
 			c:Destroy()
 		end
-		local icon = UiKit.label({ Font = UiKit.bold, Text = if got.key then "🗝" else "●", TextColor3 = if got.key then keyColour(got.key) else UiKit.colors.gold, Size = UDim2.new(1, 0, 1, 0), ZIndex = 32, Parent = art }, 96)
-		UiKit.pop(icon, 0.4)
-		big.Text = if m.golden then "GOLDEN CHEST!" else "CHEST OPENED!"
-		kept.Text = if got.key then got.name .. "!" else "+" .. what
-		kept.TextColor3 = if got.key then keyColour(got.key) else UiKit.colors.gold
-		line.Text = if got.key then "Open a box with it in the lobby (Boxes)." else "Coins buy trails, titles, effects and boxes."
+		if got.oneOfOne then -- the needle itself, turning (it's nearly invisible: look closely)
+			NeedleView.make(art, got.type, got.skin, { Size = UDim2.new(1, -40, 1, 0), Position = UDim2.fromOffset(20, 0), ZIndex = 32 }, true)
+		else
+			local icon = UiKit.label({ Font = UiKit.bold, Text = if got.key then "🗝" else "●", TextColor3 = if got.key then keyColour(got.key) else UiKit.colors.gold, Size = UDim2.new(1, 0, 1, 0), ZIndex = 32, Parent = art }, 96)
+			UiKit.pop(icon, 0.4)
+		end
+		big.Text = if got.oneOfOne then "THE 1 OF 1!" elseif m.golden then "GOLDEN CHEST!" else "CHEST OPENED!"
+		kept.Text = if got.oneOfOne then got.name .. ": the only one there is" elseif got.key then got.name .. "!" else "+" .. what
+		kept.TextColor3 = if got.oneOfOne then Color3.fromRGB(225, 240, 255) elseif got.key then keyColour(got.key) else UiKit.colors.gold
+		line.Text = if got.oneOfOne then "Put it on show to carry it: one throw tags anyone out." elseif got.key then "Open a box with it in the lobby (Boxes)." else "Coins buy trails, titles, effects and boxes."
 		keep.Text = m.left .. (if m.left == 1 then " chest left" else " chests left") .. " on this map  ·  XP at the end"
 		popup.Visible = true
 		UiKit.pop(popup, 0.5)
 		Effects.sound("found")
 		Effects.burst(m.position + Vector3.new(0, 2, 0), { rgb(effect.colours[1]), rgb(effect.colours[2] or effect.colours[1]) }, if m.golden then 90 else 50)
-		if got.key then
+		if got.key or got.oneOfOne then
 			Effects.confetti()
 		end
-		task.delay(3.5, function()
+		task.delay(if got.oneOfOne then 8 else 3.5, function()
 			popup.Visible = false
 		end)
 	end)

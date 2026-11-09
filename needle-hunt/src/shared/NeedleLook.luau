@@ -50,6 +50,7 @@ end
 function NeedleLook.build(typeId, skinId, scale, fat)
 	scale, fat = scale or 1, fat or 1
 	local skin = Needles.skin(skinId) or Needles.skin("steel")
+	fat *= skin.thin or 1 -- a paper-thin skin (the 1 of 1)
 	local model = Instance.new("Model")
 	model.Name = Needles.name(typeId, skin.id)
 	local material = Enum.Material[skin.material] or Enum.Material.Metal
@@ -70,7 +71,7 @@ function NeedleLook.build(typeId, skinId, scale, fat)
 		end
 		local y = if onCurve then cf.Position.Y else cf.Position.Y * fat -- a curve keeps its shape
 		p.CFrame = CFrame.new(Vector3.new(cf.Position.X, y, cf.Position.Z) * scale) * cf.Rotation
-		p.Color, p.Material = colour, material
+		p.Color, p.Material, p.Transparency = colour, material, skin.see or 0
 		p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
 		p.Parent = model
 		return p

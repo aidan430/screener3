@@ -57,7 +57,7 @@ function Screens3.refresh()
 			Screens3.refresh()
 		end)
 	end
-	local found, total = 0, #Needles.types * #Needles.skins
+	local found, total = 0, Needles.count()
 	for _ in pairs(data.entries) do
 		found += 1
 	end
@@ -70,12 +70,12 @@ function Screens3.refresh()
 	})
 	for i, t in ipairs(Needles.types) do
 		local have = 0
-		for _, s in ipairs(Needles.skins) do
+		for _, s in ipairs(Needles.skinsFor(t.id)) do
 			if data.entries[Needles.key(t.id, s.id)] then
 				have += 1
 			end
 		end
-		local b = UiKit.button(t.name .. "  " .. have .. "/" .. #Needles.skins, if t.id == typeId then UiKit.colors.blue else UiKit.colors.card, { LayoutOrder = i, Size = UDim2.fromOffset(220, 40), Parent = tabs })
+		local b = UiKit.button(t.name .. "  " .. have .. "/" .. #Needles.skinsFor(t.id), if t.id == typeId then UiKit.colors.blue else UiKit.colors.card, { LayoutOrder = i, Size = UDim2.fromOffset(220, 40), Parent = tabs })
 		b.Activated:Connect(function()
 			typeId = t.id
 			Screens3.refresh()
@@ -85,7 +85,7 @@ function Screens3.refresh()
 	local grid = UiKit.make("Frame", { LayoutOrder = 5, Size = UDim2.new(1, -8, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = body }, {
 		UiKit.make("UIGridLayout", { CellSize = UDim2.fromOffset(132, 150), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
 	})
-	for i, s in ipairs(Needles.skins) do
+	for i, s in ipairs(Needles.skinsFor(typeId)) do
 		local key = Needles.key(typeId, s.id)
 		local count = data.entries[key] or 0
 		local rarity = Needles.rarity(s.rarity)

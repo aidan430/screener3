@@ -168,7 +168,8 @@ class Content(unittest.TestCase):
         self.assertNotIn("math.random", shop)
 
     def test_leaderboards(self):
-        stores = re.findall(r'store = "(\w+)"', CONFIG)
+        boards = CONFIG[CONFIG.index("Config.Boards = {"):]
+        stores = re.findall(r'store = "(\w+)"', boards[: boards.index("\n}")])
         self.assertEqual(len(stores), len(set(stores)))
         self.assertEqual(len(stores), 6)
 
@@ -190,7 +191,8 @@ class Collection(unittest.TestCase):
     def test_every_rarity_has_skins_and_rarer_is_worth_more(self):
         ids = {r["id"] for r in RARITIES}
         for r in RARITIES:
-            self.assertGreaterEqual(sum(1 for s in SKINS if s["rarity"] == r["id"]), 2, r["id"])
+            if r["id"] != "unique":  # the 1 of 1 is the only one of its kind
+                self.assertGreaterEqual(sum(1 for s in SKINS if s["rarity"] == r["id"]), 2, r["id"])
         mults = [r["mult"] for r in RARITIES]
         weights = [r["weight"] for r in RARITIES]
         self.assertEqual(mults, sorted(mults), "rarer pays more")
@@ -320,6 +322,24 @@ class BoxOpenings(unittest.TestCase):
             odds = dict((k, float(v)) for k, v in re.findall(r"(\w+) = ([\d.]+)", line.split("odds = {")[1]))
             announced += [(box, r) for r, v in odds.items() if 0 < v <= at]
         self.assertIn(("hay", "mythic"), announced)
+
+    def test_the_one_of_one(self):
+        o = CONFIG[CONFIG.index("Config.OneOfOne = {"):].splitlines()[0]
+        self.assertIn("chance = 1 / 12000000", o)
+        self.assertIn('key = "sewing:gossamer"', o)
+        self.assertGreaterEqual(int(re.search(r"throwDamage = (\d+)", o).group(1)), table("Combat")["hearts"], "one throw tags out")
+        unique = [x for x in SKINS if x["rarity"] == "unique"]
+        self.assertEqual([x["id"] for x in unique], ["gossamer"])
+        self.assertLess(unique[0]["thin"], 0.3, "paper thin")
+        self.assertGreater(unique[0]["see"], 0.7, "nearly invisible")
+        self.assertEqual([r["weight"] for r in RARITIES if r["id"] == "unique"], [0], "never rolled by finds or boxes")
+        for line in CONFIG[CONFIG.index("Config.Boxes = {"):].splitlines()[1:4]:
+            self.assertNotIn("unique", line, "no box can give it")
+        one = (SERVER / "OneOfOne.luau").read_text()
+        self.assertIn("UpdateAsync", one, "claimed once, across every server")
+        self.assertIn("_Studio", one, "testing in Studio never claims the real one")
+        for f in ("ShopManager.luau", "BoxManager.luau"):
+            self.assertNotIn("OneOfOne", (SERVER / f).read_text(), "never bought")
 
     def test_combat_is_the_same_for_every_skin(self):
         combat = (SERVER / "Combat.luau").read_text()

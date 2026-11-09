@@ -18,7 +18,8 @@ local Effects = require(script.Parent.Effects)
 local player = Players.LocalPlayer
 local LobbyUi = {}
 
--- A very rare box opening anywhere in the server (Remotes.Announce): a gold banner across the
+-- A very rare box opening in this server, or the 1 of 1 found on any server (Remotes.Announce):
+-- a banner across the
 -- top for everyone, the needle turning in it, and a line in the chat. It eases in and out.
 local function announce(gui, m)
 	local colour = Color3.fromRGB(m.colour[1], m.colour[2], m.colour[3])
@@ -26,7 +27,7 @@ local function announce(gui, m)
 	UiKit.autoScale(card)
 	NeedleView.make(card, m.type, m.skin, { Size = UDim2.fromOffset(150, 100), Position = UDim2.fromOffset(8, 5), ZIndex = 46 }, true)
 	UiKit.label({ Font = UiKit.bold, Text = string.upper(m.rarity) .. " FROM A " .. string.upper(m.box) .. "!", TextColor3 = colour, Size = UDim2.new(1, -180, 0, 32), Position = UDim2.fromOffset(170, 12), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 46, Parent = card }, 26)
-	UiKit.label({ Text = m.name .. " got the " .. m.needle .. string.format("  (a %.1f%% chance)", m.percent), Size = UDim2.new(1, -180, 0, 50), Position = UDim2.fromOffset(170, 48), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 46, Parent = card }, 20)
+	UiKit.label({ Text = m.name .. " got the " .. m.needle .. (if m.odds then "  (" .. m.odds .. ")" else string.format("  (a %.1f%% chance)", m.percent)), Size = UDim2.new(1, -180, 0, 50), Position = UDim2.fromOffset(170, 48), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 46, Parent = card }, 20)
 	UiKit.pop(card, 0.8)
 	Effects.sound("found", 1.2)
 	pcall(function() -- and a line in the chat

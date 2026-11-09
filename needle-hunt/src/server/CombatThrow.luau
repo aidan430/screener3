@@ -58,7 +58,9 @@ local function throw(player, aim)
 	setAway(player, tool, true)
 	task.delay(seconds, function()
 		if target then
-			Combat.damage(player, target, T.damage)
+			local d2 = DataManager.get(player)
+			local oneOfOne = d2 and d2.showcase == Config.OneOfOne.key -- the 1 of 1 in hand: one throw tags out
+			Combat.damage(player, target, if oneOfOne then Config.OneOfOne.throwDamage else T.damage)
 		end
 	end)
 	task.delay(T.back, function() -- the needle comes back to your hand

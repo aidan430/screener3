@@ -101,6 +101,11 @@ local function execute(t)
 	end
 	move(t.a, t.b)
 	move(t.b, t.a)
+	for _, pair in ipairs({ { t.a, t.b }, { t.b, t.a } }) do -- the 1 of 1's record follows it
+		if t.offer[pair[1]][Config.OneOfOne.key] then
+			require(script.Parent.OneOfOne).transfer(pair[2])
+		end
+	end
 	for _, p in ipairs({ t.a, t.b }) do
 		DataManager.update(p, function(data) -- nothing on show? Your best needle goes up
 			if data.showcase == "" then

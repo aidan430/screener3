@@ -20,6 +20,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local DataManager = require(script.Parent.DataManager)
 local ChestSpawner = require(script.Parent.ChestSpawner)
+local OneOfOne = require(script.Parent.OneOfOne)
 local RewardManager = require(script.Parent.RewardManager)
 local AntiCheat = require(script.Parent.AntiCheat)
 local MapKit = require(script.Parent.MapKit)
@@ -97,6 +98,9 @@ local function onOpen(player, chest, reward)
 	local r = round
 	if not r or not r.participants[player] then
 		return
+	end
+	if OneOfOne.roll(player) then -- 1 in 12 million, and only if nobody, anywhere, has it yet
+		reward = { oneOfOne = true }
 	end
 	local got = RewardManager.chest(player, reward)
 	r.chestsLeft -= 1
