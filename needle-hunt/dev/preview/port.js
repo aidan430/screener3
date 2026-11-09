@@ -227,6 +227,15 @@ B.lobby = (ctx) => {
     const roof = K.part(ctx, { Name: 'Awning', Size: [11, 0.5, 6], CFrame: mul(cf(base.x, 8.2, base.z - 0.5), ang(rad(-12), 0, 0)), Color: colour, Material: 'Fabric' });
     roof.label = label;
   };
+  ctx.hall = [];
+  board('HallSign', 0, 4.4, -31, 16, 2.6, 'hall');
+  const rims = [[200, 206, 216], [255, 200, 70], [205, 140, 90]];
+  [-13, 0, 13].forEach((x, i) => {
+    const h = i === 1 ? 4.2 : 3.2, base = K.at(ctx, x, 0, -24);
+    K.part(ctx, { Name: 'Pedestal', Shape: 'Cylinder', Size: [h, 6, 6], CFrame: mul(cf(base.x, h / 2, base.z), ang(0, 0, rad(90))), Color: [236, 230, 214], Material: 'Marble' });
+    K.part(ctx, { Name: 'Rim', Shape: 'Cylinder', Size: [0.35, 6.4, 6.4], CFrame: mul(cf(base.x, h - 0.1, base.z), ang(0, 0, rad(90))), Color: rims[i], Material: 'Metal' });
+    ctx.hall.push({ top: new T.Vector3(base.x, h + 2.6, base.z), tag: new T.Vector3(base.x, h + 5.4, base.z), slot: i });
+  });
   stall('ShopStall', -18, 30, [196, 64, 50], 'SHOP');
   stall('Wardrobe', 18, 30, [76, 106, 170], 'INVENTORY');
   for (const h of [[-70, -60], [70, -64], [-80, 40], [82, 50], [0, -90], [-50, 90], [56, 96]]) K.haystack(ctx, h[0], h[1], 7, 12);

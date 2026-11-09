@@ -3,6 +3,8 @@
 <body>
 <script src="three.min.js"></script>
 <script src="port.js"></script>
+<script src="needles_data.js"></script>
+<script src="needlelook.js"></script>
 <script>
 const q = new URLSearchParams(location.search);
 const MAP = q.get('map') || 'field', VIEW = q.get('view') || 'aerial', W = +(q.get('w') || 1280), H = +(q.get('h') || 720);
@@ -46,6 +48,7 @@ const texCache = {};
 function signTex(kind) {
   const cv = document.createElement('canvas'); const g = cv.getContext('2d');
   if (kind === 'title') { cv.width = 1200; cv.height = 270; }
+  else if (kind === 'hall') { cv.width = 1400; cv.height = 260; }
   else if (kind === 'leaderboard') { cv.width = 540; cv.height = 480; } else { cv.width = 540; cv.height = 360; }
   g.fillStyle = '#785432'; g.fillRect(0, 0, cv.width, cv.height);
   g.fillStyle = '#1e222c'; g.beginPath(); g.roundRect(12, 12, cv.width - 24, cv.height - 24, 18); g.fill();
@@ -53,6 +56,8 @@ function signTex(kind) {
   if (kind === 'title') {
     g.fillStyle = '#ffd65a'; g.font = 'bold 96px sans-serif'; g.fillText('A NEEDLE IN A HAYSTACK', 600, 145);
     g.fillStyle = '#dce2f0'; g.font = '48px sans-serif'; g.fillText('Find it first. Win the round.', 600, 225);
+  } else if (kind === 'hall') {
+    g.fillStyle = '#ffd65a'; g.font = 'bold 150px sans-serif'; g.fillText('HALL OF NEEDLES', 700, 185);
   } else if (kind === 'leaderboard') {
     g.fillStyle = '#ffd65a'; g.fillText('Most Needles', 270, 64); g.textAlign = 'left'; g.font = '30px sans-serif'; g.fillStyle = '#fff';
     ['HayDayHannah  ·  412', 'StrawBossMax  ·  388', 'Clover_99  ·  301', 'NeedleNinja  ·  256', 'MeadowMia  ·  199', 'BaleBuilder  ·  170', 'FarmerFinn22  ·  151'].forEach((t, i) => g.fillText((i + 1) + '.  ' + t, 36, 120 + i * 48));
@@ -104,6 +109,21 @@ for (const p of ctx.parts) {
   scene.add(mesh);
   if (p.light && lights < 8) { lights++; const l = new THREE.PointLight(c3(p.light.color), 1.4, p.light.range * 1.6, 1.5); l.position.copy(NH.pos(p.m)); scene.add(l); }
 }
+if (MAP === 'lobby' && ctx.hall) { // the Hall of Needles: the best collection in the middle
+  const shown = { 1: ['sailmaker', 'prism', 'StrawBossMax', '5,906'], 0: ['darning', 'aurora', 'You', '2,418'], 2: ['knitting', 'candycane', 'Clover_99', '1,120'] };
+  for (const slot of ctx.hall) {
+    const [type, skin, who, value] = shown[slot.slot];
+    const g = buildNeedle(window.NEEDLE_DATA, type, skin, 2);
+    g.scale.setScalar(1.5); g.position.copy(slot.top); g.rotation.set(0, [0.35, 0.25, -0.3][slot.slot], 20 * Math.PI / 180, 'YXZ');
+    g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    scene.add(g);
+    const cv = document.createElement('canvas'); cv.width = 480; cv.height = 140; const c2 = cv.getContext('2d');
+    c2.textAlign = 'center'; c2.lineWidth = 10; c2.strokeStyle = 'rgba(0,0,0,0.45)'; c2.fillStyle = '#fff';
+    c2.font = 'bold 50px sans-serif'; c2.strokeText(who, 240, 58); c2.fillText(who, 240, 58);
+    c2.font = 'bold 38px sans-serif'; c2.strokeText(value + ' collection value', 240, 112); c2.fillText(value + ' collection value', 240, 112);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false })); sp.scale.set(6.4, 1.9, 1); sp.position.copy(slot.tag); scene.add(sp);
+  }
+}
 if (MAP === 'lobby') { // the countdown above the Play pad
   const cv = document.createElement('canvas'); cv.width = 840; cv.height = 240; const g = cv.getContext('2d');
   g.font = 'bold 84px sans-serif'; g.textAlign = 'center'; g.lineWidth = 12; g.strokeStyle = 'rgba(0,0,0,0.5)'; g.strokeText('NEXT ROUND IN 0:12', 420, 150); g.fillStyle = '#fff'; g.fillText('NEXT ROUND IN 0:12', 420, 150);
@@ -113,7 +133,7 @@ if (MAP === 'lobby') { // the countdown above the Play pad
 const camera = new THREE.PerspectiveCamera(70, W / H, 0.1, 2000);
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const views = {
-  lobby: { aerial: [V(52, 36, 70), V(0, 4, -8)], player: [V(0, 5.5, 34), V(0, 8, -20)] },
+  lobby: { aerial: [V(52, 36, 70), V(0, 4, -8)], player: [V(0, 5.5, 34), V(0, 8, -20)], hall: [V(0, 6.0, -7), V(0, 6.0, -26)], hallwide: [V(18, 9, 4), V(-2, 6, -26)] },
   field: { aerial: [V(55, 38, 66), V(0, 0, -8)], player: [V(0, 5, 40), V(0, 2, 0)] },
   barn: { aerial: [V(0, 38, 70), V(0, 2, -4)], player: [V(10, 5, 14), V(-10, 4, -12)] },
   sunset: { aerial: [V(-55, 36, 66), V(0, 0, -6)], player: [V(20, 5, 40), V(-10, 3, -10)] },
