@@ -791,3 +791,9 @@ this game's own style. Nothing copied from that game.
   orange by x60. It used to sit where x2 XP! lands, in a soft-shadowed serif that blended into hay.
 - The goal and delivery-order notes moved to the left, under the coin tag (250 wide): on a
   computer Roblox's player list opens at the top right and covered them.
+
+## Store art (2026-11-09)
+- assets/marketing/store: icon-512.png (512 x 512) and three 1920 x 1080 thumbnails: the giant
+  haystack with the title, "5,000,000 STRAWS / 1 NEEDLE! / CAN YOU FIND IT?" with a magnifying
+  glass, and "LEVEL UP!" with the XP bar and x2 XP!. Drawn in code (dev/tools/store: art.py and
+  one script per image; run from that folder, needs Pillow and numpy).
