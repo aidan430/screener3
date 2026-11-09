@@ -13,6 +13,7 @@ local LeaderboardManager = require(script.Parent.LeaderboardManager)
 local AntiCheat = require(script.Parent.AntiCheat)
 local Requests = require(script.Parent.Requests)
 local CollectionManager = require(script.Parent.CollectionManager)
+local NeedleModel = require(script.Parent.NeedleModel)
 local RoundManager = require(script.Parent.RoundManager)
 
 -- While testing in Studio, server errors also show on screen.
@@ -24,6 +25,7 @@ end
 
 for _, step in ipairs({
 	{ "Lobby", LobbyBuilder.build },
+	{ "NeedleModel", NeedleModel.load },
 	{ "AntiCheat", AntiCheat.init },
 	{ "Quests", QuestManager.init },
 	{ "Rewards", RewardManager.init },

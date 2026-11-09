@@ -50,6 +50,13 @@ Config.GoldenChance = 0.05 -- a Golden Needle: triple rewards, and the needle yo
 -- (added to 1, multiplying every rarity above Common) for 1st place and for Hard rounds.
 Config.Collection = { firstLuck = 0.5, hardLuck = 0.5 }
 
+-- The owner's own needle model (server/NeedleModel): its asset ID once the imported model is
+-- saved to Roblox (Studio: right-click the model > Save to Roblox). 0 = use the built needle.
+-- The textures uploaded with it, for reference (the saved model already carries them):
+--   material0: 139923378561945, 82802973824193, 131881570420382, 134403754765000
+--   material1: 125383755787779, 83696294561694, 117010844111225, 87942777253086
+Config.NeedleModel = { asset = 0 }
+
 -- Finding (server/NeedleSpawner). Studs and seconds.
 Config.Find = {
 	reach = 14, -- how close your character must be to claim the needle (clicks and taps)
@@ -1620,6 +1627,7 @@ local LeaderboardManager = require(script.Parent.LeaderboardManager)
 local AntiCheat = require(script.Parent.AntiCheat)
 local Requests = require(script.Parent.Requests)
 local CollectionManager = require(script.Parent.CollectionManager)
+local NeedleModel = require(script.Parent.NeedleModel)
 local RoundManager = require(script.Parent.RoundManager)
 
 -- While testing in Studio, server errors also show on screen.
@@ -1631,6 +1639,7 @@ end
 
 for _, step in ipairs({
 	{ "Lobby", LobbyBuilder.build },
+	{ "NeedleModel", NeedleModel.load },
 	{ "AntiCheat", AntiCheat.init },
 	{ "Quests", QuestManager.init },
 	{ "Rewards", RewardManager.init },
@@ -2092,6 +2101,79 @@ return MapsB
 			</Item>
 			<Item class="ModuleScript" referent="RBX0001E">
 				<Properties>
+					<string name="Name">NeedleModel</string>
+					<ProtectedString name="Source"><![CDATA[-- The owner's own needle model (Config.NeedleModel.asset): a model imported into Studio with its
+-- textures, saved to Roblox, and loaded here once with InsertService (it must belong to the
+-- game's owner, or be public). It's turned so its longest side runs along X, centred, then each
+-- round a copy is scaled to that round's needle length and laid flat on the hiding spot.
+-- Camouflage and Golden rounds, and decoys, keep the built needle (a textured model can't change
+-- colour). With no asset set, or if loading fails, every needle is the built one.
+local InsertService = game:GetService("InsertService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local NeedleModel = {}
+local template = nil
+
+function NeedleModel.load()
+	local id = Config.NeedleModel and Config.NeedleModel.asset or 0
+	if id == 0 then
+		return
+	end
+	task.spawn(function()
+		local ok, asset = pcall(InsertService.LoadAsset, InsertService, id)
+		if not ok or not asset then
+			warn("[NeedleModel] couldn't load model " .. id .. ": " .. tostring(asset) .. " (it must be owned by the game's owner or be public)")
+			return
+		end
+		local model = asset:FindFirstChildWhichIsA("Model") or asset
+		local parts = 0
+		for _, p in ipairs(model:GetDescendants()) do
+			if p:IsA("BasePart") then
+				p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow, p.Massless = true, false, false, false, false, true
+				parts += 1
+			end
+		end
+		if parts == 0 then
+			warn("[NeedleModel] model " .. id .. " has no parts")
+			return
+		end
+		-- centre it and turn its longest side along X; then make that the pivot
+		local cf, size = model:GetBoundingBox()
+		model.WorldPivot = cf
+		local turn = CFrame.new()
+		if size.Y >= size.X and size.Y >= size.Z then
+			turn = CFrame.Angles(0, 0, math.rad(90))
+		elseif size.Z >= size.X and size.Z >= size.Y then
+			turn = CFrame.Angles(0, math.rad(90), 0)
+		end
+		model:PivotTo(turn)
+		model.WorldPivot = CFrame.new()
+		model.Name = "Needle"
+		template = model
+	end)
+end
+
+-- A copy laid on a surface at `base` (the surface point, turned), `length` studs long; or nil.
+function NeedleModel.place(base, length)
+	if not template then
+		return nil
+	end
+	local m = template:Clone()
+	local _, size = m:GetBoundingBox()
+	m:ScaleTo(m:GetScale() * length / math.max(size.X, size.Y, size.Z))
+	local _, scaled = m:GetBoundingBox()
+	m:PivotTo(base * CFrame.new(0, scaled.Y / 2, 0)) -- resting on the surface
+	return m
+end
+
+return NeedleModel
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX0001F">
+				<Properties>
 					<string name="Name">NeedleSpawner</string>
 					<ProtectedString name="Source"><![CDATA[-- Hides the needle(s) each round and decides, on the server, who found them.
 -- A spot is used only if (1) there's a real surface just under it, (2) nothing solid is in the
@@ -2108,6 +2190,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local MapKit = require(script.Parent.MapKit)
 local AntiCheat = require(script.Parent.AntiCheat)
+local NeedleModel = require(script.Parent.NeedleModel)
 
 local NeedleSpawner = {}
 NeedleSpawner.onClaim = function(_player, _needle) end -- RoundManager sets these
@@ -2186,10 +2269,15 @@ local function build(pos, diff, round, ctx, decoy)
 	elseif round.modifiers.camo or decoy then
 		colour, material = MapKit.rgb(ctx.def.straw), Enum.Material.SmoothPlastic
 	end
-	local model = Instance.new("Model")
+	-- the owner's own needle model when there is one (plain rounds only: it can't change colour)
+	local own = not decoy and not round.golden and not round.modifiers.camo and NeedleModel.place(CFrame.new(pos) * turn, length)
+	local model = own or Instance.new("Model")
 	model.Name = if decoy then "Decoy" else "Needle"
-	local shaft = MapKit.part(ctx, { Name = "Shaft", Shape = "Cylinder", Size = Vector3.new(length, 0.09, 0.09), CFrame = base, Color = colour, Material = material, CanCollide = false, Parent = model })
-	MapKit.part(ctx, { Name = "Eye", Size = Vector3.new(0.2, 0.05, 0.14), CFrame = base * CFrame.new(-length / 2 + 0.1, 0, 0), Color = colour:Lerp(Color3.new(0, 0, 0), 0.25), Material = material, CanCollide = false, Parent = model })
+	local shaft = nil
+	if not own then
+		shaft = MapKit.part(ctx, { Name = "Shaft", Shape = "Cylinder", Size = Vector3.new(length, 0.09, 0.09), CFrame = base, Color = colour, Material = material, CanCollide = false, Parent = model })
+		MapKit.part(ctx, { Name = "Eye", Size = Vector3.new(0.2, 0.05, 0.14), CFrame = base * CFrame.new(-length / 2 + 0.1, 0, 0), Color = colour:Lerp(Color3.new(0, 0, 0), 0.25), Material = material, CanCollide = false, Parent = model })
+	end
 	local hitbox = MapKit.part(ctx, { Name = "Hitbox", Size = Vector3.new(length + 0.5, Config.Find.hitbox, Config.Find.hitbox), CFrame = base, Transparency = 0.99, CanCollide = false, Parent = model })
 	local detector = Instance.new("ClickDetector")
 	detector.MaxActivationDistance = Config.Find.reach
@@ -2199,10 +2287,10 @@ local function build(pos, diff, round, ctx, decoy)
 		e.Rate, e.Lifetime, e.Speed = if round.golden then 3 else 0.6, NumberRange.new(0.4, 0.7), NumberRange.new(0)
 		e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 0.35), NumberSequenceKeypoint.new(1, 0) })
 		e.Color, e.LightEmission = ColorSequence.new(if round.golden then Color3.fromRGB(255, 230, 140) else Color3.new(1, 1, 1)), 0.8
-		e.Parent = shaft
+		e.Parent = shaft or hitbox
 	end
 	model.Parent = folder
-	local record = { model = model, position = shaft.Position, golden = round.golden and not decoy, index = #needles + 1 }
+	local record = { model = model, position = hitbox.Position, golden = round.golden and not decoy, index = #needles + 1 }
 	detector.MouseClick:Connect(function(player)
 		claim(player, record, decoy)
 	end)
@@ -2290,7 +2378,7 @@ return NeedleSpawner
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001F">
+			<Item class="ModuleScript" referent="RBX00020">
 				<Properties>
 					<string name="Name">QuestManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Daily quests: three a day, the same for everyone (shared/Quests.forDay). Progress is saved;
@@ -2358,7 +2446,7 @@ return QuestManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00020">
+			<Item class="ModuleScript" referent="RBX00021">
 				<Properties>
 					<string name="Name">Requests</string>
 					<ProtectedString name="Source"><![CDATA[-- Small requests from players, checked on the server: a hint (Remotes.Hint) and saving their
@@ -2418,7 +2506,7 @@ return Requests
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00021">
+			<Item class="ModuleScript" referent="RBX00022">
 				<Properties>
 					<string name="Name">RewardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Every coin and XP point is given here, on the server: needle finds (faster = more), places,
@@ -2539,7 +2627,7 @@ return RewardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00022">
+			<Item class="ModuleScript" referent="RBX00023">
 				<Properties>
 					<string name="Name">RoundManager</string>
 					<ProtectedString name="Source"><![CDATA[-- The round loop, all on the server:
@@ -2820,7 +2908,7 @@ return RoundManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00023">
+			<Item class="ModuleScript" referent="RBX00024">
 				<Properties>
 					<string name="Name">ShopManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Cosmetics and purchases. With Haystack Coins: buy a cosmetic (Remotes.Shop "buy"), and wear
@@ -3019,24 +3107,24 @@ return ShopManager
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerStorage" referent="RBX00024">
+	<Item class="ServerStorage" referent="RBX00025">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX00025">
+	<Item class="StarterPlayer" referent="RBX00026">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX00026">
+		<Item class="StarterPlayerScripts" referent="RBX00027">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX00027">
+			<Item class="Folder" referent="RBX00028">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX00028">
+				<Item class="ModuleScript" referent="RBX00029">
 					<Properties>
 						<string name="Name">Effects</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback you can see and hear, on your own screen only: sounds, a burst of particles where a
@@ -3117,7 +3205,7 @@ return Effects
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00029">
+				<Item class="ModuleScript" referent="RBX0002A">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: your coins and level (with an XP bar) at the top left; the round's
@@ -3252,7 +3340,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX0002A">
+				<Item class="LocalScript" referent="RBX0002B">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- Starts the client: the whole UI (UIController). The client only shows things and asks the
@@ -3262,7 +3350,7 @@ UIController.start()
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002B">
+				<Item class="ModuleScript" referent="RBX0002C">
 					<Properties>
 						<string name="Name">NeedleView</string>
 						<ProtectedString name="Source"><![CDATA[-- A needle in 3D inside the UI: a ViewportFrame with the needle (shared/NeedleLook) lit and
@@ -3309,7 +3397,7 @@ return NeedleView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002C">
+				<Item class="ModuleScript" referent="RBX0002D">
 					<Properties>
 						<string name="Name">Results</string>
 						<ProtectedString name="Source"><![CDATA[-- The round's big moments on screen: the 3, 2, 1 before searching; NEEDLE FOUND! when you find it
@@ -3440,7 +3528,7 @@ return Results
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002D">
+				<Item class="ModuleScript" referent="RBX0002E">
 					<Properties>
 						<string name="Name">Screens</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop and Inventory screens. The Shop sells cosmetics for Haystack Coins (needle skins,
@@ -3610,7 +3698,7 @@ return Screens
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002E">
+				<Item class="ModuleScript" referent="RBX0002F">
 					<Properties>
 						<string name="Name">Screens2</string>
 						<ProtectedString name="Source"><![CDATA[-- The Quests, Leaderboard and Settings screens.
@@ -3744,7 +3832,7 @@ return Screens2
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002F">
+				<Item class="ModuleScript" referent="RBX00030">
 					<Properties>
 						<string name="Name">Screens3</string>
 						<ProtectedString name="Source"><![CDATA[-- The Collection screen: every needle you've found, by type, shown in 3D with its rarity, value
@@ -3872,7 +3960,7 @@ return Screens3
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00030">
+				<Item class="ModuleScript" referent="RBX00031">
 					<Properties>
 						<string name="Name">UIController</string>
 						<ProtectedString name="Source"><![CDATA[-- Puts the whole UI together: one ScreenGui with the HUD, the round moments (Results), and the
@@ -3981,7 +4069,7 @@ return UIController
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00031">
+				<Item class="ModuleScript" referent="RBX00032">
 					<Properties>
 						<string name="Name">UiKit</string>
 						<ProtectedString name="Source"><![CDATA[-- The UI's look in one place: a clean, modern dark-glass style with warm gold accents, big
@@ -4118,7 +4206,7 @@ return UiKit
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX00032">
+	<Item class="Workspace" referent="RBX00033">
 		<Properties>
 			<string name="Name">Workspace</string>
 		</Properties>

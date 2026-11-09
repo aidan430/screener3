@@ -13,6 +13,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local MapKit = require(script.Parent.MapKit)
 local AntiCheat = require(script.Parent.AntiCheat)
+local NeedleModel = require(script.Parent.NeedleModel)
 
 local NeedleSpawner = {}
 NeedleSpawner.onClaim = function(_player, _needle) end -- RoundManager sets these
@@ -91,10 +92,15 @@ local function build(pos, diff, round, ctx, decoy)
 	elseif round.modifiers.camo or decoy then
 		colour, material = MapKit.rgb(ctx.def.straw), Enum.Material.SmoothPlastic
 	end
-	local model = Instance.new("Model")
+	-- the owner's own needle model when there is one (plain rounds only: it can't change colour)
+	local own = not decoy and not round.golden and not round.modifiers.camo and NeedleModel.place(CFrame.new(pos) * turn, length)
+	local model = own or Instance.new("Model")
 	model.Name = if decoy then "Decoy" else "Needle"
-	local shaft = MapKit.part(ctx, { Name = "Shaft", Shape = "Cylinder", Size = Vector3.new(length, 0.09, 0.09), CFrame = base, Color = colour, Material = material, CanCollide = false, Parent = model })
-	MapKit.part(ctx, { Name = "Eye", Size = Vector3.new(0.2, 0.05, 0.14), CFrame = base * CFrame.new(-length / 2 + 0.1, 0, 0), Color = colour:Lerp(Color3.new(0, 0, 0), 0.25), Material = material, CanCollide = false, Parent = model })
+	local shaft = nil
+	if not own then
+		shaft = MapKit.part(ctx, { Name = "Shaft", Shape = "Cylinder", Size = Vector3.new(length, 0.09, 0.09), CFrame = base, Color = colour, Material = material, CanCollide = false, Parent = model })
+		MapKit.part(ctx, { Name = "Eye", Size = Vector3.new(0.2, 0.05, 0.14), CFrame = base * CFrame.new(-length / 2 + 0.1, 0, 0), Color = colour:Lerp(Color3.new(0, 0, 0), 0.25), Material = material, CanCollide = false, Parent = model })
+	end
 	local hitbox = MapKit.part(ctx, { Name = "Hitbox", Size = Vector3.new(length + 0.5, Config.Find.hitbox, Config.Find.hitbox), CFrame = base, Transparency = 0.99, CanCollide = false, Parent = model })
 	local detector = Instance.new("ClickDetector")
 	detector.MaxActivationDistance = Config.Find.reach
@@ -104,10 +110,10 @@ local function build(pos, diff, round, ctx, decoy)
 		e.Rate, e.Lifetime, e.Speed = if round.golden then 3 else 0.6, NumberRange.new(0.4, 0.7), NumberRange.new(0)
 		e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 0.35), NumberSequenceKeypoint.new(1, 0) })
 		e.Color, e.LightEmission = ColorSequence.new(if round.golden then Color3.fromRGB(255, 230, 140) else Color3.new(1, 1, 1)), 0.8
-		e.Parent = shaft
+		e.Parent = shaft or hitbox
 	end
 	model.Parent = folder
-	local record = { model = model, position = shaft.Position, golden = round.golden and not decoy, index = #needles + 1 }
+	local record = { model = model, position = hitbox.Position, golden = round.golden and not decoy, index = #needles + 1 }
 	detector.MouseClick:Connect(function(player)
 		claim(player, record, decoy)
 	end)

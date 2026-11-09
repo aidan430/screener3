@@ -38,6 +38,13 @@ Config.GoldenChance = 0.05 -- a Golden Needle: triple rewards, and the needle yo
 -- (added to 1, multiplying every rarity above Common) for 1st place and for Hard rounds.
 Config.Collection = { firstLuck = 0.5, hardLuck = 0.5 }
 
+-- The owner's own needle model (server/NeedleModel): its asset ID once the imported model is
+-- saved to Roblox (Studio: right-click the model > Save to Roblox). 0 = use the built needle.
+-- The textures uploaded with it, for reference (the saved model already carries them):
+--   material0: 139923378561945, 82802973824193, 131881570420382, 134403754765000
+--   material1: 125383755787779, 83696294561694, 117010844111225, 87942777253086
+Config.NeedleModel = { asset = 0 }
+
 -- Finding (server/NeedleSpawner). Studs and seconds.
 Config.Find = {
 	reach = 14, -- how close your character must be to claim the needle (clicks and taps)
