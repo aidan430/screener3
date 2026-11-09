@@ -1,6 +1,6 @@
 -- The round's big moments on screen: the 3, 2, 1 before searching; NEEDLE FOUND! when you find it
--- (your needle skin held up, your place, time and rewards, your found effect where the needle
--- was); a note when someone else finds it; and the results screen at the end of the round.
+-- (the needle you get to keep turning in 3D, its rarity and value, your place, time and rewards,
+-- your found effect where it was); a note telling everyone what someone found; and the results.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -8,10 +8,12 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Rules = require(Shared:WaitForChild("Rules"))
 local Cosmetics = require(Shared:WaitForChild("Cosmetics"))
+local Needles = require(Shared:WaitForChild("Needles"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local UiKit = require(script.Parent.UiKit)
 local Effects = require(script.Parent.Effects)
 local Hud = require(script.Parent.Hud)
+local NeedleView = require(script.Parent.NeedleView)
 
 local player = Players.LocalPlayer
 local Results = {}
@@ -25,46 +27,43 @@ local function placeName(n)
 	return PLACES[n] or (n .. "th")
 end
 
--- Your needle skin, drawn as a tilted needle with an eye (for the popup).
-local function needleArt(parent, skin)
-	local holder = UiKit.make("Frame", { Size = UDim2.fromOffset(240, 60), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 40), BackgroundTransparency = 1, Rotation = -18, Parent = parent })
-	local shaft = UiKit.make("Frame", { Size = UDim2.new(1, -20, 0, 12), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 10, 0.5, 0), BackgroundColor3 = rgb(skin.colours[1]), Parent = holder }, { UiKit.corner(6) })
-	if skin.rainbow then
-		UiKit.make("UIGradient", { Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 110, 110)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(120, 230, 140)), ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 160, 255)) }), Parent = shaft })
-	end
-	UiKit.make("Frame", { Size = UDim2.fromOffset(26, 18), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = rgb(skin.colours[2]), Parent = holder }, { UiKit.corner(9) })
-	UiKit.make("Frame", { Size = UDim2.fromOffset(12, 6), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 9, 0.5, 0), BackgroundColor3 = UiKit.colors.panel, Parent = holder }, { UiKit.corner(3) })
-	UiKit.pop(holder, 0.3)
-end
-
 function Results.mount(gui, getProfile)
 	-- the 3, 2, 1
 	local count = UiKit.label({ Font = UiKit.bold, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Size = UDim2.fromOffset(300, 200), TextColor3 = UiKit.colors.gold, TextStrokeTransparency = 0.4, Visible = false, ZIndex = 30, Parent = gui }, 180)
 	-- the NEEDLE FOUND! popup
-	local popup = UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(520, 230), BackgroundColor3 = UiKit.colors.panel, BackgroundTransparency = 0.05, Visible = false, ZIndex = 30, Parent = gui }, { UiKit.corner(22), UiKit.stroke(UiKit.colors.gold, 3) })
+	local popup = UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(560, 300), BackgroundColor3 = UiKit.colors.panel, BackgroundTransparency = 0.05, Visible = false, ZIndex = 30, Parent = gui }, { UiKit.corner(22), UiKit.stroke(UiKit.colors.gold, 3) })
 	UiKit.autoScale(popup)
-	local art = UiKit.make("Frame", { Size = UDim2.new(1, 0, 0, 80), BackgroundTransparency = 1, ZIndex = 31, Parent = popup })
-	local big = UiKit.label({ Font = UiKit.bold, Text = "NEEDLE FOUND!", Size = UDim2.new(1, -30, 0, 64), Position = UDim2.fromOffset(15, 78), TextColor3 = UiKit.colors.gold, ZIndex = 31, Parent = popup }, 60)
-	local line = UiKit.label({ Size = UDim2.new(1, -30, 0, 50), Position = UDim2.fromOffset(15, 146), ZIndex = 31, Parent = popup }, 24)
+	local art = UiKit.make("Frame", { Size = UDim2.new(1, 0, 0, 110), BackgroundTransparency = 1, ZIndex = 31, Parent = popup })
+	local big = UiKit.label({ Font = UiKit.bold, Text = "NEEDLE FOUND!", Size = UDim2.new(1, -30, 0, 56), Position = UDim2.fromOffset(15, 108), TextColor3 = UiKit.colors.gold, ZIndex = 31, Parent = popup }, 54)
+	local kept = UiKit.label({ Font = UiKit.bold, Size = UDim2.new(1, -30, 0, 34), Position = UDim2.fromOffset(15, 166), ZIndex = 31, Parent = popup }, 26)
+	local line = UiKit.label({ Size = UDim2.new(1, -30, 0, 40), Position = UDim2.fromOffset(15, 206), ZIndex = 31, Parent = popup }, 22)
+	local keep = UiKit.label({ Size = UDim2.new(1, -30, 0, 26), Position = UDim2.fromOffset(15, 252), TextColor3 = UiKit.colors.soft, ZIndex = 31, Parent = popup }, 18)
 	-- the results screen
 	local results, body = UiKit.window(gui, "Round results", 560, 440)
 	results.ZIndex = 25
 
 	Remotes.Found.OnClientEvent:Connect(function(m)
 		local mine = m.userId == player.UserId
+		local k = m.kept
 		if not mine then
-			Hud.toast(m.name .. " found it! (" .. placeName(m.place) .. ")" .. (if m.place == 1 then "  " .. Config.Round.grace .. " seconds left for everyone else!" else ""), "level")
+			local what = if k then " found a " .. k.rarity .. " " .. k.name .. "!" else " found it!"
+			Hud.toast(m.name .. what .. " (" .. placeName(m.place) .. ")" .. (if m.place == 1 then "  " .. Config.Round.grace .. " seconds left for everyone else!" else ""), "level")
 			Effects.sound("whoosh")
 			return
 		end
 		local profile = getProfile() or {}
 		local equipped = profile.equipped or {}
-		local skin = Cosmetics.get(equipped.needle or "n_silver") or Cosmetics.get("n_silver")
 		local effect = Cosmetics.get(equipped.effect or "e_confetti") or Cosmetics.get("e_confetti")
 		for _, c in ipairs(art:GetChildren()) do
 			c:Destroy()
 		end
-		needleArt(art, skin)
+		if k then
+			NeedleView.make(art, k.type, k.skin, { Size = UDim2.new(1, -40, 1, 0), Position = UDim2.fromOffset(20, 0), ZIndex = 32 }, true)
+			local rarity = Needles.rarity(k.rarityId)
+			kept.Text = (if k.new then "NEW!  " else "") .. k.rarity .. " " .. k.name
+			kept.TextColor3 = Color3.fromRGB(rarity.colour[1], rarity.colour[2], rarity.colour[3])
+			keep.Text = "It's yours to keep: worth " .. Rules.commas(k.value) .. " in your Collection."
+		end
 		big.Text = if m.golden then "GOLDEN NEEDLE!" else "NEEDLE FOUND!"
 		line.Text = placeName(m.place) .. "  ·  " .. string.format("%.1f s", m.seconds) .. "  ·  +" .. Rules.commas(m.coins) .. " coins  ·  +" .. m.xp .. " XP"
 		popup.Visible = true
@@ -73,7 +72,7 @@ function Results.mount(gui, getProfile)
 		Effects.flash()
 		Effects.burst(m.position, { rgb(effect.colours[1]), rgb(effect.colours[2] or effect.colours[1]) }, if m.golden then 90 else 50)
 		Effects.confetti()
-		task.delay(3.2, function()
+		task.delay(4.5, function()
 			popup.Visible = false
 		end)
 	end)
@@ -109,7 +108,11 @@ function Results.mount(gui, getProfile)
 				local medal = if r.place == 1 then UiKit.colors.gold elseif r.place == 2 then Color3.fromRGB(200, 206, 216) elseif r.place == 3 then Color3.fromRGB(205, 140, 90) else UiKit.colors.soft
 				UiKit.label({ Font = UiKit.bold, Text = placeName(r.place), Size = UDim2.new(0, 70, 1, 0), TextColor3 = medal, Parent = card }, 24)
 				UiKit.label({ Text = r.name, Size = UDim2.new(0.45, 0, 1, 0), Position = UDim2.fromOffset(76, 0), TextXAlignment = Enum.TextXAlignment.Left, Parent = card }, 22)
-				UiKit.label({ Text = string.format("%.1f s  ·  +%d coins", r.seconds or 0, r.coins or 0), Size = UDim2.new(0.42, 0, 1, 0), Position = UDim2.new(0.58, -10, 0, 0), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = UiKit.colors.soft, Parent = card }, 20)
+				UiKit.label({ Text = string.format("%.1f s  ·  +%d coins", r.seconds or 0, r.coins or 0), Size = UDim2.new(0.42, 0, 0.5, 0), Position = UDim2.new(0.58, -10, 0, 2), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = UiKit.colors.soft, Parent = card }, 18)
+				if r.kept then -- the needle they keep, in its rarity colour
+					local rarity = Needles.rarity(r.kept.rarityId)
+					UiKit.label({ Text = r.kept.rarity .. " " .. r.kept.name, Size = UDim2.new(0.62, 0, 0.5, 0), Position = UDim2.new(0.38, -10, 0.5, -2), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.fromRGB(rarity.colour[1], rarity.colour[2], rarity.colour[3]), Parent = card }, 16)
+				end
 			end
 			results.Visible = true
 			UiKit.pop(results, 0.8)

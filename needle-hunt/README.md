@@ -24,6 +24,8 @@ needle-hunt/
     Maps.luau               the 5 maps: names, lighting, colours, pick weights
     Cosmetics.luau          needle skins, trails, titles, found effects (prices and sources)
     Quests.luau             the daily quest pool and the day's three (same for everyone)
+    Needles.luau            the collection: 12 needle types, 32 skins, rarities, values, the roll
+    NeedleLook.luau         builds any needle type in any skin out of parts
   src/server/   -> ServerScriptService.Server
     Main.server.luau        (Script) starts everything
     RoundManager.luau       the round loop and winner detection (server-owned state)
@@ -35,6 +37,7 @@ needle-hunt/
     LeaderboardManager.luau OrderedDataStore boards with batched writes and cached reads
     AntiCheat.luau          speed/teleport checks
     Requests.luau           hint and settings requests
+    CollectionManager.luau  the needle you keep: rolls it, saves it, values it, shows others
     LobbyBuilder.luau       builds the lobby
     MapKit.luau             building blocks for maps; records hiding spots
     MapsA.luau              Classic Haystack Field, Barn Interior, Farm at Sunset
@@ -47,6 +50,8 @@ needle-hunt/
     Results.luau            3-2-1, NEEDLE FOUND!, round results
     Screens.luau            Shop and Inventory
     Screens2.luau           Daily Quests, Leaderboard, Settings
+    Screens3.luau           the Collection (yours and anyone's in the server)
+    NeedleView.luau         a needle in 3D inside the UI
     Effects.luau            sounds, particles, soft flash, camera kick, confetti
 ```
 
@@ -83,6 +88,7 @@ ServerStorage.
 | Shop | RemoteFunction | player → server | `"buy"` or `"equip"` a cosmetic; the server decides |
 | Hint | RemoteFunction | player → server | a hint during a round (limited per day) |
 | Boards | RemoteFunction | player → server | the cached leaderboard rows |
+| Collection | RemoteFunction | player → server | `"get"` a collection (yours or a player's in the server), `"list"` who's here, `"showcase"` a needle you own |
 
 ### Attributes the game sets
 
@@ -103,6 +109,7 @@ ServerStorage.
 | `NH_Level_v1` | OrderedDataStore | level |
 | `NH_Coins_v1` | OrderedDataStore | coins earned (all time) |
 | `NH_WeeklyWins_v1_<week>` | OrderedDataStore | wins this week (a new store each week) |
+| `NH_Collection_v1` | OrderedDataStore | collection value |
 
 **In Studio**, turn on *Game Settings > Security > Enable Studio Access to API Services*, or
 nothing saves. If a save can't be loaded, that player plays unsaved for the visit (so their real
@@ -114,7 +121,7 @@ Create these on the Creator Dashboard, then put the IDs in `Config.GamePasses` /
 `Config.Products`. Anything left at 0 is hidden in the shop.
 
 - Game passes: **DoubleCoins** (2x coins), **ExtraHint** (+1 hint a day), **Supporter** (title + trail)
-- Developer product: **StarterBundle** (500 coins + the Rose Gold needle skin)
+- Developer product: **StarterBundle** (500 coins + the Sparkle Trail; never a collectible needle)
 
 Purchases are granted on the server only. ProcessReceipt records each receipt in the save,
 so a repeated receipt never pays twice, and it reports success only after the save is written.
@@ -154,10 +161,55 @@ ground beside haystacks, the barn loft, the attic table and so on. Each round th
   blocks their claims for 5 seconds.
 - Rewards are calculated only on the server.
 
+## The needle collection
+
+Every needle a player finds is theirs to keep. Everyone hunts the same plain needle, so it stays
+fair. When you find it, the server reveals what it really was: one of **12 types** (Sewing
+Needle, Dressmaker's Pin, Darning Needle, Knitting Needle, Crochet Hook, Safety Pin, Curved
+Upholstery Needle and more) in one of **32 skins**. That makes 384 to collect.
+
+**Skins** come in six rarities, each found less often and worth more:
+
+| Rarity | Chance | Worth |
+|---|---|---|
+| Common | 55% | x1 |
+| Uncommon | 25% | x2 |
+| Rare | 12% | x5 |
+| Epic | 6% | x12 |
+| Legendary | 1.8% | x40 |
+| Mythic | 0.2% | x150 |
+
+**Luck:**
+- 1st place and Hard rounds give extra luck (`Config.Collection`).
+- A Golden Needle round always gives the Golden skin.
+
+**Value:**
+- A needle is worth its type's base value × its rarity.
+- A collection is worth its different needles added up; duplicates show as x2, x3.
+
+**Earned only:** needles are never sold for coins or Robux and never come from anything paid.
+
+**Showing it off:**
+- Everyone sees what you found as you find it.
+- The results list each player's needle.
+- The **Collection** screen shows your collection or anyone's in the server, needle by needle in 3D.
+- The lobby's **Hall of Needles** pedestals show the server's top three collections, each with the needle its owner chose.
+- **Most Valuable Collection** is a leaderboard, and Collection value shows in the player list.
+- Two daily quests use it: "Add 3 new needles" and "Find a Rare (or better) needle".
+
+**Designing more skins:**
+- Print or draw on `assets/skin-template/needle_skin_template.png`.
+- Fill in a name, two colours, a pattern (solid, two-tone, stripes, gradient, rainbow), a material, a rarity and any extras.
+- Each card becomes one line in `shared/Needles.luau`, and every skin works on all 12 types.
+
+Skins are recipes rather than pictures, so no image upload is needed. For painted image skins
+later, free CC0 textures come from Poly Haven, ambientCG and Kenney, or the Roblox Creator Store.
+
 ## Adding things
 
 - **A map:** a row in `shared/Maps.luau`, plus a builder function in `MapsA` or `MapsB`. Use MapKit pieces, which record hiding spots for you, and add at least 6 spawn points.
 - **A cosmetic:** a line in `shared/Cosmetics.luau`.
+- **A needle skin or type:** a line in `shared/Needles.luau`. A new type also needs its shape in `NeedleLook.luau`.
 - **A quest:** a line in `shared/Quests.luau`. Its kind must be one of find, win, play, fast, hard or golden.
 - **Numbers:** everything is in `shared/Config.luau`.
 

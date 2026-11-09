@@ -107,7 +107,7 @@ function Screens.refresh()
 			{ id = Config.GamePasses.DoubleCoins, pass = true, name = "2x Coins (pass)", text = "Every coin you earn, doubled. Forever." },
 			{ id = Config.GamePasses.ExtraHint, pass = true, name = "Extra Daily Hint (pass)", text = "One more hint every day." },
 			{ id = Config.GamePasses.Supporter, pass = true, name = "Supporter (pass)", text = "The Supporter title and trail. Thank you!" },
-			{ id = Config.Products.StarterBundle, pass = false, name = "Starter Bundle", text = Config.StarterBundle.coins .. " coins and the Rose Gold needle skin." },
+			{ id = Config.Products.StarterBundle, pass = false, name = "Starter Bundle", text = Config.StarterBundle.coins .. " coins and the Sparkle Trail." },
 		}
 		for _, r in ipairs(robux) do
 			if r.id ~= 0 then

@@ -19,6 +19,7 @@ CONFIG = (SHARED / "Config.luau").read_text()
 COSMETICS = (SHARED / "Cosmetics.luau").read_text()
 QUESTS = (SHARED / "Quests.luau").read_text()
 MAPS = (SHARED / "Maps.luau").read_text()
+NEEDLES = (SHARED / "Needles.luau").read_text()
 
 
 def rows(text: str, start: str) -> list[dict]:
@@ -129,9 +130,7 @@ class Content(unittest.TestCase):
     def test_cosmetics(self):
         ids = [i["id"] for i in ITEMS]
         self.assertEqual(len(ids), len(set(ids)))
-        self.assertTrue(all(i["kind"] in ("needle", "trail", "title", "effect") for i in ITEMS))
-        coin_needles = [i for i in ITEMS if i["kind"] == "needle" and i["price"] > 0]
-        self.assertGreaterEqual(len(coin_needles), 5, "the shop sells at least 5 needle skins")
+        self.assertTrue(all(i["kind"] in ("trail", "title", "effect") for i in ITEMS), "needles aren't sold: they're found")
         for i in ITEMS:
             if i["price"] == 0:
                 self.assertIn("source", i, i["id"] + " says where it comes from")
@@ -139,7 +138,7 @@ class Content(unittest.TestCase):
         self.assertIn(bundle, ids)
 
     def test_quests(self):
-        kinds = {"find", "win", "play", "fast", "hard", "golden"}
+        kinds = {"find", "win", "play", "fast", "hard", "golden", "collect", "rare"}
         ids = {i["id"] for i in ITEMS}
         self.assertTrue(all(q["kind"] in kinds for q in POOL))
         self.assertGreaterEqual(len({q["kind"] for q in POOL if q["kind"] != "golden"}), 3, "three different kinds a day")
@@ -149,7 +148,7 @@ class Content(unittest.TestCase):
                 self.assertIn(q["cosmetic"], ids)
             if q["kind"] == "fast":
                 self.assertIn("under", q)
-        handled = (SERVER / "QuestManager.luau").read_text() + (SERVER / "RewardManager.luau").read_text()
+        handled = (SERVER / "QuestManager.luau").read_text() + (SERVER / "RewardManager.luau").read_text() + (SERVER / "CollectionManager.luau").read_text()
         for kind in kinds:
             self.assertIn(f'"{kind}"', handled, f"something records {kind} quests")
 
@@ -161,7 +160,48 @@ class Content(unittest.TestCase):
     def test_leaderboards(self):
         stores = re.findall(r'store = "(\w+)"', CONFIG)
         self.assertEqual(len(stores), len(set(stores)))
-        self.assertEqual(len(stores), 5)
+        self.assertEqual(len(stores), 6)
+
+
+RARITIES = rows(NEEDLES, "Needles.rarities = {")
+TYPES = rows(NEEDLES, "Needles.types = {")
+SKINS = rows(NEEDLES, "Needles.skins = {")
+
+
+class Collection(unittest.TestCase):
+    def test_lots_to_collect(self):
+        self.assertGreaterEqual(len(TYPES), 10)
+        self.assertGreaterEqual(len(SKINS), 30)
+        self.assertGreaterEqual(len(TYPES) * len(SKINS), 300)
+        for kind in (TYPES, SKINS):
+            ids = [r["id"] for r in kind]
+            self.assertEqual(len(ids), len(set(ids)))
+
+    def test_every_rarity_has_skins_and_rarer_is_worth_more(self):
+        ids = {r["id"] for r in RARITIES}
+        for r in RARITIES:
+            self.assertGreaterEqual(sum(1 for s in SKINS if s["rarity"] == r["id"]), 2, r["id"])
+        mults = [r["mult"] for r in RARITIES]
+        weights = [r["weight"] for r in RARITIES]
+        self.assertEqual(mults, sorted(mults), "rarer pays more")
+        self.assertEqual(weights, sorted(weights, reverse=True), "rarer turns up less")
+        self.assertTrue(all(s["rarity"] in ids for s in SKINS))
+        self.assertIn("golden", {s["id"] for s in SKINS}, "Golden Needle rounds give the Golden skin")
+        top = sum(r["weight"] for r in RARITIES if r["id"] in ("legendary", "mythic")) / sum(weights)
+        self.assertLess(top, 0.03, "Legendary and Mythic stay special")
+
+    def test_every_skin_and_type_can_be_drawn(self):
+        look = (SHARED / "NeedleLook.luau").read_text()
+        for t in TYPES:
+            if t["id"] != "sewing":  # the default shape
+                self.assertIn(f'typeId == "{t["id"]}"', look, t["id"])
+        for s in SKINS:
+            self.assertIn(s["pattern"], ("solid", "two", "stripes", "gradient", "rainbow"), s["id"])
+
+    def test_needles_are_earned_never_bought(self):
+        shop = (SERVER / "ShopManager.luau").read_text()
+        self.assertNotIn("Needles", shop, "the shop and Robux never hand out collectible needles")
+        self.assertIn("Needles.roll", (SERVER / "CollectionManager.luau").read_text())
 
 
 if __name__ == "__main__":

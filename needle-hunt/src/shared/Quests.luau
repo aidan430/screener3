@@ -4,6 +4,7 @@
 --     find      a needle you found            win     a round you won (1st)
 --     play      a round you were in at the end fast    a find in under `under` seconds
 --     hard      a Hard round you were in at the end    golden  a Golden Needle you found
+--     collect   a needle new to your collection        rare    a Rare (or better) needle found
 --   n: how many. Rewards: coins, xp, and sometimes a cosmetic (Cosmetics id).
 local Quests = {}
 
@@ -19,6 +20,8 @@ Quests.pool = {
 	{ id = "hard1", kind = "hard", n = 1, text = "Complete a Hard round", coins = 100, xp = 150 },
 	{ id = "golden1", kind = "golden", n = 1, text = "Find a Golden Needle", coins = 300, xp = 400 },
 	{ id = "finder10", kind = "find", n = 10, text = "Find 10 needles", coins = 260, xp = 350, cosmetic = "ti_finder" },
+	{ id = "collect3", kind = "collect", n = 3, text = "Add 3 new needles to your collection", coins = 140, xp = 180 },
+	{ id = "rare1", kind = "rare", n = 1, text = "Find a Rare (or better) needle", coins = 160, xp = 220 },
 }
 
 Quests.perDay = 3

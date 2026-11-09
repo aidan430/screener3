@@ -11,6 +11,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Rules = require(Shared:WaitForChild("Rules"))
 local Cosmetics = require(Shared:WaitForChild("Cosmetics"))
+local Needles = require(Shared:WaitForChild("Needles"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local DataManager = {}
@@ -35,6 +36,7 @@ function DataManager.fresh(saved)
 		hintsDay = number(saved, "hintsDay", 0), hintsUsed = number(saved, "hintsUsed", 0),
 		weekly = { week = 0, wins = 0 }, quests = { day = 0, progress = {}, done = {} },
 		owned = {}, equipped = {}, receipts = {},
+		collection = {}, showcase = "", -- needles kept: ["type:skin"] = how many; the one on show
 		settings = { music = true, sfx = true, reduceEffects = false, autoJoin = true },
 	}
 	if type(saved.weekly) == "table" then
@@ -79,6 +81,16 @@ function DataManager.fresh(saved)
 			d.settings[key] = if type(v) == "boolean" then v else default
 		end
 	end
+	if type(saved.collection) == "table" then
+		for key, count in pairs(saved.collection) do
+			if type(count) == "number" and count > 0 and Needles.split(key) then
+				d.collection[key] = math.floor(count)
+			end
+		end
+	end
+	if type(saved.showcase) == "string" and d.collection[saved.showcase] then
+		d.showcase = saved.showcase
+	end
 	if type(saved.receipts) == "table" then
 		for _, id in ipairs(saved.receipts) do
 			if type(id) == "string" then
@@ -118,12 +130,18 @@ local function publish(player, d)
 	player:SetAttribute("Wins", d.wins)
 	player:SetAttribute("BestTime", d.bestTime)
 	player:SetAttribute("LoginStreak", d.loginStreak)
+	local kinds = 0
+	for _ in pairs(d.collection) do
+		kinds += 1
+	end
+	player:SetAttribute("CollectionValue", Needles.total(d.collection))
+	player:SetAttribute("CollectionCount", kinds)
 	player:SetAttribute("HintsUsed", if d.hintsDay == math.floor(os.time() / 86400) then d.hintsUsed else 0) -- hints reset each day (UTC)
 	local stats = player:FindFirstChild("leaderstats")
 	if stats then
-		stats.Level.Value, stats.Needles.Value = d.level, d.needles
+		stats.Level.Value, stats.Needles.Value, stats.Collection.Value = d.level, d.needles, Needles.total(d.collection)
 	end
-	Remotes.Profile:FireClient(player, { owned = d.owned, equipped = d.equipped, quests = d.quests, settings = d.settings })
+	Remotes.Profile:FireClient(player, { owned = d.owned, equipped = d.equipped, quests = d.quests, settings = d.settings, collection = d.collection, showcase = d.showcase })
 end
 
 function DataManager.get(player)
@@ -173,7 +191,7 @@ end
 local function added(player)
 	local stats = Instance.new("Folder")
 	stats.Name = "leaderstats"
-	for _, name in ipairs({ "Level", "Needles" }) do
+	for _, name in ipairs({ "Level", "Needles", "Collection" }) do
 		Instance.new("IntValue", stats).Name = name
 	end
 	stats.Parent = player

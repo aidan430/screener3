@@ -12,6 +12,7 @@ local ShopManager = require(script.Parent.ShopManager)
 local LeaderboardManager = require(script.Parent.LeaderboardManager)
 local AntiCheat = require(script.Parent.AntiCheat)
 local Requests = require(script.Parent.Requests)
+local CollectionManager = require(script.Parent.CollectionManager)
 local RoundManager = require(script.Parent.RoundManager)
 
 -- While testing in Studio, server errors also show on screen.
@@ -29,6 +30,7 @@ for _, step in ipairs({
 	{ "Shop", ShopManager.init },
 	{ "Leaderboards", LeaderboardManager.init },
 	{ "Requests", Requests.init },
+	{ "Collection", CollectionManager.init },
 	{ "Data", DataManager.init },
 	{ "Rounds", RoundManager.start },
 }) do

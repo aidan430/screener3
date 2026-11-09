@@ -32,7 +32,11 @@ Config.Modifiers = {
 	{ id = "lowlight", name = "Low Light", text = "The lights are low", weight = 20 },
 	{ id = "camo", name = "Camouflage", text = "The needle matches the hay", weight = 20 },
 }
-Config.GoldenChance = 0.05 -- a Golden Needle: triple rewards
+Config.GoldenChance = 0.05 -- a Golden Needle: triple rewards, and the needle you keep is Golden
+
+-- The needle collection (shared/Needles, server/CollectionManager): extra luck for a better skin
+-- (added to 1, multiplying every rarity above Common) for 1st place and for Hard rounds.
+Config.Collection = { firstLuck = 0.5, hardLuck = 0.5 }
 
 -- Finding (server/NeedleSpawner). Studs and seconds.
 Config.Find = {
@@ -82,6 +86,7 @@ Config.Boards = {
 	{ id = "level", name = "Highest Level", store = "NH_Level_v1", ascending = false },
 	{ id = "coins", name = "Most Coins Earned", store = "NH_Coins_v1", ascending = false },
 	{ id = "weekly", name = "This Week's Winners", store = "NH_WeeklyWins_v1_", ascending = false, weekly = true },
+	{ id = "collection", name = "Most Valuable Collection", store = "NH_Collection_v1", ascending = false },
 }
 Config.BoardRows = 10
 Config.BoardFlushSeconds = 120
@@ -91,7 +96,7 @@ Config.BoardReadSeconds = 180
 -- Dashboard, then put its ID here. Nothing here is a random reward.
 Config.GamePasses = { DoubleCoins = 0, ExtraHint = 0, Supporter = 0 }
 Config.Products = { StarterBundle = 0 }
-Config.StarterBundle = { coins = 500, cosmetic = "n_rose" } -- what the Starter Bundle gives
+Config.StarterBundle = { coins = 500, cosmetic = "t_sparkle" } -- what the Starter Bundle gives (never a collectible needle)
 
 -- Sounds: Roblox's built-in sounds; swap in your own Toolbox IDs ("rbxassetid://...").
 Config.Sounds = {

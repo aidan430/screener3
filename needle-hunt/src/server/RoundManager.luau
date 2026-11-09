@@ -19,6 +19,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local DataManager = require(script.Parent.DataManager)
 local NeedleSpawner = require(script.Parent.NeedleSpawner)
 local RewardManager = require(script.Parent.RewardManager)
+local CollectionManager = require(script.Parent.CollectionManager)
 local AntiCheat = require(script.Parent.AntiCheat)
 local LobbyBuilder = require(script.Parent.LobbyBuilder)
 local builders = require(script.Parent.MapsA)
@@ -113,8 +114,9 @@ local function onClaim(player, n)
 	r.finished[player] = elapsed
 	local place = #r.order
 	local coins, xp = RewardManager.placed(player, place, elapsed, r.duration, r.diff, r.golden, r.count)
-	r.rewards[player] = { coins = coins, xp = xp }
-	Remotes.Found:FireAllClients({ userId = player.UserId, name = player.DisplayName, place = place, seconds = elapsed, golden = r.golden, position = n.position, coins = coins, xp = xp })
+	local kept = CollectionManager.award(player, place, r.diff, r.golden)
+	r.rewards[player] = { coins = coins, xp = xp, kept = kept }
+	Remotes.Found:FireAllClients({ userId = player.UserId, name = player.DisplayName, place = place, seconds = elapsed, golden = r.golden, position = n.position, coins = coins, xp = xp, kept = kept })
 	if place == 1 then
 		r.graceEnds = now() + Config.Round.grace
 		ReplicatedStorage:SetAttribute("EndsAt", math.min(r.ends, r.graceEnds))
@@ -205,7 +207,7 @@ local function playRound()
 	local rows = {}
 	for place, p in ipairs(round.order) do
 		local r = round.rewards[p] or { coins = 0, xp = 0 }
-		table.insert(rows, { name = p.DisplayName, userId = p.UserId, place = place, seconds = round.finished[p], coins = r.coins, xp = r.xp })
+		table.insert(rows, { name = p.DisplayName, userId = p.UserId, place = place, seconds = round.finished[p], coins = r.coins, xp = r.xp, kept = r.kept })
 	end
 	for p in pairs(round.participants) do
 		if p.Parent then

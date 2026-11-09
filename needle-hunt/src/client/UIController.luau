@@ -15,6 +15,7 @@ local Hud = require(script.Parent.Hud)
 local Results = require(script.Parent.Results)
 local Screens = require(script.Parent.Screens)
 local Screens2 = require(script.Parent.Screens2)
+local Screens3 = require(script.Parent.Screens3)
 
 local player = Players.LocalPlayer
 local UIController = {}
@@ -70,6 +71,13 @@ function UIController.start()
 		windows[name] = w
 	end
 	for name, fn in pairs(extra) do
+		openers[name] = fn
+	end
+	local col, colOpen = Screens3.mount(gui)
+	for name, w in pairs(col) do
+		windows[name] = w
+	end
+	for name, fn in pairs(colOpen) do
 		openers[name] = fn
 	end
 	Remotes.Profile.OnClientEvent:Connect(function(p)

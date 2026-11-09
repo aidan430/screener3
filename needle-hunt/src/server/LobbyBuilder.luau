@@ -12,6 +12,9 @@ local Quests = require(Shared:WaitForChild("Quests"))
 local Rules = require(Shared:WaitForChild("Rules"))
 local MapKit = require(script.Parent.MapKit)
 local LeaderboardManager = require(script.Parent.LeaderboardManager)
+local DataManager = require(script.Parent.DataManager)
+local Needles = require(Shared:WaitForChild("Needles"))
+local NeedleLook = require(Shared:WaitForChild("NeedleLook"))
 
 local LobbyBuilder = {}
 local ctx = nil
@@ -60,6 +63,64 @@ local function stall(name, x, z, opens, colour)
 	prompt.ActionText, prompt.ObjectText, prompt.HoldDuration, prompt.MaxActivationDistance = "Open", opens, 0, 12
 	prompt:SetAttribute("Opens", opens)
 	prompt.Parent = ctx.model:FindFirstChild(name)
+end
+
+-- The Hall of Needles: three pedestals in front of the title sign showing the most valuable
+-- collections in this server, each with its owner's showcase needle turning slowly above it.
+function LobbyBuilder.showcase()
+	local slots = {}
+	for i, x in ipairs({ -12, 0, 12 }) do
+		local base = MapKit.at(ctx, x, 0, -24)
+		local h = if i == 2 then 4.2 else 3.2
+		local pedestal = MapKit.part(ctx, { Name = "Pedestal", Shape = "Cylinder", Size = Vector3.new(h, 4, 4), CFrame = CFrame.new(base + Vector3.new(0, h / 2, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color = { 236, 230, 214 }, Material = "Marble" })
+		local tag = Instance.new("BillboardGui")
+		tag.Size, tag.StudsOffset, tag.MaxDistance = UDim2.fromOffset(240, 70), Vector3.new(0, h / 2 + 4.6, 0), 80
+		tag.Parent = pedestal
+		local label = text(tag, { Size = UDim2.fromScale(1, 1), TextStrokeTransparency = 0.3, Text = "" })
+		slots[i] = { top = base + Vector3.new(0, h + 1.6, 0), label = label, model = nil, key = nil }
+	end
+	local order = { 2, 1, 3 } -- the best in the middle, on the tallest
+	task.spawn(function()
+		local spin = 0
+		while true do
+			local ranked = {}
+			for _, p in ipairs(Players:GetPlayers()) do
+				local d = DataManager.get(p)
+				if d and d.showcase ~= "" then
+					table.insert(ranked, { player = p, value = Needles.total(d.collection), key = d.showcase })
+				end
+			end
+			table.sort(ranked, function(a, b)
+				return a.value > b.value
+			end)
+			for rank, slotIndex in ipairs(order) do
+				local slot, entry = slots[slotIndex], ranked[rank]
+				local key = entry and (entry.player.UserId .. entry.key)
+				if key ~= slot.key then
+					if slot.model then
+						slot.model:Destroy()
+						slot.model = nil
+					end
+					slot.key = key
+					if entry then
+						local t, s = Needles.split(entry.key)
+						slot.model = NeedleLook.build(t, s, 2.2, 1.8)
+						slot.model.Parent = ctx.model
+					end
+				end
+				slot.label.Text = if entry then entry.player.DisplayName .. "\n" .. Rules.commas(entry.value) .. " collection value" else ""
+			end
+			for _ = 1, 50 do -- turn the needles slowly for 5 seconds, then look again
+				spin += 0.04
+				for _, slot in ipairs(slots) do
+					if slot.model then
+						slot.model:PivotTo(CFrame.new(slot.top) * CFrame.Angles(0, spin, math.rad(20)))
+					end
+				end
+				task.wait(0.1)
+			end
+		end
+	end)
 end
 
 function LobbyBuilder.spawnPoint(i)
@@ -142,6 +203,7 @@ function LobbyBuilder.build()
 			task.wait(60)
 		end
 	end)
+	LobbyBuilder.showcase()
 	stall("ShopStall", -18, 30, "Shop", { 196, 64, 50 })
 	stall("Wardrobe", 18, 30, "Inventory", { 76, 106, 170 })
 	-- the countryside

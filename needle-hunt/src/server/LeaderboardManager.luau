@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Rules = require(Shared:WaitForChild("Rules"))
+local Needles = require(Shared:WaitForChild("Needles"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local DataManager = require(script.Parent.DataManager)
@@ -36,6 +37,8 @@ local function valueFor(board, d)
 		return d.level
 	elseif board.id == "coins" then
 		return d.coinsEarned
+	elseif board.id == "collection" then
+		return if next(d.collection) then Needles.total(d.collection) else nil
 	elseif board.id == "weekly" then
 		return if d.weekly.week == Rules.week() and d.weekly.wins > 0 then d.weekly.wins else nil
 	end
