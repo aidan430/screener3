@@ -156,7 +156,7 @@ function LobbyBuilder.build()
 	-- the title sign and its turning needle
 	local title = board("TitleSign", 0, 14, -54, 40, 9) -- well behind the Hall, so its needles stand clear
 	text(title, { Size = UDim2.new(1, -40, 0.62, 0), Position = UDim2.new(0, 20, 0.06, 0), Text = "A NEEDLE IN A HAYSTACK", TextColor3 = Color3.fromRGB(255, 214, 90) })
-	text(title, { Size = UDim2.new(1, -40, 0.26, 0), Position = UDim2.new(0, 20, 0.68, 0), Text = "Find it first. Win the round.", TextColor3 = Color3.fromRGB(220, 226, 240) })
+	text(title, { Size = UDim2.new(1, -40, 0.26, 0), Position = UDim2.new(0, 20, 0.68, 0), Text = "Open the chests. Win the round.", TextColor3 = Color3.fromRGB(220, 226, 240) })
 	local needle = MapKit.part(ctx, { Name = "BigNeedle", Shape = "Cylinder", Size = Vector3.new(16, 0.6, 0.6), CFrame = CFrame.new(MapKit.at(ctx, 0, 23, -54)), Color = { 210, 214, 224 }, Material = "Metal", CanCollide = false })
 	TweenService:Create(needle, TweenInfo.new(6, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { CFrame = needle.CFrame * CFrame.Angles(math.pi, 0, 0) }):Play()
 	TweenService:Create(needle, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = needle.Position + Vector3.new(0, 1.2, 0) }):Play()

@@ -1,5 +1,5 @@
--- Every coin and XP point is given here, on the server: needle finds (faster = more), places,
--- playing a round to the end, win streaks, the daily login streak and quest rewards. Level-ups
+-- Every coin and XP point is given here, on the server: chests, places, playing a round to the
+-- end, win streaks, the daily login streak and quest rewards. Level-ups
 -- and rewards are announced to the player. Stats for the leaderboards are kept up to date.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -15,7 +15,7 @@ local LeaderboardManager = require(script.Parent.LeaderboardManager)
 
 local RewardManager = {}
 
--- Match stats (server/MatchXp sets this while a round runs): track(player, "coins" | "needles" |
+-- Match stats (server/MatchXp sets this while a round runs): track(player, "coins" | "chests" |
 -- "elims", amount). Does nothing between rounds.
 RewardManager.tracker = nil
 function RewardManager.track(player, what, amount)
@@ -50,30 +50,41 @@ function RewardManager.grant(player, coins, xp, why)
 	return gained
 end
 
--- A needle claimed (each needle counts, so two in a Double Needle round).
-function RewardManager.found(player, elapsed, golden)
+-- A chest opened: its coins (doubled with 2x Coins) or its key. Returns what the player got,
+-- for their screen: { coins = n } or { key = id, name = "Harvest Key" }.
+function RewardManager.chest(player, reward)
+	local got = {}
 	DataManager.update(player, function(d)
-		d.needles += 1
-		if d.bestTime == 0 or elapsed < d.bestTime then
-			d.bestTime = math.floor(elapsed * 10 + 0.5) / 10
+		d.chests += 1
+		if reward.key then
+			d.keys[reward.key] = (d.keys[reward.key] or 0) + 1
 		end
 	end)
-	LeaderboardManager.mark(player)
-	RewardManager.track(player, "needles", 1)
-	QuestManager.record(player, "find", 1)
-	QuestManager.record(player, "fast", 1, { seconds = elapsed })
-	if golden then
-		QuestManager.record(player, "golden", 1)
+	RewardManager.track(player, "chests", 1)
+	QuestManager.record(player, "chest", 1)
+	if reward.key then
+		QuestManager.record(player, "key", 1)
+		for _, k in ipairs(Config.Chests.keys) do
+			if k.id == reward.key then
+				got = { key = k.id, name = k.name }
+			end
+		end
+	else
+		local coins = reward.coins * (if hasPass(player, "DoubleCoins") then 2 else 1)
+		RewardManager.grant(player, coins, 0, nil)
+		got = { coins = coins }
 	end
+	LeaderboardManager.mark(player)
+	return got
 end
 
--- A player finished the round in `place` (1 = first to find every needle). Returns coins, xp.
-function RewardManager.placed(player, place, elapsed, duration, diff, golden, playerCount)
+-- A player finished the round in `place` (1 = first). Returns the coins it paid.
+function RewardManager.placed(player, place, diff, playerCount)
 	local d = DataManager.get(player)
 	if not d then
-		return 0, 0
+		return 0
 	end
-	local coins, xp = Rules.findReward(place, elapsed, duration, diff, golden, d.winStreak, hasPass(player, "DoubleCoins"))
+	local coins = Rules.placeCoins(place, diff, d.winStreak, hasPass(player, "DoubleCoins"))
 	if place == 1 and playerCount >= Config.Round.winsNeedPlayers then
 		DataManager.update(player, function(data)
 			data.wins += 1
@@ -86,8 +97,8 @@ function RewardManager.placed(player, place, elapsed, duration, diff, golden, pl
 		end)
 		QuestManager.record(player, "win", 1)
 	end
-	RewardManager.grant(player, coins, xp, nil)
-	return coins, xp
+	RewardManager.grant(player, coins, 0, nil)
+	return coins
 end
 
 -- Everyone still in the map at the end of a round. `won` = they placed first.
@@ -99,7 +110,7 @@ function RewardManager.played(player, diff, won)
 			d.winStreak = 0
 		end
 	end)
-	RewardManager.grant(player, Config.Rewards.playCoins * mult, Config.Rewards.playXp, nil)
+	RewardManager.grant(player, Config.Rewards.playCoins * mult, 0, nil)
 	QuestManager.record(player, "play", 1)
 	if diff.id == "hard" then
 		QuestManager.record(player, "hard", 1)

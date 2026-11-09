@@ -13,7 +13,6 @@ local LeaderboardManager = require(script.Parent.LeaderboardManager)
 local AntiCheat = require(script.Parent.AntiCheat)
 local Requests = require(script.Parent.Requests)
 local CollectionManager = require(script.Parent.CollectionManager)
-local NeedleModel = require(script.Parent.NeedleModel)
 local HaystackModel = require(script.Parent.HaystackModel)
 local LobbyShowOff = require(script.Parent.LobbyShowOff)
 local RoundManager = require(script.Parent.RoundManager)
@@ -33,7 +32,6 @@ end
 for _, step in ipairs({
 	{ "HaystackModel", HaystackModel.load }, -- before the lobby, so its haystacks can use it
 	{ "Lobby", LobbyBuilder.build },
-	{ "NeedleModel", NeedleModel.load },
 	{ "AntiCheat", AntiCheat.init },
 	{ "Quests", QuestManager.init },
 	{ "Rewards", RewardManager.init },

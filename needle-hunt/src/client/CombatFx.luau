@@ -99,7 +99,7 @@ function CombatFx.start(gui)
 	local edge = UiKit.make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 40, Parent = gui }, { UiKit.stroke(Color3.fromRGB(230, 80, 80), 0) })
 	local function show()
 		local n = player:GetAttribute("Hearts") or C.hearts
-		hearts.Visible = ReplicatedStorage:GetAttribute("Phase") == "search" and (player:GetAttribute("Found") ~= nil)
+		hearts.Visible = ReplicatedStorage:GetAttribute("Phase") == "search" and player:GetAttribute("InRound") == true
 		for i, icon in ipairs(icons) do
 			icon.TextTransparency = if i <= n then 0 else 0.75
 		end

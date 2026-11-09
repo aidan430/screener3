@@ -1,11 +1,13 @@
 -- The round loop, all on the server:
 --   lobby (Config.Round.lobbyCountdown) -> loading: pick a map, difficulty, modifier and maybe a
---   Golden Needle, build the map, hide the needle(s), move everyone in -> countdown (3, 2, 1;
---   nobody moves) -> search (the timer runs; a player "finishes" when they've found every
---   needle; after the first finish, everyone else has Config.Round.grace seconds) -> results ->
---   back to the lobby. A lone player still gets rounds (practice).
+--   Golden Chest, build the map, place the chests (server/ChestSpawner), move up to
+--   Config.Round.maxPlayers in -> countdown (3, 2, 1; nobody moves) -> the round (the timer runs;
+--   open chests for coins and keys, poke and throw needles; once the last chest is open, everyone
+--   has Config.Round.grace seconds) -> results (places by chests, tag-outs, coins) -> the lobby.
+--   A lone player still gets rounds (practice).
 -- The phase is published as attributes on ReplicatedStorage (Phase, EndsAt, MapName,
--- Difficulty, Modifiers, Golden, NeedleCount) and announced with Remotes.RoundState.
+-- Difficulty, Modifiers, Golden, ChestsLeft, ChestCount) and announced with Remotes.RoundState.
+-- The search phase is still called "search" (the name other scripts check).
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -17,9 +19,8 @@ local Maps = require(Shared:WaitForChild("Maps"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local DataManager = require(script.Parent.DataManager)
-local NeedleSpawner = require(script.Parent.NeedleSpawner)
+local ChestSpawner = require(script.Parent.ChestSpawner)
 local RewardManager = require(script.Parent.RewardManager)
-local CollectionManager = require(script.Parent.CollectionManager)
 local AntiCheat = require(script.Parent.AntiCheat)
 local MapKit = require(script.Parent.MapKit)
 local RoundExtras = require(script.Parent.RoundExtras)
@@ -31,7 +32,7 @@ end
 
 local RoundManager = {}
 local rng = Random.new()
-local round = nil -- the round in play: { participants, finished, foundBy, needles, started, duration, diff, golden, ... }
+local round = nil -- the round in play: { participants, chests, chestsLeft, started, ends, duration, diff, modifiers, golden, ... }
 local lastMap = nil
 
 local function now()
@@ -76,51 +77,32 @@ local function move(player, cf)
 	end
 end
 
--- Players who'll play this round: loaded, alive, and not sitting out (Settings: Auto-join).
+-- Players who'll play this round: loaded, alive, and not sitting out (Settings: Auto-join), up to
+-- Config.Round.maxPlayers (the rest wait in the lobby for the next one).
 local function players()
 	local list = {}
 	for _, p in ipairs(Players:GetPlayers()) do
 		local d = DataManager.get(p)
 		local h = humanoid(p)
-		if d and d.settings.autoJoin and h and h.Health > 0 then
+		if d and d.settings.autoJoin and h and h.Health > 0 and #list < Config.Round.maxPlayers then
 			table.insert(list, p)
 		end
 	end
 	return list
 end
 
--- A claim on needle `n` by `player` (already checked by NeedleSpawner).
-local function onClaim(player, n)
+-- A chest opened by `player` (already checked by ChestSpawner): give what was inside, tell
+-- everyone, and when it was the last one start the closing countdown.
+local function onOpen(player, chest, reward)
 	local r = round
-	if not r or not r.participants[player] or r.finished[player] then
+	if not r or not r.participants[player] then
 		return
 	end
-	r.foundBy[n.index] = r.foundBy[n.index] or {}
-	if r.foundBy[n.index][player] then
-		return
-	end
-	r.foundBy[n.index][player] = true
-	local elapsed = now() - r.started
-	RewardManager.found(player, elapsed, n.golden)
-	local count = 0
-	for i = 1, #r.needles do
-		if r.foundBy[i] and r.foundBy[i][player] then
-			count += 1
-		end
-	end
-	player:SetAttribute("Found", count)
-	if count < #r.needles then
-		Remotes.Notify:FireClient(player, { text = "One down! " .. (#r.needles - count) .. " to go.", tone = "good" })
-		return
-	end
-	table.insert(r.order, player)
-	r.finished[player] = elapsed
-	local place = #r.order
-	local coins, xp = RewardManager.placed(player, place, elapsed, r.duration, r.diff, r.golden, r.count)
-	local kept = CollectionManager.award(player, place, r.diff, r.golden)
-	r.rewards[player] = { coins = coins, xp = xp, kept = kept }
-	Remotes.Found:FireAllClients({ userId = player.UserId, name = player.DisplayName, place = place, seconds = elapsed, golden = r.golden, position = n.position, coins = coins, xp = xp, kept = kept })
-	if place == 1 then
+	local got = RewardManager.chest(player, reward)
+	r.chestsLeft -= 1
+	ReplicatedStorage:SetAttribute("ChestsLeft", r.chestsLeft)
+	Remotes.Found:FireAllClients({ userId = player.UserId, name = player.DisplayName, golden = chest.golden, position = chest.position, got = got, left = r.chestsLeft })
+	if r.chestsLeft <= 0 and not r.graceEnds then
 		r.graceEnds = now() + Config.Round.grace
 		ReplicatedStorage:SetAttribute("EndsAt", math.min(r.ends, r.graceEnds))
 	end
@@ -168,22 +150,26 @@ local function playRound()
 	ReplicatedStorage:SetAttribute("Golden", golden)
 	phase("loading", 3)
 	builders[def.builder](ctx)
-	local needles = NeedleSpawner.spawn(ctx, diff, { modifiers = mods, golden = golden })
-	ReplicatedStorage:SetAttribute("NeedleCount", #needles)
+	local list = players()
+	local duration = if mods.speed then Config.Round.speedDuration else Config.Round.duration
+	round = { participants = {}, order = {}, diff = diff, modifiers = mods, golden = golden, duration = duration, count = #list, spawns = ctx.spawns }
+	local chests = ChestSpawner.spawn(ctx, round)
+	round.chests, round.chestsLeft = chests, #chests
+	ReplicatedStorage:SetAttribute("ChestCount", #chests)
+	ReplicatedStorage:SetAttribute("ChestsLeft", #chests)
 	light(def.lighting, diff.dim + (if mods.lowlight then 0.45 else 0))
 	-- move everyone in
-	local list = players()
-	if #list == 0 or #needles == 0 then
+	if #list == 0 or #chests == 0 then
+		round = nil
+		ChestSpawner.clear()
 		light(Maps.lobbyLighting)
 		model:Destroy()
 		MapKit.clearTerrain(Config.ArenaCentre)
 		return
 	end
-	local duration = if mods.speed then Config.Round.speedDuration else Config.Round.duration
-	round = { participants = {}, finished = {}, foundBy = {}, order = {}, rewards = {}, needles = needles, diff = diff, golden = golden, duration = duration, count = #list, spawns = ctx.spawns }
 	for i, p in ipairs(list) do
 		round.participants[p] = true
-		p:SetAttribute("Found", 0)
+		p:SetAttribute("InRound", true)
 		move(p, ctx.spawns[(i - 1) % #ctx.spawns + 1])
 		freeze(p, true)
 	end
@@ -196,38 +182,28 @@ local function playRound()
 	round.ends = round.started + duration
 	phase("search", duration)
 	RoundExtras.start(ctx, round)
-	-- search until time is up, the grace window closes or everyone has finished
+	-- play until time is up, the closing countdown after the last chest ends, or nobody's left
 	while true do
 		task.wait(0.25)
-		local remaining = 0
-		for p in pairs(round.participants) do
-			if p.Parent and not round.finished[p] then
-				remaining += 1
-			end
-		end
 		local t = now()
-		if t >= round.ends or (round.graceEnds and t >= round.graceEnds) or remaining == 0 then
+		if t >= round.ends or (round.graceEnds and t >= round.graceEnds) or next(round.participants) == nil then
 			break
 		end
 	end
-	-- results and rewards for playing
-	local rows = {}
-	for place, p in ipairs(round.order) do
-		local r = round.rewards[p] or { coins = 0, xp = 0 }
-		table.insert(rows, { name = p.DisplayName, userId = p.UserId, place = place, seconds = round.finished[p], coins = r.coins, xp = r.xp, kept = r.kept })
-	end
+	-- places, coins and XP, then the results
+	local rows, xp = RoundExtras.finish(round)
 	for p in pairs(round.participants) do
 		if p.Parent then
 			RewardManager.played(p, diff, round.order[1] == p)
 		end
 	end
-	local xp = RoundExtras.finish(round) -- everyone's match XP, with their breakdown for the results
 	phase("results", Config.Round.results, { rows = rows, map = def.name, golden = golden, xp = xp })
-	NeedleSpawner.clear()
+	ChestSpawner.clear()
 	RoundExtras.stop()
 	task.wait(Config.Round.results)
 	for i, p in ipairs(Players:GetPlayers()) do
 		if round.participants[p] then
+			p:SetAttribute("InRound", false)
 			move(p, LobbyBuilder.spawnPoint(i))
 		end
 	end
@@ -243,8 +219,8 @@ function RoundManager.current()
 end
 
 function RoundManager.start()
-	NeedleSpawner.onClaim = onClaim
-	NeedleSpawner.canClaim = function(player)
+	ChestSpawner.onOpen = onOpen
+	ChestSpawner.canOpen = function(player)
 		return round ~= nil and round.participants[player] == true and ReplicatedStorage:GetAttribute("Phase") == "search"
 	end
 	Players.PlayerRemoving:Connect(function(player)
@@ -270,11 +246,12 @@ function RoundManager.start()
 				if not ok then
 					warn("[Round] " .. tostring(err))
 					for i, p in ipairs(Players:GetPlayers()) do -- nobody is left in a broken map
+						p:SetAttribute("InRound", false)
 						freeze(p, false)
 						move(p, LobbyBuilder.spawnPoint(i))
 					end
 					round = nil
-					NeedleSpawner.clear()
+					ChestSpawner.clear()
 					RoundExtras.stop()
 					light(Maps.lobbyLighting)
 				end

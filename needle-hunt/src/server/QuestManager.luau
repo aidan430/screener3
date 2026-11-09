@@ -21,8 +21,8 @@ local function fresh(d)
 	end
 end
 
--- Records progress of `kind` (see shared/Quests) for today's quests. info.seconds for "fast".
-function QuestManager.record(player, kind, amount, info)
+-- Records progress of `kind` (see shared/Quests) for today's quests.
+function QuestManager.record(player, kind, amount)
 	local d = DataManager.get(player)
 	if not d then
 		return
@@ -31,7 +31,7 @@ function QuestManager.record(player, kind, amount, info)
 	DataManager.update(player, function(data)
 		fresh(data)
 		for _, q in ipairs(Quests.forDay(data.quests.day)) do
-			local counts = q.kind == kind and not data.quests.done[q.id] and (kind ~= "fast" or (info and info.seconds < q.under))
+			local counts = q.kind == kind and not data.quests.done[q.id]
 			if counts then
 				local now = math.min(q.n, (data.quests.progress[q.id] or 0) + amount)
 				data.quests.progress[q.id] = now

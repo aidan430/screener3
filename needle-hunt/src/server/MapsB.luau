@@ -35,7 +35,7 @@ function MapsB.forest(ctx)
 		MapKit.part(ctx, { Name = "Stalk", Size = Vector3.new(0.3, 0.8, 0.3), CFrame = CFrame.new(MapKit.at(ctx, x, 0.4, z)), Color = { 230, 226, 210 }, Material = "SmoothPlastic", CanCollide = false })
 		MapKit.part(ctx, { Name = "Cap", Shape = "Ball", Size = Vector3.new(1.1, 1.1, 1.1), CFrame = CFrame.new(MapKit.at(ctx, x, 0.9, z)), Color = { 120, 200, 255 }, Material = "Neon", CanCollide = false })
 	end
-	maze.spawns(8)
+	maze.spawns(10)
 	MapKit.clutter(ctx, ctx.diff.clutter, 58, 58)
 	MapKit.moving(ctx, ctx.diff.moving, 45, 45)
 end
@@ -85,7 +85,7 @@ function MapsB.attic(ctx)
 	for i = 0, 3 do
 		MapKit.lamp(ctx, MapKit.at(ctx, -30 + i * 20, 15, 0), { 255, 214, 150 }, 30)
 	end
-	maze.spawns(8)
+	maze.spawns(10)
 	MapKit.clutter(ctx, ctx.diff.clutter, L / 2 - 4, Wd / 2 - 8)
 	MapKit.moving(ctx, ctx.diff.moving, L / 2 - 8, Wd / 2 - 10)
 end

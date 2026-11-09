@@ -6,7 +6,7 @@ local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Co
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local DataManager = require(script.Parent.DataManager)
-local NeedleSpawner = require(script.Parent.NeedleSpawner)
+local ChestSpawner = require(script.Parent.ChestSpawner)
 local RewardManager = require(script.Parent.RewardManager)
 local RoundManager = require(script.Parent.RoundManager)
 
@@ -25,9 +25,9 @@ local function hint(player)
 	if used >= allowed then
 		return nil, "No hints left today. They come back tomorrow."
 	end
-	local text = NeedleSpawner.hint(player, r.foundBy)
+	local text = ChestSpawner.hint(player)
 	if not text then
-		return nil, "You've found them all!"
+		return nil, "Every chest is open!"
 	end
 	DataManager.update(player, function(data)
 		data.hintsDay, data.hintsUsed = today, used + 1

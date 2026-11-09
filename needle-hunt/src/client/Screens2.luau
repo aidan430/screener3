@@ -15,7 +15,7 @@ local quests, questBody, boards, boardBody, settings, settingsBody
 local getProfile = function()
 	return {}
 end
-local boardId, scope = "needles", "global"
+local boardId, scope = "chests", "global"
 
 local function clear(body)
 	for _, c in ipairs(body:GetChildren()) do

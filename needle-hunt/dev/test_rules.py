@@ -55,25 +55,22 @@ MODS = rows(CONFIG, "Config.Modifiers = {")
 ITEMS = rows(COSMETICS, "Cosmetics.items = {")
 POOL = rows(QUESTS, "Quests.pool = {")
 MAP_ROWS = [r for r in rows(MAPS, "Maps.list = {") if "id" in r]
-PLACE = [float(v) for v in re.search(r"place = \{ ([\d., ]+) \}", CONFIG).group(1).split(",")]
+PLACE = [float(v) for v in re.search(r"placeCoins = \{ ([\d., ]+) \}", CONFIG).group(1).split(",")]
 
 
 def xp_need(level: int) -> float:
     return LEVELS["xpBase"] + LEVELS["xpStep"] * (level - 1)
 
 
-def find_reward(place, elapsed, duration, diff, golden=False, streak=0, double=False):
-    """Mirror of Rules.findReward."""
-    p = PLACE[min(place, len(PLACE)) - 1]
-    speed = 0.5 + 0.5 * min(max(1 - elapsed / max(duration, 1), 0), 1)
-    streak_mult = 1 + min(REWARDS["winStreakMax"], REWARDS["winStreakStep"] * max(0, streak))
-    mult = p * speed * diff["coins"] * (REWARDS["golden"] if golden else 1)
-    coins = int(REWARDS["findCoins"] * mult * streak_mult * (2 if double else 1) + 0.5)
-    xp = int(REWARDS["findXp"] * mult + 0.5)
-    if place <= 3:
-        coins += REWARDS["top3Coins"] * (2 if double else 1)
-        xp += REWARDS["top3Xp"]
-    return coins, xp
+def place_coins(place, diff, streak=0, double=False):
+    """Mirror of Rules.placeCoins."""
+    base = PLACE[min(place, len(PLACE)) - 1]
+    streak_mult = 1 + min(REWARDS["winStreakMax"], REWARDS["winStreakStep"] * max(0, streak)) if place == 1 else 1
+    return int(base * diff["coins"] * streak_mult * (2 if double else 1) + 0.5)
+
+
+CHESTS = block_table("Chests")
+CHEST_COINS = [float(v) for v in re.search(r"coins = \{ (\d+), (\d+) \}", CONFIG).groups()]
 
 
 class Rounds(unittest.TestCase):
@@ -83,40 +80,46 @@ class Rounds(unittest.TestCase):
         self.assertLess(ROUND["speedDuration"], ROUND["duration"])
         self.assertEqual(ROUND["results"], 10)
         self.assertEqual(ROUND["minPlayers"], 1, "a lone player still gets practice rounds")
+        self.assertEqual(ROUND["maxPlayers"], 10, "ten players on a map")
 
     def test_difficulties_get_harder(self):
         easy, normal, hard = DIFFS
-        self.assertGreater(easy["needle"], normal["needle"])
-        self.assertGreater(normal["needle"], hard["needle"])
         self.assertGreater(hard["clutter"], normal["clutter"])
-        self.assertGreater(hard["decoys"], 0)
+        self.assertGreater(hard["dim"], easy["dim"])
         self.assertGreater(hard["coins"], easy["coins"], "harder rounds pay more")
 
-    def test_modifiers_are_the_four_asked_for(self):
-        self.assertEqual({m["id"] for m in MODS}, {"double", "speed", "lowlight", "camo"})
+    def test_modifiers_and_chests(self):
+        self.assertEqual({m["id"] for m in MODS}, {"speed", "lowlight", "keys", "brawl"})
         self.assertIn("Config.GoldenChance", CONFIG)
+        self.assertEqual(CHESTS["count"], 5, "five chests a map")
+        self.assertTrue(0 < CHESTS["keyChance"] < 1, "a chest holds coins or a key")
+        keys = re.findall(r'\{ id = "(\w+)", name = "\w+ Key"', CONFIG)
+        self.assertEqual(set(keys), {b["id"] for b in rows(CONFIG, "Config.Boxes = {")}, "a key for every box")
+        spawner = (SERVER / "ChestSpawner.luau").read_text()
+        for check in ("canOpen", "CH.reach", "chest.opened", "AntiCheat.flagged"):
+            self.assertIn(check, spawner, "the server checks every chest opening")
 
 
 class Rewards(unittest.TestCase):
-    def test_faster_and_higher_places_pay_more(self):
+    def test_higher_places_pay_more(self):
         normal = DIFFS[1]
-        fast, _ = find_reward(1, 10, 180, normal)
-        slow, _ = find_reward(1, 170, 180, normal)
-        second, _ = find_reward(2, 10, 180, normal)
-        self.assertGreater(fast, slow)
-        self.assertGreater(fast, second)
+        self.assertGreater(place_coins(1, normal), place_coins(2, normal))
+        self.assertGreater(place_coins(2, normal), place_coins(3, normal))
+        self.assertEqual(place_coins(1, normal, double=True), place_coins(1, normal) * 2)
+        self.assertGreater(place_coins(1, normal, streak=3), place_coins(1, normal))
 
-    def test_golden_and_double_coins(self):
-        normal = DIFFS[1]
-        base, _ = find_reward(1, 30, 180, normal)
-        self.assertGreater(find_reward(1, 30, 180, normal, golden=True)[0], base * 2)
-        self.assertEqual(find_reward(1, 30, 180, normal, double=True)[0], base * 2)
+    def test_ranking_goes_chests_then_tagouts_then_coins(self):
+        rules = (SHARED / "Rules.luau").read_text()
+        body = rules[rules.index("function Rules.rank"):]
+        self.assertLess(body.index("chests ~="), body.index("elims ~="))
+        self.assertLess(body.index("elims ~="), body.index("x.coins > y.coins"))
 
     def test_levels_take_longer_as_you_go(self):
         self.assertLess(xp_need(1), xp_need(10))
         mx = block_table("MatchXp")
         place = [float(v) for v in re.search(r"MatchXp = \{ place = \{ ([\d., ]+) \}", CONFIG).group(1).split(",")]
-        first_win_xp = place[0] + mx["played"] + 60 * mx["perCoin"] + mx["perNeedle"]  # 1st, ~60 coins, one needle
+        avg_chest = sum(CHEST_COINS) / 2
+        first_win_xp = place[0] + mx["played"] + 2 * avg_chest * mx["perCoin"] + 2 * mx["perChest"]  # 1st with two chests
         self.assertLess(xp_need(1) / first_win_xp, 3, "a couple of good rounds reach level 2")
         self.assertGreater(mx["perElimination"], 0, "tagging players out earns XP")
 
@@ -147,17 +150,15 @@ class Content(unittest.TestCase):
         self.assertIn(bundle, ids)
 
     def test_quests(self):
-        kinds = {"find", "win", "play", "fast", "hard", "golden", "collect", "rare"}
+        kinds = {"chest", "win", "play", "key", "hard", "tagout", "collect", "rare"}
         ids = {i["id"] for i in ITEMS}
         self.assertTrue(all(q["kind"] in kinds for q in POOL))
-        self.assertGreaterEqual(len({q["kind"] for q in POOL if q["kind"] != "golden"}), 3, "three different kinds a day")
+        self.assertGreaterEqual(len({q["kind"] for q in POOL}), 3, "three different kinds a day")
         for q in POOL:
             self.assertGreater(q["coins"], 0)
             if "cosmetic" in q:
                 self.assertIn(q["cosmetic"], ids)
-            if q["kind"] == "fast":
-                self.assertIn("under", q)
-        handled = (SERVER / "QuestManager.luau").read_text() + (SERVER / "RewardManager.luau").read_text() + (SERVER / "CollectionManager.luau").read_text()
+        handled = "".join((SERVER / f).read_text() for f in ("QuestManager.luau", "RewardManager.luau", "CollectionManager.luau", "Combat.luau"))
         for kind in kinds:
             self.assertIn(f'"{kind}"', handled, f"something records {kind} quests")
 
@@ -210,7 +211,7 @@ class Collection(unittest.TestCase):
     def test_needles_are_earned_never_bought(self):
         shop = (SERVER / "ShopManager.luau").read_text()
         self.assertNotIn("Needles", shop, "the shop and Robux never hand out collectible needles")
-        self.assertIn("Needles.roll", (SERVER / "CollectionManager.luau").read_text())
+        self.assertIn("Boxes.roll", (SERVER / "BoxManager.luau").read_text(), "needles come from boxes")
 
 
 class Powerups(unittest.TestCase):
@@ -303,6 +304,22 @@ class BoxOpenings(unittest.TestCase):
         moved = dash["speed"] * dash["seconds"] + 26 * (ac["checkEvery"] - dash["seconds"])  # dashing with Hay Boots on
         self.assertLess(moved / ac["checkEvery"], ac["maxSpeed"])
         self.assertGreater(dash["cooldown"], 1)
+
+    def test_very_rare_openings_are_announced_and_keys_open_boxes(self):
+        boxes = (SERVER / "BoxManager.luau").read_text()
+        at = float(re.search(r"announceAt = ([\d.]+)", CONFIG).group(1))
+        self.assertEqual(at, 0.5)
+        self.assertIn("Config.Boxes.announceAt", boxes)
+        self.assertIn("Remotes.Announce:FireAllClients", boxes)
+        self.assertIn("BoxManager.announce", (SERVER / "ShopManager.luau").read_text(), "Robux openings too")
+        self.assertIn("data.keys[box.id] -= 1", boxes, "a key is used up")
+        # which rarities would be announced: those with a chance at or below announceAt in their box
+        announced = []
+        for line in CONFIG[CONFIG.index("Config.Boxes = {"):].splitlines()[1:4]:
+            box = re.search(r'id = "(\w+)"', line).group(1)
+            odds = dict((k, float(v)) for k, v in re.findall(r"(\w+) = ([\d.]+)", line.split("odds = {")[1]))
+            announced += [(box, r) for r, v in odds.items() if 0 < v <= at]
+        self.assertIn(("hay", "mythic"), announced)
 
     def test_combat_is_the_same_for_every_skin(self):
         combat = (SERVER / "Combat.luau").read_text()

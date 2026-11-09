@@ -73,6 +73,9 @@
         },
         "Dash": {
           "$className": "RemoteEvent"
+        },
+        "Announce": {
+          "$className": "RemoteEvent"
         }
       }
     },

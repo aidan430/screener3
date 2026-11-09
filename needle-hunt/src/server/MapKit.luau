@@ -1,7 +1,7 @@
 -- The building kit for maps (server/MapsA, MapsB): ground, hay bales, haystacks, crates, fences,
 -- trees, walls, lamps, loose straw and tumbling hay. Each prop records the hiding spots it makes
 -- (on its top, or on the ground beside it) as it is placed, so a needle only ever goes on a real
--- surface; server/NeedleSpawner checks each spot again before using it.
+-- surface; server/ChestSpawner checks each spot again before using it.
 -- ctx: { model, rng, centre = Vector3, def = a Maps row, spots = {}, spawns = {}, floorY }
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")

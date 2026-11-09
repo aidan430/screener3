@@ -5,42 +5,52 @@ local Config = {}
 -- Rounds (server/RoundManager). Seconds.
 Config.Round = {
 	lobbyCountdown = 15, -- in the lobby before a round
-	loadCountdown = 3, -- 3, 2, 1 in the map before searching starts
+	loadCountdown = 3, -- 3, 2, 1 in the map before the round starts
 	duration = 180, -- a normal round
 	speedDuration = 90, -- a Speed Round
-	grace = 10, -- after the first find, everyone else still has this long (2nd, 3rd...)
+	grace = 15, -- once the last chest is open, this long to finish fights before the results
 	results = 10, -- the results screen
 	minPlayers = 1, -- 1 = a solo player still gets (practice) rounds
+	maxPlayers = 10, -- players on one map (set the place's Max Players to 10 in Game Settings too)
 	winsNeedPlayers = 2, -- a win counts towards wins and weekly winners only with this many playing
 }
 
--- Difficulty: picked each round by weight. needle = its length in studs; glint = a soft sparkle
--- (easy only); clutter = loose straws scattered round the map; decoys = fake needles; dim =
--- how much darker the light is; moving = tumbling hay bundles that drift about.
+-- Difficulty: picked each round by weight. clutter = loose straws scattered round the map; dim =
+-- how much darker the light is; moving = tumbling hay bundles that drift about; coins = times
+-- the coins in every chest and the place coins.
 Config.Difficulty = {
-	{ id = "easy", name = "Easy", weight = 30, needle = 3.6, glint = true, clutter = 160, decoys = 0, dim = 0, moving = 0, coins = 1.0 },
-	{ id = "normal", name = "Normal", weight = 50, needle = 2.8, glint = false, clutter = 260, decoys = 0, dim = 0, moving = 0, coins = 1.25 },
-	{ id = "hard", name = "Hard", weight = 20, needle = 2.0, glint = false, clutter = 380, decoys = 4, dim = 0.35, moving = 4, coins = 1.6 },
+	{ id = "easy", name = "Easy", weight = 30, clutter = 160, dim = 0, moving = 0, coins = 1.0 },
+	{ id = "normal", name = "Normal", weight = 50, clutter = 260, dim = 0, moving = 0, coins = 1.25 },
+	{ id = "hard", name = "Hard", weight = 20, clutter = 380, dim = 0.35, moving = 4, coins = 1.6 },
 }
 
--- Modifiers: a round gets one with this chance (then by weight). The Golden Needle is a
+-- Modifiers: a round gets one with this chance (then by weight). The Golden Chest is a
 -- separate, rarer roll on top.
 Config.ModifierChance = 0.35
 Config.Modifiers = {
-	{ id = "double", name = "Double Needle", text = "Two needles: both must be found", weight = 30 },
-	{ id = "speed", name = "Speed Round", text = "Half the time!", weight = 30 },
-	{ id = "lowlight", name = "Low Light", text = "The lights are low", weight = 20 },
-	{ id = "camo", name = "Camouflage", text = "The needle matches the hay", weight = 20 },
+	{ id = "speed", name = "Speed Round", text = "Half the time!", weight = 35 },
+	{ id = "lowlight", name = "Low Light", text = "The lights are low", weight = 30 },
+	{ id = "keys", name = "Key Round", text = "Every chest holds a key", weight = 15 },
+	{ id = "brawl", name = "Brawl", text = "Tag-outs pay double", weight = 20 },
 }
-Config.GoldenChance = 0.05 -- a Golden Needle: triple rewards, and the needle you keep is Golden
+Config.GoldenChance = 0.08 -- one chest is a Golden Chest, with a Starlight Key inside
 
--- The needle collection (shared/Needles, server/CollectionManager): extra luck for a better skin
--- (added to 1, multiplying every rarity above Common) for 1st place and for Hard rounds.
-Config.Collection = { firstLuck = 0.5, hardLuck = 0.5 }
+-- Chests (server/ChestSpawner): `count` on every map, in dead ends first and at least `spread`
+-- studs apart. Hold E for `hold` seconds within `reach` studs to open one. Inside: a key with
+-- `keyChance` (which key by weight), otherwise `coins` (min, max; times the difficulty's coins).
+-- A key opens one box of its kind in the lobby (the Boxes screen), free.
+Config.Chests = {
+	count = 5, spread = 30, hold = 1.5, reach = 10,
+	keyChance = 0.3, coins = { 30, 90 }, goldenKey = "starlight",
+	keys = {
+		{ id = "hay", name = "Hay Key", weight = 70 },
+		{ id = "harvest", name = "Harvest Key", weight = 25 },
+		{ id = "starlight", name = "Starlight Key", weight = 5 },
+	},
+}
 
--- The owner's own needle model (server/NeedleModel): its asset ID once the imported model is
--- saved to Roblox (Studio: right-click the model > Save to Roblox). 0 = use the built needle.
-Config.NeedleModel = { asset = 0 }
+-- Places at the end of a round: by chests opened, then tag-outs, then coins collected. Places
+-- pay coins (placeCoins, 1st to 4th, the rest get the last; times the difficulty's coins).
 
 -- Haystacks (MapKit.haystack): smooth, lumpy terrain domes in `material`, recoloured `colour`
 -- (the arena's terrain is cleared between rounds). model = the owner's haystack model's asset ID
@@ -50,27 +60,16 @@ Config.NeedleModel = { asset = 0 }
 --   material1: 125383755787779, 83696294561694, 117010844111225, 87942777253086
 Config.Haystacks = { material = "Sand", colour = { 226, 186, 88 }, model = 0 }
 
--- Finding (server/NeedleSpawner). Studs and seconds.
-Config.Find = {
-	reach = 14, -- how close your character must be to claim the needle (clicks and taps)
-	hitbox = 1.6, -- the invisible box round the needle you click or tap (the same on every device)
-	thickness = 0.2, -- how thick the needle's shaft is (studs): thick enough to spot, thin enough to hide
-	decoyLockout = 3, -- clicking a decoy: no claims for this long
-	clicksPerSecond = 6, -- more than this and the extra clicks are ignored
-	jitter = 0.6, -- the needle moves this far from its hiding spot, so spots can't be memorised
-	maxSpotHeight = 6.5, -- spots higher than this above the floor need `climb = true` (a reachable loft)
-}
-
 -- Anti-exploit (server/AntiCheat).
--- Testing (Roblox Studio only, never in a live game): revealNeedle = true outlines the hidden
--- needle through walls and prints where it is, so you can test finding it.
-Config.Testing = { revealNeedle = false }
+-- Testing (Roblox Studio only, never in a live game): revealChests = true outlines the chests
+-- through walls, so you can test opening them.
+Config.Testing = { revealChests = false }
 
 -- Power-ups (server/Powerups): `count` glowing pickups float in the maze's corridors each round;
 -- walk into one to take it, and another appears somewhere else `respawn` seconds later. Only
 -- helpful ones (nothing slows or blinds anyone else), picked by weight. icon = shown on the orb.
---   speed: walk at `walkSpeed` for `seconds`     compass: an arrow to the nearest needle
---   birdseye: a look down from above the maze    glint: needles (and decoys!) within `range` sparkle
+--   speed: walk at `walkSpeed` for `seconds`     compass: an arrow to the nearest unopened chest
+--   birdseye: a look down from above the maze    glint: unopened chests within `range` sparkle
 --   coins: a pouch of coins (doubled with 2x Coins) and a little XP
 -- image = the uploaded icon's asset ID (assets/powerups/<id>.png: Studio > Asset Manager > Images,
 -- or Creator Dashboard > Decals; copy its ID here). 0 = show the `icon` glyph instead.
@@ -83,9 +82,9 @@ Config.Powerups = { count = 8, respawn = 20, kinds = {
 } }
 
 -- XP after each match (server/MatchXp), shown as a breakdown on the results screen.
---   place: finishers 1st, 2nd, 3rd, then everyone else who finished; played: everyone at the end
---   perCoin: for each coin collected in the match; perNeedle: each needle found; perElimination
-Config.MatchXp = { place = { 120, 90, 70, 50 }, played = 20, perCoin = 0.5, perNeedle = 40, perElimination = 25 }
+--   place: 1st, 2nd, 3rd, then everyone else (by chests, tag-outs, coins); played: everyone at the end
+--   perCoin: for each coin collected in the match; perChest: each chest opened; perElimination
+Config.MatchXp = { place = { 120, 90, 70, 50 }, played = 20, perCoin = 0.5, perChest = 40, perElimination = 25 }
 
 -- Needle combat (server/Combat, client/CombatFx): during the search everyone carries their
 -- showcase needle and can poke others. Three pokes and you're tagged out: you pop back at a maze
@@ -108,8 +107,10 @@ Config.NeedleTool = { grip = { 0, 90, 0 }, scale = 1.6, inspect = 2.4 }
 -- each rarity's chance in percent (shown in the game before you open one). series = the box's own
 -- skins (Needles.skins with that series); a rarity the series doesn't have comes from the regular
 -- skins. product = the Config.Products name that opens it for Robux (nil = coins only). pity:
--- every this many opens without Rare or better, the next is Rare or better (also shown).
-Config.Boxes = { pity = 10, list = {
+-- every this many opens without Rare or better, the next is Rare or better (also shown). Keys from
+-- chests open a box free. announceAt: a needle whose rarity had this % chance or less in its box
+-- is announced to the whole server.
+Config.Boxes = { pity = 10, announceAt = 0.5, list = {
 	{ id = "hay", name = "Hay Box", coins = 400, colour = { 226, 186, 88 }, odds = { common = 60, uncommon = 25, rare = 10, epic = 4, legendary = 0.9, mythic = 0.1 } },
 	{ id = "harvest", name = "Harvest Box", coins = 1500, product = "HarvestBox", series = "harvest", colour = { 230, 120, 50 }, odds = { common = 40, uncommon = 30, rare = 18, epic = 8, legendary = 3.5, mythic = 0.5 } },
 	{ id = "starlight", name = "Starlight Box", coins = 5000, product = "StarlightBox", series = "starlight", colour = { 120, 110, 240 }, odds = { common = 0, uncommon = 45, rare = 30, epic = 16, legendary = 7, mythic = 2 } },
@@ -128,20 +129,17 @@ Config.AntiCheat = {
 
 -- Rewards (server/RewardManager). Coins and XP.
 Config.Rewards = {
-	findCoins = 60, findXp = 0, -- the first finder, at the very start of a round (halves by the end); XP comes from Config.MatchXp
-	place = { 1, 0.6, 0.4, 0.25 }, -- 1st, 2nd, 3rd, the rest
-	top3Coins = 15, top3Xp = 0,
-	playCoins = 5, playXp = 0, -- for being there at the end of a round
-	golden = 3, -- times everything for a Golden Needle
-	winStreakStep = 0.1, winStreakMax = 0.5, -- +10% per win in a row, up to +50%
+	placeCoins = { 60, 40, 25, 10 }, -- 1st, 2nd, 3rd, the rest (who opened a chest or tagged someone)
+	playCoins = 5, -- for being there at the end of a round
+	winStreakStep = 0.1, winStreakMax = 0.5, -- +10% place coins per win in a row, up to +50%
 	loginCoins = 25, loginStreakMax = 7, -- daily login: 25 x streak day, up to day 7
 }
 
 -- Levels: level L needs xpBase + xpStep x (L - 1) XP.
 Config.Levels = { xpBase = 100, xpStep = 25, max = 500 }
 
--- Hints: a free hint a day (two with the Extra Hint pass). A hint says roughly where the
--- needle is: its compass direction, how far and whether it's high or low.
+-- Hints: a free hint a day (two with the Extra Hint pass). A hint says roughly where the nearest
+-- unopened chest is: its direction and how far.
 Config.Hints = { free = 1, pass = 1, nearStuds = 15, farStuds = 45 }
 
 -- Saving (server/DataManager). Change DataStoreName to start everyone afresh.
@@ -152,8 +150,8 @@ Config.LoadRetries = 3
 -- Leaderboards (server/LeaderboardManager): OrderedDataStore names. weekly gets the week
 -- number added. Writes are batched every flushSeconds; boards re-read every readSeconds.
 Config.Boards = {
-	{ id = "needles", name = "Most Needles", store = "NH_Needles_v1", ascending = false },
-	{ id = "fastest", name = "Fastest Find", store = "NH_Fastest_v1", ascending = true, seconds = true },
+	{ id = "chests", name = "Most Chests Opened", store = "NH_Chests_v1", ascending = false },
+	{ id = "tagouts", name = "Most Tag-outs", store = "NH_TagOuts_v1", ascending = false },
 	{ id = "level", name = "Highest Level", store = "NH_Level_v1", ascending = false },
 	{ id = "coins", name = "Most Coins Earned", store = "NH_Coins_v1", ascending = false },
 	{ id = "weekly", name = "This Week's Winners", store = "NH_WeeklyWins_v1_", ascending = false, weekly = true },

@@ -18,6 +18,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local DataManager = require(script.Parent.DataManager)
 local RewardManager = require(script.Parent.RewardManager)
+local QuestManager = require(script.Parent.QuestManager)
 
 local Combat = {}
 local C, T = Config.Combat, Config.NeedleTool
@@ -112,8 +113,10 @@ local function tagOut(attacker, target, humanoid)
 	DataManager.update(attacker, function(d)
 		d.eliminations += 1
 	end)
+	QuestManager.record(attacker, "tagout", 1)
 	RewardManager.track(attacker, "elims", 1)
-	local coins = C.eliminationCoins * (if RewardManager.hasPass(attacker, "DoubleCoins") then 2 else 1)
+	local brawl = round and round.modifiers and round.modifiers.brawl -- a Brawl round pays double
+	local coins = C.eliminationCoins * (if RewardManager.hasPass(attacker, "DoubleCoins") then 2 else 1) * (if brawl then 2 else 1)
 	RewardManager.grant(attacker, coins, 0, nil)
 	Remotes.Notify:FireClient(attacker, { text = "You tagged out " .. target.DisplayName .. "! +" .. coins .. " coins", tone = "good" })
 	Remotes.Notify:FireClient(target, { text = attacker.DisplayName .. " tagged you out! Back in " .. C.respawn .. "...", tone = "bad" })

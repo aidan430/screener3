@@ -1,8 +1,8 @@
 -- Power-ups on your screen (server/Powerups decides; Remotes.Powerup says what you got):
 --   a toast, and a chip above the bottom of the screen counting down while it lasts;
---   compass   a big arrow under the round banner pointing at the needle, with how far it is;
+--   compass   a big arrow under the round banner pointing at the nearest chest, with how far;
 --   birdseye  your camera glides up above the maze, looks down, and glides back;
---   glint     the needles and decoys near you sparkle and glow (only on your screen);
+--   glint     the unopened chests near you sparkle and glow (only on your screen);
 --   speed and coins need nothing more than the chip and the toast.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -45,7 +45,7 @@ end
 
 local function compass(target, seconds)
 	if not target then
-		Hud.toast("You've already found every needle!", "good")
+		Hud.toast("Every chest is open!", "good")
 		return
 	end
 	arrow.Visible, distance.Visible = true, true
@@ -82,7 +82,7 @@ end
 
 local function glint(points, seconds)
 	if #points == 0 then
-		Hud.toast("No needles nearby... try another corridor.", "bad")
+		Hud.toast("No chests nearby... try another corridor.", "bad")
 	end
 	for _, pos in ipairs(points) do
 		local spark = UiKit.make("Part", { Anchored = true, CanCollide = false, CanQuery = false, CanTouch = false, Transparency = 1, Size = Vector3.one, CFrame = CFrame.new(pos), Parent = workspace })

@@ -39,7 +39,7 @@ function MapsA.field(ctx)
 		local x, z = inCell(ctx, maze, 3)
 		MapKit.crate(ctx, x, 0, z, 2.5)
 	end
-	maze.spawns(8)
+	maze.spawns(10)
 	finish(ctx, 62)
 end
 
@@ -77,7 +77,7 @@ function MapsA.barn(ctx)
 	for i = 0, 3 do
 		MapKit.lamp(ctx, MapKit.at(ctx, -W / 2 + 12 + i * 17, H - 3, 6), { 255, 196, 120 }, 30)
 	end
-	maze.spawns(8)
+	maze.spawns(10)
 	finish(ctx, 32)
 end
 
@@ -116,7 +116,7 @@ function MapsA.sunset(ctx)
 		local x, z = inCell(ctx, maze, 2.5)
 		MapKit.bale(ctx, x, 0, z, r:NextNumber() * 3)
 	end
-	maze.spawns(8)
+	maze.spawns(10)
 	finish(ctx, 62)
 end
 

@@ -3,9 +3,9 @@
 -- search, and you're really there), and a new one appears somewhere else a little later. What it
 -- does is decided here; Remotes.Powerup tells your screen what to show (client/PowerupFx):
 --   speed     faster walking for a while (set here, on your character)
---   compass   where the nearest needle you haven't found is (your screen shows an arrow)
+--   compass   where the nearest unopened chest is (your screen shows an arrow)
 --   birdseye  your camera rises above the maze for a few seconds (your screen only)
---   glint     where the needles and decoys near you are (your screen makes them sparkle)
+--   glint     where the unopened chests near you are (your screen makes them sparkle)
 --   coins     a pouch of coins, paid here
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -24,25 +24,23 @@ local P = Config.Powerups
 local active = nil -- { ctx, round, folder, token }
 local rng = Random.new()
 
-local function needlesNear(position, range)
+-- The unopened chests within `range` (glint), and the nearest one (compass).
+local function chestsNear(position, range)
 	local out = {}
-	local folder = active and active.ctx.model:FindFirstChild("Needles")
-	for _, m in ipairs(folder and folder:GetChildren() or {}) do
-		local hitbox = m:FindFirstChild("Hitbox")
-		if hitbox and (hitbox.Position - position).Magnitude <= range then
-			table.insert(out, hitbox.Position)
+	for _, c in ipairs(active and active.round.chests or {}) do
+		if not c.opened and (c.position - position).Magnitude <= range then
+			table.insert(out, c.position)
 		end
 	end
 	return out
 end
 
-local function nearestUnfound(player, position)
+local function nearestChest(position)
 	local best, dist = nil, math.huge
-	for _, n in ipairs(active.round.needles) do
-		local mine = active.round.foundBy[n.index] and active.round.foundBy[n.index][player]
-		local d = (n.position - position).Magnitude
-		if not mine and d < dist then
-			best, dist = n.position, d
+	for _, c in ipairs(active.round.chests or {}) do
+		local d = (c.position - position).Magnitude
+		if not c.opened and d < dist then
+			best, dist = c.position, d
 		end
 	end
 	return best
@@ -63,11 +61,11 @@ local function apply(player, kind, root)
 			end)
 		end
 	elseif kind.id == "compass" then
-		message.target = nearestUnfound(player, root.Position)
+		message.target = nearestChest(root.Position)
 	elseif kind.id == "birdseye" then
 		message.height = kind.height
 	elseif kind.id == "glint" then
-		message.points = needlesNear(root.Position, kind.range)
+		message.points = chestsNear(root.Position, kind.range)
 	elseif kind.id == "coins" then
 		local coins = kind.coins * (if RewardManager.hasPass(player, "DoubleCoins") then 2 else 1)
 		RewardManager.grant(player, coins, kind.xp, nil)

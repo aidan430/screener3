@@ -92,7 +92,7 @@ function ThrowFx.start(gui)
 	task.spawn(function() -- the button: only with the Needle out in a round, and when it's ready
 		while true do
 			local holding = player.Character and player.Character:FindFirstChild("Needle") ~= nil
-			button.Visible = holding and ReplicatedStorage:GetAttribute("Phase") == "search" and player:GetAttribute("Found") ~= nil
+			button.Visible = holding and ReplicatedStorage:GetAttribute("Phase") == "search" and player:GetAttribute("InRound") == true
 			local wait = T.cooldown - (os.clock() - lastThrow)
 			button.Text = if wait > 0 then string.format("Throw  %.0f", math.ceil(wait)) else "Throw (Q)"
 			button.BackgroundColor3 = if wait > 0 then UiKit.colors.line else Color3.fromRGB(230, 120, 50)

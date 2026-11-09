@@ -202,6 +202,7 @@ local function processReceipt(receipt)
 	end
 	if opened then
 		CollectionManager.after(player, opened)
+		BoxManager.announce(player, opened)
 		Remotes.BoxResult:FireClient(player, opened)
 	end
 	Remotes.Notify:FireClient(player, { text = thanks or "Thank you!", tone = "good" })

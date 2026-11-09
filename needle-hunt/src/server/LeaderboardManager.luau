@@ -1,4 +1,4 @@
--- Global leaderboards (Config.Boards), each an OrderedDataStore: most needles, fastest find,
+-- Global leaderboards (Config.Boards), each an OrderedDataStore: most chests, most tag-outs,
 -- highest level, most coins earned and this week's winners. Writes are batched: a player is
 -- marked when a stat changes and written every Config.BoardFlushSeconds (and when they leave),
 -- never more than the DataStore budget allows. Each board is read every Config.BoardReadSeconds
@@ -29,10 +29,10 @@ end
 
 -- The value a player has on a board (nil = nothing to write).
 local function valueFor(board, d)
-	if board.id == "needles" then
-		return d.needles
-	elseif board.id == "fastest" then
-		return if d.bestTime > 0 then math.floor(d.bestTime * 10) else nil -- tenths of a second
+	if board.id == "chests" then
+		return if d.chests > 0 then d.chests else nil
+	elseif board.id == "tagouts" then
+		return if d.eliminations > 0 then d.eliminations else nil
 	elseif board.id == "level" then
 		return d.level
 	elseif board.id == "coins" then

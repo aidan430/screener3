@@ -1,4 +1,5 @@
--- The Boxes screen: each box with its price (coins; the dearer ones also Robux), and below them
+-- The Boxes screen: each box with its price (coins; the dearer ones also Robux), a key button
+-- (keys come from chests in rounds: a free open), and below them
 -- the exact odds of every rarity and the skins inside each box, always on show, and how many opens until
 -- the Rare-or-better guarantee. Opening asks the server (Remotes.Box), which decides; Robux opens
 -- come back through Remotes.BoxResult. Where paid random items are restricted, the screen says
@@ -49,14 +50,14 @@ local function robuxPrice(id, button)
 	end)
 end
 
-local function open(box)
-	local ok, result = Remotes.Box:InvokeServer("open", box.id)
+local function open(box, withKey)
+	local ok, result = Remotes.Box:InvokeServer(if withKey then "key" else "open", box.id)
 	if not ok then
 		Hud.toast(tostring(result), "bad")
 		return
 	end
 	BoxReel.play(win, result, function()
-		open(box)
+		open(box, withKey)
 	end, BoxScreen.refresh)
 end
 
@@ -92,7 +93,7 @@ function BoxScreen.refresh()
 	end
 	local left = info.pityAt - info.pity
 	UiKit.label({ LayoutOrder = 1, Text = "Rare or better guaranteed within " .. left .. (if left == 1 then " open" else " opens") .. ".  You have ● " .. Rules.commas(info.coins), Size = UDim2.new(1, -8, 0, 26), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UiKit.colors.gold, Parent = body }, 20)
-	local row = UiKit.make("Frame", { LayoutOrder = 2, Size = UDim2.new(1, -8, 0, 222), BackgroundTransparency = 1, Parent = body }, {
+	local row = UiKit.make("Frame", { LayoutOrder = 2, Size = UDim2.new(1, -8, 0, 252), BackgroundTransparency = 1, Parent = body }, {
 		UiKit.make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
 	})
 	for i, box in ipairs(Config.Boxes.list) do
@@ -101,13 +102,22 @@ function BoxScreen.refresh()
 		local crate = UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 12), Size = UDim2.fromOffset(96, 72), BackgroundColor3 = colour, Parent = c }, { UiKit.corner(8), UiKit.stroke(Color3.fromRGB(90, 62, 36), 3) })
 		UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 22), Size = UDim2.new(1, 8, 0, 8), BackgroundColor3 = Color3.fromRGB(90, 62, 36), Parent = crate }) -- the lid's band
 		UiKit.label({ Text = box.name, Font = UiKit.bold, Size = UDim2.new(1, -12, 0, 28), Position = UDim2.fromOffset(6, 92), Parent = c }, 22)
-		local coinsButton = UiKit.button("● " .. Rules.commas(box.coins), if info.coins >= box.coins then UiKit.colors.green else UiKit.colors.line, { Position = UDim2.new(0, 10, 0, 128), Size = UDim2.new(1, -20, 0, 42), Parent = c })
+		local coinsButton = UiKit.button("● " .. Rules.commas(box.coins), if info.coins >= box.coins then UiKit.colors.green else UiKit.colors.line, { Position = UDim2.new(0, 10, 0, 128), Size = UDim2.new(1, -20, 0, 40), Parent = c })
 		coinsButton.Activated:Connect(function()
 			open(box)
 		end)
+		local keys = (info.keys or {})[box.id] or 0 -- keys from chests in rounds
+		local keyButton = UiKit.button("🗝 Use a key (" .. keys .. ")", if keys > 0 then colour else UiKit.colors.line, { Position = UDim2.new(0, 10, 0, 172), Size = UDim2.new(1, -20, 0, 32), Parent = c })
+		keyButton.Activated:Connect(function()
+			if keys > 0 then
+				open(box, true)
+			else
+				Hud.toast("No " .. box.name .. " keys yet: chests in rounds hold them!", "bad")
+			end
+		end)
 		local productId = box.product and Config.Products[box.product] or 0
 		if productId ~= 0 then
-			local r = UiKit.button("R$", UiKit.colors.blue, { Position = UDim2.new(0, 10, 0, 176), Size = UDim2.new(1, -20, 0, 34), Parent = c })
+			local r = UiKit.button("R$", UiKit.colors.blue, { Position = UDim2.new(0, 10, 0, 210), Size = UDim2.new(1, -20, 0, 32), Parent = c })
 			robuxPrice(productId, r)
 			r.Activated:Connect(function()
 				MarketplaceService:PromptProductPurchase(player, productId)

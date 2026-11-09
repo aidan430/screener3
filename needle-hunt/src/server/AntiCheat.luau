@@ -2,7 +2,7 @@
 -- compared with the last; moving faster than Config.AntiCheat.maxSpeed (outside a teleport the
 -- server made itself, see AntiCheat.allow) puts the character back and flags the player, which
 -- stops them claiming a needle for a few seconds. Claims are also checked for distance and rate
--- in server/NeedleSpawner. Nothing here trusts the client.
+-- in server/ChestSpawner. Nothing here trusts the client.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

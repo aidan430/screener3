@@ -1,6 +1,6 @@
--- The round's big moments on screen: the 3, 2, 1 before searching; NEEDLE FOUND! when you find it
--- (the needle you get to keep turning in 3D, its rarity and value, your place, time and rewards,
--- your found effect where it was); a note telling everyone what someone found; and the results.
+-- The round's big moments on screen: the 3, 2, 1; CHEST OPENED! when you open one (coins, or a
+-- key in its box's colour); a note telling everyone what someone else got; and the results
+-- (places by chests, tag-outs and coins, and your match XP).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -8,19 +8,28 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Rules = require(Shared:WaitForChild("Rules"))
 local Cosmetics = require(Shared:WaitForChild("Cosmetics"))
-local Needles = require(Shared:WaitForChild("Needles"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local UiKit = require(script.Parent.UiKit)
 local Effects = require(script.Parent.Effects)
 local Hud = require(script.Parent.Hud)
-local NeedleView = require(script.Parent.NeedleView)
 
 local player = Players.LocalPlayer
 local Results = {}
 local PLACES = { "1st", "2nd", "3rd" }
+local keyColour
 
 local function rgb(c)
 	return Color3.fromRGB(c[1], c[2], c[3])
+end
+
+-- A key's colour: its box's colour.
+keyColour = function(id)
+	for _, box in ipairs(Config.Boxes.list) do
+		if box.id == id then
+			return rgb(box.colour)
+		end
+	end
+	return UiKit.colors.gold
 end
 
 local function placeName(n)
@@ -42,37 +51,34 @@ function Results.mount(gui, getProfile)
 	local results, body = UiKit.window(gui, "Round results", 560, 440)
 	results.ZIndex = 25
 
+	-- a chest opened: yours gets the popup; anyone else's, a note
 	Remotes.Found.OnClientEvent:Connect(function(m)
-		local mine = m.userId == player.UserId
-		local k = m.kept
-		if not mine then
-			local what = if k then " found a " .. k.rarity .. " " .. k.name .. "!" else " found it!"
-			Hud.toast(m.name .. what .. " (" .. placeName(m.place) .. ")" .. (if m.place == 1 then "  " .. Config.Round.grace .. " seconds left for everyone else!" else ""), "level")
-			Effects.sound("whoosh")
+		local got = m.got or {}
+		local what = if got.key then "a " .. got.name else Rules.commas(got.coins or 0) .. " coins"
+		if m.userId ~= player.UserId then
+			Hud.toast(m.name .. " opened a " .. (if m.golden then "Golden Chest" else "chest") .. ": " .. what .. "!  (" .. m.left .. " left)", if got.key then "level" else "good")
 			return
 		end
 		local profile = getProfile() or {}
-		local equipped = profile.equipped or {}
-		local effect = Cosmetics.get(equipped.effect or "e_confetti") or Cosmetics.get("e_confetti")
+		local effect = Cosmetics.get((profile.equipped or {}).effect or "e_confetti") or Cosmetics.get("e_confetti")
 		for _, c in ipairs(art:GetChildren()) do
 			c:Destroy()
 		end
-		if k then
-			NeedleView.make(art, k.type, k.skin, { Size = UDim2.new(1, -40, 1, 0), Position = UDim2.fromOffset(20, 0), ZIndex = 32 }, true)
-			local rarity = Needles.rarity(k.rarityId)
-			kept.Text = (if k.new then "NEW!  " else "") .. k.rarity .. " " .. k.name
-			kept.TextColor3 = Color3.fromRGB(rarity.colour[1], rarity.colour[2], rarity.colour[3])
-			keep.Text = "It's yours to keep: worth " .. Rules.commas(k.value) .. " in your Collection."
-		end
-		big.Text = if m.golden then "GOLDEN NEEDLE!" else "NEEDLE FOUND!"
-		line.Text = placeName(m.place) .. "  ·  " .. string.format("%.1f s", m.seconds) .. "  ·  +" .. Rules.commas(m.coins) .. " coins  ·  XP at the end"
+		local icon = UiKit.label({ Font = UiKit.bold, Text = if got.key then "🗝" else "●", TextColor3 = if got.key then keyColour(got.key) else UiKit.colors.gold, Size = UDim2.new(1, 0, 1, 0), ZIndex = 32, Parent = art }, 96)
+		UiKit.pop(icon, 0.4)
+		big.Text = if m.golden then "GOLDEN CHEST!" else "CHEST OPENED!"
+		kept.Text = if got.key then got.name .. "!" else "+" .. what
+		kept.TextColor3 = if got.key then keyColour(got.key) else UiKit.colors.gold
+		line.Text = if got.key then "Open a box with it in the lobby (Boxes)." else "Coins buy trails, titles, effects and boxes."
+		keep.Text = m.left .. (if m.left == 1 then " chest left" else " chests left") .. " on this map  ·  XP at the end"
 		popup.Visible = true
 		UiKit.pop(popup, 0.5)
 		Effects.sound("found")
-		Effects.flash()
-		Effects.burst(m.position, { rgb(effect.colours[1]), rgb(effect.colours[2] or effect.colours[1]) }, if m.golden then 90 else 50)
-		Effects.confetti()
-		task.delay(4.5, function()
+		Effects.burst(m.position + Vector3.new(0, 2, 0), { rgb(effect.colours[1]), rgb(effect.colours[2] or effect.colours[1]) }, if m.golden then 90 else 50)
+		if got.key then
+			Effects.confetti()
+		end
+		task.delay(3.5, function()
 			popup.Visible = false
 		end)
 	end)
@@ -99,20 +105,16 @@ function Results.mount(gui, getProfile)
 			end
 			local extra = state.extra or {}
 			local rows = extra.rows or {}
-			UiKit.label({ LayoutOrder = 0, Text = (extra.map or "") .. (if extra.golden then "  ·  Golden Needle round" else ""), Size = UDim2.new(1, 0, 0, 26), TextColor3 = UiKit.colors.soft, Parent = body }, 20)
+			UiKit.label({ LayoutOrder = 0, Text = (extra.map or "") .. (if extra.golden then "  ·  Golden Chest round" else ""), Size = UDim2.new(1, 0, 0, 26), TextColor3 = UiKit.colors.soft, Parent = body }, 20)
 			if #rows == 0 then
-				UiKit.label({ LayoutOrder = 1, Text = "Nobody found it this time. The hay wins!", Size = UDim2.new(1, 0, 0, 40), Parent = body }, 24)
+				UiKit.label({ LayoutOrder = 1, Text = "Nobody opened a chest this time. The hay wins!", Size = UDim2.new(1, 0, 0, 40), Parent = body }, 24)
 			end
 			for i, r in ipairs(rows) do
 				local card = UiKit.make("Frame", { LayoutOrder = i, Size = UDim2.new(1, -8, 0, 52), BackgroundColor3 = if r.userId == player.UserId then UiKit.colors.line else UiKit.colors.card, Parent = body }, { UiKit.corner(10) })
 				local medal = if r.place == 1 then UiKit.colors.gold elseif r.place == 2 then Color3.fromRGB(200, 206, 216) elseif r.place == 3 then Color3.fromRGB(205, 140, 90) else UiKit.colors.soft
 				UiKit.label({ Font = UiKit.bold, Text = placeName(r.place), Size = UDim2.new(0, 70, 1, 0), TextColor3 = medal, Parent = card }, 24)
 				UiKit.label({ Text = r.name, Size = UDim2.new(0.45, 0, 1, 0), Position = UDim2.fromOffset(76, 0), TextXAlignment = Enum.TextXAlignment.Left, Parent = card }, 22)
-				UiKit.label({ Text = string.format("%.1f s  ·  +%d coins", r.seconds or 0, r.coins or 0), Size = UDim2.new(0.42, 0, 0.5, 0), Position = UDim2.new(0.58, -10, 0, 2), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = UiKit.colors.soft, Parent = card }, 18)
-				if r.kept then -- the needle they keep, in its rarity colour
-					local rarity = Needles.rarity(r.kept.rarityId)
-					UiKit.label({ Text = r.kept.rarity .. " " .. r.kept.name, Size = UDim2.new(0.62, 0, 0.5, 0), Position = UDim2.new(0.38, -10, 0.5, -2), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.fromRGB(rarity.colour[1], rarity.colour[2], rarity.colour[3]), Parent = card }, 16)
-				end
+				UiKit.label({ Text = string.format("%d chests  ·  %d tagged out  ·  +%s coins", r.chests or 0, r.elims or 0, Rules.commas(r.coins or 0)), Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.new(0.5, -10, 0, 0), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = UiKit.colors.soft, Parent = card }, 18)
 			end
 			local mine = (extra.xp or {})[tostring(player.UserId)] -- your match XP and where it came from
 			if mine then
@@ -121,7 +123,7 @@ function Results.mount(gui, getProfile)
 				local parts = {
 					(if mine.place then placeName(mine.place) else "Played") .. " +" .. mine.placeXp,
 					mine.coins .. " coins +" .. mine.coinXp,
-					mine.needles .. (if mine.needles == 1 then " needle +" else " needles +") .. mine.needleXp,
+					mine.chests .. (if mine.chests == 1 then " chest +" else " chests +") .. mine.chestXp,
 					mine.elims .. " tagged out +" .. mine.elimXp,
 				}
 				UiKit.label({ Text = table.concat(parts, "   ·   "), TextColor3 = UiKit.colors.soft, Size = UDim2.new(1, -20, 0, 26), Position = UDim2.fromOffset(10, 40), TextXAlignment = Enum.TextXAlignment.Left, Parent = box }, 18)

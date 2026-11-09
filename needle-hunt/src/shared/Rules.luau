@@ -20,22 +20,34 @@ function Rules.addXp(level, xp, gain)
 	return level, xp, level - before
 end
 
--- Coins and XP for finding a needle: `place` (1 = first), `elapsed` seconds into a round of
--- `duration`, at difficulty `diff` (a Config.Difficulty row), golden or not, with a win streak.
--- Faster finds pay more: the time bonus falls from 100% to 50% over the round.
-function Rules.findReward(place, elapsed, duration, diff, golden, streak, doubleCoins)
+-- Coins for finishing a round in `place` (1 = first) at difficulty `diff` (a Config.Difficulty
+-- row), with a win streak and maybe the 2x Coins pass.
+function Rules.placeCoins(place, diff, streak, doubleCoins)
 	local R = Config.Rewards
-	local placeMult = R.place[math.min(place, #R.place)]
-	local speed = 0.5 + 0.5 * math.clamp(1 - elapsed / math.max(duration, 1), 0, 1)
-	local streakMult = 1 + math.min(R.winStreakMax, R.winStreakStep * math.max(0, streak))
-	local mult = placeMult * speed * (diff.coins or 1) * (if golden then R.golden else 1)
-	local coins = math.floor(R.findCoins * mult * streakMult * (if doubleCoins then 2 else 1) + 0.5)
-	local xp = math.floor(R.findXp * mult + 0.5)
-	if place <= 3 then
-		coins += R.top3Coins * (if doubleCoins then 2 else 1)
-		xp += R.top3Xp
+	local base = R.placeCoins[math.min(place, #R.placeCoins)]
+	local streakMult = if place == 1 then 1 + math.min(R.winStreakMax, R.winStreakStep * math.max(0, streak)) else 1
+	return math.floor(base * (diff.coins or 1) * streakMult * (if doubleCoins then 2 else 1) + 0.5)
+end
+
+-- Who placed where: by chests opened, then tag-outs, then coins collected (more is better).
+-- Returns the players in order; only players who opened a chest or tagged someone place.
+function Rules.rank(stats)
+	local list = {}
+	for player, s in pairs(stats) do
+		if s.chests > 0 or s.elims > 0 then
+			table.insert(list, player)
+		end
 	end
-	return coins, xp
+	table.sort(list, function(a, b)
+		local x, y = stats[a], stats[b]
+		if x.chests ~= y.chests then
+			return x.chests > y.chests
+		elseif x.elims ~= y.elims then
+			return x.elims > y.elims
+		end
+		return x.coins > y.coins
+	end)
+	return list
 end
 
 -- Picks one row from a list of tables with `weight` fields.

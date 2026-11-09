@@ -1,11 +1,11 @@
 # A Needle in a Haystack (round-based)
 
-A fast, competitive "find the hidden object" game for Roblox. Players wait in a lobby, are
-dropped into one of five haystack-themed maps, and race to click or tap one tiny needle before
-the timer runs out. First to find it wins the round; everyone else gets 10 seconds to grab 2nd
-and 3rd. Coins, XP, levels, streaks, daily quests, leaderboards and a cosmetic shop keep people
-coming back. Nothing is pay-to-win: the hidden needle looks the same for everyone, and Robux
-only buys looks, a coin booster and an extra daily hint.
+A fast, competitive round game for Roblox. Up to 10 players wait in a lobby, are dropped into one
+of five haystack-themed mazes, and race to open the 5 chests hidden in it while poking, throwing
+and dashing past each other with their needles. A chest holds coins or a key; keys open boxes in
+the lobby, and boxes hold the needles players collect, show off and trade. Places go by chests
+opened, then tag-outs, then coins. Coins, XP, levels, streaks, daily quests, leaderboards and a
+cosmetic shop keep people coming back. Robux never buys combat power.
 
 This is a separate game from the long-form "Needle in the Haystack" in the repo root; it shares
 nothing at runtime.
@@ -172,34 +172,32 @@ Earned board.
 1. **Lobby:** a 15-second countdown, shown on the HUD and above the Play pad.
 2. **Loading:** the server picks the round's settings:
    - a map (never the same one twice in a row)
-   - a difficulty: Easy, Normal or Hard
-   - maybe a modifier: Double Needle, Speed Round, Low Light or Camouflage
-   - and, rarely, a Golden Needle
+   - a difficulty: Easy, Normal or Hard (more clutter, darker, drifting hay; chests pay more)
+   - maybe a modifier: Speed Round, Low Light, Key Round (every chest holds a key) or Brawl
+     (tag-outs pay double)
+   - and, sometimes, a Golden Chest (with a Starlight Key inside)
 
-   It then builds the map and hides the needle.
-3. **Countdown:** everyone is moved into the map and held still for 3, 2, 1.
-4. **Search:** 3 minutes (90 seconds in a Speed Round).
-   - Click or tap the needle, or walk into it.
-   - After the first find, everyone else has 10 seconds to place 2nd and 3rd.
-   - In a Double Needle round you finish once you've found both.
-5. **Results:** places, times and rewards for 10 seconds, then everyone goes back to the lobby.
+   It then builds the map and places the 5 chests.
+3. **Countdown:** up to 10 players (`Config.Round.maxPlayers`) are moved in and held still for 3, 2, 1.
+   Anyone beyond 10 waits in the lobby for the next round.
+4. **The round:** 3 minutes (90 seconds in a Speed Round).
+   - Find a chest and hold E (or the on-screen button) for 1.5 seconds to open it. First come,
+     first served: once it's open, it's empty.
+   - Inside: coins (30 to 90, times the difficulty), or a key (30%): a Hay Key (70%), Harvest Key
+     (25%) or Starlight Key (5%). A key opens one of that box in the lobby, free.
+   - Poke, throw and dash (see Needle combat). Tagged out, you're back in 5 seconds.
+   - Once the last chest is open, everyone has 15 seconds to finish fights.
+5. **Results:** places by chests opened, then tag-outs, then coins collected. Places pay coins
+   (60 / 40 / 25 / 10, times the difficulty) and match XP. Then everyone goes back to the lobby.
 
-**Hiding spots** are recorded by each map as it places its props: bale tops, crate tops, the
-ground beside haystacks, the barn loft, the attic table and so on. Each round the spawner:
-- checks there's a real surface under the spot, nothing solid in the way, and that it's within
-  jumping height (or reachable by stairs)
-- then nudges and turns the needle so spots can't be memorised.
-
-**Difficulty:**
-- **Easy:** a bigger needle with a faint glint.
-- **Normal:** a standard needle, more clutter.
-- **Hard:** a small needle, lots of clutter, 4 decoys (clicking one locks you out for 3 seconds), darker light and drifting hay bundles.
+**Chests** go in the maze's dead ends first, then any other recorded spot, at least 30 studs apart,
+each checked for a real floor and room round it. The banner counts chests left; everyone sees
+who opened one and what they got. All the numbers are in `Config.Chests`.
 
 **Anti-exploit:**
-- Every claim is checked on the server: the round is running, you're in it, your character is
-  within 16 studs of the needle, and you aren't clicking more than 6 times a second.
-- A movement check puts back anyone moving faster than 70 studs/s outside a server teleport and
-  blocks their claims for 5 seconds.
+- Every chest opening is checked on the server: the round is running, you're in it, you're within
+  reach, nobody opened it first, and you aren't flagged by the movement check.
+- A movement check puts back anyone moving faster than 70 studs/s outside a server teleport.
 - Rewards are calculated only on the server.
 
 ## The lobby: showing off
@@ -224,15 +222,14 @@ the booths, and a hay yard of haystacks behind the title sign.
 
 Code: `server/LobbySocial.luau`, `server/LobbyShowOff.luau`, `client/LobbyUi.luau`.
 
-Set Max Players to about 12 (Game Settings > Places) to match the booths.
+Set Max Players to 10 (Game Settings > Places): a server is one map's worth of players.
 
-## Finding the needle
+## Chests
 
-- **Size:** needles are 3.6 / 2.8 / 2.0 studs long (Easy / Normal / Hard) with a bigger grab box (`Config.Find`).
-- **Hover:** point at a needle within reach and it lights up with a white outline and "Click to grab!".
-- **Counter:** the banner counts what you've found ("0/1").
-- **Once yours:** the needle vanishes from your screen, while others still see theirs.
-- **Testing in Studio:** `Config.Testing.revealNeedle = true` outlines the hidden needle through walls and prints where it is. It only works in Studio.
+- **Testing in Studio:** `Config.Testing.revealChests = true` outlines the chests through walls.
+  It only works in Studio.
+- **Hints** (one free a day, two with the Extra Hint pass) say roughly where the nearest unopened
+  chest is. The Compass power-up points at it; Glint makes chests near you sparkle.
 
 **Barriers:** every outdoor map and the lobby have a hedge all the way round, with invisible walls above it up to 200 studs. Anyone who falls below a height of -40 respawns: in a round, back into the map.
 
@@ -290,40 +287,25 @@ model carries them itself.
 
 ## The needle collection
 
-Every needle a player finds is theirs to keep. Everyone hunts the same plain needle, so it stays
-fair. When you find it, the server reveals what it really was: one of **12 types** (Sewing
-Needle, Dressmaker's Pin, Darning Needle, Knitting Needle, Crochet Hook, Safety Pin, Curved
-Upholstery Needle and more) in one of **32 skins**. That makes 384 to collect.
+Needles come out of boxes (opened with coins, keys from chests, or Robux) and trades. Each is
+one of **12 types** (Sewing Needle, Dressmaker's Pin, Darning Needle, Knitting Needle, Crochet
+Hook, Safety Pin, Curved Upholstery Needle and more) in one of **57 skins**: 684 to collect.
 
-**Skins** come in six rarities, each found less often and worth more:
-
-| Rarity | Chance | Worth |
-|---|---|---|
-| Common | 55% | x1 |
-| Uncommon | 25% | x2 |
-| Rare | 12% | x5 |
-| Epic | 6% | x12 |
-| Legendary | 1.8% | x40 |
-| Mythic | 0.2% | x150 |
-
-**Luck:**
-- 1st place and Hard rounds give extra luck (`Config.Collection`).
-- A Golden Needle round always gives the Golden skin.
+**Skins** come in six rarities, each rarer and worth more: Common x1, Uncommon x2, Rare x5,
+Epic x12, Legendary x40, Mythic x150. Each box has its own exact odds (see Boxes).
 
 **Value:**
 - A needle is worth its type's base value × its rarity.
 - A collection is worth its different needles added up; duplicates show as x2, x3.
 
-**Where needles come from:** finds, boxes (below) and trades. A needle you already have still
+**Where needles come from:** boxes (below) and trades. A needle you already have still
 counts (x2, x3): keep it or trade it.
 
 **Showing it off:**
-- Everyone sees what you found as you find it.
-- The results list each player's needle.
 - The **Collection** screen shows your collection or anyone's in the server, needle by needle in 3D.
 - The lobby's **Hall of Needles** pedestals show the server's top three collections, each with the needle its owner chose.
 - **Most Valuable Collection** is a leaderboard, and Collection value shows in the player list.
-- Two daily quests use it: "Add 3 new needles" and "Find a Rare (or better) needle".
+- Two daily quests use it: "Add 3 new needles" and "Get a Rare (or better) needle from a box".
 
 **Designing more skins:**
 - Print or draw on `assets/skin-template/needle_skin_template.png`.
@@ -355,6 +337,13 @@ Open a box for a needle for your collection (Boxes in the menu, or the Box Stall
 - **Robux:** create the HarvestBox and StarlightBox developer products (Selling with Robux) and put
   their IDs in `Config.Products`; the R$ button then shows their price.
 
+**Keys:** each box has a "Use a key" button showing how many of its keys you have. A key opens
+the box free, with the same odds.
+
+**Announcements:** when anyone opens a needle whose rarity had a 0.5% chance or less in its box
+(`Config.Boxes.announceAt`: today the Hay Box's Mythic at 0.1% and the Harvest Box's Mythic at
+0.5%), everyone in the server gets a banner with the needle turning in it and a line in the chat.
+
 ## Needle combat
 
 During a round's search everyone carries their showcase needle (the **Needle** tool, slot 1).
@@ -382,8 +371,8 @@ All the numbers are in `Config.Combat`.
 ## Match XP
 
 XP comes at the end of each match, with a breakdown on the results screen (`Config.MatchXp`):
-your place (1st 120, 2nd 90, 3rd 70, other finishers 50), +20 for playing, +0.5 per coin
-collected in the match, +40 per needle found and +25 per player tagged out.
+your place (1st 120, 2nd 90, 3rd 70, everyone else who placed 50), +20 for playing, +0.5 per
+coin collected in the match, +40 per chest opened and +25 per player tagged out.
 
 ## Trading
 
@@ -421,11 +410,11 @@ remotes, but it can't run Roblox. Play mode in Studio is the real test.
 3. After 15 seconds:
    - The banner shows the map name, then 3-2-1.
    - You're in a map and can't move until GO.
-4. Find the needle. If you can't, use Hint; one works, the second says none are left today.
-   - Clicking it shows NEEDLE FOUND! with your needle skin, place, time and rewards, a burst and a soft flash.
-   - The round ends 10 seconds later (or at once when you're alone).
-5. The results screen lists you 1st, then you're back in the lobby. Coins, XP and Needles have gone up.
-6. **Shop:** buy Copper (400 coins). To test quickly, set `Config.Rewards.findCoins = 2000` for a round and set it back after. It equips; the Inventory shows it.
+4. Open a chest: hold E next to it. Use Hint if you can't find one (or `Config.Testing.revealChests`).
+   - CHEST OPENED! shows the coins or the key; the banner counts down the chests left.
+   - When the last chest is open the round ends 15 seconds later.
+5. The results screen lists you 1st with your chests, then you're back in the lobby. Coins, XP and Chests have gone up; a key shows on its box in Boxes.
+6. **Shop:** buy the Straw Trail (700 coins). To test quickly, set `Config.Chests.coins = { 2000, 2000 }` for a round and set it back after. It equips; the Inventory shows it.
 7. **Inventory:** equip a trail; it follows you. Equip a title (from a quest); it floats over your head.
 8. **Quests:** progress bars move after rounds; finishing one pays out with a toast.
 9. **Leaderboard:** "This server" shows you; "Everyone" fills in a few minutes after publishing.
@@ -434,14 +423,14 @@ remotes, but it can't run Roblox. Play mode in Studio is the real test.
     - Reduce effects: no flash or camera kick.
     - Join rounds automatically off: you stay in the lobby.
 11. Test → **Clients and Servers**, 2 or 3 players:
-    - The first finder wins.
-    - Others get 10 seconds to place.
+    - Whoever opens the most chests wins (ties: tag-outs, then coins).
+    - Everyone sees who opened which chest and what was inside.
     - A win counts only with 2 or more playing.
 12. Stop and Play again: your coins, level, cosmetics and quests are still there.
-13. Hard round: decoys say "A decoy!" and lock you out for 3 seconds.
+13. Open a box with a key; with `Config.Boxes.announceAt = 100` for a test, every opening shows the server-wide banner (set it back to 0.5).
 14. Phone: Test → Device emulator → a phone.
     - The HUD, menu and windows scale down and stay readable.
-    - Tapping the needle works.
+    - Holding the chest's button opens it.
 15. **Boxes:** open a Hay Box (give yourself coins first); the reel stops on a card and the needle turns. The odds show for all three boxes. In Studio, PolicyService may report boxes as restricted: then the screen says so (that's the safe answer).
 16. **Combat** (2 players): equip the Needle (1), click near the other player: hearts drop, POP! shows, three pokes tag them out and they're back in 5 seconds. Press Q aiming at them: the needle flies and takes 2 hearts; aim at a wall and it sticks there. Press F to inspect. Check the needle points forwards in the hand (`Config.NeedleTool.grip`).
 17. **Results:** the MATCH XP box shows your breakdown.

@@ -38,6 +38,7 @@ function DataManager.fresh(saved)
 		owned = {}, equipped = {}, receipts = {}, starterBought = saved.starterBought == true, -- the Starter Bundle is once each
 		boxPity = number(saved, "boxPity", 0), boxesOpened = number(saved, "boxesOpened", 0), -- opens since the last Rare or better
 		eliminations = number(saved, "eliminations", 0),
+		chests = number(saved, "chests", 0), keys = {}, -- chests opened; keys from chests: [box id] = how many
 		collection = {}, showcase = "", -- needles kept: ["type:skin"] = how many; the one on show
 		settings = { music = true, sfx = true, reduceEffects = false, autoJoin = true },
 	}
@@ -90,6 +91,10 @@ function DataManager.fresh(saved)
 			end
 		end
 	end
+	for _, k in ipairs(Config.Chests.keys) do
+		local n = type(saved.keys) == "table" and saved.keys[k.id]
+		d.keys[k.id] = if type(n) == "number" and n > 0 then math.floor(n) else 0
+	end
 	if type(saved.showcase) == "string" and d.collection[saved.showcase] then
 		d.showcase = saved.showcase
 	end
@@ -128,7 +133,7 @@ local function publish(player, d)
 	player:SetAttribute("Level", d.level)
 	player:SetAttribute("XP", d.xp)
 	player:SetAttribute("XPNeed", Rules.xpNeed(d.level))
-	player:SetAttribute("Needles", d.needles)
+	player:SetAttribute("Chests", d.chests)
 	player:SetAttribute("Wins", d.wins)
 	player:SetAttribute("Showcase", d.showcase) -- server/Combat rebuilds your Needle tool when it changes
 	player:SetAttribute("BestTime", d.bestTime)
@@ -142,9 +147,9 @@ local function publish(player, d)
 	player:SetAttribute("HintsUsed", if d.hintsDay == math.floor(os.time() / 86400) then d.hintsUsed else 0) -- hints reset each day (UTC)
 	local stats = player:FindFirstChild("leaderstats")
 	if stats then
-		stats.Level.Value, stats.Needles.Value, stats.Collection.Value = d.level, d.needles, Needles.total(d.collection)
+		stats.Level.Value, stats.Chests.Value, stats.Collection.Value = d.level, d.chests, Needles.total(d.collection)
 	end
-	Remotes.Profile:FireClient(player, { owned = d.owned, equipped = d.equipped, quests = d.quests, settings = d.settings, collection = d.collection, showcase = d.showcase, starterBought = d.starterBought })
+	Remotes.Profile:FireClient(player, { owned = d.owned, equipped = d.equipped, quests = d.quests, settings = d.settings, collection = d.collection, showcase = d.showcase, starterBought = d.starterBought, keys = d.keys })
 end
 
 function DataManager.get(player)
@@ -194,7 +199,7 @@ end
 local function added(player)
 	local stats = Instance.new("Folder")
 	stats.Name = "leaderstats"
-	for _, name in ipairs({ "Level", "Needles", "Collection" }) do
+	for _, name in ipairs({ "Level", "Chests", "Collection" }) do
 		Instance.new("IntValue", stats).Name = name
 	end
 	stats.Parent = player

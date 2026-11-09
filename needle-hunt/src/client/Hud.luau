@@ -100,14 +100,14 @@ function Hud.mount(gui, open)
 			local inRound = player.Character and player.Character.PrimaryPart and (player.Character.PrimaryPart.Position - Config.ArenaCentre).Magnitude < 200
 			if phase == "lobby" then
 				headline.Text, timer.Text = "Next round in", Rules.clock(left)
-				info.Text = if #game:GetService("Players"):GetPlayers() == 1 then "Practice round: invite friends to race!" else "Get ready to search!"
+				info.Text = if #game:GetService("Players"):GetPlayers() == 1 then "Practice round: invite friends to race!" else "Get ready: 5 chests, first come first served!"
 			elseif phase == "loading" or phase == "countdown" then
 				headline.Text, timer.Text = ReplicatedStorage:GetAttribute("MapName") or "Loading...", if phase == "countdown" then tostring(math.max(1, math.ceil(left))) else "..."
-				info.Text = (ReplicatedStorage:GetAttribute("Difficulty") or "") .. (if mods ~= "" then "  ·  " .. mods else "") .. (if golden then "  ·  ✦ GOLDEN NEEDLE ✦" else "")
+				info.Text = (ReplicatedStorage:GetAttribute("Difficulty") or "") .. (if mods ~= "" then "  ·  " .. mods else "") .. (if golden then "  ·  ✦ GOLDEN CHEST ✦" else "")
 			elseif phase == "search" then
-				local count = ReplicatedStorage:GetAttribute("NeedleCount") or 1
-				local found = player:GetAttribute("Found") or 0
-				headline.Text = (if count > 1 then "Find both needles!" else "Find the needle!") .. "  " .. found .. "/" .. count
+				local count = ReplicatedStorage:GetAttribute("ChestCount") or 5
+				local chestsLeft = ReplicatedStorage:GetAttribute("ChestsLeft") or count
+				headline.Text = if chestsLeft > 0 then "Chests left: " .. chestsLeft .. " / " .. count else "All chests open!"
 				timer.Text = Rules.clock(left)
 				timer.TextColor3 = if left < 15 then UiKit.colors.red else UiKit.colors.gold
 				info.Text = (ReplicatedStorage:GetAttribute("MapName") or "") .. "  ·  " .. (ReplicatedStorage:GetAttribute("Difficulty") or "") .. (if mods ~= "" then "  ·  " .. mods else "") .. (if golden then "  ·  ✦ GOLDEN ✦" else "")
