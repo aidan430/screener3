@@ -708,3 +708,8 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   equips what you own. The new Wardrobe journal page lists every cosmetic, how to unlock it,
   and Wear / Take off. The Achievements page shows open milestones with progress bars and
   prizes (client/Milestones); secret ones stay ??? until earned. Any 10 still open the Loft.
+- Hats upgraded (server/CosmeticHats, Config.HatScale = 1.35): a bigger straw hat; a bandana
+  with a knot and two tails; the Golden Straw Crown is a tall glowing band with eight pearl-
+  tipped points, four coloured gems, a golden shimmer and a soft light; the Starlight Halo is a
+  16-piece glowing ring that twinkles, glows and turns slowly (Config.HaloSpin, client/WorldFx
+  turns its CosmeticSpin weld on every screen).

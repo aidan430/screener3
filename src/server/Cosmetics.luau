@@ -39,41 +39,7 @@ local function weld(a, b)
 	w.Parent = b
 end
 
-local HATS = {} -- shape -> function(head, c, folder)
-function HATS.strawhat(head, c, folder)
-	local top = head.CFrame * CFrame.new(0, head.Size.Y / 2, 0)
-	local parts = {
-		Build.part({ size = Vector3.new(0.12, 2.6, 2.6), shape = "Cylinder", cframe = top * CFrame.new(0, 0.06, 0) * CFrame.Angles(0, 0, math.rad(90)), color = colour(c, 1), material = "Fabric", collide = false, parent = folder }),
-		Build.part({ size = Vector3.new(0.7, 1.4, 1.4), shape = "Cylinder", cframe = top * CFrame.new(0, 0.4, 0) * CFrame.Angles(0, 0, math.rad(90)), color = colour(c, 1), material = "Fabric", collide = false, parent = folder }),
-		Build.part({ size = Vector3.new(0.18, 1.44, 1.44), shape = "Cylinder", cframe = top * CFrame.new(0, 0.18, 0) * CFrame.Angles(0, 0, math.rad(90)), color = colour(c, 2), material = "Fabric", collide = false, parent = folder }),
-	}
-	return parts
-end
-function HATS.bandana(head, c, folder)
-	local top = head.CFrame * CFrame.new(0, head.Size.Y * 0.32, 0)
-	return {
-		Build.part({ size = Vector3.new(0.5, 1.28, 1.28), shape = "Cylinder", cframe = top * CFrame.Angles(0, 0, math.rad(90)), color = colour(c, 1), material = "Fabric", collide = false, parent = folder }),
-		Build.part({ size = Vector3.new(0.5, 0.5, 0.2), cframe = head.CFrame * CFrame.new(0, head.Size.Y * 0.25, 0.68) * CFrame.Angles(math.rad(20), 0, 0), color = colour(c, 1), material = "Fabric", collide = false, parent = folder }),
-	}
-end
-function HATS.crown(head, c, folder)
-	local top = head.CFrame * CFrame.new(0, head.Size.Y / 2 + 0.2, 0)
-	local parts = { Build.part({ size = Vector3.new(0.4, 1.3, 1.3), shape = "Cylinder", cframe = top * CFrame.Angles(0, 0, math.rad(90)), color = colour(c, 1), material = "Neon", collide = false, parent = folder }) }
-	for i = 0, 5 do
-		local a = i / 6 * math.pi * 2
-		table.insert(parts, Build.part({ size = Vector3.new(0.18, 0.5, 0.18), cframe = top * CFrame.new(math.cos(a) * 0.58, 0.4, math.sin(a) * 0.58), color = colour(c, 2), material = "Neon", collide = false, parent = folder }))
-	end
-	return parts
-end
-function HATS.halo(head, c, folder)
-	local centre = head.CFrame * CFrame.new(0, head.Size.Y / 2 + 0.8, 0)
-	local parts = {}
-	for i = 0, 11 do
-		local a = i / 12 * math.pi * 2
-		table.insert(parts, Build.part({ size = Vector3.new(0.18, 0.12, 0.42), cframe = centre * CFrame.new(math.cos(a) * 0.8, 0, math.sin(a) * 0.8) * CFrame.Angles(0, -a, 0), color = colour(c, 1), material = "Neon", collide = false, parent = folder }))
-	end
-	return parts
-end
+local HATS = require(script.Parent.CosmeticHats)
 
 -- Puts everything the player wears on their character (replacing what was there).
 function Cosmetics.dress(player)
@@ -113,9 +79,11 @@ function Cosmetics.dress(player)
 		g.Parent = label
 	end
 	if hat and HATS[hat.shape] then
-		for _, part in ipairs(HATS[hat.shape](head, hat, folder)) do
-			part.Anchored, part.Massless, part.CanQuery, part.CanTouch = false, true, false, false
-			weld(head, part)
+		for _, part in ipairs(HATS[hat.shape](head, hat, folder, Config.HatScale)) do
+			if not part:GetAttribute("Welded") then
+				part.Anchored, part.Massless, part.CanQuery, part.CanTouch = false, true, false, false
+				weld(head, part)
+			end
 		end
 	end
 	if trail then

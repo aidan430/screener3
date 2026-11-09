@@ -87,6 +87,14 @@ local function spinFans()
 		end
 		local step = spinning * 6
 		spinning = 0
+		for _, someone in ipairs(Players:GetPlayers()) do -- the Starlight Halo turns slowly
+			local worn = someone.Character and someone.Character:FindFirstChild("Cosmetics")
+			local hub = worn and worn:FindFirstChild("HaloHub")
+			local spin = hub and hub:FindFirstChild("CosmeticSpin")
+			if spin and spin:GetAttribute("Base") then
+				spin.C0 = spin:GetAttribute("Base") * CFrame.Angles(0, (os.clock() * Config.HaloSpin) % (math.pi * 2), 0)
+			end
+		end
 		for _, flow in ipairs(CollectionService:GetTagged("PortalFlow")) do -- the portals' light flows up
 			flow.OffsetStudsV = (os.clock() * Config.PortalFlow) % flow.StudsPerTileV
 		end

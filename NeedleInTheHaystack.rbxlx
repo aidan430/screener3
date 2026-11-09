@@ -374,6 +374,8 @@ Config.Achievements = {
 	{ id = "lucky100", open = true, name = "Four-Leaf Clover", text = "Make 100 lucky finds.", stat = "lucky_finds", goal = 100, spins = 2 },
 	{ id = "sold1m", open = true, name = "Market Favourite", text = "Sell 1,000,000 straws.", stat = "straws_sold", goal = 1000000, coins = 250000 },
 }
+Config.HatScale = 1.35 -- hats a little bigger than life, so they read from across the farm
+Config.HaloSpin = 0.8 -- radians a second the Starlight Halo turns
 Config.LegendBoostHours = 24 -- "every power-up": each timed boost (2x Speed, 2x Coins, Lucky Charm) lasts this long
 
 return Config
@@ -2191,6 +2193,118 @@ return Carry
 			</Item>
 			<Item class="ModuleScript" referent="RBX0002B">
 				<Properties>
+					<string name="Name">CosmeticHats</string>
+					<ProtectedString name="Source"><![CDATA[-- The hats (Config.Cosmetics, kind "hat"), built from parts on a player's head. Each builder
+-- takes the head, the cosmetic, the folder to build into and the size (Config.HatScale), and
+-- returns its parts; parts already welded (to a hub that spins) carry the attribute Welded.
+-- The halo's hub is welded with a Weld named CosmeticSpin, which client/WorldFx turns slowly.
+local Build = require(script.Parent.Build)
+
+local Hats = {}
+local ROT90 = CFrame.Angles(0, 0, math.rad(90)) -- a cylinder standing upright
+
+local function colour(c, i)
+	local v = c.colours[i] or c.colours[1]
+	return if type(v) == "table" then Build.rgb(v) else Color3.new(1, 1, 1)
+end
+
+local function bit(spec)
+	spec.collide = false
+	return Build.part(spec)
+end
+
+local function sparkle(part, col, rate)
+	local p = Instance.new("ParticleEmitter")
+	p.Color = ColorSequence.new(col, Color3.new(1, 1, 1))
+	p.LightEmission, p.Rate = 1, rate
+	p.Lifetime, p.Speed = NumberRange.new(0.5, 1), NumberRange.new(0.2, 0.6)
+	p.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 0.18), NumberSequenceKeypoint.new(1, 0) })
+	p.SpreadAngle = Vector2.new(180, 180)
+	p.Parent = part
+end
+
+local function glow(part, col, range)
+	local l = Instance.new("PointLight")
+	l.Color, l.Range, l.Brightness = col, range, 0.9
+	l.Parent = part
+end
+
+function Hats.strawhat(head, c, folder, s)
+	local top = head.CFrame * CFrame.new(0, head.Size.Y / 2, 0)
+	return {
+		bit({ size = Vector3.new(0.14, 2.9 * s, 2.9 * s), shape = "Cylinder", cframe = top * CFrame.new(0, 0.07, 0) * ROT90, color = colour(c, 1), material = "Fabric", parent = folder }),
+		bit({ size = Vector3.new(0.8 * s, 1.5 * s, 1.5 * s), shape = "Cylinder", cframe = top * CFrame.new(0, 0.45 * s, 0) * ROT90, color = colour(c, 1), material = "Fabric", parent = folder }),
+		bit({ size = Vector3.new(0.22 * s, 1.54 * s, 1.54 * s), shape = "Cylinder", cframe = top * CFrame.new(0, 0.2 * s, 0) * ROT90, color = colour(c, 2), material = "Fabric", parent = folder }),
+	}
+end
+
+function Hats.bandana(head, c, folder, s)
+	local band = head.CFrame * CFrame.new(0, head.Size.Y * 0.3, 0)
+	return {
+		bit({ size = Vector3.new(0.55 * s, 1.3, 1.3), shape = "Cylinder", cframe = band * ROT90, color = colour(c, 1), material = "Fabric", parent = folder }),
+		bit({ size = Vector3.new(0.6 * s, 0.6 * s, 0.25), cframe = head.CFrame * CFrame.new(0, head.Size.Y * 0.22, 0.7) * CFrame.Angles(math.rad(25), 0, 0), color = colour(c, 1), material = "Fabric", parent = folder }),
+		bit({ size = Vector3.new(0.2, 0.8 * s, 0.3), cframe = head.CFrame * CFrame.new(0.2, head.Size.Y * 0.05, 0.78) * CFrame.Angles(0, 0, math.rad(-20)), color = colour(c, 1), material = "Fabric", parent = folder }),
+		bit({ size = Vector3.new(0.2, 0.7 * s, 0.3), cframe = head.CFrame * CFrame.new(-0.2, head.Size.Y * 0.07, 0.78) * CFrame.Angles(0, 0, math.rad(20)), color = colour(c, 1), material = "Fabric", parent = folder }),
+	}
+end
+
+-- The Legendary crown: a tall gold band with eight points tipped with pearls, four coloured
+-- gems round it, a golden shimmer and a soft light.
+function Hats.crown(head, c, folder, s)
+	local base = head.CFrame * CFrame.new(0, head.Size.Y / 2 + 0.25 * s, 0)
+	local gold, shine = colour(c, 1), colour(c, 2)
+	local band = bit({ size = Vector3.new(0.55 * s, 1.5 * s, 1.5 * s), shape = "Cylinder", cframe = base * ROT90, color = gold, material = "Neon", parent = folder })
+	local parts = { band }
+	for i = 0, 7 do
+		local a = i / 8 * math.pi * 2
+		local x, z = math.cos(a) * 0.68 * s, math.sin(a) * 0.68 * s
+		local h = if i % 2 == 0 then 0.8 else 0.55
+		table.insert(parts, bit({ size = Vector3.new(0.2 * s, h * s, 0.2 * s), cframe = base * CFrame.new(x, (0.27 + h / 2) * s, z), color = gold, material = "Neon", parent = folder }))
+		table.insert(parts, bit({ size = Vector3.one * 0.24 * s, shape = "Ball", cframe = base * CFrame.new(x, (0.3 + h) * s, z), color = shine, material = "Neon", parent = folder }))
+	end
+	for i, gem in ipairs({ { 220, 50, 70 }, { 60, 120, 230 }, { 60, 190, 110 }, { 160, 80, 220 } }) do
+		local a = (i - 1) / 4 * math.pi * 2 + math.pi / 2
+		table.insert(parts, bit({ size = Vector3.one * 0.3 * s, shape = "Ball", cframe = base * CFrame.new(math.cos(a) * 0.76 * s, 0, math.sin(a) * 0.76 * s), color = gem, material = "Neon", parent = folder }))
+	end
+	sparkle(band, gold, 8)
+	glow(band, gold, 9)
+	return parts
+end
+
+-- The Mythic halo: a glowing ring floating above the head that turns slowly and twinkles.
+function Hats.halo(head, c, folder, s)
+	local offset = CFrame.new(0, head.Size.Y / 2 + 0.85 * s, 0)
+	local hub = bit({ name = "HaloHub", size = Vector3.one * 0.2, cframe = head.CFrame * offset, transparency = 1, parent = folder })
+	local parts = {}
+	for i = 0, 15 do
+		local a = i / 16 * math.pi * 2
+		local seg = bit({ size = Vector3.new(0.2 * s, 0.14 * s, 0.4 * s), cframe = hub.CFrame * CFrame.new(math.cos(a) * 0.95 * s, 0, math.sin(a) * 0.95 * s) * CFrame.Angles(0, -a, 0), color = colour(c, if i % 4 == 0 then 2 else 1), material = "Neon", parent = folder })
+		seg.Anchored, seg.Massless, seg.CanQuery, seg.CanTouch = false, true, false, false
+		local w = Instance.new("WeldConstraint")
+		w.Part0, w.Part1 = hub, seg
+		w.Parent = seg
+		seg:SetAttribute("Welded", true)
+		table.insert(parts, seg)
+	end
+	hub.Anchored, hub.Massless, hub.CanQuery, hub.CanTouch = false, true, false, false
+	local spin = Instance.new("Weld")
+	spin.Name = "CosmeticSpin"
+	spin.Part0, spin.Part1, spin.C0 = head, hub, offset
+	spin:SetAttribute("Base", offset)
+	spin.Parent = hub
+	hub:SetAttribute("Welded", true)
+	sparkle(hub, colour(c, 1), 6)
+	glow(hub, colour(c, 1), 8)
+	table.insert(parts, hub)
+	return parts
+end
+
+return Hats
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX0002C">
+				<Properties>
 					<string name="Name">Cosmetics</string>
 					<ProtectedString name="Source"><![CDATA[-- What players wear (Config.Cosmetics), built on their character so everyone on the server sees
 -- it: a title above the head, a hat, a trail and an aura. Remotes.Wear(kind, id) puts on one you
@@ -2233,41 +2347,7 @@ local function weld(a, b)
 	w.Parent = b
 end
 
-local HATS = {} -- shape -> function(head, c, folder)
-function HATS.strawhat(head, c, folder)
-	local top = head.CFrame * CFrame.new(0, head.Size.Y / 2, 0)
-	local parts = {
-		Build.part({ size = Vector3.new(0.12, 2.6, 2.6), shape = "Cylinder", cframe = top * CFrame.new(0, 0.06, 0) * CFrame.Angles(0, 0, math.rad(90)), color = colour(c, 1), material = "Fabric", collide = false, parent = folder }),
-		Build.part({ size = Vector3.new(0.7, 1.4, 1.4), shape = "Cylinder", cframe = top * CFrame.new(0, 0.4, 0) * CFrame.Angles(0, 0, math.rad(90)), color = colour(c, 1), material = "Fabric", collide = false, parent = folder }),
-		Build.part({ size = Vector3.new(0.18, 1.44, 1.44), shape = "Cylinder", cframe = top * CFrame.new(0, 0.18, 0) * CFrame.Angles(0, 0, math.rad(90)), color = colour(c, 2), material = "Fabric", collide = false, parent = folder }),
-	}
-	return parts
-end
-function HATS.bandana(head, c, folder)
-	local top = head.CFrame * CFrame.new(0, head.Size.Y * 0.32, 0)
-	return {
-		Build.part({ size = Vector3.new(0.5, 1.28, 1.28), shape = "Cylinder", cframe = top * CFrame.Angles(0, 0, math.rad(90)), color = colour(c, 1), material = "Fabric", collide = false, parent = folder }),
-		Build.part({ size = Vector3.new(0.5, 0.5, 0.2), cframe = head.CFrame * CFrame.new(0, head.Size.Y * 0.25, 0.68) * CFrame.Angles(math.rad(20), 0, 0), color = colour(c, 1), material = "Fabric", collide = false, parent = folder }),
-	}
-end
-function HATS.crown(head, c, folder)
-	local top = head.CFrame * CFrame.new(0, head.Size.Y / 2 + 0.2, 0)
-	local parts = { Build.part({ size = Vector3.new(0.4, 1.3, 1.3), shape = "Cylinder", cframe = top * CFrame.Angles(0, 0, math.rad(90)), color = colour(c, 1), material = "Neon", collide = false, parent = folder }) }
-	for i = 0, 5 do
-		local a = i / 6 * math.pi * 2
-		table.insert(parts, Build.part({ size = Vector3.new(0.18, 0.5, 0.18), cframe = top * CFrame.new(math.cos(a) * 0.58, 0.4, math.sin(a) * 0.58), color = colour(c, 2), material = "Neon", collide = false, parent = folder }))
-	end
-	return parts
-end
-function HATS.halo(head, c, folder)
-	local centre = head.CFrame * CFrame.new(0, head.Size.Y / 2 + 0.8, 0)
-	local parts = {}
-	for i = 0, 11 do
-		local a = i / 12 * math.pi * 2
-		table.insert(parts, Build.part({ size = Vector3.new(0.18, 0.12, 0.42), cframe = centre * CFrame.new(math.cos(a) * 0.8, 0, math.sin(a) * 0.8) * CFrame.Angles(0, -a, 0), color = colour(c, 1), material = "Neon", collide = false, parent = folder }))
-	end
-	return parts
-end
+local HATS = require(script.Parent.CosmeticHats)
 
 -- Puts everything the player wears on their character (replacing what was there).
 function Cosmetics.dress(player)
@@ -2307,9 +2387,11 @@ function Cosmetics.dress(player)
 		g.Parent = label
 	end
 	if hat and HATS[hat.shape] then
-		for _, part in ipairs(HATS[hat.shape](head, hat, folder)) do
-			part.Anchored, part.Massless, part.CanQuery, part.CanTouch = false, true, false, false
-			weld(head, part)
+		for _, part in ipairs(HATS[hat.shape](head, hat, folder, Config.HatScale)) do
+			if not part:GetAttribute("Welded") then
+				part.Anchored, part.Massless, part.CanQuery, part.CanTouch = false, true, false, false
+				weld(head, part)
+			end
 		end
 	end
 	if trail then
@@ -2366,7 +2448,7 @@ return Cosmetics
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002C">
+			<Item class="ModuleScript" referent="RBX0002D">
 				<Properties>
 					<string name="Name">Detector</string>
 					<ProtectedString name="Source"><![CDATA[-- The metal detector (Config.MetalDetector), bought once in the shop. While the player holds
@@ -2424,7 +2506,7 @@ return Detector
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002D">
+			<Item class="ModuleScript" referent="RBX0002E">
 				<Properties>
 					<string name="Name">Factory</string>
 					<ProtectedString name="Source"><![CDATA[-- The factory line, ticking: Hay Arms and Throwers take hay from your heap and put bundles on
@@ -2555,7 +2637,7 @@ return Factory
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002E">
+			<Item class="ModuleScript" referent="RBX0002F">
 				<Properties>
 					<string name="Name">Goals</string>
 					<ProtectedString name="Source"><![CDATA[-- Guided goals: a step-by-step list (Config.Goals) that teaches the game. The server checks the
@@ -2673,7 +2755,7 @@ return Goals
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002F">
+			<Item class="ModuleScript" referent="RBX00030">
 				<Properties>
 					<string name="Name">Hauling</string>
 					<ProtectedString name="Source"><![CDATA[-- Hauling: everything you dump waits in your trader's basket. Every second the trader buys
@@ -2904,7 +2986,7 @@ return Hauling
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00030">
+			<Item class="ModuleScript" referent="RBX00031">
 				<Properties>
 					<string name="Name">HayItems</string>
 					<ProtectedString name="Source"><![CDATA[-- Every physical bit of hay lying on a plot: bundles (loose hay), bales, wrapped bales and
@@ -3037,7 +3119,7 @@ return HayItems
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00031">
+			<Item class="ModuleScript" referent="RBX00032">
 				<Properties>
 					<string name="Name">Haystack</string>
 					<ProtectedString name="Source"><![CDATA[-- The Golden Loft: the secret level in the clouds above the hub, with its golden haystack.
@@ -3098,7 +3180,7 @@ return Haystack
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00032">
+			<Item class="ModuleScript" referent="RBX00033">
 				<Properties>
 					<string name="Name">Lobby</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby, Sky Meadow (Config.Lobby): where everyone arrives on joining. Five walk-in arches
@@ -3344,7 +3426,7 @@ return Lobby
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00033">
+			<Item class="ModuleScript" referent="RBX00034">
 				<Properties>
 					<string name="Name">LobbyIsland</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's island, Sky Meadow: a round floating meadow (Config.Lobby, Config.LobbyRadius)
@@ -3560,7 +3642,7 @@ return Island
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00034">
+			<Item class="ModuleScript" referent="RBX00035">
 				<Properties>
 					<string name="Name">Loft</string>
 					<ProtectedString name="Source"><![CDATA[-- The Golden Loft: the secret level above the hub, open only to players with ten
@@ -3601,7 +3683,7 @@ return Loft
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00035">
+			<Item class="ModuleScript" referent="RBX00036">
 				<Properties>
 					<string name="Name">LooseHay</string>
 					<ProtectedString name="Source"><![CDATA[-- You and loose hay: press G to drop what you carry as a bundle; E picks up a bale, wrapped
@@ -3721,7 +3803,7 @@ return LooseHay
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00036">
+			<Item class="ModuleScript" referent="RBX00037">
 				<Properties>
 					<string name="Name">Machines</string>
 					<ProtectedString name="Source"><![CDATA[-- Machines harvest the top of your pile into your silo every second, if your generators make
@@ -3877,7 +3959,7 @@ return Machines
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Script" referent="RBX00037">
+			<Item class="Script" referent="RBX00038">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Starts the game. The ground and spawn point are built first, so nobody spawns into the void.
@@ -4071,7 +4153,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00038">
+			<Item class="ModuleScript" referent="RBX00039">
 				<Properties>
 					<string name="Name">Monetization</string>
 					<ProtectedString name="Source"><![CDATA[-- Robux items. Every ID in Config.GamePasses and Config.Products starts at 0 (switched off);
@@ -4221,7 +4303,7 @@ return Monetization
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00039">
+			<Item class="ModuleScript" referent="RBX0003A">
 				<Properties>
 					<string name="Name">Orders</string>
 					<ProtectedString name="Source"><![CDATA[-- Delivery orders: one at a time, a truck driver asks for straws of one kind (bundles, bales,
@@ -4289,7 +4371,7 @@ return Orders
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003A">
+			<Item class="ModuleScript" referent="RBX0003B">
 				<Properties>
 					<string name="Name">Pieces</string>
 					<ProtectedString name="Source"><![CDATA[-- What each buildable item looks like, built from parts around `cf`: the base centre on the
@@ -4536,7 +4618,7 @@ return Pieces
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003B">
+			<Item class="ModuleScript" referent="RBX0003C">
 				<Properties>
 					<string name="Name">PiecesBelts</string>
 					<ProtectedString name="Source"><![CDATA[-- Conveyor belts, the conveyor down off a platform, and the bale maker. Belts move anything
@@ -4609,7 +4691,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003C">
+			<Item class="ModuleScript" referent="RBX0003D">
 				<Properties>
 					<string name="Name">PiecesFactory</string>
 					<ProtectedString name="Source"><![CDATA[-- The factory line's pieces: belt corners and splitters, Hay Arms and Hay Throwers that feed
@@ -4720,7 +4802,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003D">
+			<Item class="ModuleScript" referent="RBX0003E">
 				<Properties>
 					<string name="Name">Piles</string>
 					<ProtectedString name="Source"><![CDATA[-- Each player's 70 m pile: 5,000 clumps of 1,000 straws on their plot, built from their save
@@ -4915,7 +4997,7 @@ return Piles
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003E">
+			<Item class="ModuleScript" referent="RBX0003F">
 				<Properties>
 					<string name="Name">PlayerData</string>
 					<ProtectedString name="Source"><![CDATA[-- Each player's saved progress and the leaderboard. If the DataStore can't be read (Studio
@@ -5219,7 +5301,7 @@ return PlayerData
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003F">
+			<Item class="ModuleScript" referent="RBX00040">
 				<Properties>
 					<string name="Name">Playtime</string>
 					<ProtectedString name="Source"><![CDATA[-- Time played and days in a row, for the milestone achievements (ConfigCosmetics). Every minute
@@ -5273,7 +5355,7 @@ return Playtime
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00040">
+			<Item class="ModuleScript" referent="RBX00041">
 				<Properties>
 					<string name="Name">Plots</string>
 					<ProtectedString name="Source"><![CDATA[-- The four plots. They all share the middle of the farm: a player gets a free plot (an index)
@@ -5426,7 +5508,7 @@ return Plots
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00041">
+			<Item class="ModuleScript" referent="RBX00042">
 				<Properties>
 					<string name="Name">PortalShape</string>
 					<ProtectedString name="Source"><![CDATA[-- The built-in portal, shaped by Config.PortalDesign (the owner designs it in the Portal Designer
@@ -5593,7 +5675,7 @@ return PortalShape
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00042">
+			<Item class="ModuleScript" referent="RBX00043">
 				<Properties>
 					<string name="Name">Processing</string>
 					<ProtectedString name="Source"><![CDATA[-- What happens when loose hay touches a machine's sensor on its owner's plot: the trader's
@@ -5724,7 +5806,7 @@ return Processing
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00043">
+			<Item class="ModuleScript" referent="RBX00044">
 				<Properties>
 					<string name="Name">Profile</string>
 					<ProtectedString name="Source"><![CDATA[-- A player's data model: what is saved, with its defaults. Anything missing or of the
@@ -5921,7 +6003,7 @@ return Profile
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00044">
+			<Item class="ModuleScript" referent="RBX00045">
 				<Properties>
 					<string name="Name">RobuxPads</string>
 					<ProtectedString name="Source"><![CDATA[-- The Robux corner: one round pad per Robux item (Config.RobuxPads), in an arc on the lobby's
@@ -6030,7 +6112,7 @@ return RobuxPads
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00045">
+			<Item class="ModuleScript" referent="RBX00046">
 				<Properties>
 					<string name="Name">Scenery</string>
 					<ProtectedString name="Source"><![CDATA[-- The countryside of Hollow Creek Farm, packed into the ring between the plots and the fence
@@ -6280,7 +6362,7 @@ return Scenery
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00046">
+			<Item class="ModuleScript" referent="RBX00047">
 				<Properties>
 					<string name="Name">SceneryAnimals</string>
 					<ProtectedString name="Source"><![CDATA[-- Animal pens just west of the plots and the cute blocky animals in them: pigs, cows and sheep
@@ -6503,7 +6585,7 @@ return Pens
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00047">
+			<Item class="ModuleScript" referent="RBX00048">
 				<Properties>
 					<string name="Name">SceneryKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Shared helpers for the countryside around the plots (see Scenery): a part maker that works
@@ -6699,7 +6781,7 @@ return Kit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00048">
+			<Item class="ModuleScript" referent="RBX00049">
 				<Properties>
 					<string name="Name">SceneryNature</string>
 					<ProtectedString name="Source"><![CDATA[-- The living countryside (see Scenery): dirt lanes, the duck pond, the pumpkin and corn
@@ -6905,7 +6987,7 @@ return Nature
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00049">
+			<Item class="ModuleScript" referent="RBX0004A">
 				<Properties>
 					<string name="Name">SceneryProps</string>
 					<ProtectedString name="Source"><![CDATA[-- Farm props for the countryside (see Scenery): a tractor and trailer, carts, round hay bales,
@@ -7107,7 +7189,7 @@ return Props
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004A">
+			<Item class="ModuleScript" referent="RBX0004B">
 				<Properties>
 					<string name="Name">Search</string>
 					<ProtectedString name="Source"><![CDATA[-- The loop: click the clump you're looking at to harvest it onto your tool, sell at the
@@ -7381,7 +7463,7 @@ return Search
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004B">
+			<Item class="ModuleScript" referent="RBX0004C">
 				<Properties>
 					<string name="Name">Secrets</string>
 					<ProtectedString name="Source"><![CDATA[-- The Hidden Straw: one golden straw tucked away somewhere on the farm (Config.SecretStraw).
@@ -7430,7 +7512,7 @@ return Secrets
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004C">
+			<Item class="ModuleScript" referent="RBX0004D">
 				<Properties>
 					<string name="Name">Shop</string>
 					<ProtectedString name="Source"><![CDATA[-- Buying with coins: tools and silos (in order), perks for the tool you hold, and
@@ -7663,7 +7745,7 @@ return Shop
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004D">
+			<Item class="ModuleScript" referent="RBX0004E">
 				<Properties>
 					<string name="Name">Stamina</string>
 					<ProtectedString name="Source"><![CDATA[-- Stamina: each harvest click spends some (Config.Stamina) and it refills all the time. Out of
@@ -7799,7 +7881,7 @@ return Stamina
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004E">
+			<Item class="ModuleScript" referent="RBX0004F">
 				<Properties>
 					<string name="Name">Story</string>
 					<ProtectedString name="Source"><![CDATA[-- The story (shared/Story): every couple of seconds, plays the next beat whose trigger the player
@@ -7905,7 +7987,7 @@ return Story
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004F">
+			<Item class="ModuleScript" referent="RBX00050">
 				<Properties>
 					<string name="Name">Structures</string>
 					<ProtectedString name="Source"><![CDATA[-- Free building on your own plot: place pieces, machines and generators you've bought, take
@@ -8124,7 +8206,7 @@ return Structures
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00050">
+			<Item class="ModuleScript" referent="RBX00051">
 				<Properties>
 					<string name="Name">ToolGadgets</string>
 					<ProtectedString name="Source"><![CDATA[-- The gadget tools' shapes (Config.Tools[n].shape): Hay Blower, Magnet Gloves, Twin Turbines
@@ -8250,7 +8332,7 @@ return ToolGadgets
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00051">
+			<Item class="ModuleScript" referent="RBX00052">
 				<Properties>
 					<string name="Name">ToolLook</string>
 					<ProtectedString name="Source"><![CDATA[-- Tools that wear a model you imported in Studio (Config.Tools[n].model = its asset ID).
@@ -8308,7 +8390,7 @@ return ToolLook
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00052">
+			<Item class="ModuleScript" referent="RBX00053">
 				<Properties>
 					<string name="Name">ToolParts</string>
 					<ProtectedString name="Source"><![CDATA[-- The farm tools' shapes, built from parts welded to the tool's Handle (Config.Tools[n].shape).
@@ -8480,7 +8562,7 @@ return ToolParts
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00053">
+			<Item class="ModuleScript" referent="RBX00054">
 				<Properties>
 					<string name="Name">Tools</string>
 					<ProtectedString name="Source"><![CDATA[-- The search tools: one Tool per level, built in its own shape (ToolParts, ToolGadgets) or
@@ -8698,7 +8780,7 @@ return Tools
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00054">
+			<Item class="ModuleScript" referent="RBX00055">
 				<Properties>
 					<string name="Name">Wheel</string>
 					<ProtectedString name="Source"><![CDATA[-- The Wheel of Fortune: every player gets one free spin a day (a new day starts at midnight UTC);
@@ -8820,7 +8902,7 @@ return Wheel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00055">
+			<Item class="ModuleScript" referent="RBX00056">
 				<Properties>
 					<string name="Name">WheelFace</string>
 					<ProtectedString name="Source"><![CDATA[-- The Wheel of Fortune's face, drawn on the disc's flat side (a SurfaceGui): one pie slice per
@@ -8924,7 +9006,7 @@ return WheelFace
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00056">
+			<Item class="ModuleScript" referent="RBX00057">
 				<Properties>
 					<string name="Name">World</string>
 					<ProtectedString name="Source"><![CDATA[-- Hollow Creek Farm: four plots around a hub with the merchant, the Wheel of Fortune and the
@@ -9152,7 +9234,7 @@ return World
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00057">
+			<Item class="ModuleScript" referent="RBX00058">
 				<Properties>
 					<string name="Name">Worlds</string>
 					<ProtectedString name="Source"><![CDATA[-- The portal worlds: four arches in the lobby (server/Lobby.luau) lead to the Moon, the Ember
@@ -9317,7 +9399,7 @@ return Worlds
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00058">
+			<Item class="ModuleScript" referent="RBX00059">
 				<Properties>
 					<string name="Name">WorldsAtlantis</string>
 					<ProtectedString name="Source"><![CDATA[-- Bubble City: a domed city on the sea floor inside a great air bubble. Sand, coral, kelp,
@@ -9457,7 +9539,7 @@ return Atlantis
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00059">
+			<Item class="ModuleScript" referent="RBX0005A">
 				<Properties>
 					<string name="Name">WorldsField</string>
 					<ProtectedString name="Source"><![CDATA[-- Haystack Stadium: a striped grass pitch with its lines and two goals, stands of seats on three
@@ -9596,7 +9678,7 @@ return Field
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005A">
+			<Item class="ModuleScript" referent="RBX0005B">
 				<Properties>
 					<string name="Name">WorldsKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Shared pieces for the portal worlds: the arches, signs, lights, embers and each world's
@@ -9717,7 +9799,7 @@ return Kit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005B">
+			<Item class="ModuleScript" referent="RBX0005C">
 				<Properties>
 					<string name="Name">WorldsLava</string>
 					<ProtectedString name="Source"><![CDATA[-- The Ember Lands: dark basalt, a smoking volcano, glowing lava rivers with stone bridges,
@@ -9844,7 +9926,7 @@ return Lava
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005C">
+			<Item class="ModuleScript" referent="RBX0005D">
 				<Properties>
 					<string name="Name">WorldsMoon</string>
 					<ProtectedString name="Source"><![CDATA[-- The Moon: grey dust with craters and boulders, a little landed lander with its flag (a
@@ -9969,7 +10051,7 @@ return Moon
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005D">
+			<Item class="ModuleScript" referent="RBX0005E">
 				<Properties>
 					<string name="Name">WorldsPortal</string>
 					<ProtectedString name="Source"><![CDATA[-- The portals: the built-in one is shaped by Config.PortalDesign (server/PortalShape; the owner
@@ -10078,19 +10160,19 @@ return Portal
 			</Item>
 		</Item>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX0005E">
+	<Item class="StarterPlayer" referent="RBX0005F">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX0005F">
+		<Item class="StarterPlayerScripts" referent="RBX00060">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX00060">
+			<Item class="Folder" referent="RBX00061">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX00061">
+				<Item class="ModuleScript" referent="RBX00062">
 					<Properties>
 						<string name="Name">Animals</string>
 						<ProtectedString name="Source"><![CDATA[-- Brings the farm's animals to life on this screen only: each one ambles to a new spot in its
@@ -10270,7 +10352,7 @@ return Animals
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00062">
+				<Item class="ModuleScript" referent="RBX00063">
 					<Properties>
 						<string name="Name">BuildMode</string>
 						<ProtectedString name="Source"><![CDATA[-- Free building in first person. Z and C pick from your inventory bar (or press M and click
@@ -10574,7 +10656,7 @@ return BuildMode
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00063">
+				<Item class="ModuleScript" referent="RBX00064">
 					<Properties>
 						<string name="Name">CameraView</string>
 						<ProtectedString name="Source"><![CDATA[-- The optional over-the-shoulder view: V (or the View stamp, or the touch pad's View) switches
@@ -10658,7 +10740,7 @@ return CameraView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00064">
+				<Item class="ModuleScript" referent="RBX00065">
 					<Properties>
 						<string name="Name">Controls</string>
 						<ProtectedString name="Source"><![CDATA[-- The shortcuts: Q shop, T home, G drop hay (or put down a bale), and on touch screens the
@@ -10747,7 +10829,7 @@ return Controls
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00065">
+				<Item class="ModuleScript" referent="RBX00066">
 					<Properties>
 						<string name="Name">Cursor</string>
 						<ProtectedString name="Source"><![CDATA[-- First person locks the mouse to the centre of the screen. Menus need a pointer, so a
@@ -10799,7 +10881,7 @@ return Cursor
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00066">
+				<Item class="ModuleScript" referent="RBX00067">
 					<Properties>
 						<string name="Name">Dents</string>
 						<ProtectedString name="Source"><![CDATA[-- Every swing leaves its mark: a dent carved in your haystack where you hit (on your screen;
@@ -10877,7 +10959,7 @@ return Dents
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00067">
+				<Item class="ModuleScript" referent="RBX00068">
 					<Properties>
 						<string name="Name">Detector</string>
 						<ProtectedString name="Source"><![CDATA[-- The metal detector: hold Config.MetalDetector.key to sweep. The client only says "I'm
@@ -10999,7 +11081,7 @@ return Detector
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00068">
+				<Item class="ModuleScript" referent="RBX00069">
 					<Properties>
 						<string name="Name">Dialogue</string>
 						<ProtectedString name="Source"><![CDATA[-- The story's dialogue box: a paper card at the bottom of the screen, the speaker's round
@@ -11178,7 +11260,7 @@ return Dialogue
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00069">
+				<Item class="ModuleScript" referent="RBX0006A">
 					<Properties>
 						<string name="Name">Farmers</string>
 						<ProtectedString name="Source"><![CDATA[-- "Farmers here": a small paper card at the bottom right listing everyone on this server with how
@@ -11243,7 +11325,7 @@ return Farmers
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006A">
+				<Item class="ModuleScript" referent="RBX0006B">
 					<Properties>
 						<string name="Name">Goals</string>
 						<ProtectedString name="Source"><![CDATA[-- The guided goal card (top left) and the coins-a-minute line under the coins counter.
@@ -11387,7 +11469,7 @@ return Goals
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006B">
+				<Item class="ModuleScript" referent="RBX0006C">
 					<Properties>
 						<string name="Name">Guide</string>
 						<ProtectedString name="Source"><![CDATA[-- When your tool and bucket are full, a soft golden line runs from you to your trader's
@@ -11449,7 +11531,7 @@ return Guide
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006C">
+				<Item class="ModuleScript" referent="RBX0006D">
 					<Properties>
 						<string name="Name">Harvest</string>
 						<ProtectedString name="Source"><![CDATA[-- Aiming in first person: the clump under the crosshair (within reach, on your own pile or the
@@ -11717,7 +11799,7 @@ return Harvest
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006D">
+				<Item class="ModuleScript" referent="RBX0006E">
 					<Properties>
 						<string name="Name">HayFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The hay you can see moving: every harvest lifts a lump off the heap onto your tool, and
@@ -11818,7 +11900,7 @@ return HayFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006E">
+				<Item class="ModuleScript" referent="RBX0006F">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen, in the farm journal style: a ring crosshair; your heap's progress
@@ -12002,7 +12084,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006F">
+				<Item class="ModuleScript" referent="RBX00070">
 					<Properties>
 						<string name="Name">Jetpack</string>
 						<ProtectedString name="Source"><![CDATA[-- The Jetpack (a Robux game pass; the server sets the "PassJetpack" attribute when you own it).
@@ -12184,7 +12266,7 @@ return Jetpack
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00070">
+				<Item class="ModuleScript" referent="RBX00071">
 					<Properties>
 						<string name="Name">Juice</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback that makes harvesting feel good: straw bursts, floating numbers, a soft camera
@@ -12373,7 +12455,7 @@ return Juice
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00071">
+				<Item class="ModuleScript" referent="RBX00072">
 					<Properties>
 						<string name="Name">Lobby</string>
 						<ProtectedString name="Source"><![CDATA[-- The lobby on your screen: a soft fade round every trip through an arch, the gentle card a
@@ -12519,7 +12601,7 @@ return Lobby
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX00072">
+				<Item class="LocalScript" referent="RBX00073">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- The player's side of the game: first-person harvesting, building, the menus, and all the
@@ -12823,7 +12905,7 @@ end)
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00073">
+				<Item class="ModuleScript" referent="RBX00074">
 					<Properties>
 						<string name="Name">Milestones</string>
 						<ProtectedString name="Source"><![CDATA[-- The Achievements page's list: open milestones first (name, what to do, a progress bar, and
@@ -12897,7 +12979,7 @@ return Milestones
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00074">
+				<Item class="ModuleScript" referent="RBX00075">
 					<Properties>
 						<string name="Name">Music</string>
 						<ProtectedString name="Source"><![CDATA[-- Soft background music: the Config.Music playlist in a loop, low and relaxing, fading gently
@@ -13048,7 +13130,7 @@ return Music
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00075">
+				<Item class="ModuleScript" referent="RBX00076">
 					<Properties>
 						<string name="Name">Notify</string>
 						<ProtectedString name="Source"><![CDATA[-- Messages: small toasts under the haystack counter, and a big banner for case news.
@@ -13155,7 +13237,7 @@ return Notify
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00076">
+				<Item class="ModuleScript" referent="RBX00077">
 					<Properties>
 						<string name="Name">Offer</string>
 						<ProtectedString name="Source"><![CDATA[-- One gentle Robux suggestion per session: after Config.OfferAfterClumps clumps harvested since
@@ -13261,7 +13343,7 @@ return Offer
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00077">
+				<Item class="ModuleScript" referent="RBX00078">
 					<Properties>
 						<string name="Name">OnlyMine</string>
 						<ProtectedString name="Source"><![CDATA[-- Every player's farm shares the middle of the map, so on your screen other players' buildings,
@@ -13350,7 +13432,7 @@ return OnlyMine
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00078">
+				<Item class="ModuleScript" referent="RBX00079">
 					<Properties>
 						<string name="Name">OrderCard</string>
 						<ProtectedString name="Source"><![CDATA[-- The current delivery order, on the right of the screen: what the driver wants, how many
@@ -13401,7 +13483,7 @@ return OrderCard
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00079">
+				<Item class="ModuleScript" referent="RBX0007A">
 					<Properties>
 						<string name="Name">Panels</string>
 						<ProtectedString name="Source"><![CDATA[-- The windows: Shop, secret Achievements, Finds & Skins, and the Wheel of Fortune (odds first).
@@ -13681,7 +13763,7 @@ return Panels
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007A">
+				<Item class="ModuleScript" referent="RBX0007B">
 					<Properties>
 						<string name="Name">PileView</string>
 						<ProtectedString name="Source"><![CDATA[-- Draws your own haystack on your screen. Every player's haystack stands in the same place in
@@ -13736,7 +13818,7 @@ return PileView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007B">
+				<Item class="ModuleScript" referent="RBX0007C">
 					<Properties>
 						<string name="Name">RobuxItems</string>
 						<ProtectedString name="Source"><![CDATA[-- Every Robux item the game sells, in shop order, with exactly what it gives (shown in the
@@ -13760,7 +13842,7 @@ return {
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007C">
+				<Item class="ModuleScript" referent="RBX0007D">
 					<Properties>
 						<string name="Name">RobuxPads</string>
 						<ProtectedString name="Source"><![CDATA[-- The Robux corner on your screen: each pad server/RobuxPads.luau built gets a floating
@@ -13996,7 +14078,7 @@ return RobuxPads
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007D">
+				<Item class="ModuleScript" referent="RBX0007E">
 					<Properties>
 						<string name="Name">Shop</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop window: Tools, Perks, Fitness (stamina, the metal detector), Storage (buckets and
@@ -14300,7 +14382,7 @@ return Shop
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007E">
+				<Item class="ModuleScript" referent="RBX0007F">
 					<Properties>
 						<string name="Name">SkinFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Animated skins, drawn on every screen for every equipped skinned tool (Tools.make sets the
@@ -14399,7 +14481,7 @@ return SkinFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007F">
+				<Item class="ModuleScript" referent="RBX00080">
 					<Properties>
 						<string name="Name">Sprint</string>
 						<ProtectedString name="Source"><![CDATA[-- Sprinting on every device: hold Shift on a keyboard, press the left stick (L3) on a controller
@@ -14482,7 +14564,7 @@ return Sprint
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00080">
+				<Item class="ModuleScript" referent="RBX00081">
 					<Properties>
 						<string name="Name">Stamina</string>
 						<ProtectedString name="Source"><![CDATA[-- A slim stamina bar under the crosshair (the server owns stamina: attributes Stamina,
@@ -14530,7 +14612,7 @@ return StaminaBar
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00081">
+				<Item class="ModuleScript" referent="RBX00082">
 					<Properties>
 						<string name="Name">Teleport</string>
 						<ProtectedString name="Source"><![CDATA[-- The teleporter menu: standing on one of your pads, pick any of your other pads (listed by
@@ -14601,7 +14683,7 @@ return Teleport
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00082">
+				<Item class="ModuleScript" referent="RBX00083">
 					<Properties>
 						<string name="Name">TouchAim</string>
 						<ProtectedString name="Source"><![CDATA[-- Harvesting on touch screens. In first person a finger dragged across the screen turns the
@@ -14666,7 +14748,7 @@ return TouchAim
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00083">
+				<Item class="ModuleScript" referent="RBX00084">
 					<Properties>
 						<string name="Name">TouchPad</string>
 						<ProtectedString name="Source"><![CDATA[-- The action pad on touch screens: the keyboard's shortcuts (shop, build, drop, home, tool,
@@ -14813,7 +14895,7 @@ return TouchPad
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00084">
+				<Item class="ModuleScript" referent="RBX00085">
 					<Properties>
 						<string name="Name">Ui</string>
 						<ProtectedString name="Source"><![CDATA[-- A small UI kit in the "farm journal" style: cream paper cards, ink-brown text, serif headings,
@@ -15025,7 +15107,7 @@ return Ui
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00085">
+				<Item class="ModuleScript" referent="RBX00086">
 					<Properties>
 						<string name="Name">UiJournal</string>
 						<ProtectedString name="Source"><![CDATA[-- The farm journal's own pieces for the UI kit: paper cards, pins, thin bars, round stamp
@@ -15143,7 +15225,7 @@ end
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00086">
+				<Item class="ModuleScript" referent="RBX00087">
 					<Properties>
 						<string name="Name">Wardrobe</string>
 						<ProtectedString name="Source"><![CDATA[-- The Wardrobe, a page of the farm journal: every milestone cosmetic (titles, hats, trails,
@@ -15234,7 +15316,7 @@ return Wardrobe
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00087">
+				<Item class="ModuleScript" referent="RBX00088">
 					<Properties>
 						<string name="Name">WorldFx</string>
 						<ProtectedString name="Source"><![CDATA[-- World effects on your screen: the glowing needle clump (Wheel jackpot), the wheel turning
@@ -15326,6 +15408,14 @@ local function spinFans()
 		end
 		local step = spinning * 6
 		spinning = 0
+		for _, someone in ipairs(Players:GetPlayers()) do -- the Starlight Halo turns slowly
+			local worn = someone.Character and someone.Character:FindFirstChild("Cosmetics")
+			local hub = worn and worn:FindFirstChild("HaloHub")
+			local spin = hub and hub:FindFirstChild("CosmeticSpin")
+			if spin and spin:GetAttribute("Base") then
+				spin.C0 = spin:GetAttribute("Base") * CFrame.Angles(0, (os.clock() * Config.HaloSpin) % (math.pi * 2), 0)
+			end
+		end
 		for _, flow in ipairs(CollectionService:GetTagged("PortalFlow")) do -- the portals' light flows up
 			flow.OffsetStudsV = (os.clock() * Config.PortalFlow) % flow.StudsPerTileV
 		end
@@ -15359,7 +15449,7 @@ return WorldFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00088">
+				<Item class="ModuleScript" referent="RBX00089">
 					<Properties>
 						<string name="Name">Worlds</string>
 						<ProtectedString name="Source"><![CDATA[-- The portal worlds and the lobby on your own screen: each world's light (and the lobby's,
@@ -15626,29 +15716,29 @@ return Worlds
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX00089">
+	<Item class="Workspace" referent="RBX0008A">
 		<Properties>
 			<string name="Name">Workspace</string>
 			<bool name="StreamingEnabled">false</bool>
 		</Properties>
 	</Item>
-	<Item class="ServerStorage" referent="RBX0008A">
+	<Item class="ServerStorage" referent="RBX0008B">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
-		<Item class="Folder" referent="RBX0008B">
+		<Item class="Folder" referent="RBX0008C">
 			<Properties>
 				<string name="Name">Designs</string>
 			</Properties>
 		</Item>
 	</Item>
-	<Item class="MaterialService" referent="RBX0008C">
+	<Item class="MaterialService" referent="RBX0008D">
 		<Properties>
 			<string name="Name">MaterialService</string>
 			<bool name="Use2022Materials">true</bool>
 			<string name="LeafyGrassName">Field</string>
 		</Properties>
-		<Item class="MaterialVariant" referent="RBX0008D">
+		<Item class="MaterialVariant" referent="RBX0008E">
 			<Properties>
 				<string name="Name">Field</string>
 				<token name="BaseMaterial">1284</token>

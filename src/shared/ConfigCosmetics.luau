@@ -59,6 +59,8 @@ Config.Achievements = {
 	{ id = "lucky100", open = true, name = "Four-Leaf Clover", text = "Make 100 lucky finds.", stat = "lucky_finds", goal = 100, spins = 2 },
 	{ id = "sold1m", open = true, name = "Market Favourite", text = "Sell 1,000,000 straws.", stat = "straws_sold", goal = 1000000, coins = 250000 },
 }
+Config.HatScale = 1.35 -- hats a little bigger than life, so they read from across the farm
+Config.HaloSpin = 0.8 -- radians a second the Starlight Halo turns
 Config.LegendBoostHours = 24 -- "every power-up": each timed boost (2x Speed, 2x Coins, Lucky Charm) lasts this long
 
 return Config
