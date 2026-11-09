@@ -1,5 +1,5 @@
 -- The Shop and Inventory screens. The Shop sells cosmetics for Haystack Coins (needle skins,
--- trails, found effects) and shows the optional Robux items when they're on sale; the Inventory
+-- trails, found effects) and shows the optional Robux items (shared/Robux) when they're on sale; the Inventory
 -- lists what you own to wear. Every buy and equip is asked of the server (Remotes.Shop), which
 -- decides.
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Cosmetics = require(Shared:WaitForChild("Cosmetics"))
+local Robux = require(Shared:WaitForChild("Robux"))
 local Rules = require(Shared:WaitForChild("Rules"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local UiKit = require(script.Parent.UiKit)
@@ -20,6 +21,25 @@ local Screens = {}
 local shop, shopBody, inv, invBody
 local getProfile = function()
 	return {}
+end
+
+-- An item's Robux price as Roblox has it ("R$ 99"), looked up once; "Buy" until it's known.
+local prices = {}
+local function priceOf(id, pass, button)
+	if prices[id] then
+		button.Text = prices[id]
+		return
+	end
+	button.Text = "Buy"
+	task.spawn(function()
+		local ok, info = pcall(MarketplaceService.GetProductInfo, MarketplaceService, id, if pass then Enum.InfoType.GamePass else Enum.InfoType.Product)
+		if ok and info and info.PriceInRobux then
+			prices[id] = "R$ " .. info.PriceInRobux
+			if button.Parent then
+				button.Text = prices[id]
+			end
+		end
+	end)
 end
 
 local function rgb(c)
@@ -102,29 +122,30 @@ function Screens.refresh()
 				end
 			end
 		end
-		-- optional Robux items (only those that are on sale)
-		local robux = {
-			{ id = Config.GamePasses.DoubleCoins, pass = true, name = "2x Coins (pass)", text = "Every coin you earn, doubled. Forever." },
-			{ id = Config.GamePasses.ExtraHint, pass = true, name = "Extra Daily Hint (pass)", text = "One more hint every day." },
-			{ id = Config.GamePasses.Supporter, pass = true, name = "Supporter (pass)", text = "The Supporter title and trail. Thank you!" },
-			{ id = Config.Products.StarterBundle, pass = false, name = "Starter Bundle", text = Config.StarterBundle.coins .. " coins and the Sparkle Trail." },
-		}
-		for _, r in ipairs(robux) do
-			if r.id ~= 0 then
+		-- optional Robux items (only those that are on sale), each saying exactly what it gives
+		for _, r in ipairs(Robux.items) do
+			local id = Robux.id(r)
+			local have = r.pass and player:GetAttribute("Pass_" .. r.key) == true
+			if id ~= 0 and not (r.once and getProfile().starterBought) then
 				if order < 100 then
 					order = 100
 					heading(shopBody, order, "Support the game (Robux)")
 				end
 				order += 1
 				local c = UiKit.make("Frame", { LayoutOrder = order, Size = UDim2.new(1, -8, 0, 70), BackgroundColor3 = UiKit.colors.card, Parent = shopBody }, { UiKit.corner(12) })
-				UiKit.label({ Font = UiKit.bold, Text = r.name, Size = UDim2.new(0.6, 0, 0, 28), Position = UDim2.fromOffset(14, 8), TextXAlignment = Enum.TextXAlignment.Left, Parent = c }, 20)
-				UiKit.label({ Text = r.text, Size = UDim2.new(0.6, 0, 0, 24), Position = UDim2.fromOffset(14, 38), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UiKit.colors.soft, Parent = c }, 16)
-				local b = UiKit.button("Buy", UiKit.colors.green, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(120, 46), Parent = c })
+				UiKit.label({ Font = UiKit.bold, Text = r.name .. (if r.pass then "  (pass)" else ""), Size = UDim2.new(1, -160, 0, 28), Position = UDim2.fromOffset(14, 8), TextXAlignment = Enum.TextXAlignment.Left, Parent = c }, 20)
+				UiKit.label({ Text = r.text, Size = UDim2.new(1, -160, 0, 24), Position = UDim2.fromOffset(14, 38), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UiKit.colors.soft, Parent = c }, 16)
+				local b = UiKit.button("Owned", if have then UiKit.colors.panel else UiKit.colors.green, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(130, 46), Parent = c })
+				if not have then
+					priceOf(id, r.pass, b)
+				end
 				b.Activated:Connect(function()
-					if r.pass then
-						MarketplaceService:PromptGamePassPurchase(player, r.id)
+					if have then
+						return
+					elseif r.pass then
+						MarketplaceService:PromptGamePassPurchase(player, id)
 					else
-						MarketplaceService:PromptProductPurchase(player, r.id)
+						MarketplaceService:PromptProductPurchase(player, id)
 					end
 				end)
 			end

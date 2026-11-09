@@ -35,7 +35,7 @@ function DataManager.fresh(saved)
 		lastDay = number(saved, "lastDay", 0), loginStreak = number(saved, "loginStreak", 0),
 		hintsDay = number(saved, "hintsDay", 0), hintsUsed = number(saved, "hintsUsed", 0),
 		weekly = { week = 0, wins = 0 }, quests = { day = 0, progress = {}, done = {} },
-		owned = {}, equipped = {}, receipts = {},
+		owned = {}, equipped = {}, receipts = {}, starterBought = saved.starterBought == true, -- the Starter Bundle is once each
 		collection = {}, showcase = "", -- needles kept: ["type:skin"] = how many; the one on show
 		settings = { music = true, sfx = true, reduceEffects = false, autoJoin = true },
 	}
@@ -141,7 +141,7 @@ local function publish(player, d)
 	if stats then
 		stats.Level.Value, stats.Needles.Value, stats.Collection.Value = d.level, d.needles, Needles.total(d.collection)
 	end
-	Remotes.Profile:FireClient(player, { owned = d.owned, equipped = d.equipped, quests = d.quests, settings = d.settings, collection = d.collection, showcase = d.showcase })
+	Remotes.Profile:FireClient(player, { owned = d.owned, equipped = d.equipped, quests = d.quests, settings = d.settings, collection = d.collection, showcase = d.showcase, starterBought = d.starterBought })
 end
 
 function DataManager.get(player)

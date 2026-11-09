@@ -138,10 +138,14 @@ Config.BoardRows = 10
 Config.BoardFlushSeconds = 120
 Config.BoardReadSeconds = 180
 
--- Robux (server/ShopManager). 0 = not on sale yet: create the pass or product on the Creator
--- Dashboard, then put its ID here. Nothing here is a random reward.
-Config.GamePasses = { DoubleCoins = 0, ExtraHint = 0, Supporter = 0 }
-Config.Products = { StarterBundle = 0 }
+-- Robux (server/ShopManager, shared/Robux for what the shop says). 0 = not on sale yet: create the
+-- pass or product on the Creator Dashboard (README: Selling with Robux), then put its ID here.
+-- Nothing here is a random reward, and Robux never buys a needle, a power-up or a hint mid-round.
+Config.GamePasses = { DoubleCoins = 0, ExtraHint = 0, Supporter = 0, GrandBooth = 0 }
+Config.Products = { StarterBundle = 0, CoinsSmall = 0, CoinsMedium = 0, CoinsLarge = 0, CoinShower = 0 }
+Config.CoinPacks = { CoinsSmall = 500, CoinsMedium = 1500, CoinsLarge = 4000 } -- coins each pack gives
+Config.CoinShower = { coins = 100 } -- every player in the server gets this, the buyer too
+Config.GrandBooth = { needles = 6 } -- needles on show at a Grand Booth (3 otherwise)
 Config.StarterBundle = { coins = 500, cosmetic = "t_sparkle" } -- what the Starter Bundle gives (never a collectible needle)
 
 -- Sounds: Roblox's built-in sounds; swap in your own Toolbox IDs ("rbxassetid://...").
@@ -176,14 +180,26 @@ Cosmetics.items = {
 	-- trails
 	{ id = "t_straw", kind = "trail", name = "Straw Trail", price = 700, colours = { { 240, 200, 90 }, { 255, 240, 190 } } },
 	{ id = "t_sparkle", kind = "trail", name = "Sparkle Trail", price = 1800, colours = { { 255, 255, 255 }, { 170, 220, 255 } } },
+	{ id = "t_meadow", kind = "trail", name = "Meadow Trail", price = 900, colours = { { 120, 200, 90 }, { 230, 250, 180 } } },
+	{ id = "t_sunset", kind = "trail", name = "Sunset Trail", price = 1400, colours = { { 255, 140, 70 }, { 255, 90, 140 } } },
+	{ id = "t_ocean", kind = "trail", name = "Ocean Trail", price = 2200, colours = { { 60, 150, 230 }, { 150, 240, 230 } } },
+	{ id = "t_rainbow", kind = "trail", name = "Rainbow Thread", price = 4000, colours = { { 255, 90, 110 }, { 110, 140, 255 } } },
+	{ id = "t_golden", kind = "trail", name = "Golden Thread", price = 6000, colours = { { 255, 214, 90 }, { 255, 250, 220 } } },
 	{ id = "t_supporter", kind = "trail", name = "Supporter Trail", price = 0, source = "Supporter pass", colours = { { 255, 200, 80 }, { 255, 120, 60 } } },
 	-- titles above your head
 	{ id = "ti_finder", kind = "title", name = "Needle Finder", price = 0, source = "quest", colours = { { 220, 225, 235 } } },
 	{ id = "ti_eagle", kind = "title", name = "Eagle Eye", price = 0, source = "quest", colours = { { 255, 214, 90 } } },
+	{ id = "ti_hero", kind = "title", name = "Haystack Hero", price = 1000, colours = { { 255, 200, 90 } } },
+	{ id = "ti_sharp", kind = "title", name = "Sharp Eyes", price = 1500, colours = { { 140, 220, 255 } } },
+	{ id = "ti_collector", kind = "title", name = "Needle Collector", price = 2500, colours = { { 200, 150, 255 } } },
+	{ id = "ti_legend", kind = "title", name = "Straw Legend", price = 5000, colours = { { 255, 170, 60 } } },
 	{ id = "ti_supporter", kind = "title", name = "Supporter", price = 0, source = "Supporter pass", colours = { { 255, 160, 70 } } },
 	-- found effects: the burst when you find a needle
 	{ id = "e_confetti", kind = "effect", name = "Confetti Pop", price = 0, source = "start", colours = { { 255, 206, 70 }, { 110, 170, 240 } } },
 	{ id = "e_stars", kind = "effect", name = "Starburst", price = 1200, colours = { { 255, 250, 220 }, { 255, 214, 90 } } },
+	{ id = "e_hay", kind = "effect", name = "Hay Burst", price = 800, colours = { { 240, 200, 90 }, { 200, 150, 70 } } },
+	{ id = "e_petals", kind = "effect", name = "Petal Shower", price = 2000, colours = { { 255, 150, 190 }, { 255, 240, 245 } } },
+	{ id = "e_fireflies", kind = "effect", name = "Fireflies", price = 3000, colours = { { 220, 255, 120 }, { 255, 230, 120 } } },
 }
 
 Cosmetics.kinds = { "trail", "title", "effect" }
@@ -668,6 +684,36 @@ return Quests
 			</Item>
 			<Item class="ModuleScript" referent="RBX00008">
 				<Properties>
+					<string name="Name">Robux</string>
+					<ProtectedString name="Source"><![CDATA[-- What the shop's Robux section says about each item (server/ShopManager does the giving; the
+-- amounts come from Config). Each says exactly what it gives. key = its name in Config.GamePasses
+-- or Config.Products; an item with ID 0 there isn't on sale and isn't shown.
+local Config = require(script.Parent.Config)
+
+local Robux = {}
+
+Robux.items = {
+	{ key = "StarterBundle", pass = false, once = true, name = "Starter Bundle", text = Config.StarterBundle.coins .. " coins and the Sparkle Trail. Once per player." },
+	{ key = "CoinsSmall", pass = false, name = "Pouch of Coins", text = Config.CoinPacks.CoinsSmall .. " Haystack Coins for trails, titles and effects." },
+	{ key = "CoinsMedium", pass = false, name = "Sack of Coins", text = Config.CoinPacks.CoinsMedium .. " Haystack Coins for trails, titles and effects." },
+	{ key = "CoinsLarge", pass = false, name = "Cart of Coins", text = Config.CoinPacks.CoinsLarge .. " Haystack Coins for trails, titles and effects." },
+	{ key = "CoinShower", pass = false, name = "Coin Shower", text = "Everyone in this server, you too, gets " .. Config.CoinShower.coins .. " coins." },
+	{ key = "DoubleCoins", pass = true, name = "2x Coins", text = "Every coin you earn, doubled. Forever." },
+	{ key = "ExtraHint", pass = true, name = "Extra Daily Hint", text = "One more hint every day." },
+	{ key = "GrandBooth", pass = true, name = "Grand Booth", text = "Your lobby booth shows your " .. Config.GrandBooth.needles .. " best needles, with a gold sign." },
+	{ key = "Supporter", pass = true, name = "Supporter", text = "The Supporter title and trail. Thank you!" },
+}
+
+function Robux.id(item)
+	return (if item.pass then Config.GamePasses else Config.Products)[item.key] or 0
+end
+
+return Robux
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00009">
+				<Properties>
 					<string name="Name">Rules</string>
 					<ProtectedString name="Source"><![CDATA[-- The game's arithmetic in one place, shared by the server (which decides) and the client
 -- (which only shows): levels, round rewards, and weighted picks. dev/test_rules.py mirrors it.
@@ -748,81 +794,81 @@ return Rules
 				</Properties>
 			</Item>
 		</Item>
-		<Item class="Folder" referent="RBX00009">
+		<Item class="Folder" referent="RBX0000A">
 			<Properties>
 				<string name="Name">Remotes</string>
 			</Properties>
-			<Item class="RemoteEvent" referent="RBX0000A">
+			<Item class="RemoteEvent" referent="RBX0000B">
 				<Properties>
 					<string name="Name">RoundState</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0000B">
+			<Item class="RemoteEvent" referent="RBX0000C">
 				<Properties>
 					<string name="Name">Found</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0000C">
+			<Item class="RemoteEvent" referent="RBX0000D">
 				<Properties>
 					<string name="Name">Notify</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0000D">
+			<Item class="RemoteEvent" referent="RBX0000E">
 				<Properties>
 					<string name="Name">Profile</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0000E">
+			<Item class="RemoteEvent" referent="RBX0000F">
 				<Properties>
 					<string name="Name">SaveSettings</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX0000F">
+			<Item class="RemoteFunction" referent="RBX00010">
 				<Properties>
 					<string name="Name">Shop</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00010">
+			<Item class="RemoteFunction" referent="RBX00011">
 				<Properties>
 					<string name="Name">Hint</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00011">
+			<Item class="RemoteFunction" referent="RBX00012">
 				<Properties>
 					<string name="Name">Boards</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00012">
+			<Item class="RemoteFunction" referent="RBX00013">
 				<Properties>
 					<string name="Name">Collection</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00013">
+			<Item class="RemoteEvent" referent="RBX00014">
 				<Properties>
 					<string name="Name">ShowOff</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00014">
+			<Item class="RemoteFunction" referent="RBX00015">
 				<Properties>
 					<string name="Name">LobbyInfo</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00015">
+			<Item class="RemoteEvent" referent="RBX00016">
 				<Properties>
 					<string name="Name">Powerup</string>
 				</Properties>
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerScriptService" referent="RBX00016">
+	<Item class="ServerScriptService" referent="RBX00017">
 		<Properties>
 			<string name="Name">ServerScriptService</string>
 		</Properties>
-		<Item class="Folder" referent="RBX00017">
+		<Item class="Folder" referent="RBX00018">
 			<Properties>
 				<string name="Name">Server</string>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX00018">
+			<Item class="ModuleScript" referent="RBX00019">
 				<Properties>
 					<string name="Name">AntiCheat</string>
 					<ProtectedString name="Source"><![CDATA[-- Basic anti-exploit: every Config.AntiCheat.checkEvery seconds, each character's position is
@@ -908,7 +954,7 @@ return AntiCheat
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00019">
+			<Item class="ModuleScript" referent="RBX0001A">
 				<Properties>
 					<string name="Name">CollectionManager</string>
 					<ProtectedString name="Source"><![CDATA[-- The needle collection, on the server. Each player who finishes a round keeps the needle they
@@ -1001,7 +1047,7 @@ return CollectionManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001A">
+			<Item class="ModuleScript" referent="RBX0001B">
 				<Properties>
 					<string name="Name">DataManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Player data: loaded on join, cached for the session, saved with UpdateAsync on an autosave
@@ -1041,7 +1087,7 @@ function DataManager.fresh(saved)
 		lastDay = number(saved, "lastDay", 0), loginStreak = number(saved, "loginStreak", 0),
 		hintsDay = number(saved, "hintsDay", 0), hintsUsed = number(saved, "hintsUsed", 0),
 		weekly = { week = 0, wins = 0 }, quests = { day = 0, progress = {}, done = {} },
-		owned = {}, equipped = {}, receipts = {},
+		owned = {}, equipped = {}, receipts = {}, starterBought = saved.starterBought == true, -- the Starter Bundle is once each
 		collection = {}, showcase = "", -- needles kept: ["type:skin"] = how many; the one on show
 		settings = { music = true, sfx = true, reduceEffects = false, autoJoin = true },
 	}
@@ -1147,7 +1193,7 @@ local function publish(player, d)
 	if stats then
 		stats.Level.Value, stats.Needles.Value, stats.Collection.Value = d.level, d.needles, Needles.total(d.collection)
 	end
-	Remotes.Profile:FireClient(player, { owned = d.owned, equipped = d.equipped, quests = d.quests, settings = d.settings, collection = d.collection, showcase = d.showcase })
+	Remotes.Profile:FireClient(player, { owned = d.owned, equipped = d.equipped, quests = d.quests, settings = d.settings, collection = d.collection, showcase = d.showcase, starterBought = d.starterBought })
 end
 
 function DataManager.get(player)
@@ -1259,7 +1305,7 @@ return DataManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001B">
+			<Item class="ModuleScript" referent="RBX0001C">
 				<Properties>
 					<string name="Name">HaystackModel</string>
 					<ProtectedString name="Source"><![CDATA[-- The owner's own haystack model (Config.Haystacks.model): loaded once with InsertService (it must
@@ -1313,7 +1359,7 @@ return HaystackModel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001C">
+			<Item class="ModuleScript" referent="RBX0001D">
 				<Properties>
 					<string name="Name">LeaderboardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Global leaderboards (Config.Boards), each an OrderedDataStore: most needles, fastest find,
@@ -1485,7 +1531,7 @@ return LeaderboardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001D">
+			<Item class="ModuleScript" referent="RBX0001E">
 				<Properties>
 					<string name="Name">LobbyBuilder</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby, built once at Config.LobbyCentre: a wooden plaza in a field, the animated title sign
@@ -1724,7 +1770,7 @@ return LobbyBuilder
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001E">
+			<Item class="ModuleScript" referent="RBX0001F">
 				<Properties>
 					<string name="Name">LobbyDecor</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's dressing (LobbyBuilder calls build once): a lawn crossed by cobbled paths (spawn to
@@ -1833,7 +1879,7 @@ return LobbyDecor
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001F">
+			<Item class="ModuleScript" referent="RBX00020">
 				<Properties>
 					<string name="Name">LobbyShowOff</string>
 					<ProtectedString name="Source"><![CDATA[-- Show off (Remotes.ShowOff): hold your showcase needle (or your best) up over your head for a
@@ -1902,7 +1948,7 @@ return LobbyShowOff
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00020">
+			<Item class="ModuleScript" referent="RBX00021">
 				<Properties>
 					<string name="Name">LobbySocial</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's social side: showing off collections.
@@ -1918,6 +1964,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
 local Needles = require(Shared:WaitForChild("Needles"))
 local NeedleLook = require(Shared:WaitForChild("NeedleLook"))
 local Rules = require(Shared:WaitForChild("Rules"))
@@ -2024,7 +2071,7 @@ local function buildBooth(i, x, z)
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText, prompt.ObjectText, prompt.HoldDuration, prompt.MaxActivationDistance, prompt.Enabled = "View collection", "", 0, 12, false
 	prompt.Parent = glass
-	booths[i] = { player = nil, models = {}, keys = "", title = title, line = line, prompt = prompt, face = face }
+	booths[i] = { player = nil, models = {}, keys = "", title = title, line = line, prompt = prompt, face = face, plate = plate, sign = sign }
 end
 
 local function fillBooth(b)
@@ -2036,22 +2083,30 @@ local function fillBooth(b)
 		return
 	end
 	local list = LobbySocial.ranked(d)
-	local keys = (list[1] and list[1].key or "") .. (list[2] and list[2].key or "") .. (list[3] and list[3].key or "")
+	local grand = b.player:GetAttribute("Pass_GrandBooth") == true -- the Grand Booth pass: more on show, a gold sign
+	local limit = if grand then Config.GrandBooth.needles else 3
+	local keys = if grand then "grand" else ""
+	for slot = 1, limit do
+		keys ..= (list[slot] and list[slot].key or "") .. ","
+	end
+	b.plate.Color = if grand then Color3.fromRGB(214, 170, 60) else Color3.fromRGB(96, 66, 40)
+	b.sign.BackgroundColor3 = if grand then Color3.fromRGB(60, 44, 16) else Color3.fromRGB(30, 34, 44)
 	b.title.Text = b.player.DisplayName .. "'s collection"
 	b.line.Text = Rules.commas(Needles.total(d.collection)) .. " value  ·  press E to look"
 	b.prompt.ObjectText, b.prompt.Enabled = b.player.DisplayName, true
 	b.prompt:SetAttribute("ViewUser", b.player.UserId)
 	if keys == b.keys then
-		return -- the same three needles: leave them be
+		return -- the same needles: leave them be
 	end
 	b.keys = keys
 	clearModels(b.models)
 	for slot, entry in ipairs(list) do
-		if slot > 3 then
+		if slot > limit then
 			break
 		end
+		local row, col = (slot - 1) // 3, (slot - 1) % 3 -- three on the shelf; a Grand Booth's next three hang higher, on the back wall
 		local m = NeedleLook.build(entry.type, entry.skin, 1.35, 2)
-		m:PivotTo(b.face * CFrame.new((slot - 2) * 3.1, 4.4, -1) * CFrame.Angles(0, math.pi / 2, math.rad(50)))
+		m:PivotTo(b.face * CFrame.new((col - 1) * 3.1, 4.4 + row * 3, -1 + row * 2.4) * CFrame.Angles(0, math.pi / 2, math.rad(50)))
 		m.Parent = ctx.model
 		table.insert(b.models, m)
 	end
@@ -2173,7 +2228,7 @@ return LobbySocial
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Script" referent="RBX00021">
+			<Item class="Script" referent="RBX00022">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Starts A Needle in a Haystack on the server. Systems that react to a player's save loading are
@@ -2226,7 +2281,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00022">
+			<Item class="ModuleScript" referent="RBX00023">
 				<Properties>
 					<string name="Name">MapKit</string>
 					<ProtectedString name="Source"><![CDATA[-- The building kit for maps (server/MapsA, MapsB): ground, hay bales, haystacks, crates, fences,
@@ -2441,7 +2496,7 @@ return MapKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00023">
+			<Item class="ModuleScript" referent="RBX00024">
 				<Properties>
 					<string name="Name">MapsA</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Classic Haystack Field (a hedge maze), Barn Interior (a maze of stall walls) and
@@ -2570,7 +2625,7 @@ return MapsA
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00024">
+			<Item class="ModuleScript" referent="RBX00025">
 				<Properties>
 					<string name="Name">MapsB</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Night Forest (a thicket maze) and Abandoned Attic (a maze of stacked boxes under
@@ -2669,7 +2724,7 @@ return MapsB
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00025">
+			<Item class="ModuleScript" referent="RBX00026">
 				<Properties>
 					<string name="Name">MazeKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Mazes for the maps: a grid of cells carved into a maze (a random depth-first walk, so every cell
@@ -2870,7 +2925,7 @@ return MazeKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00026">
+			<Item class="ModuleScript" referent="RBX00027">
 				<Properties>
 					<string name="Name">NeedleModel</string>
 					<ProtectedString name="Source"><![CDATA[-- The owner's own needle model (Config.NeedleModel.asset): a model imported into Studio with its
@@ -2943,7 +2998,7 @@ return NeedleModel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00027">
+			<Item class="ModuleScript" referent="RBX00028">
 				<Properties>
 					<string name="Name">NeedleSpawner</string>
 					<ProtectedString name="Source"><![CDATA[-- Hides the needle(s) each round and decides, on the server, who found them.
@@ -3156,7 +3211,7 @@ return NeedleSpawner
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00028">
+			<Item class="ModuleScript" referent="RBX00029">
 				<Properties>
 					<string name="Name">Powerups</string>
 					<ProtectedString name="Source"><![CDATA[-- Power-ups on the maps (Config.Powerups). When a round's search starts, glowing orbs float in
@@ -3327,7 +3382,7 @@ return Powerups
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00029">
+			<Item class="ModuleScript" referent="RBX0002A">
 				<Properties>
 					<string name="Name">QuestManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Daily quests: three a day, the same for everyone (shared/Quests.forDay). Progress is saved;
@@ -3395,7 +3450,7 @@ return QuestManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002A">
+			<Item class="ModuleScript" referent="RBX0002B">
 				<Properties>
 					<string name="Name">Requests</string>
 					<ProtectedString name="Source"><![CDATA[-- Small requests from players, checked on the server: a hint (Remotes.Hint) and saving their
@@ -3455,7 +3510,7 @@ return Requests
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002B">
+			<Item class="ModuleScript" referent="RBX0002C">
 				<Properties>
 					<string name="Name">RewardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Every coin and XP point is given here, on the server: needle finds (faster = more), places,
@@ -3576,7 +3631,7 @@ return RewardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002C">
+			<Item class="ModuleScript" referent="RBX0002D">
 				<Properties>
 					<string name="Name">RoundManager</string>
 					<ProtectedString name="Source"><![CDATA[-- The round loop, all on the server:
@@ -3867,13 +3922,14 @@ return RoundManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002D">
+			<Item class="ModuleScript" referent="RBX0002E">
 				<Properties>
 					<string name="Name">ShopManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Cosmetics and purchases. With Haystack Coins: buy a cosmetic (Remotes.Shop "buy"), and wear
 -- what you own ("equip"); the server checks the price, your coins and that you own it. With
--- Robux (MarketplaceService): game passes (2x Coins, Extra Hint, Supporter) are checked on join
--- and after a purchase; the Starter Bundle product goes through ProcessReceipt, which records
+-- Robux (MarketplaceService): game passes (2x Coins, Extra Hint, Grand Booth, Supporter) are
+-- checked on join and after a purchase; products (Starter Bundle, coin packs, Coin Shower) go
+-- through ProcessReceipt, which records
 -- each receipt in the save so a repeated receipt is never paid twice, and only reports success
 -- once the save has been written. What you wear shows on your character: a trail and a title.
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -3883,6 +3939,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Cosmetics = require(Shared:WaitForChild("Cosmetics"))
+local Rules = require(Shared:WaitForChild("Rules"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local DataManager = require(script.Parent.DataManager)
@@ -3993,26 +4050,62 @@ local function checkPasses(player)
 	end
 end
 
+-- What each Robux product gives (by its name in Config.Products). Bought coins never count
+-- towards the Most Coins Earned board. Returns the thank-you line.
+local function give(player, name, data)
+	if name == "StarterBundle" then
+		local bundle = Config.StarterBundle
+		data.coins += bundle.coins
+		data.starterBought = true
+		if Cosmetics.get(bundle.cosmetic) then
+			data.owned[bundle.cosmetic] = true
+		end
+		return "Starter Bundle: +" .. bundle.coins .. " coins and the " .. (Cosmetics.get(bundle.cosmetic) or { name = "new" }).name .. ". Thank you!"
+	elseif Config.CoinPacks[name] then
+		data.coins += Config.CoinPacks[name]
+		return "+" .. Rules.commas(Config.CoinPacks[name]) .. " coins. Thank you!"
+	elseif name == "CoinShower" then
+		data.coins += Config.CoinShower.coins
+		return "Your Coin Shower: +" .. Config.CoinShower.coins .. " coins for everyone here. Thank you!"
+	end
+	return nil
+end
+
+local function productName(id)
+	for name, pid in pairs(Config.Products) do
+		if pid ~= 0 and pid == id then
+			return name
+		end
+	end
+	return nil
+end
+
+-- A Coin Shower: everyone else in the server gets the coins too (the buyer's are in the receipt).
+local function shower(buyer)
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= buyer and DataManager.get(p) then
+			DataManager.update(p, function(data)
+				data.coins += Config.CoinShower.coins
+			end)
+		end
+		Remotes.Notify:FireClient(p, { text = buyer.DisplayName .. " shared a Coin Shower: +" .. Config.CoinShower.coins .. " coins for everyone!", tone = "good" })
+	end
+end
+
 -- Robux products: grant once per receipt, then save before telling Roblox it's done.
 local function processReceipt(receipt)
 	local player = Players:GetPlayerByUserId(receipt.PlayerId)
 	local d = player and DataManager.get(player)
-	if not d then
+	local name = productName(receipt.ProductId)
+	if not d or not name then
 		return Enum.ProductPurchaseDecision.NotProcessedYet -- tried again when they're back
 	end
 	if table.find(d.receipts, receipt.PurchaseId) then
 		return Enum.ProductPurchaseDecision.PurchaseGranted -- already given
 	end
-	if receipt.ProductId ~= Config.Products.StarterBundle or Config.Products.StarterBundle == 0 then
-		return Enum.ProductPurchaseDecision.NotProcessedYet
-	end
-	local bundle = Config.StarterBundle
+	local thanks
 	DataManager.update(player, function(data)
-		data.coins += bundle.coins
-		data.coinsEarned += bundle.coins
-		if Cosmetics.get(bundle.cosmetic) then
-			data.owned[bundle.cosmetic] = true
-		end
+		thanks = give(player, name, data)
 		table.insert(data.receipts, receipt.PurchaseId)
 		while #data.receipts > 50 do
 			table.remove(data.receipts, 1)
@@ -4023,7 +4116,10 @@ local function processReceipt(receipt)
 	if DataManager.unsaved(player) or not DataManager.save(player) then
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
-	Remotes.Notify:FireClient(player, { text = "Starter Bundle: +" .. bundle.coins .. " coins and a new needle skin. Thank you!", tone = "good" })
+	if name == "CoinShower" then
+		shower(player)
+	end
+	Remotes.Notify:FireClient(player, { text = thanks or "Thank you!", tone = "good" })
 	return Enum.ProductPurchaseDecision.PurchaseGranted
 end
 
@@ -4066,24 +4162,24 @@ return ShopManager
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerStorage" referent="RBX0002E">
+	<Item class="ServerStorage" referent="RBX0002F">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX0002F">
+	<Item class="StarterPlayer" referent="RBX00030">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX00030">
+		<Item class="StarterPlayerScripts" referent="RBX00031">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX00031">
+			<Item class="Folder" referent="RBX00032">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX00032">
+				<Item class="ModuleScript" referent="RBX00033">
 					<Properties>
 						<string name="Name">Effects</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback you can see and hear, on your own screen only: sounds, a burst of particles where a
@@ -4164,7 +4260,7 @@ return Effects
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00033">
+				<Item class="ModuleScript" referent="RBX00034">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: your coins and level (with an XP bar) at the top left; the round's
@@ -4300,7 +4396,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00034">
+				<Item class="ModuleScript" referent="RBX00035">
 					<Properties>
 						<string name="Name">LobbyUi</string>
 						<ProtectedString name="Source"><![CDATA[-- The lobby and finding, on your screen:
@@ -4422,7 +4518,7 @@ return LobbyUi
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX00035">
+				<Item class="LocalScript" referent="RBX00036">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- Starts the client: the whole UI (UIController). The client only shows things and asks the
@@ -4432,7 +4528,7 @@ UIController.start()
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00036">
+				<Item class="ModuleScript" referent="RBX00037">
 					<Properties>
 						<string name="Name">NeedleView</string>
 						<ProtectedString name="Source"><![CDATA[-- A needle in 3D inside the UI: a ViewportFrame with the needle (shared/NeedleLook) lit and
@@ -4479,7 +4575,7 @@ return NeedleView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00037">
+				<Item class="ModuleScript" referent="RBX00038">
 					<Properties>
 						<string name="Name">PowerupFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Power-ups on your screen (server/Powerups decides; Remotes.Powerup says what you got):
@@ -4613,7 +4709,7 @@ return PowerupFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00038">
+				<Item class="ModuleScript" referent="RBX00039">
 					<Properties>
 						<string name="Name">Results</string>
 						<ProtectedString name="Source"><![CDATA[-- The round's big moments on screen: the 3, 2, 1 before searching; NEEDLE FOUND! when you find it
@@ -4744,11 +4840,11 @@ return Results
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00039">
+				<Item class="ModuleScript" referent="RBX0003A">
 					<Properties>
 						<string name="Name">Screens</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop and Inventory screens. The Shop sells cosmetics for Haystack Coins (needle skins,
--- trails, found effects) and shows the optional Robux items when they're on sale; the Inventory
+-- trails, found effects) and shows the optional Robux items (shared/Robux) when they're on sale; the Inventory
 -- lists what you own to wear. Every buy and equip is asked of the server (Remotes.Shop), which
 -- decides.
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -4758,6 +4854,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Cosmetics = require(Shared:WaitForChild("Cosmetics"))
+local Robux = require(Shared:WaitForChild("Robux"))
 local Rules = require(Shared:WaitForChild("Rules"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local UiKit = require(script.Parent.UiKit)
@@ -4769,6 +4866,25 @@ local Screens = {}
 local shop, shopBody, inv, invBody
 local getProfile = function()
 	return {}
+end
+
+-- An item's Robux price as Roblox has it ("R$ 99"), looked up once; "Buy" until it's known.
+local prices = {}
+local function priceOf(id, pass, button)
+	if prices[id] then
+		button.Text = prices[id]
+		return
+	end
+	button.Text = "Buy"
+	task.spawn(function()
+		local ok, info = pcall(MarketplaceService.GetProductInfo, MarketplaceService, id, if pass then Enum.InfoType.GamePass else Enum.InfoType.Product)
+		if ok and info and info.PriceInRobux then
+			prices[id] = "R$ " .. info.PriceInRobux
+			if button.Parent then
+				button.Text = prices[id]
+			end
+		end
+	end)
 end
 
 local function rgb(c)
@@ -4851,29 +4967,30 @@ function Screens.refresh()
 				end
 			end
 		end
-		-- optional Robux items (only those that are on sale)
-		local robux = {
-			{ id = Config.GamePasses.DoubleCoins, pass = true, name = "2x Coins (pass)", text = "Every coin you earn, doubled. Forever." },
-			{ id = Config.GamePasses.ExtraHint, pass = true, name = "Extra Daily Hint (pass)", text = "One more hint every day." },
-			{ id = Config.GamePasses.Supporter, pass = true, name = "Supporter (pass)", text = "The Supporter title and trail. Thank you!" },
-			{ id = Config.Products.StarterBundle, pass = false, name = "Starter Bundle", text = Config.StarterBundle.coins .. " coins and the Sparkle Trail." },
-		}
-		for _, r in ipairs(robux) do
-			if r.id ~= 0 then
+		-- optional Robux items (only those that are on sale), each saying exactly what it gives
+		for _, r in ipairs(Robux.items) do
+			local id = Robux.id(r)
+			local have = r.pass and player:GetAttribute("Pass_" .. r.key) == true
+			if id ~= 0 and not (r.once and getProfile().starterBought) then
 				if order < 100 then
 					order = 100
 					heading(shopBody, order, "Support the game (Robux)")
 				end
 				order += 1
 				local c = UiKit.make("Frame", { LayoutOrder = order, Size = UDim2.new(1, -8, 0, 70), BackgroundColor3 = UiKit.colors.card, Parent = shopBody }, { UiKit.corner(12) })
-				UiKit.label({ Font = UiKit.bold, Text = r.name, Size = UDim2.new(0.6, 0, 0, 28), Position = UDim2.fromOffset(14, 8), TextXAlignment = Enum.TextXAlignment.Left, Parent = c }, 20)
-				UiKit.label({ Text = r.text, Size = UDim2.new(0.6, 0, 0, 24), Position = UDim2.fromOffset(14, 38), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UiKit.colors.soft, Parent = c }, 16)
-				local b = UiKit.button("Buy", UiKit.colors.green, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(120, 46), Parent = c })
+				UiKit.label({ Font = UiKit.bold, Text = r.name .. (if r.pass then "  (pass)" else ""), Size = UDim2.new(1, -160, 0, 28), Position = UDim2.fromOffset(14, 8), TextXAlignment = Enum.TextXAlignment.Left, Parent = c }, 20)
+				UiKit.label({ Text = r.text, Size = UDim2.new(1, -160, 0, 24), Position = UDim2.fromOffset(14, 38), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UiKit.colors.soft, Parent = c }, 16)
+				local b = UiKit.button("Owned", if have then UiKit.colors.panel else UiKit.colors.green, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(130, 46), Parent = c })
+				if not have then
+					priceOf(id, r.pass, b)
+				end
 				b.Activated:Connect(function()
-					if r.pass then
-						MarketplaceService:PromptGamePassPurchase(player, r.id)
+					if have then
+						return
+					elseif r.pass then
+						MarketplaceService:PromptGamePassPurchase(player, id)
 					else
-						MarketplaceService:PromptProductPurchase(player, r.id)
+						MarketplaceService:PromptProductPurchase(player, id)
 					end
 				end)
 			end
@@ -4914,7 +5031,7 @@ return Screens
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0003A">
+				<Item class="ModuleScript" referent="RBX0003B">
 					<Properties>
 						<string name="Name">Screens2</string>
 						<ProtectedString name="Source"><![CDATA[-- The Quests, Leaderboard and Settings screens.
@@ -5048,7 +5165,7 @@ return Screens2
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0003B">
+				<Item class="ModuleScript" referent="RBX0003C">
 					<Properties>
 						<string name="Name">Screens3</string>
 						<ProtectedString name="Source"><![CDATA[-- The Collection screen: every needle you've found, by type, shown in 3D with its rarity, value
@@ -5181,7 +5298,7 @@ return Screens3
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0003C">
+				<Item class="ModuleScript" referent="RBX0003D">
 					<Properties>
 						<string name="Name">UIController</string>
 						<ProtectedString name="Source"><![CDATA[-- Puts the whole UI together: one ScreenGui with the HUD, the round moments (Results), and the
@@ -5301,7 +5418,7 @@ return UIController
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0003D">
+				<Item class="ModuleScript" referent="RBX0003E">
 					<Properties>
 						<string name="Name">UiKit</string>
 						<ProtectedString name="Source"><![CDATA[-- The UI's look in one place: a clean, modern dark-glass style with warm gold accents, big
@@ -5438,7 +5555,7 @@ return UiKit
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX0003E">
+	<Item class="Workspace" referent="RBX0003F">
 		<Properties>
 			<string name="Name">Workspace</string>
 		</Properties>

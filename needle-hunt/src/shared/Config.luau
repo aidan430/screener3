@@ -126,10 +126,14 @@ Config.BoardRows = 10
 Config.BoardFlushSeconds = 120
 Config.BoardReadSeconds = 180
 
--- Robux (server/ShopManager). 0 = not on sale yet: create the pass or product on the Creator
--- Dashboard, then put its ID here. Nothing here is a random reward.
-Config.GamePasses = { DoubleCoins = 0, ExtraHint = 0, Supporter = 0 }
-Config.Products = { StarterBundle = 0 }
+-- Robux (server/ShopManager, shared/Robux for what the shop says). 0 = not on sale yet: create the
+-- pass or product on the Creator Dashboard (README: Selling with Robux), then put its ID here.
+-- Nothing here is a random reward, and Robux never buys a needle, a power-up or a hint mid-round.
+Config.GamePasses = { DoubleCoins = 0, ExtraHint = 0, Supporter = 0, GrandBooth = 0 }
+Config.Products = { StarterBundle = 0, CoinsSmall = 0, CoinsMedium = 0, CoinsLarge = 0, CoinShower = 0 }
+Config.CoinPacks = { CoinsSmall = 500, CoinsMedium = 1500, CoinsLarge = 4000 } -- coins each pack gives
+Config.CoinShower = { coins = 100 } -- every player in the server gets this, the buyer too
+Config.GrandBooth = { needles = 6 } -- needles on show at a Grand Booth (3 otherwise)
 Config.StarterBundle = { coins = 500, cosmetic = "t_sparkle" } -- what the Starter Bundle gives (never a collectible needle)
 
 -- Sounds: Roblox's built-in sounds; swap in your own Toolbox IDs ("rbxassetid://...").

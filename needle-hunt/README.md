@@ -118,16 +118,41 @@ ServerStorage.
 nothing saves. If a save can't be loaded, that player plays unsaved for the visit (so their real
 save is never overwritten) and is told so. To wipe everyone, change `Config.DataStoreName`.
 
-### Robux (optional; off until you set IDs)
+### Selling with Robux (off until you set IDs)
 
-Create these on the Creator Dashboard, then put the IDs in `Config.GamePasses` /
-`Config.Products`. Anything left at 0 is hidden in the shop.
+Every item says exactly what it gives. Nothing is random, and Robux never buys a needle, a
+power-up or a hint during a round: coins only buy looks (trails, titles, found effects).
 
-- Game passes: **DoubleCoins** (2x coins), **ExtraHint** (+1 hint a day), **Supporter** (title + trail)
-- Developer product: **StarterBundle** (500 coins + the Sparkle Trail; never a collectible needle)
+| Item | Kind | Gives | Suggested price |
+|---|---|---|---|
+| Starter Bundle | product (`StarterBundle`) | 500 coins + Sparkle Trail; once per player | 49 R$ |
+| Pouch of Coins | product (`CoinsSmall`) | 500 coins | 39 R$ |
+| Sack of Coins | product (`CoinsMedium`) | 1,500 coins | 99 R$ |
+| Cart of Coins | product (`CoinsLarge`) | 4,000 coins | 229 R$ |
+| Coin Shower | product (`CoinShower`) | 100 coins to everyone in the server, buyer too | 49 R$ |
+| 2x Coins | pass (`DoubleCoins`) | every coin earned doubled, forever | 199 R$ |
+| Extra Daily Hint | pass (`ExtraHint`) | one more lobby hint a day | 79 R$ |
+| Grand Booth | pass (`GrandBooth`) | your lobby booth shows 6 needles, gold sign | 149 R$ |
+| Supporter | pass (`Supporter`) | Supporter title + trail | 99 R$ |
 
-Purchases are granted on the server only. ProcessReceipt records each receipt in the save,
-so a repeated receipt never pays twice, and it reports success only after the save is written.
+Prices are yours to choose; the shop shows whatever price Roblox has. Amounts are in
+`Config.CoinPacks`, `Config.CoinShower`, `Config.StarterBundle` and `Config.GrandBooth`; the
+shop's wording is in `shared/Robux.luau`.
+
+**Setting them up:**
+1. Publish the place (File > Publish to Roblox), so the experience exists on the Creator Dashboard.
+2. Creator Dashboard (create.roblox.com) > your experience > **Monetization > Passes** > Create a
+   Pass: name, description and a 512×512 icon for each pass; save, open it, **Sales** > On Sale,
+   set the price. Copy its ID (the number in its address) into `Config.GamePasses`.
+3. **Monetization > Developer Products** > Create a Developer Product for each product, with its
+   price. Copy each ID into `Config.Products`.
+4. Rebuild (or edit Config in Studio), publish again, and test in a live server: Studio purchases
+   are free test purchases that still run the whole code path.
+
+Anything left at 0 is hidden in the shop. Purchases are granted on the server only.
+ProcessReceipt records each receipt in the save, so a repeated receipt never pays twice, and it
+reports success only after the save is written. Bought coins don't count towards the Most Coins
+Earned board.
 
 ## How a round works
 

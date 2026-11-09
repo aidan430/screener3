@@ -11,6 +11,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
 local Needles = require(Shared:WaitForChild("Needles"))
 local NeedleLook = require(Shared:WaitForChild("NeedleLook"))
 local Rules = require(Shared:WaitForChild("Rules"))
@@ -117,7 +118,7 @@ local function buildBooth(i, x, z)
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText, prompt.ObjectText, prompt.HoldDuration, prompt.MaxActivationDistance, prompt.Enabled = "View collection", "", 0, 12, false
 	prompt.Parent = glass
-	booths[i] = { player = nil, models = {}, keys = "", title = title, line = line, prompt = prompt, face = face }
+	booths[i] = { player = nil, models = {}, keys = "", title = title, line = line, prompt = prompt, face = face, plate = plate, sign = sign }
 end
 
 local function fillBooth(b)
@@ -129,22 +130,30 @@ local function fillBooth(b)
 		return
 	end
 	local list = LobbySocial.ranked(d)
-	local keys = (list[1] and list[1].key or "") .. (list[2] and list[2].key or "") .. (list[3] and list[3].key or "")
+	local grand = b.player:GetAttribute("Pass_GrandBooth") == true -- the Grand Booth pass: more on show, a gold sign
+	local limit = if grand then Config.GrandBooth.needles else 3
+	local keys = if grand then "grand" else ""
+	for slot = 1, limit do
+		keys ..= (list[slot] and list[slot].key or "") .. ","
+	end
+	b.plate.Color = if grand then Color3.fromRGB(214, 170, 60) else Color3.fromRGB(96, 66, 40)
+	b.sign.BackgroundColor3 = if grand then Color3.fromRGB(60, 44, 16) else Color3.fromRGB(30, 34, 44)
 	b.title.Text = b.player.DisplayName .. "'s collection"
 	b.line.Text = Rules.commas(Needles.total(d.collection)) .. " value  ·  press E to look"
 	b.prompt.ObjectText, b.prompt.Enabled = b.player.DisplayName, true
 	b.prompt:SetAttribute("ViewUser", b.player.UserId)
 	if keys == b.keys then
-		return -- the same three needles: leave them be
+		return -- the same needles: leave them be
 	end
 	b.keys = keys
 	clearModels(b.models)
 	for slot, entry in ipairs(list) do
-		if slot > 3 then
+		if slot > limit then
 			break
 		end
+		local row, col = (slot - 1) // 3, (slot - 1) % 3 -- three on the shelf; a Grand Booth's next three hang higher, on the back wall
 		local m = NeedleLook.build(entry.type, entry.skin, 1.35, 2)
-		m:PivotTo(b.face * CFrame.new((slot - 2) * 3.1, 4.4, -1) * CFrame.Angles(0, math.pi / 2, math.rad(50)))
+		m:PivotTo(b.face * CFrame.new((col - 1) * 3.1, 4.4 + row * 3, -1 + row * 2.4) * CFrame.Angles(0, math.pi / 2, math.rad(50)))
 		m.Parent = ctx.model
 		table.insert(b.models, m)
 	end

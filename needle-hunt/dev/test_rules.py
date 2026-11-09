@@ -223,5 +223,29 @@ class Powerups(unittest.TestCase):
         self.assertNotIn("Robux", server, "power-ups are found on the map, never bought")
 
 
+class RobuxShop(unittest.TestCase):
+    def test_every_robux_item_is_on_the_list_handled_and_fair(self):
+        passes = re.findall(r"(\w+) = 0", re.search(r"^Config\.GamePasses = \{(.*)\}", CONFIG, re.M).group(1))
+        products = re.findall(r"(\w+) = 0", re.search(r"^Config\.Products = \{(.*)\}", CONFIG, re.M).group(1))
+        robux = (SHARED / "Robux.luau").read_text()
+        listed = re.findall(r'key = "(\w+)", pass = (true|false)', robux)
+        self.assertEqual({k for k, p in listed if p == "true"}, set(passes), "every pass is in the shop")
+        self.assertEqual({k for k, p in listed if p == "false"}, set(products), "every product is in the shop")
+        shop = (SERVER / "ShopManager.luau").read_text()
+        packs = table("CoinPacks")
+        for name in products:
+            self.assertTrue(f'"{name}"' in shop or name in packs, f"{name} gives something")
+        code = "\n".join(line.split("--")[0] for line in shop.splitlines())  # not the comments
+        for word in ("Powerup", "Needles", "Hint", "NextNumber", "math.random"):
+            self.assertNotIn(word, code, f"Robux never buys {word}")
+        self.assertIn("Pass_GrandBooth", (SERVER / "LobbySocial.luau").read_text())
+        self.assertIn("starterBought", shop, "the Starter Bundle is once per player")
+
+    def test_coins_have_plenty_to_buy(self):
+        priced = [i for i in ITEMS if i["price"] > 0]
+        self.assertGreaterEqual(len(priced), 12)
+        self.assertGreater(sum(i["price"] for i in priced), max(table("CoinPacks").values()) * 5, "packs don't buy the whole shop")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,7 +1,8 @@
 -- Cosmetics and purchases. With Haystack Coins: buy a cosmetic (Remotes.Shop "buy"), and wear
 -- what you own ("equip"); the server checks the price, your coins and that you own it. With
--- Robux (MarketplaceService): game passes (2x Coins, Extra Hint, Supporter) are checked on join
--- and after a purchase; the Starter Bundle product goes through ProcessReceipt, which records
+-- Robux (MarketplaceService): game passes (2x Coins, Extra Hint, Grand Booth, Supporter) are
+-- checked on join and after a purchase; products (Starter Bundle, coin packs, Coin Shower) go
+-- through ProcessReceipt, which records
 -- each receipt in the save so a repeated receipt is never paid twice, and only reports success
 -- once the save has been written. What you wear shows on your character: a trail and a title.
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -11,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Cosmetics = require(Shared:WaitForChild("Cosmetics"))
+local Rules = require(Shared:WaitForChild("Rules"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local DataManager = require(script.Parent.DataManager)
@@ -121,26 +123,62 @@ local function checkPasses(player)
 	end
 end
 
+-- What each Robux product gives (by its name in Config.Products). Bought coins never count
+-- towards the Most Coins Earned board. Returns the thank-you line.
+local function give(player, name, data)
+	if name == "StarterBundle" then
+		local bundle = Config.StarterBundle
+		data.coins += bundle.coins
+		data.starterBought = true
+		if Cosmetics.get(bundle.cosmetic) then
+			data.owned[bundle.cosmetic] = true
+		end
+		return "Starter Bundle: +" .. bundle.coins .. " coins and the " .. (Cosmetics.get(bundle.cosmetic) or { name = "new" }).name .. ". Thank you!"
+	elseif Config.CoinPacks[name] then
+		data.coins += Config.CoinPacks[name]
+		return "+" .. Rules.commas(Config.CoinPacks[name]) .. " coins. Thank you!"
+	elseif name == "CoinShower" then
+		data.coins += Config.CoinShower.coins
+		return "Your Coin Shower: +" .. Config.CoinShower.coins .. " coins for everyone here. Thank you!"
+	end
+	return nil
+end
+
+local function productName(id)
+	for name, pid in pairs(Config.Products) do
+		if pid ~= 0 and pid == id then
+			return name
+		end
+	end
+	return nil
+end
+
+-- A Coin Shower: everyone else in the server gets the coins too (the buyer's are in the receipt).
+local function shower(buyer)
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= buyer and DataManager.get(p) then
+			DataManager.update(p, function(data)
+				data.coins += Config.CoinShower.coins
+			end)
+		end
+		Remotes.Notify:FireClient(p, { text = buyer.DisplayName .. " shared a Coin Shower: +" .. Config.CoinShower.coins .. " coins for everyone!", tone = "good" })
+	end
+end
+
 -- Robux products: grant once per receipt, then save before telling Roblox it's done.
 local function processReceipt(receipt)
 	local player = Players:GetPlayerByUserId(receipt.PlayerId)
 	local d = player and DataManager.get(player)
-	if not d then
+	local name = productName(receipt.ProductId)
+	if not d or not name then
 		return Enum.ProductPurchaseDecision.NotProcessedYet -- tried again when they're back
 	end
 	if table.find(d.receipts, receipt.PurchaseId) then
 		return Enum.ProductPurchaseDecision.PurchaseGranted -- already given
 	end
-	if receipt.ProductId ~= Config.Products.StarterBundle or Config.Products.StarterBundle == 0 then
-		return Enum.ProductPurchaseDecision.NotProcessedYet
-	end
-	local bundle = Config.StarterBundle
+	local thanks
 	DataManager.update(player, function(data)
-		data.coins += bundle.coins
-		data.coinsEarned += bundle.coins
-		if Cosmetics.get(bundle.cosmetic) then
-			data.owned[bundle.cosmetic] = true
-		end
+		thanks = give(player, name, data)
 		table.insert(data.receipts, receipt.PurchaseId)
 		while #data.receipts > 50 do
 			table.remove(data.receipts, 1)
@@ -151,7 +189,10 @@ local function processReceipt(receipt)
 	if DataManager.unsaved(player) or not DataManager.save(player) then
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
-	Remotes.Notify:FireClient(player, { text = "Starter Bundle: +" .. bundle.coins .. " coins and a new needle skin. Thank you!", tone = "good" })
+	if name == "CoinShower" then
+		shower(player)
+	end
+	Remotes.Notify:FireClient(player, { text = thanks or "Thank you!", tone = "good" })
 	return Enum.ProductPurchaseDecision.PurchaseGranted
 end
 
