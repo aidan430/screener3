@@ -166,7 +166,9 @@ ground beside haystacks, the barn loft, the attic table and so on. Each round th
 
 ## The lobby: showing off
 
-The lobby is a 170 × 170 wooden plaza with a hedge all the way round.
+The lobby is a 170 × 170 lawn with a hedge all the way round (`server/LobbyDecor.luau` dresses it):
+cobbled paths to everything, two spool fountains by the spawn, flower beds, lamp posts, trees behind
+the booths, and a hay yard of haystacks behind the title sign.
 
 **When you arrive:**
 - You face the **Champion's Needle**: a podium with the single most valuable needle anyone in the server owns, big and glowing, with whose it is.

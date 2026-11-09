@@ -2,6 +2,7 @@
 -- (a giant needle turns above it), the glowing Play pad with the next round's countdown, a
 -- leaderboard that cycles through every board, the Daily Challenge board, a Shop stall and a
 -- Wardrobe (their prompts open those screens on the player's own UI), and haystacks round the edge.
+-- Paths, fountains, flowers, lamps, trees and the hay yard are in LobbyDecor.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -139,7 +140,7 @@ function LobbyBuilder.build()
 	ctx = { model = model, rng = Random.new(7), centre = Config.LobbyCentre, def = { straw = { 226, 188, 92 } }, spots = {}, spawns = {}, floorY = 0 }
 	MapKit.ground(ctx, 260, 260, { 104, 160, 76 }, "Grass")
 	MapKit.edges(ctx, 90, 90, { 104, 160, 76 }) -- a hedge all the way round: nobody wanders off
-	MapKit.part(ctx, { Name = "Plaza", Size = Vector3.new(170, 0.4, 170), CFrame = CFrame.new(MapKit.at(ctx, 0, 0.2, 0)), Color = { 170, 128, 86 }, Material = "WoodPlanks" })
+	MapKit.part(ctx, { Name = "Plaza", Size = Vector3.new(170, 0.4, 170), CFrame = CFrame.new(MapKit.at(ctx, 0, 0.2, 0)), Color = { 116, 172, 82 }, Material = "Grass" }) -- a lawn (LobbyDecor lays the paths)
 	-- you arrive at the front, facing the Champion's Needle (server/LobbySocial) and the Play pad
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Anchored, spawn.Size, spawn.Duration, spawn.Neutral = true, Vector3.new(12, 1, 12), 0, true
@@ -153,10 +154,10 @@ function LobbyBuilder.build()
 		MapKit.part(ctx, { Name = "BenchBack", Size = Vector3.new(8, 2.4, 0.4), CFrame = seat.CFrame * CFrame.new(0, 1.4, 1.1), Color = { 120, 84, 50 }, Material = "WoodPlanks" })
 	end
 	-- the title sign and its turning needle
-	local title = board("TitleSign", 0, 12, -38, 40, 9)
+	local title = board("TitleSign", 0, 14, -54, 40, 9) -- well behind the Hall, so its needles stand clear
 	text(title, { Size = UDim2.new(1, -40, 0.62, 0), Position = UDim2.new(0, 20, 0.06, 0), Text = "A NEEDLE IN A HAYSTACK", TextColor3 = Color3.fromRGB(255, 214, 90) })
 	text(title, { Size = UDim2.new(1, -40, 0.26, 0), Position = UDim2.new(0, 20, 0.68, 0), Text = "Find it first. Win the round.", TextColor3 = Color3.fromRGB(220, 226, 240) })
-	local needle = MapKit.part(ctx, { Name = "BigNeedle", Shape = "Cylinder", Size = Vector3.new(16, 0.6, 0.6), CFrame = CFrame.new(MapKit.at(ctx, 0, 21, -38)), Color = { 210, 214, 224 }, Material = "Metal", CanCollide = false })
+	local needle = MapKit.part(ctx, { Name = "BigNeedle", Shape = "Cylinder", Size = Vector3.new(16, 0.6, 0.6), CFrame = CFrame.new(MapKit.at(ctx, 0, 23, -54)), Color = { 210, 214, 224 }, Material = "Metal", CanCollide = false })
 	TweenService:Create(needle, TweenInfo.new(6, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { CFrame = needle.CFrame * CFrame.Angles(math.pi, 0, 0) }):Play()
 	TweenService:Create(needle, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = needle.Position + Vector3.new(0, 1.2, 0) }):Play()
 	-- the Play pad
@@ -216,6 +217,7 @@ function LobbyBuilder.build()
 	stall("ShopStall", -18, 30, "Shop", { 196, 64, 50 })
 	stall("Wardrobe", 18, 30, "Inventory", { 76, 106, 170 })
 	require(script.Parent.LobbySocial).build(ctx, text)
+	require(script.Parent.LobbyDecor).build(ctx)
 	-- the countryside beyond the hedge, and a few bales on the plaza
 	for _, h in ipairs({ { -110, -80 }, { 110, -84 }, { -120, 40 }, { 122, 50 }, { 0, -120 }, { -70, 115 }, { 76, 118 } }) do
 		MapKit.haystack(ctx, h[1], h[2], 7, 12)
