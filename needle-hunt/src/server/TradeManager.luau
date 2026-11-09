@@ -102,8 +102,10 @@ local function execute(t)
 	move(t.a, t.b)
 	move(t.b, t.a)
 	for _, pair in ipairs({ { t.a, t.b }, { t.b, t.a } }) do -- the 1 of 1's record follows it
-		if t.offer[pair[1]][Config.OneOfOne.key] then
-			require(script.Parent.OneOfOne).transfer(pair[2])
+		for _, e in ipairs(Config.OneOfOne.list) do
+			if t.offer[pair[1]][e.key] then
+				require(script.Parent.OneOfOne).transfer(e.key, pair[2])
+			end
 		end
 	end
 	for _, p in ipairs({ t.a, t.b }) do

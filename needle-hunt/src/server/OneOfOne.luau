@@ -1,9 +1,9 @@
--- The 1 of 1 (Config.OneOfOne). A chest rolls for it (roll); the first player to roll it claims it
+-- The 1 of 1s (Config.OneOfOne). A chest rolls for each (roll); the first player to roll one claims it
 -- in a DataStore every server shares, with UpdateAsync, so two servers can never both hand it out:
 -- if it's already claimed (or the store can't be reached), the chest is an ordinary chest. The
 -- record follows the needle when it's traded. Finding it is announced on this server and, through
 -- MessagingService, on every other one. In Studio a separate store is used, so testing (set
--- Config.OneOfOne.chance = 1) never claims the real one.
+-- a chance of 1) never claims the real ones.
 local DataStoreService = game:GetService("DataStoreService")
 local MessagingService = game:GetService("MessagingService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -25,15 +25,15 @@ local function store()
 	return if ok then ds else nil
 end
 
--- True if this player just became the one owner (call only after a roll hits).
-local function claim(player)
+-- True if this player just became the one owner of `entry` (call only after a roll hits).
+local function claim(player, entry)
 	local ds = store()
 	if not ds then
 		return false
 	end
 	local won = false
 	local ok = pcall(function()
-		ds:UpdateAsync("owner", function(old)
+		ds:UpdateAsync(entry.record, function(old)
 			if old ~= nil then
 				return nil -- already found by someone: leave it be
 			end
@@ -44,17 +44,32 @@ local function claim(player)
 	return ok and won
 end
 
--- A chest's roll: true if this chest holds the 1 of 1 and `player` has claimed it.
+local function entryFor(key)
+	for _, e in ipairs(O.list) do
+		if e.key == key then
+			return e
+		end
+	end
+	return nil
+end
+OneOfOne.entryFor = entryFor
+
+-- A chest's roll: the key of the 1 of 1 this chest holds (claimed by `player`), or nil.
 function OneOfOne.roll(player)
-	return rng:NextNumber() < O.chance and claim(player)
+	for _, e in ipairs(O.list) do
+		if rng:NextNumber() < e.chance and claim(player, e) then
+			return e.key
+		end
+	end
+	return nil
 end
 
--- The needle changed hands in a trade: the record follows it.
-function OneOfOne.transfer(toPlayer)
-	local ds = store()
-	if ds then
+-- A 1 of 1 changed hands in a trade: its record follows it.
+function OneOfOne.transfer(key, toPlayer)
+	local ds, entry = store(), entryFor(key)
+	if ds and entry then
 		pcall(function()
-			ds:UpdateAsync("owner", function(old)
+			ds:UpdateAsync(entry.record, function(old)
 				if type(old) ~= "table" then
 					return nil
 				end
@@ -65,25 +80,32 @@ function OneOfOne.transfer(toPlayer)
 	end
 end
 
-local function message(name)
-	local t, s = Needles.split(O.key)
+local function message(name, key)
+	local entry = entryFor(key)
+	local t, s = Needles.split(key)
+	if not entry or not t then
+		return nil
+	end
 	local unique = Needles.rarity("unique")
-	return { name = name, needle = Needles.name(t, s), rarity = unique.name, colour = unique.colour, box = "chest", odds = "1 in 12,000,000", type = t, skin = s }
+	return { name = name, needle = Needles.name(t, s), rarity = unique.name, colour = unique.colour, box = "chest", odds = entry.odds, type = t, skin = s }
 end
 
 -- Tells everyone, here and on every other server.
-function OneOfOne.announce(player)
-	local m = message(player.DisplayName)
-	Remotes.Announce:FireAllClients(m)
-	pcall(MessagingService.PublishAsync, MessagingService, TOPIC, { name = player.DisplayName, job = game.JobId })
+function OneOfOne.announce(player, key)
+	local m = message(player.DisplayName, key)
+	if m then
+		Remotes.Announce:FireAllClients(m)
+		pcall(MessagingService.PublishAsync, MessagingService, TOPIC, { name = player.DisplayName, key = key, job = game.JobId })
+	end
 end
 
 function OneOfOne.init()
 	pcall(function()
 		MessagingService:SubscribeAsync(TOPIC, function(packet)
 			local data = type(packet) == "table" and packet.Data
-			if type(data) == "table" and type(data.name) == "string" and data.job ~= game.JobId then -- (this server already told its players)
-				Remotes.Announce:FireAllClients(message(string.sub(data.name, 1, 40)))
+			local m = type(data) == "table" and type(data.name) == "string" and type(data.key) == "string" and message(string.sub(data.name, 1, 40), data.key)
+			if m and data.job ~= game.JobId then -- (this server already told its players)
+				Remotes.Announce:FireAllClients(m)
 			end
 		end)
 	end)

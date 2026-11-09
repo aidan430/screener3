@@ -59,7 +59,7 @@ function RewardManager.chest(player, reward)
 	DataManager.update(player, function(d)
 		d.chests += 1
 		if reward.oneOfOne then
-			local kept = CollectionManager.addTo(d, Needles.split(Config.OneOfOne.key))
+			local kept = CollectionManager.addTo(d, Needles.split(reward.oneOfOne))
 			got = { oneOfOne = true, name = kept.name, type = kept.type, skin = kept.skin }
 		elseif reward.key then
 			d.keys[reward.key] = (d.keys[reward.key] or 0) + 1
@@ -69,7 +69,7 @@ function RewardManager.chest(player, reward)
 	QuestManager.record(player, "chest", 1)
 	if reward.oneOfOne then
 		DataManager.save(player) -- the only one there is: saved straight away
-		require(script.Parent.OneOfOne).announce(player)
+		require(script.Parent.OneOfOne).announce(player, reward.oneOfOne)
 	elseif reward.key then
 		QuestManager.record(player, "key", 1)
 		for _, k in ipairs(Config.Chests.keys) do

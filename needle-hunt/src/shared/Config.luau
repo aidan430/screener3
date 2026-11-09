@@ -49,12 +49,15 @@ Config.Chests = {
 	},
 }
 
--- The 1 of 1 (server/OneOfOne): the Gossamer Sewing Needle, paper thin and nearly invisible. Every
--- chest opened has `chance` of holding it, but only one can ever exist: the first finder claims it
--- in a DataStore shared by every server (Studio uses its own store, so testing never claims the
--- real one). Thrown, it takes `throwDamage` hearts: an instant tag-out. It never comes from a box
--- or anything bought. Finding it is announced on every server.
-Config.OneOfOne = { key = "sewing:gossamer", chance = 1 / 12000000, store = "NH_OneOfOne_v1", throwDamage = 3 }
+-- The 1 of 1s (server/OneOfOne): paper-thin, nearly invisible Sewing Needles, one of each in the
+-- whole game. Every chest opened has each one's `chance` of holding it, but only one can ever
+-- exist: the first finder claims it (`record`) in a DataStore shared by every server (Studio uses
+-- its own store, so testing never claims the real ones). Thrown, any of them takes `throwDamage`
+-- hearts: an instant tag-out. Never from a box or anything bought. Found: announced on every server.
+Config.OneOfOne = { store = "NH_OneOfOne_v1", throwDamage = 3, list = {
+	{ key = "sewing:galaxygossamer", chance = 1 / 120000000, record = "galaxy", odds = "1 in 120,000,000" }, -- the rarer is rolled first
+	{ key = "sewing:gossamer", chance = 1 / 12000000, record = "owner", odds = "1 in 12,000,000" },
+} }
 
 -- Places at the end of a round: by chests opened, then tag-outs, then coins collected. Places
 -- pay coins (placeCoins, 1st to 4th, the rest get the last; times the difficulty's coins).

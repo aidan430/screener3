@@ -343,14 +343,18 @@ class BoxOpenings(unittest.TestCase):
         self.assertIn(("hay", "mythic"), announced)
 
     def test_the_one_of_one(self):
-        o = CONFIG[CONFIG.index("Config.OneOfOne = {"):].splitlines()[0]
-        self.assertIn("chance = 1 / 12000000", o)
-        self.assertIn('key = "sewing:gossamer"', o)
-        self.assertGreaterEqual(int(re.search(r"throwDamage = (\d+)", o).group(1)), table("Combat")["hearts"], "one throw tags out")
+        block = CONFIG[CONFIG.index("Config.OneOfOne = {"):]
+        block = block[: block.index("} }")]
+        self.assertIn("chance = 1 / 12000000", block)
+        self.assertIn("chance = 1 / 120000000", block, "the Galaxy Gossamer is ten times rarer")
+        self.assertLess(block.index("galaxygossamer"), block.index('"sewing:gossamer"'), "the rarer is rolled first")
+        self.assertEqual(len(set(re.findall(r'record = "(\w+)"', block))), 2, "each has its own one-time claim")
+        self.assertGreaterEqual(int(re.search(r"throwDamage = (\d+)", block).group(1)), table("Combat")["hearts"], "one throw tags out")
         unique = [x for x in SKINS if x["rarity"] == "unique"]
-        self.assertEqual([x["id"] for x in unique], ["gossamer"])
-        self.assertLess(unique[0]["thin"], 0.3, "paper thin")
-        self.assertGreater(unique[0]["see"], 0.7, "nearly invisible")
+        self.assertEqual([x["id"] for x in unique], ["gossamer", "galaxygossamer"])
+        for u in unique:
+            self.assertLess(u["thin"], 0.3, u["id"] + " is paper thin")
+            self.assertGreater(u["see"], 0.5, u["id"] + " is hard to see")
         self.assertEqual([r["weight"] for r in RARITIES if r["id"] == "unique"], [0], "never rolled by finds or boxes")
         for line in CONFIG[CONFIG.index("Config.Boxes = {"):].splitlines()[1:4]:
             self.assertNotIn("unique", line, "no box can give it")

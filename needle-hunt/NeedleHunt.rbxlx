@@ -137,12 +137,15 @@ Config.Chests = {
 	},
 }
 
--- The 1 of 1 (server/OneOfOne): the Gossamer Sewing Needle, paper thin and nearly invisible. Every
--- chest opened has `chance` of holding it, but only one can ever exist: the first finder claims it
--- in a DataStore shared by every server (Studio uses its own store, so testing never claims the
--- real one). Thrown, it takes `throwDamage` hearts: an instant tag-out. It never comes from a box
--- or anything bought. Finding it is announced on every server.
-Config.OneOfOne = { key = "sewing:gossamer", chance = 1 / 12000000, store = "NH_OneOfOne_v1", throwDamage = 3 }
+-- The 1 of 1s (server/OneOfOne): paper-thin, nearly invisible Sewing Needles, one of each in the
+-- whole game. Every chest opened has each one's `chance` of holding it, but only one can ever
+-- exist: the first finder claims it (`record`) in a DataStore shared by every server (Studio uses
+-- its own store, so testing never claims the real ones). Thrown, any of them takes `throwDamage`
+-- hearts: an instant tag-out. Never from a box or anything bought. Found: announced on every server.
+Config.OneOfOne = { store = "NH_OneOfOne_v1", throwDamage = 3, list = {
+	{ key = "sewing:galaxygossamer", chance = 1 / 120000000, record = "galaxy", odds = "1 in 120,000,000" }, -- the rarer is rolled first
+	{ key = "sewing:gossamer", chance = 1 / 12000000, record = "owner", odds = "1 in 12,000,000" },
+} }
 
 -- Places at the end of a round: by chests opened, then tag-outs, then coins collected. Places
 -- pay coins (placeCoins, 1st to 4th, the rest get the last; times the difficulty's coins).
@@ -800,9 +803,10 @@ Needles.skins = {
 	{ id = "borealis", name = "Borealis", rarity = "legendary", series = "starlight", colours = { { 80, 255, 160 }, { 70, 200, 255 }, { 180, 100, 255 } }, material = "Neon", pattern = "tri", sparkle = true },
 	{ id = "celestial", name = "Celestial", rarity = "mythic", series = "starlight", colours = { { 255, 255, 255 }, { 255, 210, 90 }, { 120, 170, 255 } }, material = "Glass", pattern = "tri", glow = true, sparkle = true },
 	{ id = "wishingstar", name = "Wishing Star", rarity = "mythic", series = "starlight", colours = { { 255, 255, 255 }, { 255, 255, 255 } }, material = "Neon", pattern = "rainbow", glow = true, sparkle = true },
-	-- the 1 of 1 (Config.OneOfOne): only one can ever exist, only from a chest, only as a Sewing Needle.
+	-- the 1 of 1s (Config.OneOfOne): one of each ever exists, only from a chest, only as a Sewing Needle.
 	-- thin = paper thin; see = how see-through it is (0 solid, 1 invisible)
 	{ id = "gossamer", name = "Gossamer", rarity = "unique", only = "sewing", colours = { { 235, 245, 255 }, { 200, 225, 255 } }, material = "Glass", pattern = "sheen", thin = 0.18, see = 0.82, sparkle = true },
+	{ id = "galaxygossamer", name = "Galaxy Gossamer", rarity = "unique", only = "sewing", colours = { { 40, 20, 110 }, { 230, 120, 255 }, { 90, 200, 255 } }, material = "Neon", pattern = "tri", thin = 0.18, see = 0.55, glow = true, sparkle = true },
 	-- designed in the Needle Skin Workshop
 	{ id = "thistle", name = "Thistle", rarity = "uncommon", colours = { { 150, 255, 255 }, { 181, 26, 0 } }, material = "SmoothPlastic", pattern = "gradient", glow = true, sparkle = true },
 	{ id = "cornucopiacopy", name = "Cornucopia Copy", rarity = "mythic", series = "harvest", colours = { { 255, 120, 40 }, { 220, 40, 60 } }, material = "Neon", pattern = "gradient", glow = true, sparkle = true },
@@ -2235,6 +2239,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
+local Needles = require(Shared:WaitForChild("Needles"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local DataManager = require(script.Parent.DataManager)
@@ -2284,7 +2289,8 @@ local function throw(player, aim)
 	task.delay(seconds, function()
 		if target then
 			local d2 = DataManager.get(player)
-			local oneOfOne = d2 and d2.showcase == Config.OneOfOne.key -- the 1 of 1 in hand: one throw tags out
+			local _, skinId = Needles.split(d2 and d2.showcase or "")
+			local oneOfOne = skinId ~= nil and Needles.skin(skinId).rarity == "unique" -- a 1 of 1 in hand: one throw tags out
 			Combat.damage(player, target, if oneOfOne then Config.OneOfOne.throwDamage else T.damage)
 		end
 	end)
@@ -4325,12 +4331,12 @@ return MazeKit
 			<Item class="ModuleScript" referent="RBX0003B">
 				<Properties>
 					<string name="Name">OneOfOne</string>
-					<ProtectedString name="Source"><![CDATA[-- The 1 of 1 (Config.OneOfOne). A chest rolls for it (roll); the first player to roll it claims it
+					<ProtectedString name="Source"><![CDATA[-- The 1 of 1s (Config.OneOfOne). A chest rolls for each (roll); the first player to roll one claims it
 -- in a DataStore every server shares, with UpdateAsync, so two servers can never both hand it out:
 -- if it's already claimed (or the store can't be reached), the chest is an ordinary chest. The
 -- record follows the needle when it's traded. Finding it is announced on this server and, through
 -- MessagingService, on every other one. In Studio a separate store is used, so testing (set
--- Config.OneOfOne.chance = 1) never claims the real one.
+-- a chance of 1) never claims the real ones.
 local DataStoreService = game:GetService("DataStoreService")
 local MessagingService = game:GetService("MessagingService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -4352,15 +4358,15 @@ local function store()
 	return if ok then ds else nil
 end
 
--- True if this player just became the one owner (call only after a roll hits).
-local function claim(player)
+-- True if this player just became the one owner of `entry` (call only after a roll hits).
+local function claim(player, entry)
 	local ds = store()
 	if not ds then
 		return false
 	end
 	local won = false
 	local ok = pcall(function()
-		ds:UpdateAsync("owner", function(old)
+		ds:UpdateAsync(entry.record, function(old)
 			if old ~= nil then
 				return nil -- already found by someone: leave it be
 			end
@@ -4371,17 +4377,32 @@ local function claim(player)
 	return ok and won
 end
 
--- A chest's roll: true if this chest holds the 1 of 1 and `player` has claimed it.
+local function entryFor(key)
+	for _, e in ipairs(O.list) do
+		if e.key == key then
+			return e
+		end
+	end
+	return nil
+end
+OneOfOne.entryFor = entryFor
+
+-- A chest's roll: the key of the 1 of 1 this chest holds (claimed by `player`), or nil.
 function OneOfOne.roll(player)
-	return rng:NextNumber() < O.chance and claim(player)
+	for _, e in ipairs(O.list) do
+		if rng:NextNumber() < e.chance and claim(player, e) then
+			return e.key
+		end
+	end
+	return nil
 end
 
--- The needle changed hands in a trade: the record follows it.
-function OneOfOne.transfer(toPlayer)
-	local ds = store()
-	if ds then
+-- A 1 of 1 changed hands in a trade: its record follows it.
+function OneOfOne.transfer(key, toPlayer)
+	local ds, entry = store(), entryFor(key)
+	if ds and entry then
 		pcall(function()
-			ds:UpdateAsync("owner", function(old)
+			ds:UpdateAsync(entry.record, function(old)
 				if type(old) ~= "table" then
 					return nil
 				end
@@ -4392,25 +4413,32 @@ function OneOfOne.transfer(toPlayer)
 	end
 end
 
-local function message(name)
-	local t, s = Needles.split(O.key)
+local function message(name, key)
+	local entry = entryFor(key)
+	local t, s = Needles.split(key)
+	if not entry or not t then
+		return nil
+	end
 	local unique = Needles.rarity("unique")
-	return { name = name, needle = Needles.name(t, s), rarity = unique.name, colour = unique.colour, box = "chest", odds = "1 in 12,000,000", type = t, skin = s }
+	return { name = name, needle = Needles.name(t, s), rarity = unique.name, colour = unique.colour, box = "chest", odds = entry.odds, type = t, skin = s }
 end
 
 -- Tells everyone, here and on every other server.
-function OneOfOne.announce(player)
-	local m = message(player.DisplayName)
-	Remotes.Announce:FireAllClients(m)
-	pcall(MessagingService.PublishAsync, MessagingService, TOPIC, { name = player.DisplayName, job = game.JobId })
+function OneOfOne.announce(player, key)
+	local m = message(player.DisplayName, key)
+	if m then
+		Remotes.Announce:FireAllClients(m)
+		pcall(MessagingService.PublishAsync, MessagingService, TOPIC, { name = player.DisplayName, key = key, job = game.JobId })
+	end
 end
 
 function OneOfOne.init()
 	pcall(function()
 		MessagingService:SubscribeAsync(TOPIC, function(packet)
 			local data = type(packet) == "table" and packet.Data
-			if type(data) == "table" and type(data.name) == "string" and data.job ~= game.JobId then -- (this server already told its players)
-				Remotes.Announce:FireAllClients(message(string.sub(data.name, 1, 40)))
+			local m = type(data) == "table" and type(data.name) == "string" and type(data.key) == "string" and message(string.sub(data.name, 1, 40), data.key)
+			if m and data.job ~= game.JobId then -- (this server already told its players)
+				Remotes.Announce:FireAllClients(m)
 			end
 		end)
 	end)
@@ -4781,7 +4809,7 @@ function RewardManager.chest(player, reward)
 	DataManager.update(player, function(d)
 		d.chests += 1
 		if reward.oneOfOne then
-			local kept = CollectionManager.addTo(d, Needles.split(Config.OneOfOne.key))
+			local kept = CollectionManager.addTo(d, Needles.split(reward.oneOfOne))
 			got = { oneOfOne = true, name = kept.name, type = kept.type, skin = kept.skin }
 		elseif reward.key then
 			d.keys[reward.key] = (d.keys[reward.key] or 0) + 1
@@ -4791,7 +4819,7 @@ function RewardManager.chest(player, reward)
 	QuestManager.record(player, "chest", 1)
 	if reward.oneOfOne then
 		DataManager.save(player) -- the only one there is: saved straight away
-		require(script.Parent.OneOfOne).announce(player)
+		require(script.Parent.OneOfOne).announce(player, reward.oneOfOne)
 	elseif reward.key then
 		QuestManager.record(player, "key", 1)
 		for _, k in ipairs(Config.Chests.keys) do
@@ -5008,8 +5036,9 @@ local function onOpen(player, chest, reward)
 	if not r or not r.participants[player] then
 		return
 	end
-	if OneOfOne.roll(player) then -- 1 in 12 million, and only if nobody, anywhere, has it yet
-		reward = { oneOfOne = true }
+	local unique = OneOfOne.roll(player) -- 1 in 12 (or 120) million, and only if nobody, anywhere, has it yet
+	if unique then
+		reward = { oneOfOne = unique }
 	end
 	local got = RewardManager.chest(player, reward)
 	r.chestsLeft -= 1
@@ -5535,8 +5564,10 @@ local function execute(t)
 	move(t.a, t.b)
 	move(t.b, t.a)
 	for _, pair in ipairs({ { t.a, t.b }, { t.b, t.a } }) do -- the 1 of 1's record follows it
-		if t.offer[pair[1]][Config.OneOfOne.key] then
-			require(script.Parent.OneOfOne).transfer(pair[2])
+		for _, e in ipairs(Config.OneOfOne.list) do
+			if t.offer[pair[1]][e.key] then
+				require(script.Parent.OneOfOne).transfer(e.key, pair[2])
+			end
 		end
 	end
 	for _, p in ipairs({ t.a, t.b }) do

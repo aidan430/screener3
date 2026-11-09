@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
+local Needles = require(Shared:WaitForChild("Needles"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local DataManager = require(script.Parent.DataManager)
@@ -59,7 +60,8 @@ local function throw(player, aim)
 	task.delay(seconds, function()
 		if target then
 			local d2 = DataManager.get(player)
-			local oneOfOne = d2 and d2.showcase == Config.OneOfOne.key -- the 1 of 1 in hand: one throw tags out
+			local _, skinId = Needles.split(d2 and d2.showcase or "")
+			local oneOfOne = skinId ~= nil and Needles.skin(skinId).rarity == "unique" -- a 1 of 1 in hand: one throw tags out
 			Combat.damage(player, target, if oneOfOne then Config.OneOfOne.throwDamage else T.damage)
 		end
 	end)

@@ -309,16 +309,21 @@ rule (their point is always at the tip), so they work in the hand and when throw
 **Skins** come in six rarities, each rarer and worth more: Common x1, Uncommon x2, Rare x5,
 Epic x12, Legendary x40, Mythic x150. Each box has its own exact odds (see Boxes).
 
-**The 1 of 1:** the Gossamer Sewing Needle (`Config.OneOfOne`). Only one can ever exist.
+**The 1 of 1s** (`Config.OneOfOne`): two paper-thin Sewing Needles, only one of each in the whole game.
+- **Gossamer:** clear as glass, 1 in 12,000,000 per chest.
+- **Galaxy Gossamer:** deep purple to pink to blue, glowing and sparkling, 1 in 120,000,000 per
+  chest (ten times rarer). A little easier to see than the Gossamer, but still paper thin.
+
+Both work the same way:
 - Paper thin and nearly see-through: in your hand and in flight it's hard to spot.
-- Every chest opened has a 1 in 12,000,000 chance of holding it. The first finder claims it in a
-  DataStore shared by every server (UpdateAsync), so it can never be handed out twice; after
-  that, chests never hold it again. It's never in a box and never sold, so it can't be bought.
+- Every chest opened rolls for each (the rarer first). The first finder claims it in a DataStore
+  shared by every server (UpdateAsync, one record each), so neither can be handed out twice;
+  after that, chests never hold it again. It's never in a box and never sold, so it can't be bought.
 - Put on show (your showcase) it's the needle you carry: **one throw tags anyone out** (pokes are
   the same as any needle, and safe time after respawning still protects people).
 - Finding it is announced on every server (MessagingService). It can be traded; the record follows it.
-- Worth x5000 (50,000). To test in Studio, set `Config.OneOfOne.chance = 1`: Studio claims a
-  separate store, never the real one.
+- Worth x5000 (50,000). To test in Studio, set a `chance` in `Config.OneOfOne.list` to 1: Studio
+  claims a separate store, never the real one.
 
 **Value:**
 - A needle is worth its type's base value × its rarity.

@@ -138,9 +138,10 @@ Needles.skins = {
 	{ id = "borealis", name = "Borealis", rarity = "legendary", series = "starlight", colours = { { 80, 255, 160 }, { 70, 200, 255 }, { 180, 100, 255 } }, material = "Neon", pattern = "tri", sparkle = true },
 	{ id = "celestial", name = "Celestial", rarity = "mythic", series = "starlight", colours = { { 255, 255, 255 }, { 255, 210, 90 }, { 120, 170, 255 } }, material = "Glass", pattern = "tri", glow = true, sparkle = true },
 	{ id = "wishingstar", name = "Wishing Star", rarity = "mythic", series = "starlight", colours = { { 255, 255, 255 }, { 255, 255, 255 } }, material = "Neon", pattern = "rainbow", glow = true, sparkle = true },
-	-- the 1 of 1 (Config.OneOfOne): only one can ever exist, only from a chest, only as a Sewing Needle.
+	-- the 1 of 1s (Config.OneOfOne): one of each ever exists, only from a chest, only as a Sewing Needle.
 	-- thin = paper thin; see = how see-through it is (0 solid, 1 invisible)
 	{ id = "gossamer", name = "Gossamer", rarity = "unique", only = "sewing", colours = { { 235, 245, 255 }, { 200, 225, 255 } }, material = "Glass", pattern = "sheen", thin = 0.18, see = 0.82, sparkle = true },
+	{ id = "galaxygossamer", name = "Galaxy Gossamer", rarity = "unique", only = "sewing", colours = { { 40, 20, 110 }, { 230, 120, 255 }, { 90, 200, 255 } }, material = "Neon", pattern = "tri", thin = 0.18, see = 0.55, glow = true, sparkle = true },
 	-- designed in the Needle Skin Workshop
 	{ id = "thistle", name = "Thistle", rarity = "uncommon", colours = { { 150, 255, 255 }, { 181, 26, 0 } }, material = "SmoothPlastic", pattern = "gradient", glow = true, sparkle = true },
 	{ id = "cornucopiacopy", name = "Cornucopia Copy", rarity = "mythic", series = "harvest", colours = { { 255, 120, 40 }, { 220, 40, 60 } }, material = "Neon", pattern = "gradient", glow = true, sparkle = true },

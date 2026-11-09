@@ -99,8 +99,9 @@ local function onOpen(player, chest, reward)
 	if not r or not r.participants[player] then
 		return
 	end
-	if OneOfOne.roll(player) then -- 1 in 12 million, and only if nobody, anywhere, has it yet
-		reward = { oneOfOne = true }
+	local unique = OneOfOne.roll(player) -- 1 in 12 (or 120) million, and only if nobody, anywhere, has it yet
+	if unique then
+		reward = { oneOfOne = unique }
 	end
 	local got = RewardManager.chest(player, reward)
 	r.chestsLeft -= 1
