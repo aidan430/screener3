@@ -789,3 +789,5 @@ this game's own style. Nothing copied from that game.
   upper right, the floating straw count rises above), in the same bold rounded font with a dark
   outline on a soft dark shadow (Config.LevelShadow) as LEVEL UP! and x2 XP!; gold shifting to
   orange by x60. It used to sit where x2 XP! lands, in a soft-shadowed serif that blended into hay.
+- The goal and delivery-order notes moved to the left, under the coin tag (250 wide): on a
+  computer Roblox's player list opens at the top right and covered them.

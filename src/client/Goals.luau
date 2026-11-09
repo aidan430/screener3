@@ -16,11 +16,12 @@ local Goals = {}
 local earned = {} -- { time, coins } for each rise in Coins (goal rewards taken back out)
 
 local function card(gui)
-	-- a note pinned at the top right, a little askew
-	local frame = Ui.card({ Name = "GoalCard", AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(280, 86), Rotation = -1, Visible = false, Parent = gui })
+	-- a note pinned on the left under the coin tag, a little askew
+	-- left, under the coin tag: Roblox's own player list opens at the top right on computers
+	local frame = Ui.card({ Name = "GoalCard", AnchorPoint = Vector2.new(0, 0), Size = UDim2.fromOffset(250, 86), Rotation = -1, Visible = false, Parent = gui })
 	Ui.autoScale(frame)
 	Ui.onLayout(function()
-		frame.Position = UDim2.new(1, -16, 0, Ui.topInset() + 14)
+		frame.Position = UDim2.new(0, 16, 0, Ui.topInset() + 10 + 226 * Ui.screenScale())
 	end)
 	Ui.pin(frame, Ui.colors.red)
 	local heading = Ui.label({ Size = UDim2.new(1, -28, 0, 20), Position = UDim2.fromOffset(14, 12), TextColor3 = Ui.colors.ink, TextStrokeTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = frame }, 16)

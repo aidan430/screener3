@@ -12,10 +12,10 @@ local OrderCard = {}
 
 function OrderCard.mount(gui)
 	-- a second note pinned under the goal, askew the other way (clear of the touch action pad)
-	local card = Ui.card({ AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(280, 92), Rotation = 1.2, Visible = false, Parent = gui })
+	local card = Ui.card({ AnchorPoint = Vector2.new(0, 0), Size = UDim2.fromOffset(250, 92), Rotation = 1.2, Visible = false, Parent = gui })
 	Ui.autoScale(card)
 	Ui.onLayout(function()
-		card.Position = UDim2.new(1, -16, 0, Ui.topInset() + 14 + 104 * Ui.screenScale())
+		card.Position = UDim2.new(0, 16, 0, Ui.topInset() + 10 + 330 * Ui.screenScale())
 	end)
 	Ui.pin(card, Ui.colors.green)
 	local title = Ui.label({ Text = "Delivery order", Size = UDim2.new(1, -28, 0, 20), Position = UDim2.fromOffset(14, 12), TextColor3 = Ui.colors.ink, TextStrokeTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = card }, 16)
