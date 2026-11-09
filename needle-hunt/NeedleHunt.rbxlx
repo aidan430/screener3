@@ -5471,6 +5471,7 @@ local Effects = require(script.Parent.Effects)
 local player = Players.LocalPlayer
 local CombatFx = {}
 local C = Config.Combat
+local taggedOut
 
 -- The nearest other player within reach, roughly where you're facing.
 local function target()
@@ -5511,16 +5512,31 @@ local function hookTool(tool, inspectButton)
 	end)
 end
 
-local function pop(position, colour)
+local function pop(position, colour, amount)
 	Effects.burst(position + Vector3.new(0, 1.5, 0), { colour, Color3.new(1, 1, 1) }, 18)
 	local anchor = UiKit.make("Part", { Anchored = true, CanCollide = false, CanQuery = false, CanTouch = false, Transparency = 1, Size = Vector3.one, CFrame = CFrame.new(position + Vector3.new(0, 3, 0)), Parent = workspace })
-	local gui = UiKit.make("BillboardGui", { Size = UDim2.fromOffset(120, 50), AlwaysOnTop = true, Parent = anchor })
-	local label = UiKit.label({ Text = "POP!", Font = UiKit.bold, TextColor3 = colour, TextStrokeTransparency = 0.3, Size = UDim2.fromScale(1, 1), Parent = gui }, 36)
+	local gui = UiKit.make("BillboardGui", { Size = UDim2.fromOffset(120, 84), AlwaysOnTop = true, Parent = anchor })
+	local label = UiKit.label({ Text = "POP!", Font = UiKit.bold, TextColor3 = colour, TextStrokeTransparency = 0.3, Size = UDim2.new(1, 0, 0, 50), Parent = gui }, 36)
+	UiKit.label({ Text = "-" .. amount .. " ♥", Font = UiKit.bold, TextStrokeTransparency = 0.3, Size = UDim2.new(1, 0, 0, 30), Position = UDim2.fromOffset(0, 50), Parent = gui }, 24) -- hearts lost
 	UiKit.pop(label, 0.6)
 	UiKit.ease(gui, 0.9, { StudsOffset = Vector3.new(0, 2, 0) })
 	task.delay(0.9, function()
 		anchor:Destroy()
 	end)
+end
+
+-- Tagged out: a calm panel in the middle counting down to your return.
+taggedOut = function(gui)
+	local box = UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(400, 120), BackgroundColor3 = UiKit.colors.panel, BackgroundTransparency = 0.1, ZIndex = 35, Parent = gui }, { UiKit.corner(18), UiKit.stroke(Color3.fromRGB(255, 150, 160), 2) })
+	UiKit.autoScale(box)
+	UiKit.label({ Text = "TAGGED OUT", Font = UiKit.bold, TextColor3 = Color3.fromRGB(255, 150, 160), Size = UDim2.new(1, -20, 0, 44), Position = UDim2.fromOffset(10, 14), ZIndex = 36, Parent = box }, 34)
+	local line = UiKit.label({ Size = UDim2.new(1, -20, 0, 30), Position = UDim2.fromOffset(10, 70), ZIndex = 36, Parent = box }, 22)
+	UiKit.pop(box, 0.85)
+	for n = C.respawn, 1, -1 do
+		line.Text = "Back at a maze start in " .. n .. "  ·  your finds stay found"
+		task.wait(1)
+	end
+	box:Destroy()
 end
 
 function CombatFx.start(gui)
@@ -5546,12 +5562,15 @@ function CombatFx.start(gui)
 	show()
 	-- hits: a sparkle and a pop where they land; your own, a soft red edge that fades
 	Remotes.Hit.OnClientEvent:Connect(function(m)
-		pop(m.position, if m.hearts == 0 then UiKit.colors.gold elseif (m.amount or 1) > 1 then Color3.fromRGB(255, 150, 60) else Color3.fromRGB(255, 120, 150))
+		pop(m.position, if m.hearts == 0 then UiKit.colors.gold elseif (m.amount or 1) > 1 then Color3.fromRGB(255, 150, 60) else Color3.fromRGB(255, 120, 150), m.amount or 1)
 		Effects.sound("click", 0.8)
 		if m.to == player.UserId then
 			local stroke = edge:FindFirstChildOfClass("UIStroke")
 			stroke.Thickness, stroke.Transparency = 18, 0.3
 			UiKit.ease(stroke, 0.8, { Transparency = 1 })
+			if m.hearts == 0 then
+				task.spawn(taggedOut, gui)
+			end
 		end
 	end)
 	-- inspect: F, or the button while the Needle is out
