@@ -64,6 +64,12 @@
         },
         "TradeState": {
           "$className": "RemoteEvent"
+        },
+        "Throw": {
+          "$className": "RemoteEvent"
+        },
+        "Thrown": {
+          "$className": "RemoteEvent"
         }
       }
     },

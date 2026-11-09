@@ -288,6 +288,16 @@ class BoxOpenings(unittest.TestCase):
         reel = (ROOT / "src" / "client" / "BoxReel.luau").read_text()
         self.assertIn("result.skin", reel, "the reel lands on what the server rolled")
 
+    def test_thrown_needles_take_two_hearts_and_are_checked(self):
+        throw = (SERVER / "CombatThrow.luau").read_text()
+        t = table("Throw")
+        self.assertEqual(t["damage"], 2)
+        self.assertGreater(t["cooldown"], table("Combat")["cooldown"], "throws are rarer than pokes")
+        self.assertLess(t["damage"], table("Combat")["hearts"], "one throw never tags someone out from full")
+        self.assertIn("Spherecast", throw, "walls stop a throw")
+        self.assertIn("Combat.damage", throw, "the same safe-time rules as a poke")
+        self.assertIn("NeedleAway", (SERVER / "Combat.luau").read_text(), "no pokes while it's flying")
+
     def test_combat_is_the_same_for_every_skin(self):
         combat = (SERVER / "Combat.luau").read_text()
         self.assertNotIn("rarity", combat)

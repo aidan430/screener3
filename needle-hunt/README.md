@@ -365,6 +365,11 @@ Click or tap to poke the nearest player in front of you.
 - Tagging someone out gives +10 coins (doubled with 2x Coins) and match XP.
 - The server checks every poke: in the round, within reach, in front, off cooldown, not safe.
 - Every needle pokes the same: skins are looks only, and Robux never buys combat power.
+- **Throw:** press Q (or the Throw button) to throw your needle where you're aiming (the mouse;
+  the middle of the screen on a phone). It flies point first, up to 45 studs; a hit takes **2
+  hearts**, and a wall stops it (it sticks there for a moment). It's out of your hand for about a
+  second, so no pokes meanwhile, and you can throw again after 4 seconds (`Config.Throw`). The
+  server traces every throw from your head along your aim.
 - **Inspect:** press F (or the Inspect button) with the Needle out: it lifts and turns in your
   hand, and everyone sees it. Works in the lobby too.
 - If the needle points the wrong way in your hand, turn it with `Config.NeedleTool.grip`.
@@ -435,7 +440,7 @@ remotes, but it can't run Roblox. Play mode in Studio is the real test.
     - The HUD, menu and windows scale down and stay readable.
     - Tapping the needle works.
 15. **Boxes:** open a Hay Box (give yourself coins first); the reel stops on a card and the needle turns. The odds show for all three boxes. In Studio, PolicyService may report boxes as restricted: then the screen says so (that's the safe answer).
-16. **Combat** (2 players): equip the Needle (1), click near the other player: hearts drop, POP! shows, three pokes tag them out and they're back in 5 seconds. Press F to inspect. Check the needle points forwards in the hand (`Config.NeedleTool.grip`).
+16. **Combat** (2 players): equip the Needle (1), click near the other player: hearts drop, POP! shows, three pokes tag them out and they're back in 5 seconds. Press Q aiming at them: the needle flies and takes 2 hearts; aim at a wall and it sticks there. Press F to inspect. Check the needle points forwards in the hand (`Config.NeedleTool.grip`).
 17. **Results:** the MATCH XP box shows your breakdown.
 18. **Trade** (2 players, in the lobby): ask, accept, add needles, both Ready, wait for the countdown: the needles swap. Changing an offer un-readies both.
 19. Watch the Output window for red errors throughout.

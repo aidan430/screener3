@@ -20,6 +20,7 @@ local LobbyUi = require(script.Parent.LobbyUi)
 local PowerupFx = require(script.Parent.PowerupFx)
 local BoxScreen = require(script.Parent.BoxScreen)
 local CombatFx = require(script.Parent.CombatFx)
+local ThrowFx = require(script.Parent.ThrowFx)
 local TradeScreen = require(script.Parent.TradeScreen)
 
 local player = Players.LocalPlayer
@@ -93,6 +94,7 @@ function UIController.start()
 	end
 	PowerupFx.start(gui)
 	CombatFx.start(gui)
+	ThrowFx.start(gui)
 	LobbyUi.start(gui, function(userId) -- a booth's prompt: that player's collection
 		Screens3.view(userId)
 		if windows.Collection.Visible then

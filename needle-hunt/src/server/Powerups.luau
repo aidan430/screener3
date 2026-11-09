@@ -109,7 +109,7 @@ spawnOne = function() -- (declared above, so take() can call it)
 	local model = Instance.new("Model")
 	model.Name = "Powerup"
 	local colour = Color3.fromRGB(kind.colour[1], kind.colour[2], kind.colour[3])
-	local orb = MapKit.part(ctx, { Name = "Orb", Shape = "Ball", Size = Vector3.one * 2.2, CFrame = CFrame.new(pos), Color = kind.colour, Material = "Neon", CanCollide = false, Transparency = 0.15, Parent = model })
+	local orb = MapKit.part(ctx, { Name = "Orb", CanQuery = false, Shape = "Ball", Size = Vector3.one * 2.2, CFrame = CFrame.new(pos), Color = kind.colour, Material = "Neon", CanCollide = false, Transparency = 0.15, Parent = model })
 	local ring = MapKit.part(ctx, { Name = "Ring", Shape = "Cylinder", Size = Vector3.new(0.2, 3.4, 3.4), CFrame = CFrame.new(pos - Vector3.new(0, 2.4, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color = kind.colour, Material = "Neon", CanCollide = false, CanQuery = false, Transparency = 0.4, Parent = model })
 	local light = Instance.new("PointLight")
 	light.Color, light.Range, light.Brightness = colour, 12, 1.4

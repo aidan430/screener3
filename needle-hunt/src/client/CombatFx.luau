@@ -1,5 +1,6 @@
 -- Needle combat on your screen (server/Combat decides every hit):
---   click or tap with the Needle out to poke the nearest player in front of you (Remotes.Poke);
+--   click or tap with the Needle out to poke the nearest player in front of you (Remotes.Poke;
+--   throwing it is client/ThrowFx);
 --   your hearts, top left under your level, while you're in a round's search;
 --   a sparkle and a soft "POP!" where a poke lands; a gentle red edge when you're hit (no flash);
 --   F (or the Inspect button while the Needle is out) to inspect it: it lifts and turns in your
@@ -92,7 +93,7 @@ function CombatFx.start(gui)
 	show()
 	-- hits: a sparkle and a pop where they land; your own, a soft red edge that fades
 	Remotes.Hit.OnClientEvent:Connect(function(m)
-		pop(m.position, if m.hearts == 0 then UiKit.colors.gold else Color3.fromRGB(255, 120, 150))
+		pop(m.position, if m.hearts == 0 then UiKit.colors.gold elseif (m.amount or 1) > 1 then Color3.fromRGB(255, 150, 60) else Color3.fromRGB(255, 120, 150))
 		Effects.sound("click", 0.8)
 		if m.to == player.UserId then
 			local stroke = edge:FindFirstChildOfClass("UIStroke")

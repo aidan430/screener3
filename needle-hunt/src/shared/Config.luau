@@ -92,6 +92,10 @@ Config.MatchXp = { place = { 120, 90, 70, 50 }, played = 20, perCoin = 0.5, perN
 -- start after `respawn` seconds, with `safe` seconds when nobody can poke you. Hearts come back one
 -- every `regen` seconds. Every skin pokes the same (looks only). reach is in studs.
 Config.Combat = { hearts = 3, regen = 8, cooldown = 0.7, reach = 8, respawn = 5, safe = 3, eliminationCoins = 10 }
+-- Throwing your needle (Q, or the Throw button): it flies straight where you aim at `speed`
+-- studs a second, up to `range`; walls stop it. A hit takes `damage` hearts. Your needle is out of
+-- your hand (no pokes) until it comes back, `back` seconds after the throw; `cooldown` between throws.
+Config.Throw = { damage = 2, range = 45, speed = 90, radius = 1.2, back = 1.2, cooldown = 4 }
 -- How the Needle tool sits in the hand, in degrees (X, Y, Z): turn it here if it points the wrong
 -- way in Studio. scale = the needle's size in the hand. inspect = seconds the inspect lasts.
 Config.NeedleTool = { grip = { 0, 90, 0 }, scale = 1.6, inspect = 2.4 }

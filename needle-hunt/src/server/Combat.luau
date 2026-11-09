@@ -106,6 +106,7 @@ end
 local function inRound(player)
 	return round ~= nil and round.participants[player] == true and ReplicatedStorage:GetAttribute("Phase") == "search"
 end
+Combat.inRound = inRound
 
 local function tagOut(attacker, target, humanoid)
 	DataManager.update(attacker, function(d)
@@ -126,6 +127,9 @@ local function poke(attacker, targetId)
 		return
 	end
 	lastPoke[attacker] = now
+	if attacker:GetAttribute("NeedleAway") then
+		return -- it's flying: nothing in your hand to poke with
+	end
 	jab(attacker)
 	if not inRound(attacker) or type(targetId) ~= "number" then
 		return
@@ -142,18 +146,31 @@ local function poke(attacker, targetId)
 	if offset.Magnitude > C.reach + 1 or (flat.Magnitude > 0.5 and a.CFrame.LookVector:Dot(flat.Unit) < 0.2) then
 		return -- too far, or behind you
 	end
-	if (target:GetAttribute("SafeUntil") or 0) > workspace:GetServerTimeNow() then
-		return
+	Combat.damage(attacker, target, 1)
+end
+
+-- Takes `amount` hearts from `target` (a poke 1, a thrown needle Config.Combat.throwDamage), if
+-- both are in the round, the target is alive and isn't in their safe time. Returns true if it hit.
+function Combat.damage(attacker, target, amount)
+	local root = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+	local humanoid = root and target.Character:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 or target == attacker or not inRound(attacker) or not inRound(target) then
+		return false
+	elseif (target:GetAttribute("SafeUntil") or 0) > workspace:GetServerTimeNow() then
+		return false
 	end
-	attacker:SetAttribute("SafeUntil", 0) -- poking ends your own safe time
-	local hearts = math.max(0, (target:GetAttribute("Hearts") or C.hearts) - 1)
+	attacker:SetAttribute("SafeUntil", 0) -- attacking ends your own safe time
+	local hearts = math.max(0, (target:GetAttribute("Hearts") or C.hearts) - amount)
 	target:SetAttribute("Hearts", hearts)
-	lastHit[target] = now
-	Remotes.Hit:FireAllClients({ from = attacker.UserId, to = target.UserId, hearts = hearts, position = b.Position })
+	lastHit[target] = os.clock()
+	Remotes.Hit:FireAllClients({ from = attacker.UserId, to = target.UserId, hearts = hearts, position = root.Position, amount = amount })
 	if hearts == 0 then
 		tagOut(attacker, target, humanoid)
 	end
+	return true
 end
+
+Combat.toolOf = toolOf
 
 function Combat.start(r)
 	round = r
