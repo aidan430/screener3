@@ -726,3 +726,9 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   to your eyes. Ten story scenes use them (shared/Story `cinematic = ...`): the storm (opening),
   the red thread, stairs, haystacks in the sky, halfway, the silver needle, and each world's
   arrival. Skip ends the scene and the camera at once. Config.CinematicsOn = false turns them off.
+
+## Fix: lobby settings lost (2026-11-09)
+- Putting the owner's portal design into ConfigLobby also deleted LobbyPortalCooldown,
+  LobbyFade, LobbyNudge, LobbyFallBelow and LobbyMood, so Sky Meadow's fall check added a number
+  to nil (a SERVER ERROR in Lobby). Restored from history. New test: every Config.Name a script
+  reads must be set in Config.luau or a companion, so a lost setting fails the tests.

@@ -152,6 +152,18 @@ class Milestones(unittest.TestCase):
         self.assertIn("Config.Testing = { fastHours = 0, unlockAll = false }", text, "testing switches stay off in the shipped game")
 
 
+class Settings(unittest.TestCase):
+    def test_every_setting_a_script_uses_exists(self):
+        """A Config.Name read anywhere in the scripts must be set in Config.luau or a companion."""
+        defined = set(re.findall(r"^Config\.(\w+) = ", CONFIG, re.M))
+        used = set()
+        for path in (ROOT / "src").rglob("*.luau"):
+            if path.name.startswith("Config"):
+                continue
+            used |= set(re.findall(r"\bConfig\.([A-Za-z]\w*)", path.read_text()))
+        self.assertEqual(sorted(used - defined), [], "settings used but never set")
+
+
 class Wheel(unittest.TestCase):
     def test_slices_are_sized_by_their_odds(self):
         """Mirrors Economy.wheelSlice: share of the face by weight, the smallest kept visible."""

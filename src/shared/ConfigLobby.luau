@@ -39,4 +39,12 @@ Config.PortalDesign = { -- the owner's design, sent from the Portal Designer on 
 	stoneA = { 0, 0, 0 }, stoneB = { 0, 0, 0 }, wood = { 92, 66, 3 },
 }
 
+Config.LobbyPortalCooldown = 2 -- seconds between two trips through any arch
+Config.LobbyFade = { into = 0.35, hold = 0.3, out = 0.9 } -- the soft fade round every trip (seconds)
+Config.LobbyNudge = { back = 26, up = 12 } -- a locked arch eases you back out (studs/s)
+Config.LobbyFallBelow = -60 -- anyone who drifts off the island below this height is set back on it
+
+-- The lobby's light (eased in on your own screen, like a world's): a bright, soft sky morning.
+Config.LobbyMood = { clock = 13, brightness = 2.6, ambient = { 112, 118, 132 }, outdoor = { 172, 182, 198 }, shift = { 255, 246, 232 }, color = { 214, 230, 255 }, decay = { 156, 182, 220 }, density = 0.3, haze = 1.2, glare = 0.2 }
+
 return Config
