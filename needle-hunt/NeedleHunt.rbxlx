@@ -2771,6 +2771,7 @@ local LobbyShowOff = require(script.Parent.LobbyShowOff)
 local RoundManager = require(script.Parent.RoundManager)
 local BoxManager = require(script.Parent.BoxManager)
 local Combat = require(script.Parent.Combat)
+local TradeManager = require(script.Parent.TradeManager)
 
 -- While testing in Studio, server errors also show on screen.
 if RunService:IsStudio() then
@@ -2793,6 +2794,7 @@ for _, step in ipairs({
 	{ "ShowOff", LobbyShowOff.init },
 	{ "Boxes", BoxManager.init },
 	{ "Combat", Combat.init },
+	{ "Trading", TradeManager.init },
 	{ "Data", DataManager.init },
 	{ "Rounds", RoundManager.start },
 }) do
@@ -4804,26 +4806,285 @@ return ShopManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
+			<Item class="ModuleScript" referent="RBX0003B">
+				<Properties>
+					<string name="Name">TradeManager</string>
+					<ProtectedString name="Source"><![CDATA[-- Trading needles between two players in the lobby (Config.Trading). Remotes.Trade asks; the
+-- server keeps every trade and sends each side its state (Remotes.TradeState). Protections:
+--   only in the lobby (never during a round), one trade at a time, a cooldown on asking;
+--   any change to either offer un-readies both, and stops the countdown;
+--   once both press Ready, a countdown runs before anything moves, and either can still cancel;
+--   at the end the server checks both still own everything offered, then swaps and saves both.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Needles = require(Shared:WaitForChild("Needles"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local DataManager = require(script.Parent.DataManager)
+local LeaderboardManager = require(script.Parent.LeaderboardManager)
+local RoundManager = require(script.Parent.RoundManager)
+
+local TradeManager = {}
+local TR = Config.Trading
+local trades = {} -- player -> the trade they're in
+local invites = {} -- target -> { [from] = os.clock() }
+local lastAsk = {}
+
+local function other(t, p)
+	return if t.a == p then t.b else t.a
+end
+
+local function count(offer)
+	local n = 0
+	for _, c in pairs(offer) do
+		n += c
+	end
+	return n
+end
+
+local function list(offer)
+	local out = {}
+	for key, c in pairs(offer) do
+		table.insert(out, { key = key, count = c })
+	end
+	return out
+end
+
+local function send(t)
+	for _, p in ipairs({ t.a, t.b }) do
+		local o = other(t, p)
+		Remotes.TradeState:FireClient(p, {
+			kind = "trade", countdownEnds = t.countdownEnds,
+			you = { offer = list(t.offer[p]), ready = t.ready[p] == true },
+			them = { userId = o.UserId, name = o.DisplayName, offer = list(t.offer[o]), ready = t.ready[o] == true },
+		})
+	end
+end
+
+local function finish(t, text)
+	trades[t.a], trades[t.b] = nil, nil
+	t.over = true
+	for _, p in ipairs({ t.a, t.b }) do
+		if p.Parent then
+			Remotes.TradeState:FireClient(p, { kind = "closed", text = text })
+		end
+	end
+end
+
+local function inLobby(player) -- not playing in the round going on (if one is)
+	local round = RoundManager.current()
+	return not (round and round.participants[player])
+end
+
+-- Both still own what they offered? Then swap, fix showcases, and save both.
+local function execute(t)
+	local da, db = DataManager.get(t.a), DataManager.get(t.b)
+	if not da or not db or DataManager.unsaved(t.a) or DataManager.unsaved(t.b) then
+		return finish(t, "Trade cancelled: a save isn't working right now.")
+	end
+	for _, side in ipairs({ { t.a, da }, { t.b, db } }) do
+		for key, c in pairs(t.offer[side[1]]) do
+			if (side[2].collection[key] or 0) < c then
+				return finish(t, "Trade cancelled: something offered isn't there any more.")
+			end
+		end
+	end
+	local function move(from, to)
+		DataManager.update(from, function(data)
+			for key, c in pairs(t.offer[from]) do
+				data.collection[key] -= c
+				if data.collection[key] <= 0 then
+					data.collection[key] = nil
+					if data.showcase == key then
+						data.showcase = ""
+					end
+				end
+			end
+		end)
+		DataManager.update(to, function(data)
+			for key, c in pairs(t.offer[from]) do
+				data.collection[key] = (data.collection[key] or 0) + c
+			end
+		end)
+	end
+	move(t.a, t.b)
+	move(t.b, t.a)
+	for _, p in ipairs({ t.a, t.b }) do
+		DataManager.update(p, function(data) -- nothing on show? Your best needle goes up
+			if data.showcase == "" then
+				local best, value = "", -1
+				for key in pairs(data.collection) do
+					local ty, sk = Needles.split(key)
+					if ty and Needles.value(ty, sk) > value then
+						best, value = key, Needles.value(ty, sk)
+					end
+				end
+				data.showcase = best
+			end
+		end)
+		DataManager.save(p)
+		LeaderboardManager.mark(p)
+	end
+	print(string.format("[Trade] %s <-> %s: %d for %d needles", t.a.Name, t.b.Name, count(t.offer[t.a]), count(t.offer[t.b])))
+	finish(t, "Trade done! Enjoy your new needles.")
+end
+
+local function unready(t)
+	t.ready, t.countdownEnds, t.token = {}, nil, (t.token or 0) + 1
+end
+
+local actions = {}
+
+function actions.request(player, userId)
+	local target = type(userId) == "number" and Players:GetPlayerByUserId(userId)
+	if not target or target == player then
+		return false, "They aren't here."
+	elseif not inLobby(player) or not inLobby(target) then
+		return false, "Trades happen in the lobby, between rounds."
+	elseif trades[player] or trades[target] then
+		return false, "One of you is already trading."
+	elseif os.clock() - (lastAsk[player] or 0) < TR.requestCooldown then
+		return false, "Wait a moment before asking again."
+	end
+	lastAsk[player] = os.clock()
+	invites[target] = invites[target] or {}
+	invites[target][player] = os.clock()
+	Remotes.TradeState:FireClient(target, { kind = "invite", from = player.UserId, name = player.DisplayName })
+	return true, "Asked " .. target.DisplayName .. " to trade."
+end
+
+function actions.respond(player, userId, accept)
+	local from = type(userId) == "number" and Players:GetPlayerByUserId(userId)
+	local asked = from and invites[player] and invites[player][from]
+	if invites[player] and from then
+		invites[player][from] = nil
+	end
+	if not asked or os.clock() - asked > 30 then
+		return false, "That invite has run out."
+	elseif not accept then
+		Remotes.Notify:FireClient(from, { text = player.DisplayName .. " said no thanks to a trade.", tone = "bad" })
+		return true, nil
+	elseif trades[player] or trades[from] or not inLobby(player) or not inLobby(from) then
+		return false, "That trade can't start right now."
+	end
+	local t = { a = from, b = player, offer = { [from] = {}, [player] = {} }, ready = {} }
+	trades[from], trades[player] = t, t
+	send(t)
+	return true, nil
+end
+
+function actions.offer(player, key, add)
+	local t = trades[player]
+	local d = DataManager.get(player)
+	if not t or not d or type(key) ~= "string" or not Needles.split(key) then
+		return false, "?"
+	end
+	local mine = t.offer[player]
+	if add then
+		if (mine[key] or 0) >= (d.collection[key] or 0) then
+			return false, "You don't have another of those."
+		elseif count(mine) >= TR.maxItems then
+			return false, "Up to " .. TR.maxItems .. " needles a trade."
+		end
+		mine[key] = (mine[key] or 0) + 1
+	elseif mine[key] then
+		mine[key] = if mine[key] > 1 then mine[key] - 1 else nil
+	end
+	unready(t) -- any change: both have to look again
+	send(t)
+	return true, nil
+end
+
+function actions.ready(player, on)
+	local t = trades[player]
+	if not t then
+		return false, "?"
+	end
+	t.ready[player] = on == true
+	if t.ready[t.a] and t.ready[t.b] then
+		if count(t.offer[t.a]) + count(t.offer[t.b]) == 0 then
+			t.ready = {}
+			send(t)
+			return false, "Put something in the trade first."
+		end
+		t.token = (t.token or 0) + 1
+		local token = t.token
+		t.countdownEnds = workspace:GetServerTimeNow() + TR.countdown
+		task.delay(TR.countdown, function()
+			if not t.over and t.token == token and t.ready[t.a] and t.ready[t.b] then
+				execute(t)
+			end
+		end)
+	else
+		t.countdownEnds, t.token = nil, (t.token or 0) + 1
+	end
+	send(t)
+	return true, nil
+end
+
+function actions.cancel(player)
+	local t = trades[player]
+	if t then
+		finish(t, player.DisplayName .. " cancelled the trade.")
+	end
+	return true, nil
+end
+
+function TradeManager.init()
+	Remotes.Trade.OnServerInvoke = function(player, action, a, b)
+		local fn = type(action) == "string" and actions[action]
+		if not fn then
+			return false, "?"
+		end
+		return fn(player, a, b)
+	end
+	Players.PlayerRemoving:Connect(function(player)
+		local t = trades[player]
+		if t then
+			finish(t, player.DisplayName .. " left, so the trade was cancelled.")
+		end
+		invites[player], lastAsk[player] = nil, nil
+	end)
+	ReplicatedStorage:GetAttributeChangedSignal("Phase"):Connect(function()
+		if ReplicatedStorage:GetAttribute("Phase") == "countdown" then -- a round is starting
+			local seen = {}
+			for _, t in pairs(trades) do
+				if not seen[t] then
+					seen[t] = true
+					finish(t, "A round is starting, so the trade was cancelled. Nothing moved.")
+				end
+			end
+		end
+	end)
+end
+
+return TradeManager
+]]></ProtectedString>
+				</Properties>
+			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerStorage" referent="RBX0003B">
+	<Item class="ServerStorage" referent="RBX0003C">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX0003C">
+	<Item class="StarterPlayer" referent="RBX0003D">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX0003D">
+		<Item class="StarterPlayerScripts" referent="RBX0003E">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX0003E">
+			<Item class="Folder" referent="RBX0003F">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX0003F">
+				<Item class="ModuleScript" referent="RBX00040">
 					<Properties>
 						<string name="Name">BoxReel</string>
 						<ProtectedString name="Source"><![CDATA[-- The box opening on your screen: a strip of needle cards slides along under a gold marker,
@@ -4926,7 +5187,7 @@ return BoxReel
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00040">
+				<Item class="ModuleScript" referent="RBX00041">
 					<Properties>
 						<string name="Name">BoxScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Boxes screen: each box with its price (coins; the dearer ones also Robux), and below them
@@ -5063,7 +5324,7 @@ return BoxScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00041">
+				<Item class="ModuleScript" referent="RBX00042">
 					<Properties>
 						<string name="Name">CombatFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Needle combat on your screen (server/Combat decides every hit):
@@ -5212,7 +5473,7 @@ return CombatFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00042">
+				<Item class="ModuleScript" referent="RBX00043">
 					<Properties>
 						<string name="Name">Effects</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback you can see and hear, on your own screen only: sounds, a burst of particles where a
@@ -5293,7 +5554,7 @@ return Effects
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00043">
+				<Item class="ModuleScript" referent="RBX00044">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: your coins and level (with an XP bar) at the top left; the round's
@@ -5365,11 +5626,11 @@ function Hud.mount(gui, open)
 	local timer = UiKit.label({ Font = UiKit.bold, Size = UDim2.new(1, -20, 0, 30), Position = UDim2.fromOffset(10, 40), TextColor3 = UiKit.colors.gold, Parent = banner }, 28)
 	local info = UiKit.label({ Size = UDim2.new(1, -20, 0, 22), Position = UDim2.fromOffset(10, 74), TextColor3 = UiKit.colors.soft, Parent = banner }, 18)
 	-- the menu, down the right
-	local menu = UiKit.make("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0), Size = UDim2.fromOffset(150, 458), BackgroundTransparency = 1, Parent = gui }, {
+	local menu = UiKit.make("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0), Size = UDim2.fromOffset(150, 522), BackgroundTransparency = 1, Parent = gui }, {
 		UiKit.make("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Right }),
 	})
 	UiKit.autoScale(menu)
-	for i, item in ipairs({ { "Collection", Color3.fromRGB(230, 120, 170) }, { "Boxes", Color3.fromRGB(230, 120, 50) }, { "Shop", UiKit.colors.gold }, { "Inventory", UiKit.colors.purple }, { "Quests", UiKit.colors.green }, { "Leaderboard", UiKit.colors.blue }, { "Settings", UiKit.colors.card } }) do
+	for i, item in ipairs({ { "Collection", Color3.fromRGB(230, 120, 170) }, { "Boxes", Color3.fromRGB(230, 120, 50) }, { "Trade", Color3.fromRGB(70, 170, 190) }, { "Shop", UiKit.colors.gold }, { "Inventory", UiKit.colors.purple }, { "Quests", UiKit.colors.green }, { "Leaderboard", UiKit.colors.blue }, { "Settings", UiKit.colors.card } }) do
 		local b = UiKit.button(item[1], item[2], { LayoutOrder = i, Size = UDim2.fromOffset(150, 54), Parent = menu })
 		b.Activated:Connect(function()
 			Effects.sound("click")
@@ -5429,7 +5690,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00044">
+				<Item class="ModuleScript" referent="RBX00045">
 					<Properties>
 						<string name="Name">LobbyUi</string>
 						<ProtectedString name="Source"><![CDATA[-- The lobby and finding, on your screen:
@@ -5551,7 +5812,7 @@ return LobbyUi
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX00045">
+				<Item class="LocalScript" referent="RBX00046">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- Starts the client: the whole UI (UIController). The client only shows things and asks the
@@ -5561,7 +5822,7 @@ UIController.start()
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00046">
+				<Item class="ModuleScript" referent="RBX00047">
 					<Properties>
 						<string name="Name">NeedleView</string>
 						<ProtectedString name="Source"><![CDATA[-- A needle in 3D inside the UI: a ViewportFrame with the needle (shared/NeedleLook) lit and
@@ -5608,7 +5869,7 @@ return NeedleView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00047">
+				<Item class="ModuleScript" referent="RBX00048">
 					<Properties>
 						<string name="Name">PowerupFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Power-ups on your screen (server/Powerups decides; Remotes.Powerup says what you got):
@@ -5742,7 +6003,7 @@ return PowerupFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00048">
+				<Item class="ModuleScript" referent="RBX00049">
 					<Properties>
 						<string name="Name">Results</string>
 						<ProtectedString name="Source"><![CDATA[-- The round's big moments on screen: the 3, 2, 1 before searching; NEEDLE FOUND! when you find it
@@ -5885,7 +6146,7 @@ return Results
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00049">
+				<Item class="ModuleScript" referent="RBX0004A">
 					<Properties>
 						<string name="Name">Screens</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop and Inventory screens. The Shop sells cosmetics for Haystack Coins (needle skins,
@@ -6076,7 +6337,7 @@ return Screens
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004A">
+				<Item class="ModuleScript" referent="RBX0004B">
 					<Properties>
 						<string name="Name">Screens2</string>
 						<ProtectedString name="Source"><![CDATA[-- The Quests, Leaderboard and Settings screens.
@@ -6210,7 +6471,7 @@ return Screens2
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004B">
+				<Item class="ModuleScript" referent="RBX0004C">
 					<Properties>
 						<string name="Name">Screens3</string>
 						<ProtectedString name="Source"><![CDATA[-- The Collection screen: every needle you've found, by type, shown in 3D with its rarity, value
@@ -6343,7 +6604,202 @@ return Screens3
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004C">
+				<Item class="ModuleScript" referent="RBX0004D">
+					<Properties>
+						<string name="Name">TradeScreen</string>
+						<ProtectedString name="Source"><![CDATA[-- The Trade screen (server/TradeManager decides everything). Not trading: everyone in the server
+-- with an "Ask to trade" button. Asked: a card with Accept / No thanks. Trading: your offer and
+-- theirs side by side with each needle's rarity and value and both totals, your needles to add
+-- from, and Ready. Any change un-readies you both; when both are ready a countdown runs, and you
+-- can still cancel until it ends.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Needles = require(Shared:WaitForChild("Needles"))
+local Rules = require(Shared:WaitForChild("Rules"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local UiKit = require(script.Parent.UiKit)
+local Hud = require(script.Parent.Hud)
+
+local player = Players.LocalPlayer
+local TradeScreen = {}
+local win, body, getProfile
+local state = nil -- the trade in progress (Remotes.TradeState), or nil
+
+local function rgb(c)
+	return Color3.fromRGB(c[1], c[2], c[3])
+end
+
+local function clear()
+	for _, c in ipairs(body:GetChildren()) do
+		if c:IsA("GuiObject") then
+			c:Destroy()
+		end
+	end
+end
+
+local function ask(...)
+	local ok, why = Remotes.Trade:InvokeServer(...)
+	if why then
+		Hud.toast(why, if ok then "good" else "bad")
+	end
+	return ok
+end
+
+-- One needle line: rarity colour, name, value, how many; a button if `action` is given.
+local function needleRow(parent, order, key, n, label, action)
+	local t, s = Needles.split(key)
+	if not t then
+		return 0
+	end
+	local skin, value = Needles.skin(s), Needles.value(t, s)
+	local rarity = Needles.rarity(skin.rarity)
+	local r = UiKit.make("Frame", { LayoutOrder = order, Size = UDim2.new(1, 0, 0, 40), BackgroundColor3 = UiKit.colors.card, Parent = parent }, { UiKit.corner(8) })
+	UiKit.make("Frame", { Size = UDim2.new(0, 6, 1, 0), BackgroundColor3 = rgb(rarity.colour), Parent = r }, { UiKit.corner(3) })
+	UiKit.label({ Text = Needles.name(t, s) .. (if n > 1 then "  ×" .. n else ""), Size = UDim2.new(1, -150, 0, 22), Position = UDim2.fromOffset(14, 2), TextXAlignment = Enum.TextXAlignment.Left, Parent = r }, 17)
+	UiKit.label({ Text = rarity.name .. "  ·  " .. Rules.commas(value), TextColor3 = rgb(rarity.colour), Size = UDim2.new(1, -150, 0, 16), Position = UDim2.fromOffset(14, 22), TextXAlignment = Enum.TextXAlignment.Left, Parent = r }, 14)
+	if action then
+		local b = UiKit.button(label, UiKit.colors.blue, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Size = UDim2.fromOffset(110, 32), Parent = r })
+		b.Activated:Connect(action)
+	end
+	return value * n
+end
+
+local function column(x, title)
+	local col = UiKit.make("Frame", { Position = UDim2.new(x, 0, 0, 0), Size = UDim2.new(0.5, -6, 1, 0), BackgroundTransparency = 1 })
+	UiKit.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = col })
+	UiKit.label({ LayoutOrder = 0, Text = title, Font = UiKit.bold, Size = UDim2.new(1, 0, 0, 26), TextXAlignment = Enum.TextXAlignment.Left, Parent = col }, 20)
+	return col
+end
+
+local function drawTrade()
+	local top = UiKit.make("Frame", { LayoutOrder = 1, Size = UDim2.new(1, -8, 0, 300), BackgroundTransparency = 1, Parent = body })
+	local yours, theirs = column(0, "You give"), column(0.5, state.them.name .. " gives")
+	yours.Parent, theirs.Parent = top, top
+	local give, get = 0, 0
+	for i, e in ipairs(state.you.offer) do
+		give += needleRow(yours, i, e.key, e.count, "Take back", function()
+			ask("offer", e.key, false)
+		end)
+	end
+	for i, e in ipairs(state.them.offer) do
+		get += needleRow(theirs, i, e.key, e.count)
+	end
+	UiKit.label({ LayoutOrder = 98, Text = "Value " .. Rules.commas(give) .. (if state.you.ready then "  ·  READY" else ""), Font = UiKit.bold, TextColor3 = UiKit.colors.gold, Size = UDim2.new(1, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Left, Parent = yours }, 18)
+	UiKit.label({ LayoutOrder = 98, Text = "Value " .. Rules.commas(get) .. (if state.them.ready then "  ·  READY" else ""), Font = UiKit.bold, TextColor3 = UiKit.colors.gold, Size = UDim2.new(1, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Left, Parent = theirs }, 18)
+	local bar = UiKit.make("Frame", { LayoutOrder = 2, Size = UDim2.new(1, -8, 0, 50), BackgroundTransparency = 1, Parent = body })
+	local ready = UiKit.button(if state.you.ready then "Not ready" else "Ready", if state.you.ready then UiKit.colors.line else UiKit.colors.green, { Size = UDim2.fromOffset(160, 46), Parent = bar })
+	ready.Activated:Connect(function()
+		ask("ready", not state.you.ready)
+	end)
+	local cancel = UiKit.button("Cancel trade", UiKit.colors.red, { Position = UDim2.fromOffset(170, 0), Size = UDim2.fromOffset(160, 46), Parent = bar })
+	cancel.Activated:Connect(function()
+		ask("cancel")
+	end)
+	local note = UiKit.label({ Text = "Check both sides before you press Ready.", TextColor3 = UiKit.colors.soft, Position = UDim2.fromOffset(340, 0), Size = UDim2.new(1, -340, 1, 0), TextXAlignment = Enum.TextXAlignment.Left, Parent = bar }, 18)
+	if state.countdownEnds then
+		task.spawn(function()
+			while note.Parent and state and state.countdownEnds do
+				note.Text = "Trading in " .. math.max(0, math.ceil(state.countdownEnds - workspace:GetServerTimeNow())) .. "...  (cancel to stop it)"
+				note.TextColor3 = UiKit.colors.gold
+				task.wait(0.2)
+			end
+		end)
+	end
+	UiKit.label({ LayoutOrder = 3, Text = "Your needles (up to " .. Config.Trading.maxItems .. " in a trade)", Font = UiKit.bold, Size = UDim2.new(1, -8, 0, 26), TextXAlignment = Enum.TextXAlignment.Left, Parent = body }, 20)
+	local offered = {}
+	for _, e in ipairs(state.you.offer) do
+		offered[e.key] = e.count
+	end
+	local order = 4
+	for key, n in pairs(getProfile().collection or {}) do
+		local left = n - (offered[key] or 0)
+		if left > 0 then
+			order += 1
+			needleRow(body, order, key, left, "Add", function()
+				ask("offer", key, true)
+			end)
+		end
+	end
+end
+
+local function drawPlayers()
+	UiKit.label({ LayoutOrder = 0, Text = "Swap needles with anyone in this server, in the lobby between rounds.", TextColor3 = UiKit.colors.soft, Size = UDim2.new(1, -8, 0, 24), TextXAlignment = Enum.TextXAlignment.Left, Parent = body }, 18)
+	for i, p in ipairs(Remotes.Collection:InvokeServer("list") or {}) do
+		if p.userId ~= player.UserId then
+			local r = UiKit.make("Frame", { LayoutOrder = i, Size = UDim2.new(1, -8, 0, 50), BackgroundColor3 = UiKit.colors.card, Parent = body }, { UiKit.corner(10) })
+			UiKit.label({ Text = p.name .. "  ·  collection " .. Rules.commas(p.value), Size = UDim2.new(1, -200, 1, 0), Position = UDim2.fromOffset(14, 0), TextXAlignment = Enum.TextXAlignment.Left, Parent = r }, 20)
+			local b = UiKit.button("Ask to trade", UiKit.colors.blue, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.fromOffset(170, 40), Parent = r })
+			b.Activated:Connect(function()
+				ask("request", p.userId)
+			end)
+		end
+	end
+end
+
+function TradeScreen.refresh()
+	if not win or not win.Visible then
+		return
+	end
+	clear()
+	if state then
+		drawTrade()
+	else
+		drawPlayers()
+	end
+end
+
+-- Someone asked: a card under the banner with Accept / No thanks, gone after 30 seconds.
+local function invite(gui, m)
+	local card = UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 140), Size = UDim2.fromOffset(420, 110), BackgroundColor3 = UiKit.colors.panel, ZIndex = 30, Parent = gui }, { UiKit.corner(14), UiKit.stroke(UiKit.colors.blue, 2) })
+	UiKit.autoScale(card)
+	UiKit.label({ Text = m.name .. " wants to trade needles", Font = UiKit.bold, Size = UDim2.new(1, -20, 0, 30), Position = UDim2.fromOffset(10, 10), ZIndex = 31, Parent = card }, 22)
+	local yes = UiKit.button("Accept", UiKit.colors.green, { Position = UDim2.fromOffset(20, 54), Size = UDim2.fromOffset(180, 44), ZIndex = 31, Parent = card })
+	local no = UiKit.button("No thanks", UiKit.colors.card, { Position = UDim2.fromOffset(220, 54), Size = UDim2.fromOffset(180, 44), ZIndex = 31, Parent = card })
+	yes.Activated:Connect(function()
+		card:Destroy()
+		if ask("respond", m.from, true) then
+			win.Visible = true
+		end
+	end)
+	no.Activated:Connect(function()
+		card:Destroy()
+		ask("respond", m.from, false)
+	end)
+	UiKit.pop(card, 0.8)
+	task.delay(30, function()
+		if card.Parent then
+			card:Destroy()
+		end
+	end)
+end
+
+function TradeScreen.mount(gui, profileFn)
+	getProfile = profileFn
+	win, body = UiKit.window(gui, "Trade", 820, 600)
+	Remotes.TradeState.OnClientEvent:Connect(function(m)
+		if m.kind == "invite" then
+			invite(gui, m)
+		elseif m.kind == "trade" then
+			state = m
+			win.Visible = true
+			TradeScreen.refresh()
+		elseif m.kind == "closed" then
+			state = nil
+			Hud.toast(m.text or "Trade closed.", "good")
+			TradeScreen.refresh()
+		end
+	end)
+	return { Trade = win }, { Trade = TradeScreen.refresh }
+end
+
+return TradeScreen
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX0004E">
 					<Properties>
 						<string name="Name">UIController</string>
 						<ProtectedString name="Source"><![CDATA[-- Puts the whole UI together: one ScreenGui with the HUD, the round moments (Results), and the
@@ -6368,6 +6824,7 @@ local LobbyUi = require(script.Parent.LobbyUi)
 local PowerupFx = require(script.Parent.PowerupFx)
 local BoxScreen = require(script.Parent.BoxScreen)
 local CombatFx = require(script.Parent.CombatFx)
+local TradeScreen = require(script.Parent.TradeScreen)
 
 local player = Players.LocalPlayer
 local UIController = {}
@@ -6432,8 +6889,8 @@ function UIController.start()
 	for name, fn in pairs(colOpen) do
 		openers[name] = fn
 	end
-	for _, screen in ipairs({ BoxScreen }) do
-		local w, opener = screen.mount(gui)
+	for _, screen in ipairs({ BoxScreen, TradeScreen }) do
+		local w, opener = screen.mount(gui, getProfile)
 		for name, frame in pairs(w) do
 			windows[name], openers[name] = frame, opener[name]
 		end
@@ -6453,6 +6910,7 @@ function UIController.start()
 		applySettings()
 		Screens.refresh()
 		Screens2.refresh()
+		TradeScreen.refresh()
 	end)
 	-- the lobby's Shop stall and Wardrobe open their screens
 	ProximityPromptService.PromptTriggered:Connect(function(prompt)
@@ -6472,7 +6930,7 @@ return UIController
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004D">
+				<Item class="ModuleScript" referent="RBX0004F">
 					<Properties>
 						<string name="Name">UiKit</string>
 						<ProtectedString name="Source"><![CDATA[-- The UI's look in one place: a clean, modern dark-glass style with warm gold accents, big
@@ -6610,7 +7068,7 @@ return UiKit
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX0004E">
+	<Item class="Workspace" referent="RBX00050">
 		<Properties>
 			<string name="Name">Workspace</string>
 		</Properties>

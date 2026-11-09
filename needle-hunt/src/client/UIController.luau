@@ -20,6 +20,7 @@ local LobbyUi = require(script.Parent.LobbyUi)
 local PowerupFx = require(script.Parent.PowerupFx)
 local BoxScreen = require(script.Parent.BoxScreen)
 local CombatFx = require(script.Parent.CombatFx)
+local TradeScreen = require(script.Parent.TradeScreen)
 
 local player = Players.LocalPlayer
 local UIController = {}
@@ -84,8 +85,8 @@ function UIController.start()
 	for name, fn in pairs(colOpen) do
 		openers[name] = fn
 	end
-	for _, screen in ipairs({ BoxScreen }) do
-		local w, opener = screen.mount(gui)
+	for _, screen in ipairs({ BoxScreen, TradeScreen }) do
+		local w, opener = screen.mount(gui, getProfile)
 		for name, frame in pairs(w) do
 			windows[name], openers[name] = frame, opener[name]
 		end
@@ -105,6 +106,7 @@ function UIController.start()
 		applySettings()
 		Screens.refresh()
 		Screens2.refresh()
+		TradeScreen.refresh()
 	end)
 	-- the lobby's Shop stall and Wardrobe open their screens
 	ProximityPromptService.PromptTriggered:Connect(function(prompt)

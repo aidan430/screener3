@@ -19,6 +19,7 @@ local LobbyShowOff = require(script.Parent.LobbyShowOff)
 local RoundManager = require(script.Parent.RoundManager)
 local BoxManager = require(script.Parent.BoxManager)
 local Combat = require(script.Parent.Combat)
+local TradeManager = require(script.Parent.TradeManager)
 
 -- While testing in Studio, server errors also show on screen.
 if RunService:IsStudio() then
@@ -41,6 +42,7 @@ for _, step in ipairs({
 	{ "ShowOff", LobbyShowOff.init },
 	{ "Boxes", BoxManager.init },
 	{ "Combat", Combat.init },
+	{ "Trading", TradeManager.init },
 	{ "Data", DataManager.init },
 	{ "Rounds", RoundManager.start },
 }) do

@@ -294,5 +294,15 @@ class BoxOpenings(unittest.TestCase):
         self.assertNotIn("Robux", combat)
 
 
+class Trading(unittest.TestCase):
+    def test_trades_are_safe(self):
+        trade = (SERVER / "TradeManager.luau").read_text()
+        self.assertIn("unready(t)", trade, "any change un-readies both")
+        self.assertIn("countdown", trade)
+        self.assertIn("isn't there any more", trade, "ownership is checked again before the swap")
+        self.assertIn("DataManager.save(p)", trade, "both saves are written straight away")
+        self.assertIn("RoundManager.current()", trade, "never during a round")
+
+
 if __name__ == "__main__":
     unittest.main()
