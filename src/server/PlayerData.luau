@@ -241,7 +241,7 @@ end
 local function added(player)
 	local stats = Instance.new("Folder")
 	stats.Name = "leaderstats"
-	for _, name in ipairs({ "Coins", "Needles" }) do
+	for _, name in ipairs({ "Level", "Coins", "Needles" }) do -- Level first: the player list ranks by it (server/Levels sets it)
 		local value = Instance.new("IntValue")
 		value.Name = name
 		value.Parent = stats

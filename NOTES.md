@@ -774,3 +774,5 @@ this game's own style. Nothing copied from that game.
 - XP bar level-up fixed: the glow lit the bar's background, hidden under the topped-up fill, and
   the new XP shrank the bar again within 0.2 s, so neither showed. Now the fill tops up, glows
   light gold with "Level N · LEVEL UP!" in dark brown for 0.6 s, then empties and fills again.
+- Player list: Level is now the first leaderstats column (then Coins, Needles), so Roblox ranks
+  the list by Farmer Level, which only goes up, instead of coins, which drop when you spend.
