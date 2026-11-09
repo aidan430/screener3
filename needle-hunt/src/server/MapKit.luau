@@ -63,12 +63,14 @@ function MapKit.ground(ctx, sx, sz, colour, material)
 end
 
 -- The edge of an outdoor map: countryside running off to the horizon (so the map never ends in
--- mid-air) and invisible walls round the play area, half sizes halfX, halfZ, so nobody walks or
--- jumps off it. The walls can't be clicked through to (they ignore clicks and raycasts).
+-- mid-air), a tall hedge you can see all the way round the play area (half sizes halfX, halfZ),
+-- and invisible walls on top of it up to 200 studs, so nobody walks, jumps or flies off. Neither
+-- can be clicked through to (they ignore clicks and raycasts).
 function MapKit.edges(ctx, halfX, halfZ, colour)
 	MapKit.part(ctx, { Name = "Countryside", Size = Vector3.new(900, 2, 900), CFrame = CFrame.new(MapKit.at(ctx, 0, -1.1, 0)), Color = colour, Material = "Grass", CanQuery = false })
-	for _, w in ipairs({ { 0, -halfZ, halfX * 2, 1 }, { 0, halfZ, halfX * 2, 1 }, { -halfX, 0, 1, halfZ * 2 }, { halfX, 0, 1, halfZ * 2 } }) do
-		MapKit.part(ctx, { Name = "Edge", Size = Vector3.new(w[3], 60, w[4]), CFrame = CFrame.new(MapKit.at(ctx, w[1], 30, w[2])), Transparency = 1, CanQuery = false, CastShadow = false })
+	for _, w in ipairs({ { 0, -halfZ, halfX * 2 + 3, 3 }, { 0, halfZ, halfX * 2 + 3, 3 }, { -halfX, 0, 3, halfZ * 2 + 3 }, { halfX, 0, 3, halfZ * 2 + 3 } }) do
+		MapKit.part(ctx, { Name = "Hedge", Size = Vector3.new(w[3], 9, w[4]), CFrame = CFrame.new(MapKit.at(ctx, w[1], 4.5, w[2])), Color = { 52, 104, 52 }, Material = "LeafyGrass", CanQuery = false })
+		MapKit.part(ctx, { Name = "Edge", Size = Vector3.new(w[3], 200, w[4]), CFrame = CFrame.new(MapKit.at(ctx, w[1], 109, w[2])), Transparency = 1, CanQuery = false, CastShadow = false })
 	end
 end
 

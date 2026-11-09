@@ -138,14 +138,19 @@ function LobbyBuilder.build()
 	model.Parent = workspace
 	ctx = { model = model, rng = Random.new(7), centre = Config.LobbyCentre, def = { straw = { 226, 188, 92 } }, spots = {}, spawns = {}, floorY = 0 }
 	MapKit.ground(ctx, 260, 260, { 104, 160, 76 }, "Grass")
-	MapKit.edges(ctx, 125, 125, { 104, 160, 76 })
-	MapKit.part(ctx, { Name = "Plaza", Size = Vector3.new(90, 0.4, 90), CFrame = CFrame.new(MapKit.at(ctx, 0, 0.2, 0)), Color = { 170, 128, 86 }, Material = "WoodPlanks" })
+	MapKit.edges(ctx, 90, 90, { 104, 160, 76 }) -- a hedge all the way round: nobody wanders off
+	MapKit.part(ctx, { Name = "Plaza", Size = Vector3.new(170, 0.4, 170), CFrame = CFrame.new(MapKit.at(ctx, 0, 0.2, 0)), Color = { 170, 128, 86 }, Material = "WoodPlanks" })
+	-- you arrive at the front, facing the Champion's Needle (server/LobbySocial) and the Play pad
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Anchored, spawn.Size, spawn.Duration, spawn.Neutral = true, Vector3.new(12, 1, 12), 0, true
-	spawn.CFrame, spawn.Color, spawn.Material = CFrame.new(MapKit.at(ctx, 0, 0.5, 30)), Color3.fromRGB(196, 150, 92), Enum.Material.WoodPlanks
+	spawn.CFrame, spawn.Color, spawn.Material = CFrame.new(MapKit.at(ctx, 0, 0.5, 72)), Color3.fromRGB(196, 150, 92), Enum.Material.WoodPlanks
 	spawn.Parent = model
-	for _, edge in ipairs({ { -45, -45, 45, -45 }, { 45, -45, 45, 45 }, { -45, -45, -45, 45 } }) do
-		MapKit.fence(ctx, edge[1], edge[2], edge[3], edge[4])
+	for _, b in ipairs({ { -30, 56, 0 }, { 30, 56, 0 }, { -38, -6, 90 }, { 38, -6, 90 } }) do -- benches to sit and chat
+		local seat = Instance.new("Seat")
+		seat.Anchored, seat.Size, seat.Color, seat.Material = true, Vector3.new(8, 1, 2.4), Color3.fromRGB(140, 98, 58), Enum.Material.WoodPlanks
+		seat.CFrame = CFrame.new(MapKit.at(ctx, b[1], 1.5, b[2])) * CFrame.Angles(0, math.rad(b[3]), 0)
+		seat.Parent = model
+		MapKit.part(ctx, { Name = "BenchBack", Size = Vector3.new(8, 2.4, 0.4), CFrame = seat.CFrame * CFrame.new(0, 1.4, 1.1), Color = { 120, 84, 50 }, Material = "WoodPlanks" })
 	end
 	-- the title sign and its turning needle
 	local title = board("TitleSign", 0, 12, -38, 40, 9)
@@ -210,11 +215,12 @@ function LobbyBuilder.build()
 	LobbyBuilder.showcase()
 	stall("ShopStall", -18, 30, "Shop", { 196, 64, 50 })
 	stall("Wardrobe", 18, 30, "Inventory", { 76, 106, 170 })
-	-- the countryside
-	for _, h in ipairs({ { -70, -60 }, { 70, -64 }, { -80, 40 }, { 82, 50 }, { 0, -90 }, { -50, 90 }, { 56, 96 } }) do
+	require(script.Parent.LobbySocial).build(ctx, text)
+	-- the countryside beyond the hedge, and a few bales on the plaza
+	for _, h in ipairs({ { -110, -80 }, { 110, -84 }, { -120, 40 }, { 122, 50 }, { 0, -120 }, { -70, 115 }, { 76, 118 } }) do
 		MapKit.haystack(ctx, h[1], h[2], 7, 12)
 	end
-	for _, b in ipairs({ { -30, 0, -30 }, { 30, 0, -32 }, { -40, 0, 36 }, { 40, 0, 38 } }) do
+	for _, b in ipairs({ { -30, 0, -30 }, { 30, 0, -32 }, { -44, 0, 30 }, { 44, 0, 32 } }) do
 		MapKit.bale(ctx, b[1], b[2], b[3], ctx.rng:NextNumber() * 3)
 	end
 	Players.PlayerAdded:Connect(function(player)

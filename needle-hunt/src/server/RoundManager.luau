@@ -106,6 +106,7 @@ local function onClaim(player, n)
 			count += 1
 		end
 	end
+	player:SetAttribute("Found", count)
 	if count < #r.needles then
 		Remotes.Notify:FireClient(player, { text = "One down! " .. (#r.needles - count) .. " to go.", tone = "good" })
 		return
@@ -178,6 +179,7 @@ local function playRound()
 	round = { participants = {}, finished = {}, foundBy = {}, order = {}, rewards = {}, needles = needles, diff = diff, golden = golden, duration = duration, count = #list, spawns = ctx.spawns }
 	for i, p in ipairs(list) do
 		round.participants[p] = true
+		p:SetAttribute("Found", 0)
 		move(p, ctx.spawns[(i - 1) % #ctx.spawns + 1])
 		freeze(p, true)
 	end

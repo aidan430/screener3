@@ -88,6 +88,8 @@ ServerStorage.
 | Shop | RemoteFunction | player → server | `"buy"` or `"equip"` a cosmetic; the server decides |
 | Hint | RemoteFunction | player → server | a hint during a round (limited per day) |
 | Boards | RemoteFunction | player → server | the cached leaderboard rows |
+| ShowOff | RemoteEvent | player → server | hold your showcase needle up (lobby only, cooldown) |
+| LobbyInfo | RemoteFunction | player → server | `"best"`: who has the most valuable needle here |
 | Collection | RemoteFunction | player → server | `"get"` a collection (yours or a player's in the server), `"list"` who's here, `"showcase"` a needle you own |
 
 ### Attributes the game sets
@@ -160,6 +162,38 @@ ground beside haystacks, the barn loft, the attic table and so on. Each round th
 - A movement check puts back anyone moving faster than 70 studs/s outside a server teleport and
   blocks their claims for 5 seconds.
 - Rewards are calculated only on the server.
+
+## The lobby: showing off
+
+The lobby is a 170 × 170 wooden plaza with a hedge all the way round.
+
+**When you arrive:**
+- You face the **Champion's Needle**: a podium with the single most valuable needle anyone in the server owns, big and glowing, with whose it is.
+- After a few seconds, a banner tells you the same thing.
+
+**Booths:** 12 collector booths line the sides, and each player gets one on joining.
+- Each shows that player's three best needles.
+- Press E at a booth to open that player's Collection.
+
+**Over every head:** a tag shows that player's best needle in its rarity colour, and the champion gets a "♛ MOST VALUABLE NEEDLE" line. The tags hide while a round is being searched.
+
+**Show off!** A button that holds your showcase needle over your head for 6 seconds and tells everyone what it is. Lobby only, with a 15-second wait between uses.
+
+**Also:** benches to sit on, plus the Hall of Needles, the boards and the stalls.
+
+Code: `server/LobbySocial.luau`, `server/LobbyShowOff.luau`, `client/LobbyUi.luau`.
+
+Set Max Players to about 12 (Game Settings > Places) to match the booths.
+
+## Finding the needle
+
+- **Size:** needles are 3.6 / 2.8 / 2.0 studs long (Easy / Normal / Hard) with a bigger grab box (`Config.Find`).
+- **Hover:** point at a needle within reach and it lights up with a white outline and "Click to grab!".
+- **Counter:** the banner counts what you've found ("0/1").
+- **Once yours:** the needle vanishes from your screen, while others still see theirs.
+- **Testing in Studio:** `Config.Testing.revealNeedle = true` outlines the hidden needle through walls and prints where it is. It only works in Studio.
+
+**Barriers:** every outdoor map and the lobby have a hedge all the way round, with invisible walls above it up to 200 studs. Anyone who falls below a height of -40 respawns: in a round, back into the map.
 
 ## The needle collection
 

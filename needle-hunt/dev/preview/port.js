@@ -31,7 +31,8 @@ K.spotsOn = (ctx, part, onTop, around, climb) => {
   }
 };
 K.ground = (ctx, sx, sz, colour, material) => K.part(ctx, { Name: 'Ground', Size: [sx, 2, sz], CFrame: cf(...K.at(ctx, 0, -1, 0).toArray()), Color: colour, Material: material || 'Grass' });
-K.edges = (ctx, hx, hz, colour) => K.part(ctx, { Name: 'Countryside', Size: [900, 2, 900], CFrame: cf(...K.at(ctx, 0, -1.1, 0).toArray()), Color: colour, Material: 'Grass' });
+K.edges = (ctx, hx, hz, colour) => { K.part(ctx, { Name: 'Countryside', Size: [900, 2, 900], CFrame: cf(...K.at(ctx, 0, -1.1, 0).toArray()), Color: colour, Material: 'Grass' });
+  for (const w of [[0, -hz, hx * 2 + 3, 3], [0, hz, hx * 2 + 3, 3], [-hx, 0, 3, hz * 2 + 3], [hx, 0, 3, hz * 2 + 3]]) K.part(ctx, { Name: 'Hedge', Size: [w[2], 9, w[3]], CFrame: cf(...K.at(ctx, w[0], 4.5, w[1]).toArray()), Color: [52, 104, 52], Material: 'Grass' }); };
 K.spawnAt = (ctx, x, z) => ctx.spawns.push(K.at(ctx, x, 3, z));
 K.bale = (ctx, x, y, z, turn, climb) => {
   const m = mul(cf(...K.at(ctx, x, y + 1.25, z).toArray()), ang(0, turn || 0, 0));
@@ -205,10 +206,24 @@ B.attic = (ctx) => {
 // The lobby's geometry (LobbyBuilder), with its signs' words as textures.
 B.lobby = (ctx) => {
   K.ground(ctx, 260, 260, [104, 160, 76], 'Grass');
-  K.edges(ctx, 125, 125, [104, 160, 76]);
-  K.part(ctx, { Name: 'Plaza', Size: [90, 0.4, 90], CFrame: cf(...K.at(ctx, 0, 0.2, 0).toArray()), Color: [170, 128, 86], Material: 'WoodPlanks' });
-  K.part(ctx, { Name: 'Spawn', Size: [12, 1, 12], CFrame: cf(...K.at(ctx, 0, 0.5, 30).toArray()), Color: [196, 150, 92], Material: 'WoodPlanks' });
-  for (const e of [[-45, -45, 45, -45], [45, -45, 45, 45], [-45, -45, -45, 45]]) K.fence(ctx, ...e);
+  K.edges(ctx, 90, 90, [104, 160, 76]);
+  K.part(ctx, { Name: 'Plaza', Size: [170, 0.4, 170], CFrame: cf(...K.at(ctx, 0, 0.2, 0).toArray()), Color: [170, 128, 86], Material: 'WoodPlanks' });
+  K.part(ctx, { Name: 'Spawn', Size: [12, 1, 12], CFrame: cf(...K.at(ctx, 0, 0.5, 72).toArray()), Color: [196, 150, 92], Material: 'WoodPlanks' });
+  for (const b of [[-30, 56, 0], [30, 56, 0], [-38, -6, 90], [38, -6, 90]]) { const m = mul(cf(...K.at(ctx, b[0], 1.5, b[1]).toArray()), ang(0, rad(b[2]), 0)); K.part(ctx, { Name: 'Seat', Size: [8, 1, 2.4], CFrame: m, Color: [140, 98, 58], Material: 'WoodPlanks' }); K.part(ctx, { Name: 'BenchBack', Size: [8, 2.4, 0.4], CFrame: mul(m, cf(0, 1.4, 1.1)), Color: [120, 84, 50], Material: 'WoodPlanks' }); }
+  // booths down both sides (LobbySocial.buildBooth) and the Champion's Needle podium
+  ctx.booths = []; let bi = 0;
+  for (const x of [-66, 66]) for (const z of [-50, -30, -10, 10, 30, 50]) {
+    const p0 = K.at(ctx, x, 0, z), face = lookAt(p0, K.at(ctx, 0, 0, z));
+    K.part(ctx, { Name: 'BoothCounter', Size: [10, 3, 3], CFrame: mul(face, cf(0, 1.5, -1)), Color: [150, 106, 64], Material: 'WoodPlanks' });
+    K.part(ctx, { Name: 'BoothBack', Size: [11, 9, 0.6], CFrame: mul(face, cf(0, 4.5, 2.2)), Color: [120, 84, 50], Material: 'WoodPlanks' });
+    K.part(ctx, { Name: 'BoothShelf', Size: [9.4, 0.3, 2.4], CFrame: mul(face, cf(0, 3.15, -1)), Color: [236, 230, 214], Material: 'Marble' });
+    const sign = K.part(ctx, { Name: 'BoothSign', Size: [11, 2.6, 0.6], CFrame: mul(face, cf(0, 10.3, 2.2)), Color: [96, 66, 40], Material: 'Wood' });
+    sign.booth = bi; ctx.booths.push({ face, i: bi }); bi++;
+  }
+  const cb = K.at(ctx, 0, 0, 48);
+  K.part(ctx, { Name: 'ChampionPodium', Shape: 'Cylinder', Size: [6, 8, 8], CFrame: mul(cf(cb.x, 3, cb.z), ang(0, 0, rad(90))), Color: [236, 230, 214], Material: 'Marble' });
+  K.part(ctx, { Name: 'ChampionRim', Shape: 'Cylinder', Size: [0.4, 8.5, 8.5], CFrame: mul(cf(cb.x, 5.9, cb.z), ang(0, 0, rad(90))), Color: [255, 200, 70], Material: 'Metal' });
+  ctx.champion = new T.Vector3(cb.x, 9.5, cb.z);
   const board = (name, x, y, z, w, h, sign) => {
     const p = K.at(ctx, x, y, z), m = lookAt(p, K.at(ctx, 0, y, 10));
     const b = K.part(ctx, { Name: name, Size: [w, h, 0.6], CFrame: m, Color: [120, 84, 50], Material: 'WoodPlanks' });
@@ -238,7 +253,7 @@ B.lobby = (ctx) => {
   });
   stall('ShopStall', -18, 30, [196, 64, 50], 'SHOP');
   stall('Wardrobe', 18, 30, [76, 106, 170], 'INVENTORY');
-  for (const h of [[-70, -60], [70, -64], [-80, 40], [82, 50], [0, -90], [-50, 90], [56, 96]]) K.haystack(ctx, h[0], h[1], 7, 12);
-  for (const b of [[-30, 0, -30], [30, 0, -32], [-40, 0, 36], [40, 0, 38]]) K.bale(ctx, b[0], b[1], b[2], ctx.rng.NextNumber() * 3);
+  for (const h of [[-110, -80], [110, -84], [-120, 40], [122, 50], [0, -120], [-70, 115], [76, 118]]) K.haystack(ctx, h[0], h[1], 7, 12);
+  for (const b of [[-30, 0, -30], [30, 0, -32], [-44, 0, 30], [44, 0, 32]]) K.bale(ctx, b[0], b[1], b[2], ctx.rng.NextNumber() * 3);
 };
 window.NH = { B, K, rng, cf, ang, mul, pos };

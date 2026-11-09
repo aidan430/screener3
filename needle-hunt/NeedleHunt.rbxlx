@@ -30,9 +30,9 @@ Config.Round = {
 -- (easy only); clutter = loose straws scattered round the map; decoys = fake needles; dim =
 -- how much darker the light is; moving = tumbling hay bundles that drift about.
 Config.Difficulty = {
-	{ id = "easy", name = "Easy", weight = 30, needle = 2.2, glint = true, clutter = 160, decoys = 0, dim = 0, moving = 0, coins = 1.0 },
-	{ id = "normal", name = "Normal", weight = 50, needle = 1.5, glint = false, clutter = 260, decoys = 0, dim = 0, moving = 0, coins = 1.25 },
-	{ id = "hard", name = "Hard", weight = 20, needle = 1.1, glint = false, clutter = 380, decoys = 4, dim = 0.35, moving = 4, coins = 1.6 },
+	{ id = "easy", name = "Easy", weight = 30, needle = 3.6, glint = true, clutter = 160, decoys = 0, dim = 0, moving = 0, coins = 1.0 },
+	{ id = "normal", name = "Normal", weight = 50, needle = 2.8, glint = false, clutter = 260, decoys = 0, dim = 0, moving = 0, coins = 1.25 },
+	{ id = "hard", name = "Hard", weight = 20, needle = 2.0, glint = false, clutter = 380, decoys = 4, dim = 0.35, moving = 4, coins = 1.6 },
 }
 
 -- Modifiers: a round gets one with this chance (then by weight). The Golden Needle is a
@@ -60,7 +60,8 @@ Config.NeedleModel = { asset = 0 }
 -- Finding (server/NeedleSpawner). Studs and seconds.
 Config.Find = {
 	reach = 14, -- how close your character must be to claim the needle (clicks and taps)
-	hitbox = 0.9, -- the invisible box round the needle you click or tap (the same on every device)
+	hitbox = 1.6, -- the invisible box round the needle you click or tap (the same on every device)
+	thickness = 0.2, -- how thick the needle's shaft is (studs): thick enough to spot, thin enough to hide
 	decoyLockout = 3, -- clicking a decoy: no claims for this long
 	clicksPerSecond = 6, -- more than this and the extra clicks are ignored
 	jitter = 0.6, -- the needle moves this far from its hiding spot, so spots can't be memorised
@@ -68,10 +69,15 @@ Config.Find = {
 }
 
 -- Anti-exploit (server/AntiCheat).
+-- Testing (Roblox Studio only, never in a live game): revealNeedle = true outlines the hidden
+-- needle through walls and prints where it is, so you can test finding it.
+Config.Testing = { revealNeedle = false }
+
 Config.AntiCheat = {
 	checkEvery = 0.5, -- seconds between movement checks
 	maxSpeed = 70, -- studs a second a character may move (walking, jumping, falling) outside a teleport
 	strikesToKick = 0, -- 0 = never kick; just put them back where they were
+	fallY = -40, -- below this height (a fall off a map) a character respawns
 }
 
 -- Rewards (server/RewardManager). Coins and XP.
@@ -770,17 +776,27 @@ return Rules
 					<string name="Name">Collection</string>
 				</Properties>
 			</Item>
+			<Item class="RemoteEvent" referent="RBX00013">
+				<Properties>
+					<string name="Name">ShowOff</string>
+				</Properties>
+			</Item>
+			<Item class="RemoteFunction" referent="RBX00014">
+				<Properties>
+					<string name="Name">LobbyInfo</string>
+				</Properties>
+			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerScriptService" referent="RBX00013">
+	<Item class="ServerScriptService" referent="RBX00015">
 		<Properties>
 			<string name="Name">ServerScriptService</string>
 		</Properties>
-		<Item class="Folder" referent="RBX00014">
+		<Item class="Folder" referent="RBX00016">
 			<Properties>
 				<string name="Name">Server</string>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX00015">
+			<Item class="ModuleScript" referent="RBX00017">
 				<Properties>
 					<string name="Name">AntiCheat</string>
 					<ProtectedString name="Source"><![CDATA[-- Basic anti-exploit: every Config.AntiCheat.checkEvery seconds, each character's position is
@@ -813,6 +829,13 @@ local function check(player)
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	if not root then
 		last[player] = nil
+		return
+	end
+	if root.Position.Y < Config.AntiCheat.fallY then -- fell off a map: back you come
+		local h = player.Character:FindFirstChildOfClass("Humanoid")
+		if h and h.Health > 0 then
+			h.Health = 0
+		end
 		return
 	end
 	local now = os.clock()
@@ -859,7 +882,7 @@ return AntiCheat
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00016">
+			<Item class="ModuleScript" referent="RBX00018">
 				<Properties>
 					<string name="Name">CollectionManager</string>
 					<ProtectedString name="Source"><![CDATA[-- The needle collection, on the server. Each player who finishes a round keeps the needle they
@@ -952,7 +975,7 @@ return CollectionManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00017">
+			<Item class="ModuleScript" referent="RBX00019">
 				<Properties>
 					<string name="Name">DataManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Player data: loaded on join, cached for the session, saved with UpdateAsync on an autosave
@@ -1210,7 +1233,7 @@ return DataManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00018">
+			<Item class="ModuleScript" referent="RBX0001A">
 				<Properties>
 					<string name="Name">LeaderboardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Global leaderboards (Config.Boards), each an OrderedDataStore: most needles, fastest find,
@@ -1382,7 +1405,7 @@ return LeaderboardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00019">
+			<Item class="ModuleScript" referent="RBX0001B">
 				<Properties>
 					<string name="Name">LobbyBuilder</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby, built once at Config.LobbyCentre: a wooden plaza in a field, the animated title sign
@@ -1525,14 +1548,19 @@ function LobbyBuilder.build()
 	model.Parent = workspace
 	ctx = { model = model, rng = Random.new(7), centre = Config.LobbyCentre, def = { straw = { 226, 188, 92 } }, spots = {}, spawns = {}, floorY = 0 }
 	MapKit.ground(ctx, 260, 260, { 104, 160, 76 }, "Grass")
-	MapKit.edges(ctx, 125, 125, { 104, 160, 76 })
-	MapKit.part(ctx, { Name = "Plaza", Size = Vector3.new(90, 0.4, 90), CFrame = CFrame.new(MapKit.at(ctx, 0, 0.2, 0)), Color = { 170, 128, 86 }, Material = "WoodPlanks" })
+	MapKit.edges(ctx, 90, 90, { 104, 160, 76 }) -- a hedge all the way round: nobody wanders off
+	MapKit.part(ctx, { Name = "Plaza", Size = Vector3.new(170, 0.4, 170), CFrame = CFrame.new(MapKit.at(ctx, 0, 0.2, 0)), Color = { 170, 128, 86 }, Material = "WoodPlanks" })
+	-- you arrive at the front, facing the Champion's Needle (server/LobbySocial) and the Play pad
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Anchored, spawn.Size, spawn.Duration, spawn.Neutral = true, Vector3.new(12, 1, 12), 0, true
-	spawn.CFrame, spawn.Color, spawn.Material = CFrame.new(MapKit.at(ctx, 0, 0.5, 30)), Color3.fromRGB(196, 150, 92), Enum.Material.WoodPlanks
+	spawn.CFrame, spawn.Color, spawn.Material = CFrame.new(MapKit.at(ctx, 0, 0.5, 72)), Color3.fromRGB(196, 150, 92), Enum.Material.WoodPlanks
 	spawn.Parent = model
-	for _, edge in ipairs({ { -45, -45, 45, -45 }, { 45, -45, 45, 45 }, { -45, -45, -45, 45 } }) do
-		MapKit.fence(ctx, edge[1], edge[2], edge[3], edge[4])
+	for _, b in ipairs({ { -30, 56, 0 }, { 30, 56, 0 }, { -38, -6, 90 }, { 38, -6, 90 } }) do -- benches to sit and chat
+		local seat = Instance.new("Seat")
+		seat.Anchored, seat.Size, seat.Color, seat.Material = true, Vector3.new(8, 1, 2.4), Color3.fromRGB(140, 98, 58), Enum.Material.WoodPlanks
+		seat.CFrame = CFrame.new(MapKit.at(ctx, b[1], 1.5, b[2])) * CFrame.Angles(0, math.rad(b[3]), 0)
+		seat.Parent = model
+		MapKit.part(ctx, { Name = "BenchBack", Size = Vector3.new(8, 2.4, 0.4), CFrame = seat.CFrame * CFrame.new(0, 1.4, 1.1), Color = { 120, 84, 50 }, Material = "WoodPlanks" })
 	end
 	-- the title sign and its turning needle
 	local title = board("TitleSign", 0, 12, -38, 40, 9)
@@ -1597,11 +1625,12 @@ function LobbyBuilder.build()
 	LobbyBuilder.showcase()
 	stall("ShopStall", -18, 30, "Shop", { 196, 64, 50 })
 	stall("Wardrobe", 18, 30, "Inventory", { 76, 106, 170 })
-	-- the countryside
-	for _, h in ipairs({ { -70, -60 }, { 70, -64 }, { -80, 40 }, { 82, 50 }, { 0, -90 }, { -50, 90 }, { 56, 96 } }) do
+	require(script.Parent.LobbySocial).build(ctx, text)
+	-- the countryside beyond the hedge, and a few bales on the plaza
+	for _, h in ipairs({ { -110, -80 }, { 110, -84 }, { -120, 40 }, { 122, 50 }, { 0, -120 }, { -70, 115 }, { 76, 118 } }) do
 		MapKit.haystack(ctx, h[1], h[2], 7, 12)
 	end
-	for _, b in ipairs({ { -30, 0, -30 }, { 30, 0, -32 }, { -40, 0, 36 }, { 40, 0, 38 } }) do
+	for _, b in ipairs({ { -30, 0, -30 }, { 30, 0, -32 }, { -44, 0, 30 }, { 44, 0, 32 } }) do
 		MapKit.bale(ctx, b[1], b[2], b[3], ctx.rng:NextNumber() * 3)
 	end
 	Players.PlayerAdded:Connect(function(player)
@@ -1613,7 +1642,347 @@ return LobbyBuilder
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Script" referent="RBX0001A">
+			<Item class="ModuleScript" referent="RBX0001C">
+				<Properties>
+					<string name="Name">LobbyShowOff</string>
+					<ProtectedString name="Source"><![CDATA[-- Show off (Remotes.ShowOff): hold your showcase needle (or your best) up over your head for a
+-- few seconds, and everyone in the server is told what it is. Lobby only, with a cooldown.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Needles = require(Shared:WaitForChild("Needles"))
+local NeedleLook = require(Shared:WaitForChild("NeedleLook"))
+local Rules = require(Shared:WaitForChild("Rules"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local DataManager = require(script.Parent.DataManager)
+local LobbySocial = require(script.Parent.LobbySocial)
+
+local LobbyShowOff = {}
+local lastShow = {}
+local SHOW_COOLDOWN, SHOW_SECONDS = 15, 6
+
+local function showOff(player)
+	local d = DataManager.get(player)
+	local head = player.Character and player.Character:FindFirstChild("Head")
+	local phase = ReplicatedStorage:GetAttribute("Phase")
+	if not d or not head or phase == "search" or phase == "countdown" or (lastShow[player] or 0) > os.clock() - SHOW_COOLDOWN then
+		return
+	end
+	local entry = nil
+	local t, s = Needles.split(d.showcase)
+	if t then
+		entry = { type = t, skin = s, value = Needles.value(t, s) }
+	else
+		entry = LobbySocial.ranked(d)[1]
+	end
+	if not entry then
+		Remotes.Notify:FireClient(player, { text = "Find a needle first, then you'll have something to show off!", tone = "bad" })
+		return
+	end
+	lastShow[player] = os.clock()
+	local m = NeedleLook.build(entry.type, entry.skin, 1.6, 2)
+	m:PivotTo(head.CFrame * CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, math.rad(80)))
+	for _, part in ipairs(m:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.Anchored, part.Massless = false, true
+			local w = Instance.new("WeldConstraint")
+			w.Part0, w.Part1 = head, part
+			w.Parent = part
+		end
+	end
+	m.Parent = player.Character
+	task.delay(SHOW_SECONDS, function()
+		m:Destroy()
+	end)
+	local words = LobbySocial.describe(entry)
+	Remotes.Notify:FireAllClients({ text = player.DisplayName .. " is showing off their " .. words .. " (worth " .. Rules.commas(entry.value) .. ")!", tone = "level" })
+end
+
+function LobbyShowOff.init()
+	Remotes.ShowOff.OnServerEvent:Connect(showOff)
+	Players.PlayerRemoving:Connect(function(player)
+		lastShow[player] = nil
+	end)
+end
+
+return LobbyShowOff
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX0001D">
+				<Properties>
+					<string name="Name">LobbySocial</string>
+					<ProtectedString name="Source"><![CDATA[-- The lobby's social side: showing off collections.
+--   The Champion's Needle: a tall podium right in front of where you arrive, with the single most
+--     valuable needle anyone in the server owns, big and glowing, and whose it is.
+--   Booths: down both sides of the plaza, every player gets a booth (claimed on join) with their
+--     three most valuable needles on show; its prompt opens their Collection for anyone.
+--   Tags: over each player's head, their best needle in its rarity colour; the champion gets a
+--     crown line. Hidden while a round is being searched, so they never get in the way.
+--   Show off: see server/LobbyShowOff.
+-- Remotes.LobbyInfo "best" tells a joining player who has the most valuable needle.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Needles = require(Shared:WaitForChild("Needles"))
+local NeedleLook = require(Shared:WaitForChild("NeedleLook"))
+local Rules = require(Shared:WaitForChild("Rules"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local MapKit = require(script.Parent.MapKit)
+local DataManager = require(script.Parent.DataManager)
+
+local LobbySocial = {}
+local ctx, text
+local booths = {} -- { player, models, title, line, prompt }
+local champion = nil -- { player, key, value }
+
+local function rgb(c)
+	return Color3.fromRGB(c[1], c[2], c[3])
+end
+
+-- A player's needles, most valuable first: { key, type, skin, value }.
+function LobbySocial.ranked(d)
+	local list = {}
+	for key in pairs(d.collection) do
+		local t, s = Needles.split(key)
+		if t then
+			table.insert(list, { key = key, type = t, skin = s, value = Needles.value(t, s) })
+		end
+	end
+	table.sort(list, function(a, b)
+		return a.value > b.value
+	end)
+	return list
+end
+
+function LobbySocial.describe(entry)
+	local skin = Needles.skin(entry.skin)
+	return Needles.rarity(skin.rarity).name .. " " .. Needles.name(entry.type, entry.skin), rgb(Needles.rarity(skin.rarity).colour)
+end
+
+-- Who has the most valuable needle in the server right now.
+function LobbySocial.best()
+	local top = nil
+	for _, p in ipairs(Players:GetPlayers()) do
+		local d = DataManager.get(p)
+		local list = d and LobbySocial.ranked(d)
+		if list and list[1] and (not top or list[1].value > top.entry.value) then
+			top = { player = p, entry = list[1] }
+		end
+	end
+	return top
+end
+
+local function tag(player, d, isChampion, visible)
+	local head = player.Character and player.Character:FindFirstChild("Head")
+	if not head then
+		return
+	end
+	local gui = head:FindFirstChild("LobbyTag")
+	if not gui then
+		gui = Instance.new("BillboardGui")
+		gui.Name, gui.Size, gui.StudsOffset, gui.MaxDistance = "LobbyTag", UDim2.fromOffset(260, 64), Vector3.new(0, 4.2, 0), 70
+		gui.Parent = head
+		local layout = Instance.new("UIListLayout")
+		layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		layout.Parent = gui
+		for i, name in ipairs({ "Crown", "Best" }) do
+			local l = Instance.new("TextLabel")
+			l.Name, l.LayoutOrder, l.BackgroundTransparency, l.Size = name, i, 1, UDim2.new(1, 0, 0, if i == 1 then 26 else 22)
+			l.Font, l.TextScaled, l.TextStrokeTransparency = Enum.Font.BuilderSansBold, true, 0.35
+			l.Parent = gui
+		end
+	end
+	gui.Enabled = visible
+	local best = LobbySocial.ranked(d)[1]
+	gui.Crown.Text, gui.Crown.TextColor3, gui.Crown.Visible = "♛ MOST VALUABLE NEEDLE", Color3.fromRGB(255, 205, 70), isChampion
+	if best then
+		local words, colour = LobbySocial.describe(best)
+		gui.Best.Text, gui.Best.TextColor3 = "Best: " .. words .. " · " .. Rules.commas(best.value), colour
+	else
+		gui.Best.Text, gui.Best.TextColor3 = "No needles yet", Color3.fromRGB(200, 205, 215)
+	end
+end
+
+local function clearModels(list)
+	for _, m in ipairs(list) do
+		m:Destroy()
+	end
+	table.clear(list)
+end
+
+local function buildBooth(i, x, z)
+	local pos = MapKit.at(ctx, x, 0, z)
+	local face = CFrame.lookAt(pos, MapKit.at(ctx, 0, 0, z)) -- facing the middle of the plaza
+	MapKit.part(ctx, { Name = "BoothCounter", Size = Vector3.new(10, 3, 3), CFrame = face * CFrame.new(0, 1.5, -1), Color = { 150, 106, 64 }, Material = "WoodPlanks" })
+	MapKit.part(ctx, { Name = "BoothBack", Size = Vector3.new(11, 9, 0.6), CFrame = face * CFrame.new(0, 4.5, 2.2), Color = { 120, 84, 50 }, Material = "WoodPlanks" })
+	local glass = MapKit.part(ctx, { Name = "BoothShelf", Size = Vector3.new(9.4, 0.3, 2.4), CFrame = face * CFrame.new(0, 3.15, -1), Color = { 236, 230, 214 }, Material = "Marble" })
+	local plate = MapKit.part(ctx, { Name = "BoothSign", Size = Vector3.new(11, 2.6, 0.6), CFrame = face * CFrame.new(0, 10.3, 2.2), Color = { 96, 66, 40 }, Material = "Wood" })
+	local surface = Instance.new("SurfaceGui")
+	surface.Face, surface.SizingMode, surface.PixelsPerStud, surface.LightInfluence = Enum.NormalId.Front, Enum.SurfaceGuiSizingMode.PixelsPerStud, 30, 0.1
+	surface.Parent = plate
+	local sign = Instance.new("Frame")
+	sign.Size, sign.Position, sign.BackgroundColor3 = UDim2.new(1, -12, 1, -12), UDim2.fromOffset(6, 6), Color3.fromRGB(30, 34, 44)
+	sign.Parent = surface
+	local title = text(sign, { Size = UDim2.new(1, -20, 0.6, 0), Position = UDim2.fromOffset(10, 4), Text = "Free booth", TextColor3 = Color3.fromRGB(255, 214, 90) })
+	local line = text(sign, { Size = UDim2.new(1, -20, 0.36, 0), Position = UDim2.new(0, 10, 0.62, 0), Text = "Join and it's yours", Font = Enum.Font.BuilderSans })
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText, prompt.ObjectText, prompt.HoldDuration, prompt.MaxActivationDistance, prompt.Enabled = "View collection", "", 0, 12, false
+	prompt.Parent = glass
+	booths[i] = { player = nil, models = {}, keys = "", title = title, line = line, prompt = prompt, face = face }
+end
+
+local function fillBooth(b)
+	local d = b.player and DataManager.get(b.player)
+	if not d then
+		clearModels(b.models)
+		b.keys = ""
+		b.title.Text, b.line.Text, b.prompt.Enabled = "Free booth", "Join and it's yours", false
+		return
+	end
+	local list = LobbySocial.ranked(d)
+	local keys = (list[1] and list[1].key or "") .. (list[2] and list[2].key or "") .. (list[3] and list[3].key or "")
+	b.title.Text = b.player.DisplayName .. "'s collection"
+	b.line.Text = Rules.commas(Needles.total(d.collection)) .. " value  ·  press E to look"
+	b.prompt.ObjectText, b.prompt.Enabled = b.player.DisplayName, true
+	b.prompt:SetAttribute("ViewUser", b.player.UserId)
+	if keys == b.keys then
+		return -- the same three needles: leave them be
+	end
+	b.keys = keys
+	clearModels(b.models)
+	for slot, entry in ipairs(list) do
+		if slot > 3 then
+			break
+		end
+		local m = NeedleLook.build(entry.type, entry.skin, 1.35, 2)
+		m:PivotTo(b.face * CFrame.new((slot - 2) * 3.1, 4.4, -1) * CFrame.Angles(0, math.pi / 2, math.rad(50)))
+		m.Parent = ctx.model
+		table.insert(b.models, m)
+	end
+end
+
+local function buildChampion()
+	local base = MapKit.at(ctx, 0, 0, 48)
+	MapKit.part(ctx, { Name = "ChampionPodium", Shape = "Cylinder", Size = Vector3.new(6, 8, 8), CFrame = CFrame.new(base + Vector3.new(0, 3, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color = { 236, 230, 214 }, Material = "Marble" })
+	MapKit.part(ctx, { Name = "ChampionRim", Shape = "Cylinder", Size = Vector3.new(0.4, 8.5, 8.5), CFrame = CFrame.new(base + Vector3.new(0, 5.9, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color = { 255, 200, 70 }, Material = "Metal" })
+	local anchor = MapKit.part(ctx, { Name = "ChampionLabel", Size = Vector3.new(1, 1, 1), CFrame = CFrame.new(base + Vector3.new(0, 13.5, 0)), Transparency = 1, CanCollide = false })
+	local gui = Instance.new("BillboardGui")
+	gui.Size, gui.MaxDistance = UDim2.fromOffset(420, 120), 140
+	gui.Parent = anchor
+	local lines = {}
+	for i, size in ipairs({ 36, 30, 26 }) do
+		lines[i] = text(gui, { Size = UDim2.new(1, 0, 0, size), Position = UDim2.fromOffset(0, (i - 1) * 38), TextStrokeTransparency = 0.3 })
+	end
+	lines[1].Text, lines[1].TextColor3 = "MOST VALUABLE NEEDLE HERE", Color3.fromRGB(255, 205, 70)
+	local light = Instance.new("PointLight")
+	light.Range, light.Brightness = 16, 1.5
+	light.Parent = anchor
+	return base + Vector3.new(0, 9.5, 0), lines, light
+end
+
+local function refresh(top, lines, light, state)
+	local key = top and (top.player.UserId .. top.entry.key)
+	if key ~= state.key then
+		if state.model then
+			state.model:Destroy()
+			state.model = nil
+		end
+		state.key = key
+		if top then
+			state.model = NeedleLook.build(top.entry.type, top.entry.skin, 3, 2)
+			state.model.Parent = ctx.model
+		end
+	end
+	if top then
+		local words, colour = LobbySocial.describe(top.entry)
+		lines[2].Text, lines[2].TextColor3 = words, colour
+		lines[3].Text = "owned by " .. top.player.DisplayName .. "  ·  worth " .. Rules.commas(top.entry.value)
+		light.Color = colour
+	else
+		lines[2].Text, lines[3].Text = "Nobody's found one yet", "Win a round and it could be yours"
+	end
+end
+
+function LobbySocial.build(lobbyCtx, textFn)
+	ctx, text = lobbyCtx, textFn
+	local i = 0
+	for _, x in ipairs({ -66, 66 }) do
+		for _, z in ipairs({ -50, -30, -10, 10, 30, 50 }) do
+			i += 1
+			buildBooth(i, x, z)
+		end
+	end
+	local top, lines, light = buildChampion()
+	local state = { key = nil, model = nil }
+	local function assign(player)
+		for _, b in ipairs(booths) do
+			if b.player == player then
+				return
+			end
+		end
+		for _, b in ipairs(booths) do
+			if not b.player then
+				b.player = player
+				return
+			end
+		end
+	end
+	DataManager.onLoaded(assign)
+	Players.PlayerRemoving:Connect(function(player)
+		for _, b in ipairs(booths) do
+			if b.player == player then
+				b.player = nil
+				fillBooth(b)
+			end
+		end
+	end)
+	Remotes.LobbyInfo.OnServerInvoke = function(_player, action)
+		if action == "best" then
+			local best = LobbySocial.best()
+			if best then
+				local words = LobbySocial.describe(best.entry)
+				return { name = best.player.DisplayName, userId = best.player.UserId, needle = words, type = best.entry.type, skin = best.entry.skin, value = best.entry.value }
+			end
+		end
+		return nil
+	end
+	task.spawn(function() -- every 3 seconds: booths, tags and the champion
+		local spin = 0
+		while true do
+			local best = LobbySocial.best()
+			refresh(best, lines, light, state)
+			local phase = ReplicatedStorage:GetAttribute("Phase")
+			local tagsOn = phase ~= "search" and phase ~= "countdown"
+			for _, b in ipairs(booths) do
+				fillBooth(b)
+			end
+			for _, p in ipairs(Players:GetPlayers()) do
+				local d = DataManager.get(p)
+				if d then
+					tag(p, d, best ~= nil and best.player == p, tagsOn)
+				end
+			end
+			for _ = 1, 30 do -- turn the champion's needle
+				spin += 0.03
+				if state.model then
+					state.model:PivotTo(CFrame.new(top + Vector3.new(0, math.sin(spin * 2) * 0.4, 0)) * CFrame.Angles(0, spin, math.rad(25)))
+				end
+				task.wait(0.1)
+			end
+		end
+	end)
+end
+
+return LobbySocial
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="Script" referent="RBX0001E">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Starts A Needle in a Haystack on the server. Systems that react to a player's save loading are
@@ -1632,6 +2001,7 @@ local AntiCheat = require(script.Parent.AntiCheat)
 local Requests = require(script.Parent.Requests)
 local CollectionManager = require(script.Parent.CollectionManager)
 local NeedleModel = require(script.Parent.NeedleModel)
+local LobbyShowOff = require(script.Parent.LobbyShowOff)
 local RoundManager = require(script.Parent.RoundManager)
 
 -- While testing in Studio, server errors also show on screen.
@@ -1651,6 +2021,7 @@ for _, step in ipairs({
 	{ "Leaderboards", LeaderboardManager.init },
 	{ "Requests", Requests.init },
 	{ "Collection", CollectionManager.init },
+	{ "ShowOff", LobbyShowOff.init },
 	{ "Data", DataManager.init },
 	{ "Rounds", RoundManager.start },
 }) do
@@ -1662,7 +2033,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001B">
+			<Item class="ModuleScript" referent="RBX0001F">
 				<Properties>
 					<string name="Name">MapKit</string>
 					<ProtectedString name="Source"><![CDATA[-- The building kit for maps (server/MapsA, MapsB): ground, hay bales, haystacks, crates, fences,
@@ -1730,12 +2101,14 @@ function MapKit.ground(ctx, sx, sz, colour, material)
 end
 
 -- The edge of an outdoor map: countryside running off to the horizon (so the map never ends in
--- mid-air) and invisible walls round the play area, half sizes halfX, halfZ, so nobody walks or
--- jumps off it. The walls can't be clicked through to (they ignore clicks and raycasts).
+-- mid-air), a tall hedge you can see all the way round the play area (half sizes halfX, halfZ),
+-- and invisible walls on top of it up to 200 studs, so nobody walks, jumps or flies off. Neither
+-- can be clicked through to (they ignore clicks and raycasts).
 function MapKit.edges(ctx, halfX, halfZ, colour)
 	MapKit.part(ctx, { Name = "Countryside", Size = Vector3.new(900, 2, 900), CFrame = CFrame.new(MapKit.at(ctx, 0, -1.1, 0)), Color = colour, Material = "Grass", CanQuery = false })
-	for _, w in ipairs({ { 0, -halfZ, halfX * 2, 1 }, { 0, halfZ, halfX * 2, 1 }, { -halfX, 0, 1, halfZ * 2 }, { halfX, 0, 1, halfZ * 2 } }) do
-		MapKit.part(ctx, { Name = "Edge", Size = Vector3.new(w[3], 60, w[4]), CFrame = CFrame.new(MapKit.at(ctx, w[1], 30, w[2])), Transparency = 1, CanQuery = false, CastShadow = false })
+	for _, w in ipairs({ { 0, -halfZ, halfX * 2 + 3, 3 }, { 0, halfZ, halfX * 2 + 3, 3 }, { -halfX, 0, 3, halfZ * 2 + 3 }, { halfX, 0, 3, halfZ * 2 + 3 } }) do
+		MapKit.part(ctx, { Name = "Hedge", Size = Vector3.new(w[3], 9, w[4]), CFrame = CFrame.new(MapKit.at(ctx, w[1], 4.5, w[2])), Color = { 52, 104, 52 }, Material = "LeafyGrass", CanQuery = false })
+		MapKit.part(ctx, { Name = "Edge", Size = Vector3.new(w[3], 200, w[4]), CFrame = CFrame.new(MapKit.at(ctx, w[1], 109, w[2])), Transparency = 1, CanQuery = false, CastShadow = false })
 	end
 end
 
@@ -1851,7 +2224,7 @@ return MapKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001C">
+			<Item class="ModuleScript" referent="RBX00020">
 				<Properties>
 					<string name="Name">MapsA</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Classic Haystack Field, Barn Interior and Farm at Sunset (shared/Maps holds their
@@ -1993,7 +2366,7 @@ return MapsA
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001D">
+			<Item class="ModuleScript" referent="RBX00021">
 				<Properties>
 					<string name="Name">MapsB</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Night Forest and Abandoned Attic (see MapsA for how a builder works).
@@ -2103,7 +2476,7 @@ return MapsB
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001E">
+			<Item class="ModuleScript" referent="RBX00022">
 				<Properties>
 					<string name="Name">NeedleModel</string>
 					<ProtectedString name="Source"><![CDATA[-- The owner's own needle model (Config.NeedleModel.asset): a model imported into Studio with its
@@ -2176,7 +2549,7 @@ return NeedleModel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001F">
+			<Item class="ModuleScript" referent="RBX00023">
 				<Properties>
 					<string name="Name">NeedleSpawner</string>
 					<ProtectedString name="Source"><![CDATA[-- Hides the needle(s) each round and decides, on the server, who found them.
@@ -2188,6 +2561,7 @@ return NeedleModel
 -- RoundManager's canClaim(player) agrees, the character is within reach, the player isn't
 -- clicking too fast or locked out by a decoy, and AntiCheat hasn't flagged them.
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -2279,8 +2653,8 @@ local function build(pos, diff, round, ctx, decoy)
 	model.Name = if decoy then "Decoy" else "Needle"
 	local shaft = nil
 	if not own then
-		shaft = MapKit.part(ctx, { Name = "Shaft", Shape = "Cylinder", Size = Vector3.new(length, 0.09, 0.09), CFrame = base, Color = colour, Material = material, CanCollide = false, Parent = model })
-		MapKit.part(ctx, { Name = "Eye", Size = Vector3.new(0.2, 0.05, 0.14), CFrame = base * CFrame.new(-length / 2 + 0.1, 0, 0), Color = colour:Lerp(Color3.new(0, 0, 0), 0.25), Material = material, CanCollide = false, Parent = model })
+		shaft = MapKit.part(ctx, { Name = "Shaft", Shape = "Cylinder", Size = Vector3.new(length, Config.Find.thickness, Config.Find.thickness), CFrame = base, Color = colour, Material = material, CanCollide = false, Parent = model })
+		MapKit.part(ctx, { Name = "Eye", Size = Vector3.new(0.35, Config.Find.thickness * 0.6, Config.Find.thickness * 1.6), CFrame = base * CFrame.new(-length / 2 + 0.17, 0, 0), Color = colour:Lerp(Color3.new(0, 0, 0), 0.25), Material = material, CanCollide = false, Parent = model })
 	end
 	local hitbox = MapKit.part(ctx, { Name = "Hitbox", Size = Vector3.new(length + 0.5, Config.Find.hitbox, Config.Find.hitbox), CFrame = base, Transparency = 0.99, CanCollide = false, Parent = model })
 	local detector = Instance.new("ClickDetector")
@@ -2294,6 +2668,12 @@ local function build(pos, diff, round, ctx, decoy)
 		e.Parent = shaft or hitbox
 	end
 	model.Parent = folder
+	if not decoy and RunService:IsStudio() and Config.Testing.revealNeedle then -- testing only
+		local h = Instance.new("Highlight")
+		h.DepthMode, h.FillColor, h.OutlineColor = Enum.HighlightDepthMode.AlwaysOnTop, Color3.fromRGB(255, 60, 60), Color3.new(1, 1, 1)
+		h.Parent = model
+		print("[Testing] needle hidden at " .. tostring(hitbox.Position))
+	end
 	local record = { model = model, position = hitbox.Position, golden = round.golden and not decoy, index = #needles + 1 }
 	detector.MouseClick:Connect(function(player)
 		claim(player, record, decoy)
@@ -2382,7 +2762,7 @@ return NeedleSpawner
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00020">
+			<Item class="ModuleScript" referent="RBX00024">
 				<Properties>
 					<string name="Name">QuestManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Daily quests: three a day, the same for everyone (shared/Quests.forDay). Progress is saved;
@@ -2450,7 +2830,7 @@ return QuestManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00021">
+			<Item class="ModuleScript" referent="RBX00025">
 				<Properties>
 					<string name="Name">Requests</string>
 					<ProtectedString name="Source"><![CDATA[-- Small requests from players, checked on the server: a hint (Remotes.Hint) and saving their
@@ -2510,7 +2890,7 @@ return Requests
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00022">
+			<Item class="ModuleScript" referent="RBX00026">
 				<Properties>
 					<string name="Name">RewardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Every coin and XP point is given here, on the server: needle finds (faster = more), places,
@@ -2631,7 +3011,7 @@ return RewardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00023">
+			<Item class="ModuleScript" referent="RBX00027">
 				<Properties>
 					<string name="Name">RoundManager</string>
 					<ProtectedString name="Source"><![CDATA[-- The round loop, all on the server:
@@ -2742,6 +3122,7 @@ local function onClaim(player, n)
 			count += 1
 		end
 	end
+	player:SetAttribute("Found", count)
 	if count < #r.needles then
 		Remotes.Notify:FireClient(player, { text = "One down! " .. (#r.needles - count) .. " to go.", tone = "good" })
 		return
@@ -2814,6 +3195,7 @@ local function playRound()
 	round = { participants = {}, finished = {}, foundBy = {}, order = {}, rewards = {}, needles = needles, diff = diff, golden = golden, duration = duration, count = #list, spawns = ctx.spawns }
 	for i, p in ipairs(list) do
 		round.participants[p] = true
+		p:SetAttribute("Found", 0)
 		move(p, ctx.spawns[(i - 1) % #ctx.spawns + 1])
 		freeze(p, true)
 	end
@@ -2912,7 +3294,7 @@ return RoundManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00024">
+			<Item class="ModuleScript" referent="RBX00028">
 				<Properties>
 					<string name="Name">ShopManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Cosmetics and purchases. With Haystack Coins: buy a cosmetic (Remotes.Shop "buy"), and wear
@@ -3111,24 +3493,24 @@ return ShopManager
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerStorage" referent="RBX00025">
+	<Item class="ServerStorage" referent="RBX00029">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX00026">
+	<Item class="StarterPlayer" referent="RBX0002A">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX00027">
+		<Item class="StarterPlayerScripts" referent="RBX0002B">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX00028">
+			<Item class="Folder" referent="RBX0002C">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX00029">
+				<Item class="ModuleScript" referent="RBX0002D">
 					<Properties>
 						<string name="Name">Effects</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback you can see and hear, on your own screen only: sounds, a burst of particles where a
@@ -3209,7 +3591,7 @@ return Effects
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002A">
+				<Item class="ModuleScript" referent="RBX0002E">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: your coins and level (with an XP bar) at the top left; the round's
@@ -3320,7 +3702,8 @@ function Hud.mount(gui, open)
 				info.Text = (ReplicatedStorage:GetAttribute("Difficulty") or "") .. (if mods ~= "" then "  ·  " .. mods else "") .. (if golden then "  ·  ✦ GOLDEN NEEDLE ✦" else "")
 			elseif phase == "search" then
 				local count = ReplicatedStorage:GetAttribute("NeedleCount") or 1
-				headline.Text = if count > 1 then "Find both needles!" else "Find the needle!"
+				local found = player:GetAttribute("Found") or 0
+				headline.Text = (if count > 1 then "Find both needles!" else "Find the needle!") .. "  " .. found .. "/" .. count
 				timer.Text = Rules.clock(left)
 				timer.TextColor3 = if left < 15 then UiKit.colors.red else UiKit.colors.gold
 				info.Text = (ReplicatedStorage:GetAttribute("MapName") or "") .. "  ·  " .. (ReplicatedStorage:GetAttribute("Difficulty") or "") .. (if mods ~= "" then "  ·  " .. mods else "") .. (if golden then "  ·  ✦ GOLDEN ✦" else "")
@@ -3344,7 +3727,129 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX0002B">
+				<Item class="ModuleScript" referent="RBX0002F">
+					<Properties>
+						<string name="Name">LobbyUi</string>
+						<ProtectedString name="Source"><![CDATA[-- The lobby and finding, on your screen:
+--   Hover: when your mouse is over a needle (or a decoy) within reach, it lights up with a white
+--     outline and "Click to grab!" follows the cursor, so you know you've found it.
+--   Found: the needle you found vanishes from your screen (it's in your Collection now; others
+--     still see theirs).
+--   Join banner: a few seconds after you arrive, who in this lobby has the most valuable needle,
+--     shown in 3D.
+--   Show off: a button in the lobby that holds your showcase needle up for everyone to see.
+--   Booths: a booth's "View collection" prompt opens that player's Collection.
+local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Rules = require(Shared:WaitForChild("Rules"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local UiKit = require(script.Parent.UiKit)
+local NeedleView = require(script.Parent.NeedleView)
+local Effects = require(script.Parent.Effects)
+
+local player = Players.LocalPlayer
+local LobbyUi = {}
+
+local function hover(gui)
+	local mouse = player:GetMouse()
+	local glow = Instance.new("Highlight")
+	glow.FillColor, glow.FillTransparency, glow.OutlineColor = Color3.new(1, 1, 1), 0.5, Color3.new(1, 1, 1)
+	glow.DepthMode, glow.Enabled = Enum.HighlightDepthMode.Occluded, false
+	glow.Parent = gui
+	local hint = UiKit.label({ Font = UiKit.bold, Text = "Click to grab!", Size = UDim2.fromOffset(170, 30), TextColor3 = UiKit.colors.gold, TextStrokeTransparency = 0.3, Visible = false, ZIndex = 40, Parent = gui }, 24)
+	RunService.RenderStepped:Connect(function()
+		local target = mouse.Target
+		local model = target and target.Name == "Hitbox" and target.Parent
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		local near = model and root and (target.Position - root.Position).Magnitude <= Config.Find.reach
+		if near and (model.Name == "Needle" or model.Name == "Decoy") and ReplicatedStorage:GetAttribute("Phase") == "search" then
+			glow.Adornee, glow.Enabled = model, true
+			hint.Visible = true
+			hint.Position = UDim2.fromOffset(mouse.X + 18, mouse.Y + 8)
+		else
+			glow.Enabled, hint.Visible = false, false
+		end
+	end)
+end
+
+-- The needle at `position` disappears from your screen once you've found it.
+local function hideFound(position)
+	local arena = workspace:FindFirstChild("Arena")
+	local folder = arena and arena:FindFirstChild("Needles")
+	for _, model in ipairs(folder and folder:GetChildren() or {}) do
+		local hitbox = model:FindFirstChild("Hitbox")
+		if hitbox and (hitbox.Position - position).Magnitude < 1 then
+			for _, part in ipairs(model:GetDescendants()) do
+				if part:IsA("BasePart") then
+					part.LocalTransparencyModifier = 1
+					part.Transparency = 1
+				elseif part:IsA("ParticleEmitter") then
+					part.Enabled = false
+				end
+			end
+		end
+	end
+end
+
+local function joinBanner(gui)
+	task.wait(4) -- once you've had a moment to look round
+	local best = Remotes.LobbyInfo:InvokeServer("best")
+	local card = UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 132), Size = UDim2.fromOffset(520, 150), BackgroundColor3 = UiKit.colors.panel, BackgroundTransparency = 0.05, ZIndex = 20, Parent = gui }, { UiKit.corner(16), UiKit.stroke(UiKit.colors.gold, 2) })
+	UiKit.autoScale(card)
+	if best then
+		NeedleView.make(card, best.type, best.skin, { Size = UDim2.fromOffset(170, 130), Position = UDim2.fromOffset(10, 10), ZIndex = 21 }, true)
+		UiKit.label({ Font = UiKit.bold, Text = "MOST VALUABLE NEEDLE IN THIS LOBBY", Size = UDim2.new(1, -200, 0, 24), Position = UDim2.fromOffset(186, 16), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UiKit.colors.gold, ZIndex = 21, Parent = card }, 20)
+		UiKit.label({ Font = UiKit.bold, Text = best.needle, Size = UDim2.new(1, -200, 0, 50), Position = UDim2.fromOffset(186, 44), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 21, Parent = card }, 22)
+		UiKit.label({ Text = (if best.userId == player.UserId then "That's yours!" else "owned by " .. best.name) .. "  ·  worth " .. Rules.commas(best.value), Size = UDim2.new(1, -200, 0, 22), Position = UDim2.fromOffset(186, 100), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UiKit.colors.soft, ZIndex = 21, Parent = card }, 18)
+	else
+		UiKit.label({ Font = UiKit.bold, Text = "Nobody here has found a needle yet. Win a round and the Champion's Needle podium is yours!", Size = UDim2.new(1, -40, 1, -30), Position = UDim2.fromOffset(20, 15), ZIndex = 21, Parent = card }, 22)
+	end
+	UiKit.pop(card, 0.6)
+	Effects.sound("whoosh")
+	task.wait(8)
+	UiKit.ease(card, 0.4, { BackgroundTransparency = 1 })
+	task.wait(0.4)
+	card:Destroy()
+end
+
+function LobbyUi.start(gui, openCollection)
+	hover(gui)
+	Remotes.Found.OnClientEvent:Connect(function(m)
+		if m.userId == player.UserId then
+			hideFound(m.position)
+		end
+	end)
+	task.spawn(joinBanner, gui)
+	local show = UiKit.button("Show off!", Color3.fromRGB(230, 120, 170), { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -20), Size = UDim2.fromOffset(170, 54), Parent = gui })
+	UiKit.autoScale(show)
+	show.Activated:Connect(function()
+		Remotes.ShowOff:FireServer()
+	end)
+	task.spawn(function()
+		while true do
+			local phase = ReplicatedStorage:GetAttribute("Phase")
+			show.Visible = phase ~= "search" and phase ~= "countdown"
+			task.wait(0.5)
+		end
+	end)
+	ProximityPromptService.PromptTriggered:Connect(function(prompt)
+		local userId = prompt:GetAttribute("ViewUser")
+		if userId then
+			openCollection(userId)
+		end
+	end)
+end
+
+return LobbyUi
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="LocalScript" referent="RBX00030">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- Starts the client: the whole UI (UIController). The client only shows things and asks the
@@ -3354,7 +3859,7 @@ UIController.start()
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002C">
+				<Item class="ModuleScript" referent="RBX00031">
 					<Properties>
 						<string name="Name">NeedleView</string>
 						<ProtectedString name="Source"><![CDATA[-- A needle in 3D inside the UI: a ViewportFrame with the needle (shared/NeedleLook) lit and
@@ -3401,7 +3906,7 @@ return NeedleView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002D">
+				<Item class="ModuleScript" referent="RBX00032">
 					<Properties>
 						<string name="Name">Results</string>
 						<ProtectedString name="Source"><![CDATA[-- The round's big moments on screen: the 3, 2, 1 before searching; NEEDLE FOUND! when you find it
@@ -3532,7 +4037,7 @@ return Results
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002E">
+				<Item class="ModuleScript" referent="RBX00033">
 					<Properties>
 						<string name="Name">Screens</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop and Inventory screens. The Shop sells cosmetics for Haystack Coins (needle skins,
@@ -3702,7 +4207,7 @@ return Screens
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002F">
+				<Item class="ModuleScript" referent="RBX00034">
 					<Properties>
 						<string name="Name">Screens2</string>
 						<ProtectedString name="Source"><![CDATA[-- The Quests, Leaderboard and Settings screens.
@@ -3836,7 +4341,7 @@ return Screens2
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00030">
+				<Item class="ModuleScript" referent="RBX00035">
 					<Properties>
 						<string name="Name">Screens3</string>
 						<ProtectedString name="Source"><![CDATA[-- The Collection screen: every needle you've found, by type, shown in 3D with its rarity, value
@@ -3955,6 +4460,11 @@ function Screens3.refresh()
 	end
 end
 
+-- Opens on a given player's collection next time it refreshes (nil = yours).
+function Screens3.view(userId)
+	viewing = if userId == player.UserId then nil else userId
+end
+
 function Screens3.mount(gui)
 	win, body = UiKit.window(gui, "Collection", 760, 560)
 	return { Collection = win }, { Collection = Screens3.refresh }
@@ -3964,7 +4474,7 @@ return Screens3
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00031">
+				<Item class="ModuleScript" referent="RBX00036">
 					<Properties>
 						<string name="Name">UIController</string>
 						<ProtectedString name="Source"><![CDATA[-- Puts the whole UI together: one ScreenGui with the HUD, the round moments (Results), and the
@@ -3985,6 +4495,7 @@ local Results = require(script.Parent.Results)
 local Screens = require(script.Parent.Screens)
 local Screens2 = require(script.Parent.Screens2)
 local Screens3 = require(script.Parent.Screens3)
+local LobbyUi = require(script.Parent.LobbyUi)
 
 local player = Players.LocalPlayer
 local UIController = {}
@@ -4049,6 +4560,14 @@ function UIController.start()
 	for name, fn in pairs(colOpen) do
 		openers[name] = fn
 	end
+	LobbyUi.start(gui, function(userId) -- a booth's prompt: that player's collection
+		Screens3.view(userId)
+		if windows.Collection.Visible then
+			Screens3.refresh()
+		else
+			UIController.open("Collection")
+		end
+	end)
 	Remotes.Profile.OnClientEvent:Connect(function(p)
 		profile = p
 		applySettings()
@@ -4073,7 +4592,7 @@ return UIController
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00032">
+				<Item class="ModuleScript" referent="RBX00037">
 					<Properties>
 						<string name="Name">UiKit</string>
 						<ProtectedString name="Source"><![CDATA[-- The UI's look in one place: a clean, modern dark-glass style with warm gold accents, big
@@ -4210,7 +4729,7 @@ return UiKit
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX00033">
+	<Item class="Workspace" referent="RBX00038">
 		<Properties>
 			<string name="Name">Workspace</string>
 		</Properties>

@@ -34,6 +34,12 @@
         },
         "Collection": {
           "$className": "RemoteFunction"
+        },
+        "ShowOff": {
+          "$className": "RemoteEvent"
+        },
+        "LobbyInfo": {
+          "$className": "RemoteFunction"
         }
       }
     },

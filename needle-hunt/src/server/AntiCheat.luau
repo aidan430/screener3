@@ -30,6 +30,13 @@ local function check(player)
 		last[player] = nil
 		return
 	end
+	if root.Position.Y < Config.AntiCheat.fallY then -- fell off a map: back you come
+		local h = player.Character:FindFirstChildOfClass("Humanoid")
+		if h and h.Health > 0 then
+			h.Health = 0
+		end
+		return
+	end
 	local now = os.clock()
 	local prev = last[player]
 	if (allowedUntil[player] or 0) > now or not prev then

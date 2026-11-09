@@ -18,9 +18,9 @@ Config.Round = {
 -- (easy only); clutter = loose straws scattered round the map; decoys = fake needles; dim =
 -- how much darker the light is; moving = tumbling hay bundles that drift about.
 Config.Difficulty = {
-	{ id = "easy", name = "Easy", weight = 30, needle = 2.2, glint = true, clutter = 160, decoys = 0, dim = 0, moving = 0, coins = 1.0 },
-	{ id = "normal", name = "Normal", weight = 50, needle = 1.5, glint = false, clutter = 260, decoys = 0, dim = 0, moving = 0, coins = 1.25 },
-	{ id = "hard", name = "Hard", weight = 20, needle = 1.1, glint = false, clutter = 380, decoys = 4, dim = 0.35, moving = 4, coins = 1.6 },
+	{ id = "easy", name = "Easy", weight = 30, needle = 3.6, glint = true, clutter = 160, decoys = 0, dim = 0, moving = 0, coins = 1.0 },
+	{ id = "normal", name = "Normal", weight = 50, needle = 2.8, glint = false, clutter = 260, decoys = 0, dim = 0, moving = 0, coins = 1.25 },
+	{ id = "hard", name = "Hard", weight = 20, needle = 2.0, glint = false, clutter = 380, decoys = 4, dim = 0.35, moving = 4, coins = 1.6 },
 }
 
 -- Modifiers: a round gets one with this chance (then by weight). The Golden Needle is a
@@ -48,7 +48,8 @@ Config.NeedleModel = { asset = 0 }
 -- Finding (server/NeedleSpawner). Studs and seconds.
 Config.Find = {
 	reach = 14, -- how close your character must be to claim the needle (clicks and taps)
-	hitbox = 0.9, -- the invisible box round the needle you click or tap (the same on every device)
+	hitbox = 1.6, -- the invisible box round the needle you click or tap (the same on every device)
+	thickness = 0.2, -- how thick the needle's shaft is (studs): thick enough to spot, thin enough to hide
 	decoyLockout = 3, -- clicking a decoy: no claims for this long
 	clicksPerSecond = 6, -- more than this and the extra clicks are ignored
 	jitter = 0.6, -- the needle moves this far from its hiding spot, so spots can't be memorised
@@ -56,10 +57,15 @@ Config.Find = {
 }
 
 -- Anti-exploit (server/AntiCheat).
+-- Testing (Roblox Studio only, never in a live game): revealNeedle = true outlines the hidden
+-- needle through walls and prints where it is, so you can test finding it.
+Config.Testing = { revealNeedle = false }
+
 Config.AntiCheat = {
 	checkEvery = 0.5, -- seconds between movement checks
 	maxSpeed = 70, -- studs a second a character may move (walking, jumping, falling) outside a teleport
 	strikesToKick = 0, -- 0 = never kick; just put them back where they were
+	fallY = -40, -- below this height (a fall off a map) a character respawns
 }
 
 -- Rewards (server/RewardManager). Coins and XP.

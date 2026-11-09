@@ -114,6 +114,11 @@ function Screens3.refresh()
 	end
 end
 
+-- Opens on a given player's collection next time it refreshes (nil = yours).
+function Screens3.view(userId)
+	viewing = if userId == player.UserId then nil else userId
+end
+
 function Screens3.mount(gui)
 	win, body = UiKit.window(gui, "Collection", 760, 560)
 	return { Collection = win }, { Collection = Screens3.refresh }

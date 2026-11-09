@@ -7,6 +7,7 @@
 -- RoundManager's canClaim(player) agrees, the character is within reach, the player isn't
 -- clicking too fast or locked out by a decoy, and AntiCheat hasn't flagged them.
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -98,8 +99,8 @@ local function build(pos, diff, round, ctx, decoy)
 	model.Name = if decoy then "Decoy" else "Needle"
 	local shaft = nil
 	if not own then
-		shaft = MapKit.part(ctx, { Name = "Shaft", Shape = "Cylinder", Size = Vector3.new(length, 0.09, 0.09), CFrame = base, Color = colour, Material = material, CanCollide = false, Parent = model })
-		MapKit.part(ctx, { Name = "Eye", Size = Vector3.new(0.2, 0.05, 0.14), CFrame = base * CFrame.new(-length / 2 + 0.1, 0, 0), Color = colour:Lerp(Color3.new(0, 0, 0), 0.25), Material = material, CanCollide = false, Parent = model })
+		shaft = MapKit.part(ctx, { Name = "Shaft", Shape = "Cylinder", Size = Vector3.new(length, Config.Find.thickness, Config.Find.thickness), CFrame = base, Color = colour, Material = material, CanCollide = false, Parent = model })
+		MapKit.part(ctx, { Name = "Eye", Size = Vector3.new(0.35, Config.Find.thickness * 0.6, Config.Find.thickness * 1.6), CFrame = base * CFrame.new(-length / 2 + 0.17, 0, 0), Color = colour:Lerp(Color3.new(0, 0, 0), 0.25), Material = material, CanCollide = false, Parent = model })
 	end
 	local hitbox = MapKit.part(ctx, { Name = "Hitbox", Size = Vector3.new(length + 0.5, Config.Find.hitbox, Config.Find.hitbox), CFrame = base, Transparency = 0.99, CanCollide = false, Parent = model })
 	local detector = Instance.new("ClickDetector")
@@ -113,6 +114,12 @@ local function build(pos, diff, round, ctx, decoy)
 		e.Parent = shaft or hitbox
 	end
 	model.Parent = folder
+	if not decoy and RunService:IsStudio() and Config.Testing.revealNeedle then -- testing only
+		local h = Instance.new("Highlight")
+		h.DepthMode, h.FillColor, h.OutlineColor = Enum.HighlightDepthMode.AlwaysOnTop, Color3.fromRGB(255, 60, 60), Color3.new(1, 1, 1)
+		h.Parent = model
+		print("[Testing] needle hidden at " .. tostring(hitbox.Position))
+	end
 	local record = { model = model, position = hitbox.Position, golden = round.golden and not decoy, index = #needles + 1 }
 	detector.MouseClick:Connect(function(player)
 		claim(player, record, decoy)

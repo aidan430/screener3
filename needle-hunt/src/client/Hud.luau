@@ -106,7 +106,8 @@ function Hud.mount(gui, open)
 				info.Text = (ReplicatedStorage:GetAttribute("Difficulty") or "") .. (if mods ~= "" then "  ·  " .. mods else "") .. (if golden then "  ·  ✦ GOLDEN NEEDLE ✦" else "")
 			elseif phase == "search" then
 				local count = ReplicatedStorage:GetAttribute("NeedleCount") or 1
-				headline.Text = if count > 1 then "Find both needles!" else "Find the needle!"
+				local found = player:GetAttribute("Found") or 0
+				headline.Text = (if count > 1 then "Find both needles!" else "Find the needle!") .. "  " .. found .. "/" .. count
 				timer.Text = Rules.clock(left)
 				timer.TextColor3 = if left < 15 then UiKit.colors.red else UiKit.colors.gold
 				info.Text = (ReplicatedStorage:GetAttribute("MapName") or "") .. "  ·  " .. (ReplicatedStorage:GetAttribute("Difficulty") or "") .. (if mods ~= "" then "  ·  " .. mods else "") .. (if golden then "  ·  ✦ GOLDEN ✦" else "")

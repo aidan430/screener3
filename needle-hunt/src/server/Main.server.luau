@@ -14,6 +14,7 @@ local AntiCheat = require(script.Parent.AntiCheat)
 local Requests = require(script.Parent.Requests)
 local CollectionManager = require(script.Parent.CollectionManager)
 local NeedleModel = require(script.Parent.NeedleModel)
+local LobbyShowOff = require(script.Parent.LobbyShowOff)
 local RoundManager = require(script.Parent.RoundManager)
 
 -- While testing in Studio, server errors also show on screen.
@@ -33,6 +34,7 @@ for _, step in ipairs({
 	{ "Leaderboards", LeaderboardManager.init },
 	{ "Requests", Requests.init },
 	{ "Collection", CollectionManager.init },
+	{ "ShowOff", LobbyShowOff.init },
 	{ "Data", DataManager.init },
 	{ "Rounds", RoundManager.start },
 }) do
