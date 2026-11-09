@@ -713,3 +713,7 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   tipped points, four coloured gems, a golden shimmer and a soft light; the Starlight Halo is a
   16-piece glowing ring that twinkles, glows and turns slowly (Config.HaloSpin, client/WorldFx
   turns its CosmeticSpin weld on every screen).
+- Testing switches (ConfigCosmetics: Config.Testing = { fastHours = 0, unlockAll = false }) work
+  only in Roblox Studio (RunService:IsStudio()). fastHours = 10 makes one hour of play take 10
+  seconds (the 24-hour reward after 4 minutes); unlockAll gives every cosmetic on joining. A test
+  keeps both off in the repository. Play time now ticks every 10 seconds.

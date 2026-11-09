@@ -146,6 +146,7 @@ class Milestones(unittest.TestCase):
         self.assertIn("spins = 5", day)
         self.assertIn("powerups = true", day)
         self.assertIn('stat = "hours"', day, "24 hours in total, never one sitting")
+        self.assertIn("Config.Testing = { fastHours = 0, unlockAll = false }", text, "testing switches stay off in the shipped game")
 
 
 class Wheel(unittest.TestCase):

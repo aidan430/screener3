@@ -1,8 +1,12 @@
--- Time played and days in a row, for the milestone achievements (ConfigCosmetics). Every minute
+-- Time played and days in a row, for the milestone achievements (ConfigCosmetics). Every 10 seconds
 -- a player is in the game adds to stats.play_seconds; the first visit of each day (UTC) counts a
 -- day played and carries the streak on (yesterday too) or starts it again. Totals, never one long
 -- sitting: nothing rewards playing without a break.
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 
 local PlayerData = require(script.Parent.PlayerData)
 local Achievements = require(script.Parent.Achievements)
@@ -27,15 +31,28 @@ local function visit(player)
 	Achievements.check(player)
 end
 
+-- Testing switch (Studio only): own every cosmetic straight away.
+local function testUnlock(player)
+	if RunService:IsStudio() and Config.Testing.unlockAll then
+		PlayerData.update(player, function(data)
+			for _, c in ipairs(Config.Cosmetics) do
+				data.cosmetics[c.id] = true
+			end
+		end)
+		warn("[Testing] Config.Testing.unlockAll is on: every cosmetic unlocked (Studio only)")
+	end
+end
+
 function Playtime.init()
 	PlayerData.onLoaded(visit)
+	PlayerData.onLoaded(testUnlock)
 	task.spawn(function()
 		while true do
-			task.wait(60)
+			task.wait(10)
 			for _, player in ipairs(Players:GetPlayers()) do
 				if PlayerData.get(player) then
 					PlayerData.update(player, function(data)
-						data.stats.play_seconds = (data.stats.play_seconds or 0) + 60
+						data.stats.play_seconds = (data.stats.play_seconds or 0) + 10
 					end)
 					visit(player) -- past midnight while playing
 					Achievements.check(player)

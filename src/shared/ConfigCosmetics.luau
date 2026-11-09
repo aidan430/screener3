@@ -59,6 +59,11 @@ Config.Achievements = {
 	{ id = "lucky100", open = true, name = "Four-Leaf Clover", text = "Make 100 lucky finds.", stat = "lucky_finds", goal = 100, spins = 2 },
 	{ id = "sold1m", open = true, name = "Market Favourite", text = "Sell 1,000,000 straws.", stat = "straws_sold", goal = 1000000, coins = 250000 },
 }
+-- Testing switches. They only work in Roblox Studio (never in the published game), so leaving
+-- one on by mistake can't give real players anything. fastHours: one "hour" of play time takes
+-- this many seconds (10 = the 24-hour reward after 4 minutes); 0 = off. unlockAll: you own every
+-- cosmetic as soon as you join, to try them on in the Wardrobe.
+Config.Testing = { fastHours = 0, unlockAll = false }
 Config.HatScale = 1.35 -- hats a little bigger than life, so they read from across the farm
 Config.HaloSpin = 0.8 -- radians a second the Starlight Halo turns
 Config.LegendBoostHours = 24 -- "every power-up": each timed boost (2x Speed, 2x Coins, Lucky Charm) lasts this long

@@ -1,6 +1,7 @@
 -- The secret achievements, hidden until earned. Each watches one number; any ten open the Golden Loft.
 -- Optional Roblox badges: put badge IDs into Config.BadgeIds.
 local BadgeService = game:GetService("BadgeService")
+local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -25,7 +26,8 @@ function Achievements.value(player, d, stat)
 	elseif stat == "needles" then
 		return d.needles
 	elseif stat == "hours" then
-		return (d.stats.play_seconds or 0) / 3600
+		local hour = if RunService:IsStudio() and Config.Testing.fastHours > 0 then Config.Testing.fastHours else 3600 -- (a testing switch, Studio only)
+		return (d.stats.play_seconds or 0) / hour
 	elseif stat == "streak" then
 		return d.stats.day_streak or 0
 	elseif stat == "days" then

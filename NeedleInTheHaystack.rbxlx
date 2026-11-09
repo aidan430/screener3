@@ -374,6 +374,11 @@ Config.Achievements = {
 	{ id = "lucky100", open = true, name = "Four-Leaf Clover", text = "Make 100 lucky finds.", stat = "lucky_finds", goal = 100, spins = 2 },
 	{ id = "sold1m", open = true, name = "Market Favourite", text = "Sell 1,000,000 straws.", stat = "straws_sold", goal = 1000000, coins = 250000 },
 }
+-- Testing switches. They only work in Roblox Studio (never in the published game), so leaving
+-- one on by mistake can't give real players anything. fastHours: one "hour" of play time takes
+-- this many seconds (10 = the 24-hour reward after 4 minutes); 0 = off. unlockAll: you own every
+-- cosmetic as soon as you join, to try them on in the Wardrobe.
+Config.Testing = { fastHours = 0, unlockAll = false }
 Config.HatScale = 1.35 -- hats a little bigger than life, so they read from across the farm
 Config.HaloSpin = 0.8 -- radians a second the Starlight Halo turns
 Config.LegendBoostHours = 24 -- "every power-up": each timed boost (2x Speed, 2x Coins, Lucky Charm) lasts this long
@@ -1618,6 +1623,7 @@ return Story
 					<ProtectedString name="Source"><![CDATA[-- The secret achievements, hidden until earned. Each watches one number; any ten open the Golden Loft.
 -- Optional Roblox badges: put badge IDs into Config.BadgeIds.
 local BadgeService = game:GetService("BadgeService")
+local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -1642,7 +1648,8 @@ function Achievements.value(player, d, stat)
 	elseif stat == "needles" then
 		return d.needles
 	elseif stat == "hours" then
-		return (d.stats.play_seconds or 0) / 3600
+		local hour = if RunService:IsStudio() and Config.Testing.fastHours > 0 then Config.Testing.fastHours else 3600 -- (a testing switch, Studio only)
+		return (d.stats.play_seconds or 0) / hour
 	elseif stat == "streak" then
 		return d.stats.day_streak or 0
 	elseif stat == "days" then
@@ -5304,11 +5311,15 @@ return PlayerData
 			<Item class="ModuleScript" referent="RBX00040">
 				<Properties>
 					<string name="Name">Playtime</string>
-					<ProtectedString name="Source"><![CDATA[-- Time played and days in a row, for the milestone achievements (ConfigCosmetics). Every minute
+					<ProtectedString name="Source"><![CDATA[-- Time played and days in a row, for the milestone achievements (ConfigCosmetics). Every 10 seconds
 -- a player is in the game adds to stats.play_seconds; the first visit of each day (UTC) counts a
 -- day played and carries the streak on (yesterday too) or starts it again. Totals, never one long
 -- sitting: nothing rewards playing without a break.
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 
 local PlayerData = require(script.Parent.PlayerData)
 local Achievements = require(script.Parent.Achievements)
@@ -5333,15 +5344,28 @@ local function visit(player)
 	Achievements.check(player)
 end
 
+-- Testing switch (Studio only): own every cosmetic straight away.
+local function testUnlock(player)
+	if RunService:IsStudio() and Config.Testing.unlockAll then
+		PlayerData.update(player, function(data)
+			for _, c in ipairs(Config.Cosmetics) do
+				data.cosmetics[c.id] = true
+			end
+		end)
+		warn("[Testing] Config.Testing.unlockAll is on: every cosmetic unlocked (Studio only)")
+	end
+end
+
 function Playtime.init()
 	PlayerData.onLoaded(visit)
+	PlayerData.onLoaded(testUnlock)
 	task.spawn(function()
 		while true do
-			task.wait(60)
+			task.wait(10)
 			for _, player in ipairs(Players:GetPlayers()) do
 				if PlayerData.get(player) then
 					PlayerData.update(player, function(data)
-						data.stats.play_seconds = (data.stats.play_seconds or 0) + 60
+						data.stats.play_seconds = (data.stats.play_seconds or 0) + 10
 					end)
 					visit(player) -- past midnight while playing
 					Achievements.check(player)
