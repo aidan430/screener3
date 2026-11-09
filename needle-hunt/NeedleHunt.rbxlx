@@ -52,10 +52,15 @@ Config.Collection = { firstLuck = 0.5, hardLuck = 0.5 }
 
 -- The owner's own needle model (server/NeedleModel): its asset ID once the imported model is
 -- saved to Roblox (Studio: right-click the model > Save to Roblox). 0 = use the built needle.
--- The textures uploaded with it, for reference (the saved model already carries them):
+Config.NeedleModel = { asset = 0 }
+
+-- Haystacks (MapKit.haystack): smooth, lumpy terrain domes in `material`, recoloured `colour`
+-- (the arena's terrain is cleared between rounds). model = the owner's haystack model's asset ID
+-- (server/HaystackModel; saved to Roblox from Studio): when it loads, every haystack uses it.
+-- The textures uploaded with that model, for reference (the saved model carries them itself):
 --   material0: 139923378561945, 82802973824193, 131881570420382, 134403754765000
 --   material1: 125383755787779, 83696294561694, 117010844111225, 87942777253086
-Config.NeedleModel = { asset = 0 }
+Config.Haystacks = { material = "Sand", colour = { 226, 186, 88 }, model = 0 }
 
 -- Finding (server/NeedleSpawner). Studs and seconds.
 Config.Find = {
@@ -1235,6 +1240,60 @@ return DataManager
 			</Item>
 			<Item class="ModuleScript" referent="RBX0001A">
 				<Properties>
+					<string name="Name">HaystackModel</string>
+					<ProtectedString name="Source"><![CDATA[-- The owner's own haystack model (Config.Haystacks.model): loaded once with InsertService (it must
+-- belong to the game's owner, or be public), centred and set on its base. MapKit.haystack places a
+-- copy, scaled to each haystack's size, wherever one goes. Until it loads (or with no ID), the
+-- built terrain haystacks are used.
+local InsertService = game:GetService("InsertService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local HaystackModel = {}
+local template = nil
+
+function HaystackModel.load()
+	local id = Config.Haystacks.model
+	if id == 0 then
+		return
+	end
+	local ok, asset = pcall(InsertService.LoadAsset, InsertService, id)
+	if not ok or not asset then
+		warn("[HaystackModel] couldn't load model " .. id .. ": " .. tostring(asset) .. " (it must be owned by the game's owner or be public)")
+		return
+	end
+	local model = asset:FindFirstChildWhichIsA("Model") or asset
+	for _, p in ipairs(model:GetDescendants()) do
+		if p:IsA("BasePart") then
+			p.Anchored, p.CanQuery, p.CanTouch = true, false, false
+		end
+	end
+	local cf, size = model:GetBoundingBox()
+	model.WorldPivot = CFrame.new(cf.Position - Vector3.new(0, size.Y / 2, 0)) -- the middle of its base
+	model:PivotTo(CFrame.new())
+	model.Name = "Haystack"
+	template = model
+end
+
+-- A copy standing on `ground` (a Vector3), about `width` studs across; nil if there's no model.
+function HaystackModel.place(ground, width, turn)
+	if not template then
+		return nil
+	end
+	local m = template:Clone()
+	local _, size = m:GetBoundingBox()
+	m:ScaleTo(m:GetScale() * width / math.max(size.X, size.Z))
+	m:PivotTo(CFrame.new(ground) * CFrame.Angles(0, turn, 0))
+	return m
+end
+
+return HaystackModel
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX0001B">
+				<Properties>
 					<string name="Name">LeaderboardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Global leaderboards (Config.Boards), each an OrderedDataStore: most needles, fastest find,
 -- highest level, most coins earned and this week's winners. Writes are batched: a player is
@@ -1405,7 +1464,7 @@ return LeaderboardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001B">
+			<Item class="ModuleScript" referent="RBX0001C">
 				<Properties>
 					<string name="Name">LobbyBuilder</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby, built once at Config.LobbyCentre: a wooden plaza in a field, the animated title sign
@@ -1642,7 +1701,7 @@ return LobbyBuilder
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001C">
+			<Item class="ModuleScript" referent="RBX0001D">
 				<Properties>
 					<string name="Name">LobbyShowOff</string>
 					<ProtectedString name="Source"><![CDATA[-- Show off (Remotes.ShowOff): hold your showcase needle (or your best) up over your head for a
@@ -1711,7 +1770,7 @@ return LobbyShowOff
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001D">
+			<Item class="ModuleScript" referent="RBX0001E">
 				<Properties>
 					<string name="Name">LobbySocial</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's social side: showing off collections.
@@ -1982,7 +2041,7 @@ return LobbySocial
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Script" referent="RBX0001E">
+			<Item class="Script" referent="RBX0001F">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Starts A Needle in a Haystack on the server. Systems that react to a player's save loading are
@@ -2001,6 +2060,7 @@ local AntiCheat = require(script.Parent.AntiCheat)
 local Requests = require(script.Parent.Requests)
 local CollectionManager = require(script.Parent.CollectionManager)
 local NeedleModel = require(script.Parent.NeedleModel)
+local HaystackModel = require(script.Parent.HaystackModel)
 local LobbyShowOff = require(script.Parent.LobbyShowOff)
 local RoundManager = require(script.Parent.RoundManager)
 
@@ -2012,6 +2072,7 @@ if RunService:IsStudio() then
 end
 
 for _, step in ipairs({
+	{ "HaystackModel", HaystackModel.load }, -- before the lobby, so its haystacks can use it
 	{ "Lobby", LobbyBuilder.build },
 	{ "NeedleModel", NeedleModel.load },
 	{ "AntiCheat", AntiCheat.init },
@@ -2033,7 +2094,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0001F">
+			<Item class="ModuleScript" referent="RBX00020">
 				<Properties>
 					<string name="Name">MapKit</string>
 					<ProtectedString name="Source"><![CDATA[-- The building kit for maps (server/MapsA, MapsB): ground, hay bales, haystacks, crates, fences,
@@ -2041,7 +2102,10 @@ end
 -- (on its top, or on the ground beside it) as it is placed, so a needle only ever goes on a real
 -- surface; server/NeedleSpawner checks each spot again before using it.
 -- ctx: { model, rng, centre = Vector3, def = a Maps row, spots = {}, spawns = {}, floorY }
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 
 local MapKit = {}
 
@@ -2129,18 +2193,39 @@ function MapKit.bale(ctx, x, y, z, turn, climb)
 end
 
 -- A round haystack: stacked, shrinking cylinders under a dome. Spots round its foot.
+-- A haystack: the owner's model if it's loaded (server/HaystackModel), otherwise a smooth, lumpy
+-- terrain dome (a drum with a dome on top and a few bulges), coloured straw gold. Terrain cells
+-- are 4 studs, so hiding spots go a little further out round its foot.
 function MapKit.haystack(ctx, x, z, radius, height)
-	local straw = ctx.def.straw
-	local layers = 4
-	for i = 0, layers - 1 do
-		local r = radius * (1 - i / (layers + 1.5))
-		MapKit.part(ctx, { Name = "Haystack", Shape = "Cylinder", Size = Vector3.new(height / layers, r * 2, r * 2), CFrame = CFrame.new(MapKit.at(ctx, x, (i + 0.5) * height / layers, z)) * CFrame.Angles(0, 0, math.rad(90)), Color = straw, Material = "Grass" })
+	local ground = MapKit.at(ctx, x, 0, z)
+	local own = require(script.Parent.HaystackModel).place(ground, radius * 2.2, ctx.rng:NextNumber() * math.pi * 2)
+	if own then
+		own.Parent = ctx.model
+	else
+		local terrain = workspace.Terrain
+		local H = Config.Haystacks
+		local material = Enum.Material[H.material]
+		terrain:SetMaterialColor(material, Color3.fromRGB(H.colour[1], H.colour[2], H.colour[3]))
+		local domeY = math.max(radius * 0.4, height - radius)
+		terrain:FillCylinder(CFrame.new(ground + Vector3.new(0, domeY / 2, 0)), domeY, radius, material)
+		terrain:FillBall(ground + Vector3.new(0, domeY, 0), radius, material)
+		terrain:FillBall(ground + Vector3.new(0, domeY + radius * 0.75, 0), radius * 0.6, material) -- the rounded peak
+		for _ = 1, 5 do -- gentle bulges, so no two stacks look the same
+			local a = ctx.rng:NextNumber() * math.pi * 2
+			local up = ctx.rng:NextNumber(0.2, 0.9)
+			local p = ground + Vector3.new(math.cos(a) * radius * 0.6, domeY * up + radius * 0.3, math.sin(a) * radius * 0.6)
+			terrain:FillBall(p, radius * ctx.rng:NextNumber(0.25, 0.35), material)
+		end
 	end
-	MapKit.part(ctx, { Name = "Haystack", Shape = "Ball", Size = Vector3.one * radius * 1.1, CFrame = CFrame.new(MapKit.at(ctx, x, height, z)), Color = straw, Material = "Grass" })
 	for _ = 1, 3 do
 		local a = ctx.rng:NextNumber() * math.pi * 2
-		MapKit.spot(ctx, MapKit.at(ctx, x + math.cos(a) * (radius + 1.4), 0, z + math.sin(a) * (radius + 1.4)))
+		MapKit.spot(ctx, MapKit.at(ctx, x + math.cos(a) * (radius + 3), 0, z + math.sin(a) * (radius + 3)))
 	end
+end
+
+-- Clears the terrain haystacks round `centre` (the arena, between rounds).
+function MapKit.clearTerrain(centre)
+	workspace.Terrain:FillBlock(CFrame.new(centre + Vector3.new(0, 40, 0)), Vector3.new(340, 100, 340), Enum.Material.Air)
 end
 
 function MapKit.crate(ctx, x, y, z, size, climb)
@@ -2224,7 +2309,7 @@ return MapKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00020">
+			<Item class="ModuleScript" referent="RBX00021">
 				<Properties>
 					<string name="Name">MapsA</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Classic Haystack Field, Barn Interior and Farm at Sunset (shared/Maps holds their
@@ -2366,7 +2451,7 @@ return MapsA
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00021">
+			<Item class="ModuleScript" referent="RBX00022">
 				<Properties>
 					<string name="Name">MapsB</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Night Forest and Abandoned Attic (see MapsA for how a builder works).
@@ -2476,7 +2561,7 @@ return MapsB
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00022">
+			<Item class="ModuleScript" referent="RBX00023">
 				<Properties>
 					<string name="Name">NeedleModel</string>
 					<ProtectedString name="Source"><![CDATA[-- The owner's own needle model (Config.NeedleModel.asset): a model imported into Studio with its
@@ -2549,7 +2634,7 @@ return NeedleModel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00023">
+			<Item class="ModuleScript" referent="RBX00024">
 				<Properties>
 					<string name="Name">NeedleSpawner</string>
 					<ProtectedString name="Source"><![CDATA[-- Hides the needle(s) each round and decides, on the server, who found them.
@@ -2762,7 +2847,7 @@ return NeedleSpawner
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00024">
+			<Item class="ModuleScript" referent="RBX00025">
 				<Properties>
 					<string name="Name">QuestManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Daily quests: three a day, the same for everyone (shared/Quests.forDay). Progress is saved;
@@ -2830,7 +2915,7 @@ return QuestManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00025">
+			<Item class="ModuleScript" referent="RBX00026">
 				<Properties>
 					<string name="Name">Requests</string>
 					<ProtectedString name="Source"><![CDATA[-- Small requests from players, checked on the server: a hint (Remotes.Hint) and saving their
@@ -2890,7 +2975,7 @@ return Requests
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00026">
+			<Item class="ModuleScript" referent="RBX00027">
 				<Properties>
 					<string name="Name">RewardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Every coin and XP point is given here, on the server: needle finds (faster = more), places,
@@ -3011,7 +3096,7 @@ return RewardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00027">
+			<Item class="ModuleScript" referent="RBX00028">
 				<Properties>
 					<string name="Name">RoundManager</string>
 					<ProtectedString name="Source"><![CDATA[-- The round loop, all on the server:
@@ -3037,6 +3122,7 @@ local NeedleSpawner = require(script.Parent.NeedleSpawner)
 local RewardManager = require(script.Parent.RewardManager)
 local CollectionManager = require(script.Parent.CollectionManager)
 local AntiCheat = require(script.Parent.AntiCheat)
+local MapKit = require(script.Parent.MapKit)
 local LobbyBuilder = require(script.Parent.LobbyBuilder)
 local builders = require(script.Parent.MapsA)
 for name, fn in pairs(require(script.Parent.MapsB)) do
@@ -3165,6 +3251,7 @@ local function playRound()
 	if old then
 		old:Destroy()
 	end
+	MapKit.clearTerrain(Config.ArenaCentre) -- the last map's haystacks
 	local model = Instance.new("Model")
 	model.Name = "Arena"
 	model.Parent = workspace
@@ -3189,6 +3276,7 @@ local function playRound()
 	if #list == 0 or #needles == 0 then
 		light(Maps.lobbyLighting)
 		model:Destroy()
+		MapKit.clearTerrain(Config.ArenaCentre)
 		return
 	end
 	local duration = if mods.speed then Config.Round.speedDuration else Config.Round.duration
@@ -3242,6 +3330,7 @@ local function playRound()
 	end
 	round = nil
 	model:Destroy()
+	MapKit.clearTerrain(Config.ArenaCentre)
 	light(Maps.lobbyLighting)
 end
 
@@ -3294,7 +3383,7 @@ return RoundManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00028">
+			<Item class="ModuleScript" referent="RBX00029">
 				<Properties>
 					<string name="Name">ShopManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Cosmetics and purchases. With Haystack Coins: buy a cosmetic (Remotes.Shop "buy"), and wear
@@ -3493,24 +3582,24 @@ return ShopManager
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerStorage" referent="RBX00029">
+	<Item class="ServerStorage" referent="RBX0002A">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX0002A">
+	<Item class="StarterPlayer" referent="RBX0002B">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX0002B">
+		<Item class="StarterPlayerScripts" referent="RBX0002C">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX0002C">
+			<Item class="Folder" referent="RBX0002D">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX0002D">
+				<Item class="ModuleScript" referent="RBX0002E">
 					<Properties>
 						<string name="Name">Effects</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback you can see and hear, on your own screen only: sounds, a burst of particles where a
@@ -3591,7 +3680,7 @@ return Effects
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002E">
+				<Item class="ModuleScript" referent="RBX0002F">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: your coins and level (with an XP bar) at the top left; the round's
@@ -3727,7 +3816,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0002F">
+				<Item class="ModuleScript" referent="RBX00030">
 					<Properties>
 						<string name="Name">LobbyUi</string>
 						<ProtectedString name="Source"><![CDATA[-- The lobby and finding, on your screen:
@@ -3849,7 +3938,7 @@ return LobbyUi
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX00030">
+				<Item class="LocalScript" referent="RBX00031">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- Starts the client: the whole UI (UIController). The client only shows things and asks the
@@ -3859,7 +3948,7 @@ UIController.start()
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00031">
+				<Item class="ModuleScript" referent="RBX00032">
 					<Properties>
 						<string name="Name">NeedleView</string>
 						<ProtectedString name="Source"><![CDATA[-- A needle in 3D inside the UI: a ViewportFrame with the needle (shared/NeedleLook) lit and
@@ -3906,7 +3995,7 @@ return NeedleView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00032">
+				<Item class="ModuleScript" referent="RBX00033">
 					<Properties>
 						<string name="Name">Results</string>
 						<ProtectedString name="Source"><![CDATA[-- The round's big moments on screen: the 3, 2, 1 before searching; NEEDLE FOUND! when you find it
@@ -4037,7 +4126,7 @@ return Results
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00033">
+				<Item class="ModuleScript" referent="RBX00034">
 					<Properties>
 						<string name="Name">Screens</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop and Inventory screens. The Shop sells cosmetics for Haystack Coins (needle skins,
@@ -4207,7 +4296,7 @@ return Screens
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00034">
+				<Item class="ModuleScript" referent="RBX00035">
 					<Properties>
 						<string name="Name">Screens2</string>
 						<ProtectedString name="Source"><![CDATA[-- The Quests, Leaderboard and Settings screens.
@@ -4341,7 +4430,7 @@ return Screens2
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00035">
+				<Item class="ModuleScript" referent="RBX00036">
 					<Properties>
 						<string name="Name">Screens3</string>
 						<ProtectedString name="Source"><![CDATA[-- The Collection screen: every needle you've found, by type, shown in 3D with its rarity, value
@@ -4474,7 +4563,7 @@ return Screens3
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00036">
+				<Item class="ModuleScript" referent="RBX00037">
 					<Properties>
 						<string name="Name">UIController</string>
 						<ProtectedString name="Source"><![CDATA[-- Puts the whole UI together: one ScreenGui with the HUD, the round moments (Results), and the
@@ -4592,7 +4681,7 @@ return UIController
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00037">
+				<Item class="ModuleScript" referent="RBX00038">
 					<Properties>
 						<string name="Name">UiKit</string>
 						<ProtectedString name="Source"><![CDATA[-- The UI's look in one place: a clean, modern dark-glass style with warm gold accents, big
@@ -4729,7 +4818,7 @@ return UiKit
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX00038">
+	<Item class="Workspace" referent="RBX00039">
 		<Properties>
 			<string name="Name">Workspace</string>
 		</Properties>

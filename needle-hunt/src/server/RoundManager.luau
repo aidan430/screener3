@@ -21,6 +21,7 @@ local NeedleSpawner = require(script.Parent.NeedleSpawner)
 local RewardManager = require(script.Parent.RewardManager)
 local CollectionManager = require(script.Parent.CollectionManager)
 local AntiCheat = require(script.Parent.AntiCheat)
+local MapKit = require(script.Parent.MapKit)
 local LobbyBuilder = require(script.Parent.LobbyBuilder)
 local builders = require(script.Parent.MapsA)
 for name, fn in pairs(require(script.Parent.MapsB)) do
@@ -149,6 +150,7 @@ local function playRound()
 	if old then
 		old:Destroy()
 	end
+	MapKit.clearTerrain(Config.ArenaCentre) -- the last map's haystacks
 	local model = Instance.new("Model")
 	model.Name = "Arena"
 	model.Parent = workspace
@@ -173,6 +175,7 @@ local function playRound()
 	if #list == 0 or #needles == 0 then
 		light(Maps.lobbyLighting)
 		model:Destroy()
+		MapKit.clearTerrain(Config.ArenaCentre)
 		return
 	end
 	local duration = if mods.speed then Config.Round.speedDuration else Config.Round.duration
@@ -226,6 +229,7 @@ local function playRound()
 	end
 	round = nil
 	model:Destroy()
+	MapKit.clearTerrain(Config.ArenaCentre)
 	light(Maps.lobbyLighting)
 end
 

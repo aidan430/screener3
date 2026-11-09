@@ -41,14 +41,13 @@ K.bale = (ctx, x, y, z, turn, climb) => {
   K.spotsOn(ctx, bale, 1, y > 0 ? 0 : 1, climb);
   return bale;
 };
-K.haystack = (ctx, x, z, radius, height) => {
-  const layers = 4;
-  for (let i = 0; i < layers; i++) {
-    const r = radius * (1 - i / (layers + 1.5));
-    K.part(ctx, { Name: 'Haystack', Shape: 'Cylinder', Size: [height / layers, r * 2, r * 2], CFrame: mul(cf(...K.at(ctx, x, (i + 0.5) * height / layers, z).toArray()), ang(0, 0, rad(90))), Color: ctx.def.straw, Material: 'Grass' });
-  }
-  K.part(ctx, { Name: 'Haystack', Shape: 'Ball', Size: [radius * 1.1, radius * 1.1, radius * 1.1], CFrame: cf(...K.at(ctx, x, height, z).toArray()), Color: ctx.def.straw, Material: 'Grass' });
-  for (let i = 0; i < 3; i++) { const a = ctx.rng.NextNumber() * Math.PI * 2; K.spot(ctx, K.at(ctx, x + Math.cos(a) * (radius + 1.4), 0, z + Math.sin(a) * (radius + 1.4))); }
+K.haystack = (ctx, x, z, radius, height) => { // a terrain dome (MapKit.haystack): drum, dome and bulges
+  const g = K.at(ctx, x, 0, z), domeY = Math.max(radius * 0.4, height - radius);
+  const bulges = [];
+  for (let i = 0; i < 5; i++) { const a = ctx.rng.NextNumber() * Math.PI * 2, up = ctx.rng.NextNumber(0.2, 0.9); bulges.push([Math.cos(a) * radius * 0.6, domeY * up + radius * 0.3, Math.sin(a) * radius * 0.6, radius * ctx.rng.NextNumber(0.25, 0.35)]); }
+  bulges.push([0, domeY + radius * 0.75, 0, radius * 0.6]);
+  ctx.parts.push({ size: [radius, domeY, 1], m: cf(g.x, g.y, g.z), color: [226, 186, 88], material: 'Terrain', shape: 'Dome', name: 'Haystack', bulges });
+  for (let i = 0; i < 3; i++) { const a = ctx.rng.NextNumber() * Math.PI * 2; K.spot(ctx, K.at(ctx, x + Math.cos(a) * (radius + 3), 0, z + Math.sin(a) * (radius + 3))); }
 };
 K.crate = (ctx, x, y, z, size, climb) => {
   size = size || 3;

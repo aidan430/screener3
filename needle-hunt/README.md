@@ -195,6 +195,19 @@ Set Max Players to about 12 (Game Settings > Places) to match the booths.
 
 **Barriers:** every outdoor map and the lobby have a hedge all the way round, with invisible walls above it up to 200 studs. Anyone who falls below a height of -40 respawns: in a round, back into the map.
 
+## Haystacks
+
+Haystacks are smooth, lumpy terrain domes: a drum, a rounded peak and a few bulges, coloured
+straw gold (`Config.Haystacks`). The arena's terrain is cleared between rounds.
+
+To use your own haystack model:
+1. Import it in Studio, then right-click it and choose **Save to Roblox**.
+2. Put its asset ID in `Config.Haystacks.model`.
+
+Every haystack in the maps and the lobby then uses a copy, scaled to fit (`server/HaystackModel`).
+The 8 `Model_material` texture IDs from that import are listed there for reference; the saved
+model carries them itself.
+
 ## The needle collection
 
 Every needle a player finds is theirs to keep. Everyone hunts the same plain needle, so it stays

@@ -117,6 +117,25 @@ for (const p of ctx.parts) {
   if (hideNames.includes(p.name)) continue;
   if (VIEW === 'aerial' && MAP === 'barn' && p.name === 'BarnWall' && NH.pos(p.m).z > 0) continue;
   if (VIEW === 'aerial' && MAP === 'attic' && p.name === 'Wall' && NH.pos(p.m).z > 10) continue;
+  if (p.shape === 'Dome') { // smooth terrain: a lumpy, soft dome with a straw texture
+    const [radius, domeY] = p.size, pts = [];
+    for (let i = 0; i <= 8; i++) pts.push(new THREE.Vector2(radius * (1.04 - 0.04 * i / 8), domeY * i / 8));
+    for (let i = 1; i <= 16; i++) { const a = i / 16 * Math.PI / 2; pts.push(new THREE.Vector2(Math.max(0.001, radius * Math.cos(a)), domeY + radius * Math.sin(a))); }
+    const geom = new THREE.LatheGeometry(pts, 48);
+    const pos = geom.attributes.position, v = new THREE.Vector3(), rn = NH.rng(Math.round(radius * 100 + domeY * 7));
+    const seeds = [0, 1, 2, 3].map(() => [rn.NextNumber() * 6, rn.NextNumber() * 6]);
+    for (let i = 0; i < pos.count; i++) { v.fromBufferAttribute(pos, i); const ang = Math.atan2(v.z, v.x), h = v.y;
+      const n = 1 + 0.06 * Math.sin(ang * 3 + seeds[0][0] + h * 0.3) + 0.04 * Math.sin(ang * 7 + seeds[1][0] + h * 0.6);
+      v.x *= n; v.z *= n; pos.setXYZ(i, v.x, v.y, v.z); }
+    geom.computeVertexNormals();
+    texCache.Hay = texCache.Hay || (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 256; const g2 = cv.getContext('2d'); g2.fillStyle = '#fff'; g2.fillRect(0, 0, 256, 256); const r2 = NH.rng(5);
+      for (let k = 0; k < 2200; k++) { const x = r2.NextNumber() * 256, y = r2.NextNumber() * 256, a = (r2.NextNumber() - 0.5) * 1.4, l = 6 + r2.NextNumber() * 18, sh = 170 + r2.NextNumber() * 85 | 0; g2.strokeStyle = `rgb(${sh},${sh},${sh})`; g2.lineWidth = 1.4; g2.beginPath(); g2.moveTo(x, y); g2.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g2.stroke(); }
+      const tx = new THREE.CanvasTexture(cv); tx.wrapS = tx.wrapT = THREE.RepeatWrapping; tx.repeat.set(4, 2); return tx; })();
+    const hm = new THREE.MeshStandardMaterial({ color: c3(p.color), roughness: 0.95, map: texCache.Hay });
+    const mesh = new THREE.Mesh(geom, hm); mesh.applyMatrix4(p.m); mesh.castShadow = mesh.receiveShadow = true; scene.add(mesh);
+    for (const b of p.bulges) { const bm = new THREE.Mesh(new THREE.SphereGeometry(b[3], 24, 16), hm); bm.scale.y = 0.8; bm.position.copy(NH.pos(p.m)).add(new THREE.Vector3(b[0], b[1], b[2])); bm.castShadow = bm.receiveShadow = true; scene.add(bm); }
+    continue;
+  }
   const mat = { color: c3(p.color), roughness: 0.85, metalness: 0 };
   if (['Grass', 'WoodPlanks', 'Wood', 'Slate', 'Fabric'].includes(p.material)) { texCache[p.material] = texCache[p.material] || tex(p.material); mat.map = texCache[p.material]; }
   if (p.material === 'Metal') { mat.metalness = 0.75; mat.roughness = 0.3; }

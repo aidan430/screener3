@@ -40,10 +40,15 @@ Config.Collection = { firstLuck = 0.5, hardLuck = 0.5 }
 
 -- The owner's own needle model (server/NeedleModel): its asset ID once the imported model is
 -- saved to Roblox (Studio: right-click the model > Save to Roblox). 0 = use the built needle.
--- The textures uploaded with it, for reference (the saved model already carries them):
+Config.NeedleModel = { asset = 0 }
+
+-- Haystacks (MapKit.haystack): smooth, lumpy terrain domes in `material`, recoloured `colour`
+-- (the arena's terrain is cleared between rounds). model = the owner's haystack model's asset ID
+-- (server/HaystackModel; saved to Roblox from Studio): when it loads, every haystack uses it.
+-- The textures uploaded with that model, for reference (the saved model carries them itself):
 --   material0: 139923378561945, 82802973824193, 131881570420382, 134403754765000
 --   material1: 125383755787779, 83696294561694, 117010844111225, 87942777253086
-Config.NeedleModel = { asset = 0 }
+Config.Haystacks = { material = "Sand", colour = { 226, 186, 88 }, model = 0 }
 
 -- Finding (server/NeedleSpawner). Studs and seconds.
 Config.Find = {

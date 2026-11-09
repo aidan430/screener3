@@ -3,7 +3,10 @@
 -- (on its top, or on the ground beside it) as it is placed, so a needle only ever goes on a real
 -- surface; server/NeedleSpawner checks each spot again before using it.
 -- ctx: { model, rng, centre = Vector3, def = a Maps row, spots = {}, spawns = {}, floorY }
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 
 local MapKit = {}
 
@@ -91,18 +94,39 @@ function MapKit.bale(ctx, x, y, z, turn, climb)
 end
 
 -- A round haystack: stacked, shrinking cylinders under a dome. Spots round its foot.
+-- A haystack: the owner's model if it's loaded (server/HaystackModel), otherwise a smooth, lumpy
+-- terrain dome (a drum with a dome on top and a few bulges), coloured straw gold. Terrain cells
+-- are 4 studs, so hiding spots go a little further out round its foot.
 function MapKit.haystack(ctx, x, z, radius, height)
-	local straw = ctx.def.straw
-	local layers = 4
-	for i = 0, layers - 1 do
-		local r = radius * (1 - i / (layers + 1.5))
-		MapKit.part(ctx, { Name = "Haystack", Shape = "Cylinder", Size = Vector3.new(height / layers, r * 2, r * 2), CFrame = CFrame.new(MapKit.at(ctx, x, (i + 0.5) * height / layers, z)) * CFrame.Angles(0, 0, math.rad(90)), Color = straw, Material = "Grass" })
+	local ground = MapKit.at(ctx, x, 0, z)
+	local own = require(script.Parent.HaystackModel).place(ground, radius * 2.2, ctx.rng:NextNumber() * math.pi * 2)
+	if own then
+		own.Parent = ctx.model
+	else
+		local terrain = workspace.Terrain
+		local H = Config.Haystacks
+		local material = Enum.Material[H.material]
+		terrain:SetMaterialColor(material, Color3.fromRGB(H.colour[1], H.colour[2], H.colour[3]))
+		local domeY = math.max(radius * 0.4, height - radius)
+		terrain:FillCylinder(CFrame.new(ground + Vector3.new(0, domeY / 2, 0)), domeY, radius, material)
+		terrain:FillBall(ground + Vector3.new(0, domeY, 0), radius, material)
+		terrain:FillBall(ground + Vector3.new(0, domeY + radius * 0.75, 0), radius * 0.6, material) -- the rounded peak
+		for _ = 1, 5 do -- gentle bulges, so no two stacks look the same
+			local a = ctx.rng:NextNumber() * math.pi * 2
+			local up = ctx.rng:NextNumber(0.2, 0.9)
+			local p = ground + Vector3.new(math.cos(a) * radius * 0.6, domeY * up + radius * 0.3, math.sin(a) * radius * 0.6)
+			terrain:FillBall(p, radius * ctx.rng:NextNumber(0.25, 0.35), material)
+		end
 	end
-	MapKit.part(ctx, { Name = "Haystack", Shape = "Ball", Size = Vector3.one * radius * 1.1, CFrame = CFrame.new(MapKit.at(ctx, x, height, z)), Color = straw, Material = "Grass" })
 	for _ = 1, 3 do
 		local a = ctx.rng:NextNumber() * math.pi * 2
-		MapKit.spot(ctx, MapKit.at(ctx, x + math.cos(a) * (radius + 1.4), 0, z + math.sin(a) * (radius + 1.4)))
+		MapKit.spot(ctx, MapKit.at(ctx, x + math.cos(a) * (radius + 3), 0, z + math.sin(a) * (radius + 3)))
 	end
+end
+
+-- Clears the terrain haystacks round `centre` (the arena, between rounds).
+function MapKit.clearTerrain(centre)
+	workspace.Terrain:FillBlock(CFrame.new(centre + Vector3.new(0, 40, 0)), Vector3.new(340, 100, 340), Enum.Material.Air)
 end
 
 function MapKit.crate(ctx, x, y, z, size, climb)
