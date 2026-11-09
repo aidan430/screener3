@@ -13,7 +13,7 @@ and buy tools, perks, buckets, a silo, building pieces (stairs, escalators, elev
 machines and the generators that power them, all placed freely on their plot. Robux buys
 power-ups and Wheel of Fortune spins (skins, or a 1-in-10,000 needle reveal). Ten secret
 achievements open the Golden Loft. Machines peel the heap from the outside in, so a free player
-who never climbs finds the needle in about 31 hours; climbing up and digging in is faster.
+who never climbs finds the needle in about 29 hours; climbing up and digging in is faster.
 
 The owner publishes from Roblox Studio and owns the Roblox account, the Robux items and the
 earnings. Nothing is published, sold or priced without them.
@@ -36,14 +36,17 @@ earnings. Nothing is published, sold or priced without them.
   inventory and plot bounds. Elevators teleport via their prompts.
 - **Wheel** (`server/Wheel.luau`): the WheelSpin product picks a weighted prize on the server.
   Odds are shown before buying; PolicyService hides it where paid random items are restricted.
+- **Farmer Level** (`server/Levels.luau`, `client/LevelBar.luau`, `ConfigLevels`): every lift earns
+  XP; quick level-ups (+1 Strength, a small capped carrying bonus), 6% Lucky Lifts (x2 XP), the
+  auto-fork (R), and a Top Farmers board (`server/LevelBoard.luau`).
 - **Feel** (`client/Juice.luau`): every effect eases; keep it relaxing, no flashing, and no
   pressure tactics around Robux.
 - **Saving** (`server/Profile.luau`, `server/PlayerData.luau`): a failed load plays unsaved.
 
 ## Layout (Rojo project: `default.project.json`)
 ```
-src/shared/  -> ReplicatedStorage.Shared: Config (+ ConfigFactory, ConfigGoals, ConfigPlayer, merged
-                in), Economy, Layout, Format, HayLook, Finds.json
+src/shared/  -> ReplicatedStorage.Shared: Config (+ ConfigFactory, ConfigGoals, ConfigPlayer, ConfigLevels and
+                others, merged in), Economy, Layout, Format, HayLook, Finds.json
 src/server/  -> ServerScriptService.Server: Main (Script), World, Scenery, Build, Plots, Piles,
                 Pieces, Structures, Profile, PlayerData, Search, Machines, Shop, Achievements,
                 Loft, Haystack (the loft), Wheel, Tools, ToolLook, Assets, Carry, Hauling,

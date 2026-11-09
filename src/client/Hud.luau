@@ -82,9 +82,9 @@ function Hud.mount(gui, open)
 	-- "?": the keys, on a paper slip that opens and closes
 	local help = Ui.stamp("?", "KEYS", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -16, 1, -16), Size = UDim2.fromOffset(48, 48), Parent = gui })
 	Ui.autoScale(help)
-	local keys = Ui.card({ AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -16, 1, -74), Size = UDim2.fromOffset(250, 150), Visible = false, Parent = gui })
+	local keys = Ui.card({ AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -16, 1, -74), Size = UDim2.fromOffset(250, 170), Visible = false, Parent = gui })
 	Ui.autoScale(keys)
-	Ui.paragraph(table.concat({ "M  mouse and menus", "Q  shop", "B  build", "E  use", Config.DropKey .. "  drop hay", Config.HomeKey .. "  home", "Shift  sprint" }, "\n"), { Size = UDim2.new(1, -24, 1, -16), Position = UDim2.fromOffset(12, 8), AutomaticSize = Enum.AutomaticSize.None, TextSize = 15, Parent = keys })
+	Ui.paragraph(table.concat({ "M  mouse and menus", "Q  shop", "B  build", "E  use", Config.AutoKey .. "  auto-fork", Config.DropKey .. "  drop hay", Config.HomeKey .. "  home", "Shift  sprint" }, "\n"), { Size = UDim2.new(1, -24, 1, -16), Position = UDim2.fromOffset(12, 8), AutomaticSize = Enum.AutomaticSize.None, TextSize = 15, Parent = keys })
 	help.Activated:Connect(function()
 		keys.Visible = not keys.Visible
 	end)

@@ -732,3 +732,31 @@ past 8, behind 14}, `LobbyPortalCooldown` 2, `LobbyFade` {0.35, 0.3, 0.9}, `Lobb
   LobbyFade, LobbyNudge, LobbyFallBelow and LobbyMood, so Sky Meadow's fall check added a number
   to nil (a SERVER ERROR in Lobby). Restored from history. New test: every Config.Name a script
   reads must be set in Config.luau or a companion, so a lost setting fails the tests.
+
+## Farmer Level: a reward every few seconds (2026-11-09)
+Studied the owner's 11-second clip of a popular training simulator. What keeps people there:
+something visibly grows on every action (an XP bar fills, numbers tick up), a LEVEL UP! lands every
+few seconds with a stat going up, a random "x2!" pops now and then, the loop can run itself (its
+STOP button), and the stats are on show (boards, the player list). Built the same principles in
+this game's own style. Nothing copied from that game.
+- shared/ConfigLevels (merged into Config): Config.Levels = { xpPerLift = 1, xpPerClump = 5,
+  needBase = 10, needStep = 2, carryPerLevel = 0.0005, carryMax = 0.25, luckyChance = 0.06,
+  bigEvery = 10, spinEvery = 50, maxLevel = 5000 }, Config.AutoKey = "R", Config.LevelBoard.
+- server/Levels: every lift earns XP x the tool's number (+5 for clearing a clump); level L
+  needs 10 + 2L. Each level is +1 Strength: you carry 0.05% more, up to +25% (Economy.strength;
+  Economy.capacity uses it). Every 50 levels a free wheel spin (never sold). Level is saved
+  (data.level, data.xp), shown in the player list (leaderstats Level) and as attributes.
+- Lucky Lift: 6% of lifts give double XP (server rolls it; SearchFx carries `lucky`).
+- client/LevelBar: a wide XP bar at the bottom fills on every lift; LEVEL UP! in big gold letters
+  with a dark outline, "Strength N (+1) · you carry x% more", a cheer, the bar glowing as it
+  tops up; every 10th level says LEVEL 20! with confetti; "x2 XP!" springs up by the crosshair.
+- Auto-fork (R or the AUTO button): your tool keeps lifting what you aim at, at its normal speed,
+  using stamina as usual; it turns itself off when you're full (unless you own Auto Sell) or put
+  the tool away.
+- server/LevelBoard: a "TOP FARMERS" sign at (-18, 64), turned towards where you arrive. It lists
+  the 10 highest levels across every server (OrderedDataStore FarmerLevels_v1, refreshed every
+  2 minutes; this server's farmers if the store can't be reached).
+- Pacing (dev/pacing.py models levels): the needle is found at 29.1 h (was 30.7), 10.3 h with
+  Robux. Bigger carrying bonuses or a Lucky Lift that doubled hay brought it to 25-26 h, which is
+  why Strength is small and luck only doubles XP. In the sim a player reaches level ~115 in the
+  first hour (a level every ~10-50 s), then a level every 1-2 minutes.

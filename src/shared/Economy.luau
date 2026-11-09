@@ -53,7 +53,16 @@ return function(Config)
 	-- what you can carry: the tool fills first, then the bucket at your hip
 	function Economy.capacity(data)
 		local tool = Economy.tool(data.tool).capacity * (if data.superTool then Config.SuperToolBoost else 1)
-		return tool + Economy.bucket(data.bucket or 1).capacity
+		return math.floor((tool + Economy.bucket(data.bucket or 1).capacity) * Economy.strength(data) + 0.5)
+	end
+
+	-- Farmer Level (Config.Levels): the XP level L needs, and Strength's carrying bonus (x1.00 at level 1)
+	function Economy.levelNeed(level)
+		return Config.Levels.needBase + Config.Levels.needStep * level
+	end
+
+	function Economy.strength(data)
+		return 1 + math.min(Config.Levels.carryMax, Config.Levels.carryPerLevel * math.max(0, (data.level or 1) - 1))
 	end
 
 	-- straws a second leaving your basket: the trader plus every truck you own

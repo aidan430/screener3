@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 SHARED = Path(__file__).resolve().parent.parent / "src" / "shared"
-CONFIG = "\n".join((SHARED / f).read_text() for f in ("Config.luau", "ConfigFactory.luau", "ConfigGoals.luau", "ConfigPlayer.luau", "ConfigWorlds.luau", "ConfigPads.luau", "ConfigLobby.luau", "ConfigCosmetics.luau"))
+CONFIG = "\n".join((SHARED / f).read_text() for f in ("Config.luau", "ConfigFactory.luau", "ConfigGoals.luau", "ConfigPlayer.luau", "ConfigWorlds.luau", "ConfigPads.luau", "ConfigLobby.luau", "ConfigCosmetics.luau", "ConfigLevels.luau"))
 CLICKS_PER_SECOND = 3.0
 TRIP_SECONDS = 45.0
 BUILD_COINS = 60000  # stairs, landings and elevators bought along the way
@@ -114,6 +114,8 @@ class Player:
         self.build_left = BUILD_COINS
         self.stamina, self.fitness = table("Stamina"), rows("Fitness")
         self.fit = [0] * len(self.fitness)
+        self.levels = table("Levels")  # Farmer Level: Strength carries more, Lucky Lifts lift double
+        self.level, self.xp = 1, 0.0
 
     def power_made(self, gens=None):
         gens = self.gens if gens is None else gens
@@ -164,14 +166,24 @@ class Player:
         """Average straws a second, counting the time lost walking to the merchant."""
         tool = self.tool if kw.get("tool") is None else kw["tool"]
         bucket = self.bucket if kw.get("bucket") is None else kw["bucket"]
-        load = self.tools[tool]["capacity"] + self.buckets[bucket]["capacity"]
+        load = (self.tools[tool]["capacity"] + self.buckets[bucket]["capacity"]) * (1 + min(self.levels["carryMax"], self.levels["carryPerLevel"] * (self.level - 1)))
         click = self.click_rate(kw.get("tool"), kw.get("perk"), kw.get("fit"), load)
         fill = load / click
         trips = 0 if self.robux else TRIP_SECONDS / (fill + TRIP_SECONDS)
         machines = self.machine_rate(kw.get("owned"), kw.get("gens"))
         silo = self.silos[self.silo]["size"]
         machines = min(machines, silo / (fill + TRIP_SECONDS))  # the silo caps what waits for a trip
+        tool_now = self.tools[tool]["power"] * (1 + self.perks[0]["per_level"] * (self.perk if kw.get("perk") is None else kw["perk"])[0])
+        self.lifts = click * (1 - trips) / (tool_now * (2 if self.robux else 1))  # lifts a second
         return click * (1 - trips) + machines
+
+    def level_up(self, seconds: float):
+        """XP from a stretch of harvesting (src/server/Levels.luau; the clump bonus left out)."""
+        lv = self.levels
+        self.xp += self.lifts * seconds * lv["xpPerLift"] * (self.tool + 1) * (1 + lv["luckyChance"])
+        while self.level < lv["maxLevel"] and self.xp >= lv["needBase"] + lv["needStep"] * self.level:
+            self.xp -= lv["needBase"] + lv["needStep"] * self.level
+            self.level += 1
 
     def options(self):
         out = []
@@ -253,6 +265,8 @@ def simulate(robux: bool) -> list[tuple[float, float]]:
     searched, basket, t, marks, next_mark = 0.0, 0.0, 0.0, [], 0.05
     while searched < total and t < 400 * 3600:
         straws = min(p.rate() * 60, total - searched)  # one minute at a time
+        p.level_up(60)
+        p.levels_at = getattr(p, "levels_at", []) + [(t / 3600, p.level)]
         searched += straws
         basket += straws  # it all waits in the basket, sold as fast as it's hauled
         sold = min(basket, p.haul() * 60)

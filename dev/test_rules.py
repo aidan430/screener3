@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT / "dev"))
 import pacing  # noqa: E402
 
 SHARED = ROOT / "src" / "shared"
-CONFIG = "\n".join((SHARED / f).read_text() for f in ("Config.luau", "ConfigFactory.luau", "ConfigGoals.luau", "ConfigPlayer.luau", "ConfigWorlds.luau", "ConfigPads.luau", "ConfigLobby.luau", "ConfigCosmetics.luau"))
+CONFIG = "\n".join((SHARED / f).read_text() for f in ("Config.luau", "ConfigFactory.luau", "ConfigGoals.luau", "ConfigPlayer.luau", "ConfigWorlds.luau", "ConfigPads.luau", "ConfigLobby.luau", "ConfigCosmetics.luau", "ConfigLevels.luau"))
 FINDS = json.loads((SHARED / "Finds.json").read_text())
 
 
@@ -150,6 +150,29 @@ class Milestones(unittest.TestCase):
         self.assertIn("powerups = true", day)
         self.assertIn('stat = "hours"', day, "24 hours in total, never one sitting")
         self.assertIn("Config.Testing = { fastHours = 0, unlockAll = false }", text, "testing switches stay off in the shipped game")
+
+
+class FarmerLevel(unittest.TestCase):
+    """Farmer Level (ConfigLevels): quick early levels, a small capped Strength, XP-only luck."""
+
+    def test_the_first_levels_come_within_seconds(self):
+        lv = pacing.table("Levels")
+        lifts = sum(lv["needBase"] + lv["needStep"] * level for level in range(1, 6)) / lv["xpPerLift"]
+        self.assertLessEqual(lifts, 120, "five levels in under a minute of lifting at 2 a second")
+
+    def test_strength_is_capped_so_the_needle_keeps_its_pace(self):
+        lv = pacing.table("Levels")
+        self.assertLessEqual(lv["carryMax"], 0.25)
+        self.assertLess(lv["luckyChance"], 0.2)
+        text = (SHARED / "ConfigLevels.luau").read_text()
+        self.assertIn("x2 XP", text, "a Lucky Lift doubles XP, not hay (more hay brings the needle hours sooner)")
+
+    def test_levels_climb_all_game(self):
+        p = pacing.Player(False)
+        p.rate()
+        p.level_up(3600)
+        self.assertGreater(p.level, 30, "plenty of level-ups in the first hour")
+        self.assertLess(p.level, pacing.table("Levels")["maxLevel"])
 
 
 class Settings(unittest.TestCase):

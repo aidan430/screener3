@@ -19,6 +19,7 @@ local Achievements = require(script.Parent.Achievements)
 local Hauling = require(script.Parent.Hauling)
 local Tools = require(script.Parent.Tools)
 local Stamina = require(script.Parent.Stamina)
+local Levels = require(script.Parent.Levels)
 local Worlds = require(script.Parent.Worlds)
 
 local Search = {}
@@ -172,6 +173,7 @@ local function harvest(player, target)
 			return nope(player, "You're full! Dump your hay in your trader's basket.")
 		end
 	end
+	local lucky = rng:NextNumber() < Config.Levels.luckyChance -- a Lucky Lift: x2 XP (server/Levels)
 	local power = math.min(Economy.power(d, flags.speedBoost), room(d))
 	local hitClump, clumpLeft = nil, nil -- which clump this swing dug into, and what it has left
 	local taken, hit, golden, gone = 0, false, false, false
@@ -222,7 +224,8 @@ local function harvest(player, target)
 	if not golden and d.tool >= Config.DetectorLevel and plotIndex then
 		warmth = Economy.warmth((head.Position - Piles.position(plotIndex, d.needleClump)).Magnitude)
 	end
-	Remotes.SearchFx:FireClient(player, { kind = "harvest", golden = golden, gone = gone, straws = taken, position = point, warmth = warmth, full = room(d) <= 0, clump = hitClump, left = clumpLeft })
+	Remotes.SearchFx:FireClient(player, { kind = "harvest", golden = golden, gone = gone, straws = taken, position = point, warmth = warmth, full = room(d) <= 0, clump = hitClump, left = clumpLeft, lucky = lucky })
+	Levels.lift(player, lucky, gone)
 	if hit then
 		Search.needleFound(player, golden, point)
 	elseif rng:NextNumber() < Economy.luckyChance(d, flags.luckyCharm) then

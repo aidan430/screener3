@@ -49,6 +49,8 @@ function Profile.fresh(saved)
 		whistles = number(saved, "whistles", 0),
 		lastSeen = number(saved, "lastSeen", 0),
 		freeSpinDay = math.floor(number(saved, "freeSpinDay", 0)), -- the last day (UTC) the free wheel spin was used
+		level = math.clamp(math.floor(number(saved, "level", 1)), 1, Config.Levels.maxLevel), -- Farmer Level (Config.Levels)
+		xp = math.max(0, math.floor(number(saved, "xp", 0))), -- XP towards the next level
 		spinBank = math.max(0, math.floor(number(saved, "spinBank", 0))), -- free wheel spins won from milestones
 		goal = math.clamp(math.floor(number(saved, "goal", 1)), 1, #Config.Goals + 1), -- the guided goal you're on
 		skin = if type(saved.skin) == "string" then saved.skin else "",

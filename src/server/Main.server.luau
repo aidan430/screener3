@@ -47,6 +47,8 @@ local Detector = require(script.Parent.Detector)
 local Worlds = require(script.Parent.Worlds)
 local RobuxPads = require(script.Parent.RobuxPads)
 local Lobby = require(script.Parent.Lobby)
+local Levels = require(script.Parent.Levels)
+local LevelBoard = require(script.Parent.LevelBoard)
 
 StarterPlayer.CharacterMaxSlopeAngle = Config.MaxSlopeAngle -- the steep heap needs building to climb
 local Scenery = require(script.Parent.Scenery)
@@ -163,7 +165,9 @@ local parts = {
 	{ "Monetization", Monetization.init }, -- before PlayerData, so early players get their passes checked
 	{ "Worlds", Worlds.init }, -- before PlayerData, so it hears every player load
 	{ "Lobby", function() Lobby.init(toPlot) end },
+	{ "Levels", Levels.init }, -- before PlayerData, so it hears every player load
 	{ "PlayerData", PlayerData.init },
+	{ "LevelBoard", LevelBoard.init },
 	{ "Achievements", Achievements.init },
 	{ "Structures", Structures.init },
 	{ "Machines", Machines.init },
