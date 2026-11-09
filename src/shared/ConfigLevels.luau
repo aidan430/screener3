@@ -13,6 +13,9 @@ Config.Levels = { xpPerLift = 1, xpPerClump = 5, needBase = 10, needStep = 2, ca
 -- at its own speed. It still needs stamina and room on the fork, and stops when you're full.
 Config.AutoKey = "R"
 
+-- The soft dark shadow behind LEVEL UP! and x2 XP!: how see-through its middle is (0 solid, 1 none).
+Config.LevelShadow = 0.45
+
 -- The Top Farmers board beside where you arrive: the highest Farmer Levels in every server
 -- (an OrderedDataStore), refreshed every refreshSeconds. at = { x, z } from the farm's centre.
 Config.LevelBoard = { at = { -18, 64 }, rows = 10, refreshSeconds = 120, store = "FarmerLevels_v1" }

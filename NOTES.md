@@ -760,3 +760,6 @@ this game's own style. Nothing copied from that game.
   Robux. Bigger carrying bonuses or a Lucky Lift that doubled hay brought it to 25-26 h, which is
   why Strength is small and luck only doubles XP. In the sim a player reaches level ~115 in the
   first hour (a level every ~10-50 s), then a level every 1-2 minutes.
+- Shadow behind the big words (Config.LevelShadow = 0.45): LEVEL UP! (one shadow behind both
+  lines) and x2 XP! sit on a soft dark-brown pill whose ends fade to clear (a UIGradient), so
+  the gold reads over golden hay. It appears and fades with the words.

@@ -569,6 +569,9 @@ Config.Levels = { xpPerLift = 1, xpPerClump = 5, needBase = 10, needStep = 2, ca
 -- at its own speed. It still needs stamina and room on the fork, and stops when you're full.
 Config.AutoKey = "R"
 
+-- The soft dark shadow behind LEVEL UP! and x2 XP!: how see-through its middle is (0 solid, 1 none).
+Config.LevelShadow = 0.45
+
 -- The Top Farmers board beside where you arrive: the highest Farmer Levels in every server
 -- (an OrderedDataStore), refreshed every refreshSeconds. at = { x, z } from the farm's centre.
 Config.LevelBoard = { at = { -18, 64 }, rows = 10, refreshSeconds = 120, store = "FarmerLevels_v1" }
@@ -12960,7 +12963,7 @@ local Harvest = require(script.Parent.Harvest)
 local player = Players.LocalPlayer
 local LevelBar = {}
 local OUTLINE = Color3.fromRGB(59, 36, 14)
-local bar, fill, levelText, xpText, big, sub, luckyText, autoButton
+local bar, fill, levelText, xpText, big, sub, luckyText, luckyHolder, autoButton
 local auto = false
 
 local function pop(label, from)
@@ -12969,12 +12972,34 @@ local function pop(label, from)
 	Juice.ease(scale, 0.45, { Scale = 1 }, Enum.EasingStyle.Back)
 end
 
--- Big outlined words over the world: warm gold with a dark brown edge, readable on hay and sky.
-local function shout(props, size)
+-- Big outlined words over the world: warm gold with a dark brown edge, on a soft dark shadow
+-- (an oval whose edges fade out, Config.LevelShadow) so gold reads even over golden hay. Returns
+-- the words and their holder (move or turn the holder; the shadow goes with it).
+local shadows = {}
+local function shout(props, size, shadowPad)
+	local holder = Ui.make("Frame", { AnchorPoint = props.AnchorPoint, Position = props.Position or UDim2.new(), Size = props.Size, BackgroundTransparency = 1, ZIndex = props.ZIndex, Parent = props.Parent })
+	local shadow = Ui.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, shadowPad.X, 1, shadowPad.Y), Visible = shadowPad.Magnitude > 0, BackgroundColor3 = Color3.fromRGB(28, 18, 8), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = props.ZIndex, Parent = holder }, {
+		Ui.make("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
+		Ui.make("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.25, Config.LevelShadow), NumberSequenceKeypoint.new(0.75, Config.LevelShadow), NumberSequenceKeypoint.new(1, 1) }) }),
+	})
+	props.AnchorPoint, props.Position, props.Size, props.Parent = Vector2.zero, UDim2.new(), UDim2.fromScale(1, 1), holder
 	local label = Ui.label(props, size)
 	label.Font, label.TextColor3, label.TextStrokeTransparency = Ui.bold, Color3.fromRGB(255, 214, 92), 1
 	Ui.make("UIStroke", { Color = OUTLINE, Thickness = 3, Parent = label })
-	return label
+	shadows[label] = shadow
+	return label, holder
+end
+
+-- Shows (at once) or fades (over `seconds`) the words, their outline and their shadow together.
+local function reveal(label, on, seconds, style, direction)
+	local goal = if on then 0 else 1
+	if seconds then
+		Juice.ease(label, seconds, { TextTransparency = goal }, style, direction)
+		Juice.ease(label:FindFirstChildOfClass("UIStroke"), seconds, { Transparency = goal }, style, direction)
+		Juice.ease(shadows[label], seconds, { BackgroundTransparency = goal }, style, direction)
+	else
+		label.TextTransparency, label:FindFirstChildOfClass("UIStroke").Transparency, shadows[label].BackgroundTransparency = goal, goal, goal
+	end
 end
 
 local function setFill()
@@ -12995,10 +13020,8 @@ local function levelChanged()
 		big.Text = if level % Config.Levels.bigEvery == 0 then "LEVEL " .. level .. "!" else "LEVEL UP!"
 		local more = math.min(Config.Levels.carryMax, Config.Levels.carryPerLevel * (level - 1))
 		sub.Text = "Strength " .. (level - 1) .. " (+" .. gained .. ") · you carry " .. string.format("%.1f", more * 100) .. "% more" .. (if more >= Config.Levels.carryMax then " (the most)" else "")
-		for _, label in ipairs({ big, sub }) do
-			label.TextTransparency = 0
-			label:FindFirstChildOfClass("UIStroke").Transparency = 0
-		end
+		reveal(big, true)
+		reveal(sub, true)
 		pop(big, 0.4)
 		fill.Size = UDim2.fromScale(1, 1) -- the bar tops up, then starts again
 		Juice.ease(bar, 0.5, { BackgroundColor3 = Color3.fromRGB(255, 226, 140) }, Enum.EasingStyle.Sine)
@@ -13014,10 +13037,8 @@ local function levelChanged()
 			if (player:GetAttribute("Level") or 1) ~= token then
 				return -- a newer level is showing
 			end
-			for _, label in ipairs({ big, sub }) do
-				Juice.ease(label, 0.5, { TextTransparency = 1 })
-				Juice.ease(label:FindFirstChildOfClass("UIStroke"), 0.5, { Transparency = 1 })
-			end
+			reveal(big, false, 0.5)
+			reveal(sub, false, 0.5)
 		end)
 	end
 	lastLevel = level
@@ -13026,13 +13047,12 @@ end
 
 -- A Lucky Lift: "x2 XP!" springs up beside the crosshair and drifts away.
 function LevelBar.lucky()
-	luckyText.Position = UDim2.new(0.5, 70, 0.5, -40)
-	luckyText.Rotation = math.random(-12, 12)
-	luckyText.TextTransparency = 0
-	luckyText:FindFirstChildOfClass("UIStroke").Transparency = 0
-	pop(luckyText, 0.3)
-	Juice.ease(luckyText, 0.9, { Position = UDim2.new(0.5, 80, 0.5, -90), TextTransparency = 1 }, Enum.EasingStyle.Sine, Enum.EasingDirection.In)
-	Juice.ease(luckyText:FindFirstChildOfClass("UIStroke"), 0.9, { Transparency = 1 }, Enum.EasingStyle.Sine, Enum.EasingDirection.In)
+	luckyHolder.Position = UDim2.new(0.5, 70, 0.5, -40)
+	luckyHolder.Rotation = math.random(-12, 12)
+	reveal(luckyText, true)
+	pop(luckyHolder, 0.3)
+	Juice.ease(luckyHolder, 0.9, { Position = UDim2.new(0.5, 80, 0.5, -90) }, Enum.EasingStyle.Sine, Enum.EasingDirection.In)
+	reveal(luckyText, false, 0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.In)
 	Juice.sound("pop", 1.4)
 end
 
@@ -13071,11 +13091,11 @@ function LevelBar.mount(gui)
 	levelText = Ui.label({ Font = Ui.bold, Position = UDim2.fromOffset(12, 0), Size = UDim2.new(0.5, 0, 1, 0), TextColor3 = Ui.colors.white, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, Parent = bar }, 16)
 	xpText = Ui.label({ Font = Ui.body, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 0), Size = UDim2.new(0.5, 0, 1, 0), TextColor3 = Ui.colors.white, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 3, Parent = bar }, 14)
 	autoButton = Ui.button("AUTO  " .. Config.AutoKey, Ui.colors.green, { AnchorPoint = Vector2.new(1, 1), Position = UDim2.fromScale(1, 1), Size = UDim2.fromOffset(86, 30), Parent = holder })
-	big = shout({ AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.26), Size = UDim2.fromOffset(520, 70), TextTransparency = 1, ZIndex = 30, Parent = gui }, 64)
-	sub = shout({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.26, 38), Size = UDim2.fromOffset(520, 30), TextTransparency = 1, ZIndex = 30, Parent = gui }, 24)
-	luckyText = shout({ Text = "x2 XP!", AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(170, 52), TextTransparency = 1, ZIndex = 30, Parent = gui }, 46)
+	big = shout({ AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.26), Size = UDim2.fromOffset(520, 70), ZIndex = 30, Parent = gui }, 64, Vector2.new(220, 90)) -- one shadow behind both lines
+	sub = shout({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.26, 38), Size = UDim2.fromOffset(520, 30), ZIndex = 30, Parent = gui }, 24, Vector2.zero)
+	luckyText, luckyHolder = shout({ Text = "x2 XP!", AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(170, 52), ZIndex = 30, Parent = gui }, 46, Vector2.new(80, 26))
 	for _, label in ipairs({ big, sub, luckyText }) do
-		label:FindFirstChildOfClass("UIStroke").Transparency = 1
+		reveal(label, false)
 	end
 	autoButton.Activated:Connect(function()
 		setAuto(not auto)
