@@ -289,7 +289,7 @@ model carries them itself.
 
 Needles come out of boxes (opened with coins, keys from chests, or Robux) and trades. Each is
 one of **12 types** (Sewing Needle, Dressmaker's Pin, Darning Needle, Knitting Needle, Crochet
-Hook, Safety Pin, Curved Upholstery Needle and more) in one of **57 skins**: 684 to collect.
+Hook, Safety Pin, Curved Upholstery Needle and more) in one of **60 skins**: 720 to collect.
 
 **Skins** come in six rarities, each rarer and worth more: Common x1, Uncommon x2, Rare x5,
 Epic x12, Legendary x40, Mythic x150. Each box has its own exact odds (see Boxes).
