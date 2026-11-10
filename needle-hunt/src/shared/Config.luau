@@ -114,8 +114,9 @@ Config.Throw = { damage = 2, range = 45, speed = 90, radius = 1.2, back = 1.2, c
 -- under Config.AntiCheat.maxSpeed, so a dash never looks like cheating.
 Config.Dash = { speed = 55, seconds = 0.22, cooldown = 3 }
 -- How the Needle tool sits in the hand, in degrees (X, Y, Z): turn it here if it points the wrong
--- way in Studio. scale = the needle's size in the hand. inspect = seconds the inspect lasts.
-Config.NeedleTool = { grip = { 0, 90, 0 }, scale = 1.6, inspect = 2.4 }
+-- way in Studio. scale = the needle's size in the hand. (How long the inspect lasts comes from the
+-- first-person rig, shared/FirstPerson: anims.inspect.length.)
+Config.NeedleTool = { grip = { 0, 90, 0 }, scale = 1.6 }
 
 -- The Heirloom aura (shared/NeedleAura): energy round every Heirloom-shaped needle, in its skin's
 -- colours. shell = a shimmering ForceField skin round every piece (shellGrow x its size + shellPad

@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
+local FirstPerson = require(Shared:WaitForChild("FirstPerson"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local UiKit = require(script.Parent.UiKit)
 local Effects = require(script.Parent.Effects)
@@ -145,7 +146,7 @@ function CombatFx.start(gui)
 	UiKit.autoScale(inspectButton)
 	local lastInspect = 0
 	local function doInspect()
-		if os.clock() - lastInspect > Config.NeedleTool.inspect then
+		if os.clock() - lastInspect > FirstPerson.anims.inspect.length then -- one at a time, to the end
 			lastInspect = os.clock()
 			Remotes.Inspect:FireServer()
 			ViewModel.play("inspect")

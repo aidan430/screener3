@@ -14,6 +14,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Needles = require(Shared:WaitForChild("Needles"))
 local NeedleLook = require(Shared:WaitForChild("NeedleLook"))
+local FirstPerson = require(Shared:WaitForChild("FirstPerson"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local DataManager = require(script.Parent.DataManager)
@@ -94,7 +95,7 @@ end
 
 local function inspect(player)
 	local g, up = baseGrip(), CFrame.new(0, 0.8, -0.4) * CFrame.Angles(math.rad(-55), 0, 0)
-	local third = T.inspect / 6
+	local third = FirstPerson.anims.inspect.length / 6 -- as long as your own first-person inspect
 	task.spawn(play, player, {
 		{ up * g, third }, -- lifts it to look at
 		{ up * g * CFrame.Angles(math.rad(120), 0, 0), third }, -- and turns it round its length

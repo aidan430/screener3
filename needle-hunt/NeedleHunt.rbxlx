@@ -246,8 +246,9 @@ Config.Throw = { damage = 2, range = 45, speed = 90, radius = 1.2, back = 1.2, c
 -- under Config.AntiCheat.maxSpeed, so a dash never looks like cheating.
 Config.Dash = { speed = 55, seconds = 0.22, cooldown = 3 }
 -- How the Needle tool sits in the hand, in degrees (X, Y, Z): turn it here if it points the wrong
--- way in Studio. scale = the needle's size in the hand. inspect = seconds the inspect lasts.
-Config.NeedleTool = { grip = { 0, 90, 0 }, scale = 1.6, inspect = 2.4 }
+-- way in Studio. scale = the needle's size in the hand. (How long the inspect lasts comes from the
+-- first-person rig, shared/FirstPerson: anims.inspect.length.)
+Config.NeedleTool = { grip = { 0, 90, 0 }, scale = 1.6 }
 
 -- The Heirloom aura (shared/NeedleAura): energy round every Heirloom-shaped needle, in its skin's
 -- colours. shell = a shimmering ForceField skin round every piece (shellGrow x its size + shellPad
@@ -413,32 +414,32 @@ return Cosmetics
 -- { t, right = { x, y, z, rx, ry, rz }, left = {...}, needle = {...} }, eased between keys.
 return {
 	pose = {
-		right = { pos = { 0.85, -0.82, -1 }, rot = { 119, 0, -30 } },
-		left = { pos = { -0.85, -2.4, -1 }, rot = { 119, 0, 30 } },
+		right = { pos = { 0.85, -0.82, -0.9 }, rot = { 138, 0, -30 } },
+		left = { pos = { -0.85, -1.44, -1.17 }, rot = { 103, 0, 30 } },
 		needle = { pos = { 0.04, -0.3, 0 }, rot = { 0, 0, -72 } },
 	},
 	arm = { size = { 0.3, 1.6, 0.3 }, sleeve = 0.5, sleeveColour = { 70, 110, 170 } },
 	needleLook = { scale = 0.45, fat = 1.6 },
 	motion = { bob = 0.05, bobSpeed = 8, sway = 0.08 },
 	anims = {
-		inspect = { length = 2.6, keys = {
+		inspect = { length = 6, keys = {
 			{ t = 0, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
-			{ t = 0.45, right = { -0.3, 0.3, 0, -15, 0, 30 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
-			{ t = 0.9, right = { -0.3, 0.3, 0, -15, 0, 30 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 120, 0, 0 } },
-			{ t = 1.35, right = { -0.3, 0.3, 0, -15, 0, 30 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 240, 0, 0 } },
-			{ t = 1.8, right = { -0.25, 0.28, 0, -10, 20, 25 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 360, 0, 0 } },
-			{ t = 2.6, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 360, 0, 0 } },
+			{ t = 0.75, right = { 0, -0.1, 0, 10, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0.16, -0.78, -0.55, 393, -168, 140 } },
+			{ t = 2.91, right = { 0, 0.12, 0, -10, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0.47, -0.16, 0.39, 0, 365, 383 } },
+			{ t = 3.3, right = { 0, 0.15, 0, -12, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0.4, 0, 0, 0, 360 } },
+			{ t = 3.6, right = { 0, -0.08, 0, 8, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 360 } },
+			{ t = 6, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 360 } },
 		} },
 		jab = { length = 0.3, keys = {
 			{ t = 0, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
 			{ t = 0.08, right = { -0.1, 0.12, -0.6, -8, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
 			{ t = 0.3, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
 		} },
-		throw = { length = 0.55, keys = {
+		throw = { length = 0.4, keys = {
 			{ t = 0, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
-			{ t = 0.18, right = { 0.1, 0.25, 0.1, 25, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
-			{ t = 0.3, right = { -0.1, 0.05, -0.4, -20, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
-			{ t = 0.55, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.131, right = { 0.1, 0.25, 0.1, 25, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.218, right = { -0.1, 0.05, -0.4, -20, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.4, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
 		} },
 	},
 }
@@ -2960,6 +2961,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Needles = require(Shared:WaitForChild("Needles"))
 local NeedleLook = require(Shared:WaitForChild("NeedleLook"))
+local FirstPerson = require(Shared:WaitForChild("FirstPerson"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local DataManager = require(script.Parent.DataManager)
@@ -3040,7 +3042,7 @@ end
 
 local function inspect(player)
 	local g, up = baseGrip(), CFrame.new(0, 0.8, -0.4) * CFrame.Angles(math.rad(-55), 0, 0)
-	local third = T.inspect / 6
+	local third = FirstPerson.anims.inspect.length / 6 -- as long as your own first-person inspect
 	task.spawn(play, player, {
 		{ up * g, third }, -- lifts it to look at
 		{ up * g * CFrame.Angles(math.rad(120), 0, 0), third }, -- and turns it round its length
@@ -7009,6 +7011,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
+local FirstPerson = require(Shared:WaitForChild("FirstPerson"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local UiKit = require(script.Parent.UiKit)
 local Effects = require(script.Parent.Effects)
@@ -7142,7 +7145,7 @@ function CombatFx.start(gui)
 	UiKit.autoScale(inspectButton)
 	local lastInspect = 0
 	local function doInspect()
-		if os.clock() - lastInspect > Config.NeedleTool.inspect then
+		if os.clock() - lastInspect > FirstPerson.anims.inspect.length then -- one at a time, to the end
 			lastInspect = os.clock()
 			Remotes.Inspect:FireServer()
 			ViewModel.play("inspect")
