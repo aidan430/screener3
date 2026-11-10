@@ -346,8 +346,9 @@ class BoxOpenings(unittest.TestCase):
         block = CONFIG[CONFIG.index("Config.OneOfOne = {"):]
         block = block[: block.index("} }")]
         self.assertIn("chance = 1 / 12000000", block)
-        self.assertIn("chance = 1 / 120000000", block, "the Galaxy Gossamer is ten times rarer")
-        self.assertLess(block.index("galaxygossamer"), block.index('"sewing:gossamer"'), "the rarer is rolled first")
+        self.assertIn("chance = 1 / 1000000", block, "the Galaxy Gossamer: 1 in a million")
+        chances = [int(n) for n in re.findall(r"chance = 1 / (\d+)", block)]
+        self.assertEqual(chances, sorted(chances, reverse=True), "the rarer is rolled first")
         self.assertEqual(len(set(re.findall(r'record = "(\w+)"', block))), 2, "each has its own one-time claim")
         self.assertGreaterEqual(int(re.search(r"throwDamage = (\d+)", block).group(1)), table("Combat")["hearts"], "one throw tags out")
         unique = [x for x in SKINS if x["rarity"] == "unique"]
