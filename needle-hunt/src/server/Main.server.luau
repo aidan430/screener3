@@ -23,6 +23,8 @@ local Dash = require(script.Parent.Dash)
 local OneOfOne = require(script.Parent.OneOfOne)
 local TradeManager = require(script.Parent.TradeManager)
 local Practice = require(script.Parent.Practice)
+local GamePads = require(script.Parent.GamePads)
+local GameServer = require(script.Parent.GameServer)
 
 -- While testing in Studio, server errors also show on screen.
 if RunService:IsStudio() then
@@ -51,6 +53,13 @@ for _, step in ipairs({
 	{ "Practice", Practice.init },
 	{ "Data", DataManager.init },
 	{ "Rounds", RoundManager.start },
+	{ "Games", function() -- a game's own server plays its round; the lobby runs the game platforms
+		if GameServer.isGameServer() then
+			task.spawn(GameServer.run)
+		else
+			GamePads.init()
+		end
+	end },
 }) do
 	-- each in its own thread: one that errors is reported, and one that waits on the network (in
 	-- Studio a DataStore or MessagingService call can) doesn't hold up the rest for more than 5 s

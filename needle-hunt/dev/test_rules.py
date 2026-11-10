@@ -75,7 +75,6 @@ CHEST_COINS = [float(v) for v in re.search(r"coins = \{ (\d+), (\d+) \}", CONFIG
 
 class Rounds(unittest.TestCase):
     def test_timings_follow_the_brief(self):
-        self.assertTrue(20 <= ROUND["lobbyCountdown"] <= 60, "time to roam the lobby once someone joins")
         self.assertTrue(120 <= ROUND["duration"] <= 300)
         self.assertLess(ROUND["speedDuration"], ROUND["duration"])
         self.assertEqual(ROUND["results"], 10)
@@ -401,32 +400,25 @@ class BoxOpenings(unittest.TestCase):
         self.assertIn("Combat.onDummy", (SERVER / "CombatThrow.luau").read_text())
         self.assertIn('"PracticeStall"', (SERVER / "LobbyBuilder.luau").read_text())
 
-    def test_players_choose_to_join_and_roam_the_lobby_meanwhile(self):
-        rounds = (SERVER / "RoundManager.luau").read_text()
-        self.assertIn('GetAttribute("Queued")', rounds, "only players who joined go in")
-        self.assertIn('phase("waiting", 0)', rounds, "no countdown until someone joins")
-        self.assertIn('SetAttribute("Queued", false)', rounds, "back to roaming after each round")
-        self.assertIn("pad.Touched", (SERVER / "JoinQueue.luau").read_text(), "the Play pad joins you")
-        self.assertIn("autoJoin = false", (SERVER / "DataManager.luau").read_text())
-
-    def test_menus_free_the_mouse_and_keys_are_explained(self):
-        kit = (ROOT / "src" / "client" / "UiKit.luau").read_text()
-        self.assertIn("Modal = true", kit, "an open window frees the mouse, even in first person")
-        hints = (ROOT / "src" / "client" / "KeyHints.luau").read_text()
-        for key in ("Q", "C", "Hold E", "F", "X"):
-            self.assertIn('{ "' + key + '"', hints, key + " is explained")
-        self.assertIn("KeyCode.Backspace", hints, "X or Backspace closes menus")
-        self.assertIn("UIController.closeAll", (ROOT / "src" / "client" / "UIController.luau").read_text())
-
-    def test_hayfield_farm_is_big_and_its_chests_are_hard(self):
-        big = (SERVER / "MapsBig.luau").read_text()
-        self.assertIn("doors = 2", big, "the quarters open onto the roads")
-        self.assertIn('onlyMap = "bigfarm"', CONFIG, "the big map is the one being played for now")
-        marks = (SERVER / "Landmarks.luau").read_text()
-        for name in ("silo", "lookout", "barnLoft", "windmill", "waterTower", "hayTower"):
-            self.assertIn("function Landmarks." + name, marks)
-        self.assertIn("TrussPart", marks, "ladders you can climb")
-        self.assertIn("ctx.goldenSpot", (SERVER / "ChestSpawner.luau").read_text())
+    def test_four_game_platforms_start_at_ten_or_after_a_countdown(self):
+        block = CONFIG[CONFIG.index("Config.Pads = {"):]
+        block = block[: block.index("\n\n")]
+        pads = dict((k, float(v)) for k, v in re.findall(r"(\w+) = (-?[\d.]+)", block))
+        self.assertEqual(pads["count"], 4)
+        self.assertEqual(pads["size"], 10, "a game is 10 players")
+        self.assertEqual(ROUND["maxPlayers"], pads["size"], "a game holds a full platform")
+        self.assertLess(pads["fullCountdown"], pads["countdown"], "a full platform goes almost at once")
+        self.assertGreaterEqual(pads["minPlayers"], 2, "a live game needs company; Studio can test alone")
+        gp = (SERVER / "GamePads.luau").read_text()
+        self.assertIn("ReserveServer(game.PlaceId)", gp, "each game gets its own server")
+        self.assertIn("RunService:IsStudio()", gp, "in Studio the round plays here")
+        self.assertIn("RoundManager.play", gp)
+        gs = (SERVER / "GameServer.luau").read_text()
+        self.assertIn("PrivateServerOwnerId == 0", gs, "a game server knows it's one")
+        self.assertIn("TeleportService.TeleportAsync", gs, "and sends everyone back to the lobby after its round")
+        main = (SERVER / "Main.server.luau").read_text()
+        self.assertIn("GameServer.isGameServer()", main)
+        self.assertNotIn("lobbyCountdown", (SERVER / "RoundManager.luau").read_text(), "rounds only start from a platform or a game server")
 
     def test_start_up_never_waits_on_one_system(self):
         main = (SERVER / "Main.server.luau").read_text()

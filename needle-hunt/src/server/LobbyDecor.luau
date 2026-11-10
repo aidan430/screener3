@@ -72,9 +72,7 @@ function LobbyDecor.build(ctx)
 	for _, p in ipairs(PATHS) do
 		MapKit.part(ctx, { Name = "Path", Size = Vector3.new(p[3], 0.12, p[4]), CFrame = CFrame.new(MapKit.at(ctx, p[1], 0.44, p[2])), Color = STONE, Material = "Cobblestone" })
 	end
-	local pad = MapKit.at(ctx, 0, 0.46, 6)
-	local cf, size = upright(pad.X, pad.Y, pad.Z, 0.12, 32) -- the round paving under the Play pad
-	MapKit.part(ctx, { Name = "PadPaving", Shape = "Cylinder", Size = size, CFrame = cf, Color = STONE, Material = "Cobblestone" })
+	MapKit.part(ctx, { Name = "PadPaving", Size = Vector3.new(62, 0.12, 18), CFrame = CFrame.new(MapKit.at(ctx, 0, 0.46, 6)), Color = STONE, Material = "Cobblestone" }) -- under the game platforms
 	for _, b in ipairs(BEDS) do
 		bed(ctx, b[1], b[2], b[3], b[4])
 	end

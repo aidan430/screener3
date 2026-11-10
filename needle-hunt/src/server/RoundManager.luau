@@ -1,10 +1,10 @@
--- The round loop, all on the server:
---   lobby (Config.Round.lobbyCountdown) -> loading: pick a map, difficulty, modifier and maybe a
---   Golden Chest, build the map, place the chests (server/ChestSpawner), move up to
---   Config.Round.maxPlayers in -> countdown (3, 2, 1; nobody moves) -> the round (the timer runs;
---   open chests for coins and keys, poke and throw needles; once the last chest is open, everyone
---   has Config.Round.grace seconds) -> results (places by chests, tag-outs, coins) -> the lobby.
---   A lone player still gets rounds (practice).
+-- A round, all on the server, for a group of players (RoundManager.play: a game platform's
+-- players, server/GamePads, or everyone on a game's own server, server/GameServer):
+--   loading: pick a map, difficulty, modifier and maybe a Golden Chest, build the map, place the
+--   chests (server/ChestSpawner), move the players in -> countdown (3, 2, 1; nobody moves) -> the
+--   round (the timer runs; open chests for coins and power-ups, poke and throw needles; once the
+--   last chest is open, everyone has Config.Round.grace seconds) -> results (places by chests,
+--   tag-outs, coins) -> the lobby.
 -- The phase is published as attributes on ReplicatedStorage (Phase, EndsAt, MapName,
 -- Difficulty, Modifiers, Golden, ChestsLeft, ChestCount) and announced with Remotes.RoundState.
 -- The search phase is still called "search" (the name other scripts check).
@@ -44,6 +44,7 @@ local RoundManager = {}
 local rng = Random.new()
 local round = nil -- the round in play: { participants, chests, chestsLeft, started, ends, duration, diff, modifiers, golden, ... }
 local lastMap = nil
+local playing = false -- a round is being built or played (RoundManager.play)
 
 local function now()
 	return workspace:GetServerTimeNow()
@@ -87,15 +88,13 @@ local function move(player, cf)
 	end
 end
 
--- Players who'll play this round: loaded, alive, and not sitting out (Settings: Auto-join), up to
--- Config.Round.maxPlayers (the rest wait in the lobby for the next one).
-local function players()
+-- Of a group, the players who can play: still here, loaded, alive and not in the Practice Yard, up
+-- to Config.Round.maxPlayers.
+local function players(group)
 	local list = {}
-	for _, p in ipairs(Players:GetPlayers()) do
-		local d = DataManager.get(p)
+	for _, p in ipairs(group) do
 		local h = humanoid(p)
-		local wants = p:GetAttribute("Queued") == true or d and d.settings.autoJoin -- on the Play pad, PLAY pressed, or auto-join on
-		if d and wants and h and h.Health > 0 and not p:GetAttribute("Practicing") and #list < Config.Round.maxPlayers then -- a Time Trial isn't cut short
+		if p.Parent and DataManager.get(p) and h and h.Health > 0 and not p:GetAttribute("Practicing") and #list < Config.Round.maxPlayers then
 			table.insert(list, p)
 		end
 	end
@@ -130,7 +129,7 @@ local function pickModifiers()
 	return mods
 end
 
-local function playRound()
+local function playRound(group)
 	-- choose and build
 	local options = {}
 	for _, m in ipairs(Maps.list) do
@@ -164,7 +163,7 @@ local function playRound()
 	ReplicatedStorage:SetAttribute("Golden", golden)
 	phase("loading", 3)
 	builders[def.builder](ctx)
-	local list = players()
+	local list = players(group)
 	local full = def.duration or Config.Round.duration -- a big map has longer
 	local duration = if mods.speed then math.floor(full / 2) else full
 	round = { participants = {}, order = {}, diff = diff, modifiers = mods, golden = golden, duration = duration, count = #list, spawns = ctx.spawns }
@@ -219,7 +218,6 @@ local function playRound()
 	for i, p in ipairs(Players:GetPlayers()) do
 		if round.participants[p] then
 			p:SetAttribute("InRound", false)
-			p:SetAttribute("Queued", false) -- back to roaming until you join again
 			move(p, LobbyBuilder.spawnPoint(i))
 		end
 	end
@@ -253,37 +251,39 @@ function RoundManager.start()
 		end)
 	end)
 	light(Maps.lobbyLighting)
-	require(script.Parent.JoinQueue).init() -- PLAY and the Play pad
-	task.spawn(function()
-		while true do
-			if #players() < Config.Round.minPlayers then -- nobody's joined: roam, no countdown
-				phase("waiting", 0)
-				repeat
-					task.wait(0.5)
-				until #players() >= Config.Round.minPlayers
-			end
-			phase("lobby", Config.Round.lobbyCountdown)
-			local left = Config.Round.lobbyCountdown
-			while left > 0 and #players() >= Config.Round.minPlayers do
-				left -= task.wait(0.5)
-			end
-			if #players() >= Config.Round.minPlayers then
-				local ok, err = pcall(playRound)
-				if not ok then
-					warn("[Round] " .. tostring(err))
-					for i, p in ipairs(Players:GetPlayers()) do -- nobody is left in a broken map
-						p:SetAttribute("InRound", false)
-						freeze(p, false)
-						move(p, LobbyBuilder.spawnPoint(i))
-					end
-					round = nil
-					ChestSpawner.clear()
-					RoundExtras.stop()
-					light(Maps.lobbyLighting)
-				end
+	phase("waiting", 0)
+end
+
+-- Is a round being played on this server?
+function RoundManager.busy()
+	return round ~= nil or playing
+end
+
+-- Plays one round for `group` (a list of players) and returns when it's over. A round that breaks
+-- puts everyone back in the lobby.
+function RoundManager.play(group)
+	if RoundManager.busy() then
+		return false
+	end
+	playing = true
+	local ok, err = pcall(playRound, group)
+	if not ok then
+		warn("[Round] " .. tostring(err))
+		for i, p in ipairs(group) do -- nobody is left in a broken map
+			if p.Parent then
+				p:SetAttribute("InRound", false)
+				freeze(p, false)
+				move(p, LobbyBuilder.spawnPoint(i))
 			end
 		end
-	end)
+		round = nil
+		ChestSpawner.clear()
+		RoundExtras.stop()
+		light(Maps.lobbyLighting)
+	end
+	playing = false
+	phase("waiting", 0)
+	return true
 end
 
 return RoundManager

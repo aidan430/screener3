@@ -19,7 +19,7 @@ local NeedleLook = require(Shared:WaitForChild("NeedleLook"))
 
 local LobbyBuilder = {}
 local ctx = nil
-local playPad = nil -- step on it to join the next round (server/RoundManager)
+local pads = {} -- the game platforms: { part, name, count, status (labels), position }
 
 -- A board at map-local (x, y, z) facing the plaza, with a SurfaceGui on its front (a part's
 -- Front face looks down its LookVector); returns the frame to write on.
@@ -129,8 +129,8 @@ function LobbyBuilder.showcase()
 	end)
 end
 
-function LobbyBuilder.playPad()
-	return playPad
+function LobbyBuilder.pads()
+	return pads
 end
 
 function LobbyBuilder.spawnPoint(i)
@@ -165,21 +165,19 @@ function LobbyBuilder.build()
 	local needle = MapKit.part(ctx, { Name = "BigNeedle", Shape = "Cylinder", Size = Vector3.new(16, 0.6, 0.6), CFrame = CFrame.new(MapKit.at(ctx, 0, 23, -54)), Color = { 210, 214, 224 }, Material = "Metal", CanCollide = false })
 	TweenService:Create(needle, TweenInfo.new(6, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { CFrame = needle.CFrame * CFrame.Angles(math.pi, 0, 0) }):Play()
 	TweenService:Create(needle, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = needle.Position + Vector3.new(0, 1.2, 0) }):Play()
-	-- the Play pad
-	local pad = MapKit.part(ctx, { Name = "PlayPad", Shape = "Cylinder", Size = Vector3.new(0.4, 18, 18), CFrame = CFrame.new(MapKit.at(ctx, 0, 0.6, 6)) * CFrame.Angles(0, 0, math.rad(90)), Color = { 255, 206, 80 }, Material = "Neon", CanCollide = false })
-	playPad = pad
-	local above = Instance.new("BillboardGui")
-	above.Size, above.StudsOffset, above.AlwaysOnTop = UDim2.fromOffset(420, 120), Vector3.new(0, 4, 0), false -- low over the pad, clear of the title sign
-	above.Parent = pad
-	local status = text(above, { Size = UDim2.fromScale(1, 1), TextStrokeTransparency = 0.3, Text = "" })
-	task.spawn(function()
-		while true do
-			local phase = ReplicatedStorage:GetAttribute("Phase")
-			local left = (ReplicatedStorage:GetAttribute("EndsAt") or 0) - workspace:GetServerTimeNow()
-			status.Text = if phase == "waiting" then "STEP ON TO PLAY" elseif phase == "lobby" then "NEXT ROUND IN " .. Rules.clock(left) elseif phase == "search" then "ROUND IN PLAY: " .. Rules.clock(left) else "GET READY..."
-			task.wait(0.5)
-		end
-	end)
+	-- the game platforms (server/GamePads runs them): stand on one to join its game
+	for i = 1, Config.Pads.count do
+		local x = (i - (Config.Pads.count + 1) / 2) * 14
+		local d = Config.Pads.radius * 2
+		local pad = MapKit.part(ctx, { Name = "GamePad" .. i, Shape = "Cylinder", Size = Vector3.new(0.4, d, d), CFrame = CFrame.new(MapKit.at(ctx, x, 0.6, 6)) * CFrame.Angles(0, 0, math.rad(90)), Color = Config.Pads.colours[(i - 1) % #Config.Pads.colours + 1], Material = "Neon", CanCollide = false })
+		local above = Instance.new("BillboardGui")
+		above.Size, above.StudsOffset, above.MaxDistance = UDim2.fromOffset(220, 120), Vector3.new(0, 5, 0), 120
+		above.Parent = pad
+		local name = text(above, { Size = UDim2.new(1, 0, 0.32, 0), Text = "GAME " .. i, TextStrokeTransparency = 0.3 })
+		local count = text(above, { Size = UDim2.new(1, 0, 0.4, 0), Position = UDim2.fromScale(0, 0.3), Text = "0/" .. Config.Pads.size, TextColor3 = Color3.fromRGB(255, 214, 90), TextStrokeTransparency = 0.3 })
+		local status = text(above, { Size = UDim2.new(1, 0, 0.28, 0), Position = UDim2.fromScale(0, 0.72), Text = "Stand here to play", TextColor3 = Color3.fromRGB(220, 226, 240), TextStrokeTransparency = 0.3 })
+		pads[i] = { part = pad, name = name, count = count, status = status, position = pad.Position }
+	end
 	-- the leaderboard: cycles through every board
 	local lb = board("Leaderboard", -34, 9, -8, 18, 16)
 	local lbTitle = text(lb, { Size = UDim2.new(1, -30, 0.11, 0), Position = UDim2.new(0, 15, 0.02, 0), TextColor3 = Color3.fromRGB(255, 214, 90) })

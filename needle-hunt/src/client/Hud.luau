@@ -85,20 +85,19 @@ function Hud.mount(gui, open)
 		local text, why = Remotes.Hint:InvokeServer()
 		Hud.toast(text or why or "No hint.", if text then "good" else "bad")
 	end)
-	-- PLAY: join the next round (or step on the Play pad); press again to stay in the lobby
+	-- PLAY: onto the fullest game platform with room (or walk onto one)
 	local play = UiKit.button("PLAY", UiKit.colors.green, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 124), Size = UDim2.fromOffset(240, 46), Parent = gui })
 	UiKit.autoScale(play)
 	play.Activated:Connect(function()
 		Effects.sound("click")
-		ReplicatedStorage.Remotes.Queue:InvokeServer(not player:GetAttribute("Queued"))
+		if not ReplicatedStorage.Remotes.Queue:InvokeServer() then
+			Hud.toast("Every game is full or starting: try again in a moment.", "bad")
+		end
 	end)
 	local function showPlay()
-		local queued = player:GetAttribute("Queued") == true
 		play.Visible = not player:GetAttribute("InRound") and not player:GetAttribute("Practicing")
-		play.Text = if queued then "IN THE NEXT ROUND ✓" else "PLAY"
-		play.BackgroundColor3 = if queued then UiKit.colors.gold else UiKit.colors.green
 	end
-	for _, a in ipairs({ "Queued", "InRound", "Practicing" }) do
+	for _, a in ipairs({ "InRound", "Practicing" }) do
 		player:GetAttributeChangedSignal(a):Connect(showPlay)
 	end
 	showPlay()
@@ -115,12 +114,9 @@ function Hud.mount(gui, open)
 			local mods = ReplicatedStorage:GetAttribute("Modifiers") or ""
 			local golden = ReplicatedStorage:GetAttribute("Golden")
 			local inRound = player.Character and player.Character.PrimaryPart and (player.Character.PrimaryPart.Position - Config.ArenaCentre).Magnitude < 200
-			if phase == "waiting" then
-				headline.Text, timer.Text = "Explore the lobby", ""
-				info.Text = "Press PLAY or step on the Play pad to start a round"
-			elseif phase == "lobby" then
-				headline.Text, timer.Text = "Next round in", Rules.clock(left)
-				info.Text = if not player:GetAttribute("Queued") then "Press PLAY to join this round" elseif #game:GetService("Players"):GetPlayers() == 1 then "Practice round: invite friends to race!" else "Get ready: 5 chests, first come first served!"
+			if phase == "waiting" or phase == "lobby" then
+				headline.Text, timer.Text = "Pick a game", ""
+				info.Text = "Stand on a game platform (or press PLAY): 10 players and it starts"
 			elseif phase == "loading" or phase == "countdown" then
 				headline.Text, timer.Text = ReplicatedStorage:GetAttribute("MapName") or "Loading...", if phase == "countdown" then tostring(math.max(1, math.ceil(left))) else "..."
 				info.Text = (ReplicatedStorage:GetAttribute("Difficulty") or "") .. (if mods ~= "" then "  ·  " .. mods else "") .. (if golden then "  ·  ✦ GOLDEN CHEST ✦" else "")

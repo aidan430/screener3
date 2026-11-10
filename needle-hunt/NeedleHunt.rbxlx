@@ -195,7 +195,6 @@ local Config = {}
 
 -- Rounds (server/RoundManager). Seconds.
 Config.Round = {
-	lobbyCountdown = 30, -- in the lobby, once someone has joined (Play pad or PLAY), before the round
 	loadCountdown = 3, -- 3, 2, 1 in the map before the round starts
 	duration = 180, -- a normal round (a map can set its own: Hayfield Farm's is 300)
 	onlyMap = "bigfarm", -- play just this map (shared/Maps); nil = all of them in turn
@@ -420,6 +419,19 @@ Config.Music = "" -- a looping lobby track ID, or "" for none
 -- Where things are. The lobby sits at the origin; maps are built far away, one at a time.
 Config.LobbyCentre = Vector3.new(0, 0, 0)
 Config.ArenaCentre = Vector3.new(0, 0, 600)
+
+-- The game platforms in the lobby (server/GamePads): `count` of them, each for a game of up to
+-- `size` players. Stand on one to join (PLAY takes you to the fullest). At `size` it starts after
+-- `fullCountdown` seconds; with at least `minPlayers` (`studioMinPlayers` in Studio) a `countdown`
+-- starts and the game goes with whoever is on it. A game gets its own server (a private server of
+-- this place, server/GameServer), plays one round and sends everyone back to the lobby. In Studio,
+-- where teleports don't work, the round is played in this server instead.
+Config.Pads = { count = 4, size = 10, minPlayers = 2, studioMinPlayers = 1, countdown = 60, fullCountdown = 5, radius = 6,
+	colours = { { 255, 206, 80 }, { 110, 200, 120 }, { 90, 160, 240 }, { 230, 120, 170 } } }
+
+-- A game's own server (server/GameServer): it waits up to `wait` seconds for the players a platform
+-- sent, plays one round, then `afterRound` seconds later sends everyone back to the lobby.
+Config.GameServer = { wait = 20, afterRound = 2 }
 
 -- The Practice Yard's Time Trial (server/Practice, server/PracticeYard, client/PracticeFx): your own
 -- yard of straw dummies and chests on perches. A countdown, then `seconds` to tag out every dummy
@@ -4212,6 +4224,249 @@ return FarmProps2
 			</Item>
 			<Item class="ModuleScript" referent="RBX0003C">
 				<Properties>
+					<string name="Name">GamePads</string>
+					<ProtectedString name="Source"><![CDATA[-- The game platforms in the lobby (Config.Pads; built by server/LobbyBuilder). Stand on one to join
+-- its game: the count above it shows how many are on it (3/10). At 10 the game starts after a few
+-- seconds; with at least Config.Pads.minPlayers a longer countdown starts and the game goes with
+-- whoever is on it then. Starting, its players are teleported to a private server of this place
+-- (server/GameServer plays the round there and sends them back); if that can't happen (Studio, where
+-- teleports don't work, or a failed teleport), the round is played right here when this server is
+-- free. PLAY (Remotes.Queue) takes you to the fullest platform that has room.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TeleportService = game:GetService("TeleportService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Rules = require(Shared:WaitForChild("Rules"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local LobbyBuilder = require(script.Parent.LobbyBuilder)
+local RoundManager = require(script.Parent.RoundManager)
+local AntiCheat = require(script.Parent.AntiCheat)
+
+local GamePads = {}
+local P = Config.Pads
+local state = {} -- [i] = { endsAt, launching }
+
+local function now()
+	return workspace:GetServerTimeNow()
+end
+
+local function free(p) -- in the lobby, not in a round or the Practice Yard
+	return not p:GetAttribute("InRound") and not p:GetAttribute("Practicing")
+end
+
+-- Who's standing on pad i (in the order they stepped on, up to its size).
+local arrived = {}
+local function onPad(i)
+	local pad = LobbyBuilder.pads()[i]
+	local list = {}
+	for _, p in ipairs(Players:GetPlayers()) do
+		local root = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+		local offset = root and (root.Position - pad.position)
+		local here = offset and Vector2.new(offset.X, offset.Z).Magnitude <= P.radius + 0.5 and offset.Y > -2 and offset.Y < 8 and free(p)
+		if here then
+			arrived[p] = arrived[p] or { pad = i, at = os.clock() }
+			if arrived[p].pad ~= i then
+				arrived[p] = { pad = i, at = os.clock() }
+			end
+			table.insert(list, p)
+		elseif arrived[p] and arrived[p].pad == i then
+			arrived[p] = nil
+		end
+	end
+	table.sort(list, function(a, b)
+		return arrived[a].at < arrived[b].at
+	end)
+	while #list > P.size do
+		table.remove(list)
+	end
+	return list
+end
+
+local function minPlayers()
+	return if RunService:IsStudio() then P.studioMinPlayers else P.minPlayers
+end
+
+-- A game starting: its players to their own server, or (Studio, or if that fails) a round here.
+local function launch(i, list)
+	local s = state[i]
+	s.launching, s.endsAt = true, nil
+	local ok = false
+	if not RunService:IsStudio() then
+		ok = pcall(function()
+			local code = TeleportService:ReserveServer(game.PlaceId)
+			local options = Instance.new("TeleportOptions")
+			options.ReservedServerAccessCode = code
+			options:SetTeleportData({ pad = i, count = #list })
+			TeleportService:TeleportAsync(game.PlaceId, list, options)
+		end)
+		if not ok then
+			warn("[GamePads] teleport failed: playing game " .. i .. " here")
+		end
+	end
+	if not ok then
+		if RoundManager.busy() then
+			LobbyBuilder.pads()[i].status.Text = "Waiting for the game in play..."
+			task.wait(2)
+		else
+			task.spawn(RoundManager.play, list)
+		end
+	end
+	task.wait(3) -- they've gone: the platform clears
+	s.launching = false
+end
+
+local function tick()
+	local pads = LobbyBuilder.pads()
+	for i, pad in ipairs(pads) do
+		local s = state[i]
+		local list = onPad(i)
+		pad.count.Text = #list .. "/" .. P.size
+		if s.launching then
+			pad.status.Text = "Loading the game..."
+		elseif #list >= P.size then
+			s.endsAt = math.min(s.endsAt or math.huge, now() + P.fullCountdown)
+		elseif #list >= minPlayers() then
+			s.endsAt = s.endsAt or now() + P.countdown
+		else
+			s.endsAt = nil
+		end
+		if not s.launching then
+			if s.endsAt and now() >= s.endsAt then
+				task.spawn(launch, i, list)
+			elseif s.endsAt then
+				pad.status.Text = (if #list >= P.size then "Full! Starting in " else "Starting in ") .. Rules.clock(s.endsAt - now())
+			else
+				pad.status.Text = if #list == 0 then "Stand here to play" else "Waiting for players"
+			end
+		end
+	end
+end
+
+function GamePads.init()
+	for i = 1, #LobbyBuilder.pads() do
+		state[i] = {}
+	end
+	Remotes.Queue.OnServerInvoke = function(player) -- PLAY: onto the fullest platform with room
+		if not free(player) or not player.Character then
+			return false
+		end
+		local best, bestCount = nil, -1
+		for i, pad in ipairs(LobbyBuilder.pads()) do
+			local n = #onPad(i)
+			if not state[i].launching and n < P.size and n > bestCount then
+				best, bestCount = pad, n
+			end
+		end
+		if best then
+			AntiCheat.allow(player, 3)
+			player.Character:PivotTo(CFrame.new(best.position + Vector3.new(math.random(-3, 3), 3, math.random(-3, 3))))
+		end
+		return best ~= nil
+	end
+	Players.PlayerRemoving:Connect(function(p)
+		arrived[p] = nil
+	end)
+	task.spawn(function()
+		while true do
+			tick()
+			task.wait(0.5)
+		end
+	end)
+end
+
+return GamePads
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX0003D">
+				<Properties>
+					<string name="Name">GameServer</string>
+					<ProtectedString name="Source"><![CDATA[-- A game's own server: a private (reserved) server of this same place, made by a lobby game platform
+-- (server/GamePads) for its players. Here there are no platforms: it waits for the players the
+-- platform sent (their TeleportData says how many) or Config.GameServer.wait seconds, plays one
+-- round with everyone (server/RoundManager), then sends everyone back to a lobby server. Anyone
+-- who joins late plays the next game from the lobby.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TeleportService = game:GetService("TeleportService")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local DataManager = require(script.Parent.DataManager)
+local RoundManager = require(script.Parent.RoundManager)
+
+local GameServer = {}
+
+-- Is this a game's own server (a reserved server: a private server nobody owns)?
+function GameServer.isGameServer()
+	return game.PrivateServerId ~= "" and game.PrivateServerOwnerId == 0
+end
+
+local function expected()
+	for _, p in ipairs(Players:GetPlayers()) do
+		local ok, join = pcall(p.GetJoinData, p)
+		local data = ok and join and join.TeleportData
+		if type(data) == "table" and type(data.count) == "number" then
+			return data.count
+		end
+	end
+	return nil
+end
+
+local function ready()
+	local n = 0
+	for _, p in ipairs(Players:GetPlayers()) do
+		if DataManager.get(p) and p.Character then
+			n += 1
+		end
+	end
+	return n
+end
+
+local function backToLobby()
+	for attempt = 1, 3 do
+		local list = Players:GetPlayers()
+		if #list == 0 then
+			return
+		end
+		Remotes.Notify:FireAllClients({ text = "Back to the lobby...", tone = "good" })
+		local ok, err = pcall(TeleportService.TeleportAsync, TeleportService, game.PlaceId, list)
+		if ok then
+			return
+		end
+		warn("[GameServer] back to the lobby failed (try " .. attempt .. "): " .. tostring(err))
+		task.wait(3)
+	end
+end
+
+function GameServer.run()
+	local waited = 0
+	while waited < Config.GameServer.wait do -- everyone the platform sent, or as many as made it
+		local want = expected()
+		if want and ready() >= want then
+			break
+		end
+		waited += task.wait(0.5)
+	end
+	while ready() == 0 do
+		task.wait(1)
+	end
+	RoundManager.play(Players:GetPlayers())
+	task.wait(Config.GameServer.afterRound)
+	backToLobby()
+end
+
+return GameServer
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX0003E">
+				<Properties>
 					<string name="Name">HaystackModel</string>
 					<ProtectedString name="Source"><![CDATA[-- The owner's own haystack model (Config.Haystacks.model): loaded once with InsertService (it must
 -- belong to the game's owner, or be public), centred and set on its base. MapKit.haystack places a
@@ -4264,47 +4519,7 @@ return HaystackModel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003D">
-				<Properties>
-					<string name="Name">JoinQueue</string>
-					<ProtectedString name="Source"><![CDATA[-- Joining a round (server/RoundManager): step on the lobby's Play pad or press PLAY (Remotes.Queue)
--- to be in the next round; everyone else roams the lobby. RoundManager takes you out of the queue
--- again after each round, and the Settings switch "Join rounds automatically" skips all this.
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local Remotes = ReplicatedStorage:WaitForChild("Remotes")
-local LobbyBuilder = require(script.Parent.LobbyBuilder)
-
-local JoinQueue = {}
-
-local function free(player) -- not in a round or the Practice Yard
-	return not player:GetAttribute("InRound") and not player:GetAttribute("Practicing")
-end
-
-function JoinQueue.init()
-	Remotes.Queue.OnServerInvoke = function(player, want)
-		if free(player) then
-			player:SetAttribute("Queued", want == true)
-		end
-		return player:GetAttribute("Queued") == true
-	end
-	local pad = LobbyBuilder.playPad()
-	if pad then
-		pad.Touched:Connect(function(hit)
-			local p = Players:GetPlayerFromCharacter(hit.Parent)
-			if p and free(p) then
-				p:SetAttribute("Queued", true)
-			end
-		end)
-	end
-end
-
-return JoinQueue
-]]></ProtectedString>
-				</Properties>
-			</Item>
-			<Item class="ModuleScript" referent="RBX0003E">
+			<Item class="ModuleScript" referent="RBX0003F">
 				<Properties>
 					<string name="Name">Landmarks</string>
 					<ProtectedString name="Source"><![CDATA[-- Climbable landmarks for a big map (server/MapsBig). Each is a challenge to reach, and returns the
@@ -4439,7 +4654,7 @@ return Landmarks
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003F">
+			<Item class="ModuleScript" referent="RBX00040">
 				<Properties>
 					<string name="Name">LeaderboardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Global leaderboards (Config.Boards), each an OrderedDataStore: most chests, most tag-outs,
@@ -4613,7 +4828,7 @@ return LeaderboardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00040">
+			<Item class="ModuleScript" referent="RBX00041">
 				<Properties>
 					<string name="Name">LobbyBuilder</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby, built once at Config.LobbyCentre: a wooden plaza in a field, the animated title sign
@@ -4637,7 +4852,7 @@ local NeedleLook = require(Shared:WaitForChild("NeedleLook"))
 
 local LobbyBuilder = {}
 local ctx = nil
-local playPad = nil -- step on it to join the next round (server/RoundManager)
+local pads = {} -- the game platforms: { part, name, count, status (labels), position }
 
 -- A board at map-local (x, y, z) facing the plaza, with a SurfaceGui on its front (a part's
 -- Front face looks down its LookVector); returns the frame to write on.
@@ -4747,8 +4962,8 @@ function LobbyBuilder.showcase()
 	end)
 end
 
-function LobbyBuilder.playPad()
-	return playPad
+function LobbyBuilder.pads()
+	return pads
 end
 
 function LobbyBuilder.spawnPoint(i)
@@ -4783,21 +4998,19 @@ function LobbyBuilder.build()
 	local needle = MapKit.part(ctx, { Name = "BigNeedle", Shape = "Cylinder", Size = Vector3.new(16, 0.6, 0.6), CFrame = CFrame.new(MapKit.at(ctx, 0, 23, -54)), Color = { 210, 214, 224 }, Material = "Metal", CanCollide = false })
 	TweenService:Create(needle, TweenInfo.new(6, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { CFrame = needle.CFrame * CFrame.Angles(math.pi, 0, 0) }):Play()
 	TweenService:Create(needle, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = needle.Position + Vector3.new(0, 1.2, 0) }):Play()
-	-- the Play pad
-	local pad = MapKit.part(ctx, { Name = "PlayPad", Shape = "Cylinder", Size = Vector3.new(0.4, 18, 18), CFrame = CFrame.new(MapKit.at(ctx, 0, 0.6, 6)) * CFrame.Angles(0, 0, math.rad(90)), Color = { 255, 206, 80 }, Material = "Neon", CanCollide = false })
-	playPad = pad
-	local above = Instance.new("BillboardGui")
-	above.Size, above.StudsOffset, above.AlwaysOnTop = UDim2.fromOffset(420, 120), Vector3.new(0, 4, 0), false -- low over the pad, clear of the title sign
-	above.Parent = pad
-	local status = text(above, { Size = UDim2.fromScale(1, 1), TextStrokeTransparency = 0.3, Text = "" })
-	task.spawn(function()
-		while true do
-			local phase = ReplicatedStorage:GetAttribute("Phase")
-			local left = (ReplicatedStorage:GetAttribute("EndsAt") or 0) - workspace:GetServerTimeNow()
-			status.Text = if phase == "waiting" then "STEP ON TO PLAY" elseif phase == "lobby" then "NEXT ROUND IN " .. Rules.clock(left) elseif phase == "search" then "ROUND IN PLAY: " .. Rules.clock(left) else "GET READY..."
-			task.wait(0.5)
-		end
-	end)
+	-- the game platforms (server/GamePads runs them): stand on one to join its game
+	for i = 1, Config.Pads.count do
+		local x = (i - (Config.Pads.count + 1) / 2) * 14
+		local d = Config.Pads.radius * 2
+		local pad = MapKit.part(ctx, { Name = "GamePad" .. i, Shape = "Cylinder", Size = Vector3.new(0.4, d, d), CFrame = CFrame.new(MapKit.at(ctx, x, 0.6, 6)) * CFrame.Angles(0, 0, math.rad(90)), Color = Config.Pads.colours[(i - 1) % #Config.Pads.colours + 1], Material = "Neon", CanCollide = false })
+		local above = Instance.new("BillboardGui")
+		above.Size, above.StudsOffset, above.MaxDistance = UDim2.fromOffset(220, 120), Vector3.new(0, 5, 0), 120
+		above.Parent = pad
+		local name = text(above, { Size = UDim2.new(1, 0, 0.32, 0), Text = "GAME " .. i, TextStrokeTransparency = 0.3 })
+		local count = text(above, { Size = UDim2.new(1, 0, 0.4, 0), Position = UDim2.fromScale(0, 0.3), Text = "0/" .. Config.Pads.size, TextColor3 = Color3.fromRGB(255, 214, 90), TextStrokeTransparency = 0.3 })
+		local status = text(above, { Size = UDim2.new(1, 0, 0.28, 0), Position = UDim2.fromScale(0, 0.72), Text = "Stand here to play", TextColor3 = Color3.fromRGB(220, 226, 240), TextStrokeTransparency = 0.3 })
+		pads[i] = { part = pad, name = name, count = count, status = status, position = pad.Position }
+	end
 	-- the leaderboard: cycles through every board
 	local lb = board("Leaderboard", -34, 9, -8, 18, 16)
 	local lbTitle = text(lb, { Size = UDim2.new(1, -30, 0.11, 0), Position = UDim2.new(0, 15, 0.02, 0), TextColor3 = Color3.fromRGB(255, 214, 90) })
@@ -4860,7 +5073,7 @@ return LobbyBuilder
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00041">
+			<Item class="ModuleScript" referent="RBX00042">
 				<Properties>
 					<string name="Name">LobbyDecor</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's dressing (LobbyBuilder calls build once): a lawn crossed by cobbled paths (spawn to
@@ -4937,9 +5150,7 @@ function LobbyDecor.build(ctx)
 	for _, p in ipairs(PATHS) do
 		MapKit.part(ctx, { Name = "Path", Size = Vector3.new(p[3], 0.12, p[4]), CFrame = CFrame.new(MapKit.at(ctx, p[1], 0.44, p[2])), Color = STONE, Material = "Cobblestone" })
 	end
-	local pad = MapKit.at(ctx, 0, 0.46, 6)
-	local cf, size = upright(pad.X, pad.Y, pad.Z, 0.12, 32) -- the round paving under the Play pad
-	MapKit.part(ctx, { Name = "PadPaving", Shape = "Cylinder", Size = size, CFrame = cf, Color = STONE, Material = "Cobblestone" })
+	MapKit.part(ctx, { Name = "PadPaving", Size = Vector3.new(62, 0.12, 18), CFrame = CFrame.new(MapKit.at(ctx, 0, 0.46, 6)), Color = STONE, Material = "Cobblestone" }) -- under the game platforms
 	for _, b in ipairs(BEDS) do
 		bed(ctx, b[1], b[2], b[3], b[4])
 	end
@@ -4969,7 +5180,7 @@ return LobbyDecor
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00042">
+			<Item class="ModuleScript" referent="RBX00043">
 				<Properties>
 					<string name="Name">LobbyShowOff</string>
 					<ProtectedString name="Source"><![CDATA[-- Show off (Remotes.ShowOff): hold your showcase needle (or your best) up over your head for a
@@ -5038,7 +5249,7 @@ return LobbyShowOff
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00043">
+			<Item class="ModuleScript" referent="RBX00044">
 				<Properties>
 					<string name="Name">LobbySocial</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's social side: showing off collections.
@@ -5318,7 +5529,7 @@ return LobbySocial
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Script" referent="RBX00044">
+			<Item class="Script" referent="RBX00045">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Starts A Needle in a Haystack on the server. Systems that react to a player's save loading are
@@ -5346,6 +5557,8 @@ local Dash = require(script.Parent.Dash)
 local OneOfOne = require(script.Parent.OneOfOne)
 local TradeManager = require(script.Parent.TradeManager)
 local Practice = require(script.Parent.Practice)
+local GamePads = require(script.Parent.GamePads)
+local GameServer = require(script.Parent.GameServer)
 
 -- While testing in Studio, server errors also show on screen.
 if RunService:IsStudio() then
@@ -5374,6 +5587,13 @@ for _, step in ipairs({
 	{ "Practice", Practice.init },
 	{ "Data", DataManager.init },
 	{ "Rounds", RoundManager.start },
+	{ "Games", function() -- a game's own server plays its round; the lobby runs the game platforms
+		if GameServer.isGameServer() then
+			task.spawn(GameServer.run)
+		else
+			GamePads.init()
+		end
+	end },
 }) do
 	-- each in its own thread: one that errors is reported, and one that waits on the network (in
 	-- Studio a DataStore or MessagingService call can) doesn't hold up the rest for more than 5 s
@@ -5396,7 +5616,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00045">
+			<Item class="ModuleScript" referent="RBX00046">
 				<Properties>
 					<string name="Name">MapKit</string>
 					<ProtectedString name="Source"><![CDATA[-- The building kit for maps (server/MapsA, MapsB): ground, hay bales, haystacks, crates, fences,
@@ -5611,7 +5831,7 @@ return MapKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00046">
+			<Item class="ModuleScript" referent="RBX00047">
 				<Properties>
 					<string name="Name">MapsA</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Classic Haystack Field (a hedge maze), Barn Interior (a maze of stall walls) and
@@ -5740,7 +5960,7 @@ return MapsA
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00047">
+			<Item class="ModuleScript" referent="RBX00048">
 				<Properties>
 					<string name="Name">MapsB</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Night Forest (a thicket maze) and Abandoned Attic (a maze of stacked boxes under
@@ -5839,7 +6059,7 @@ return MapsB
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00048">
+			<Item class="ModuleScript" referent="RBX00049">
 				<Properties>
 					<string name="Name">MapsBig</string>
 					<ProtectedString name="Source"><![CDATA[-- Hayfield Farm: one big map (about 360 studs across, several times the others). Four farm quarters,
@@ -5941,7 +6161,7 @@ return MapsBig
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00049">
+			<Item class="ModuleScript" referent="RBX0004A">
 				<Properties>
 					<string name="Name">MapsC</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders from the owner's Gemini map sheets: Pumpkin Patch, Harvest Corn Maze, Sunflower
@@ -6092,7 +6312,7 @@ return MapsC
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004A">
+			<Item class="ModuleScript" referent="RBX0004B">
 				<Properties>
 					<string name="Name">MapsD</string>
 					<ProtectedString name="Source"><![CDATA[-- More maps from the owner's Gemini sheets: Frozen Farm, Rainy Greenhouse, Duck Pond Marsh, Hay
@@ -6249,7 +6469,7 @@ return MapsD
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004B">
+			<Item class="ModuleScript" referent="RBX0004C">
 				<Properties>
 					<string name="Name">MatchXp</string>
 					<ProtectedString name="Source"><![CDATA[-- The match's stats and its end (Config.MatchXp, Config.Rewards): counted while the round runs
@@ -6328,7 +6548,7 @@ return MatchXp
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004C">
+			<Item class="ModuleScript" referent="RBX0004D">
 				<Properties>
 					<string name="Name">MazeKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Mazes for the maps: a grid of cells carved into a maze (a random depth-first walk, so every cell
@@ -6553,7 +6773,7 @@ return MazeKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004D">
+			<Item class="ModuleScript" referent="RBX0004E">
 				<Properties>
 					<string name="Name">MazeWalls</string>
 					<ProtectedString name="Source"><![CDATA[-- More maze wall styles (server/MazeKit uses these when a map asks for one; it has its own
@@ -6747,7 +6967,7 @@ return MazeWalls
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004E">
+			<Item class="ModuleScript" referent="RBX0004F">
 				<Properties>
 					<string name="Name">OneOfOne</string>
 					<ProtectedString name="Source"><![CDATA[-- The 1 of 1s (Config.OneOfOne). A chest rolls for each (roll); the first player to roll one claims it
@@ -6867,7 +7087,7 @@ return OneOfOne
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004F">
+			<Item class="ModuleScript" referent="RBX00050">
 				<Properties>
 					<string name="Name">Powerups</string>
 					<ProtectedString name="Source"><![CDATA[-- Power-ups on the maps (Config.Powerups). When a round's search starts, glowing orbs float in
@@ -7048,7 +7268,7 @@ return Powerups
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00050">
+			<Item class="ModuleScript" referent="RBX00051">
 				<Properties>
 					<string name="Name">Practice</string>
 					<ProtectedString name="Source"><![CDATA[-- The Time Trial in the Practice Yard (Config.Practice). From the lobby (the Practice stall, or
@@ -7303,7 +7523,7 @@ return Practice
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00051">
+			<Item class="ModuleScript" referent="RBX00052">
 				<Properties>
 					<string name="Name">PracticeYard</string>
 					<ProtectedString name="Source"><![CDATA[-- Builds one player's Practice Yard for a Time Trial (server/Practice, Config.Practice): a hedged
@@ -7444,7 +7664,7 @@ return PracticeYard
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00052">
+			<Item class="ModuleScript" referent="RBX00053">
 				<Properties>
 					<string name="Name">QuestManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Daily quests: three a day, the same for everyone (shared/Quests.forDay). Progress is saved;
@@ -7512,7 +7732,7 @@ return QuestManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00053">
+			<Item class="ModuleScript" referent="RBX00054">
 				<Properties>
 					<string name="Name">Requests</string>
 					<ProtectedString name="Source"><![CDATA[-- Small requests from players, checked on the server: a hint (Remotes.Hint) and saving their
@@ -7575,7 +7795,7 @@ return Requests
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00054">
+			<Item class="ModuleScript" referent="RBX00055">
 				<Properties>
 					<string name="Name">RewardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Every coin and XP point is given here, on the server: chests, places, playing a round to the
@@ -7721,7 +7941,7 @@ return RewardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00055">
+			<Item class="ModuleScript" referent="RBX00056">
 				<Properties>
 					<string name="Name">RoundExtras</string>
 					<ProtectedString name="Source"><![CDATA[-- What runs alongside a round's search, started and stopped together by server/RoundManager:
@@ -7755,16 +7975,16 @@ return RoundExtras
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00056">
+			<Item class="ModuleScript" referent="RBX00057">
 				<Properties>
 					<string name="Name">RoundManager</string>
-					<ProtectedString name="Source"><![CDATA[-- The round loop, all on the server:
---   lobby (Config.Round.lobbyCountdown) -> loading: pick a map, difficulty, modifier and maybe a
---   Golden Chest, build the map, place the chests (server/ChestSpawner), move up to
---   Config.Round.maxPlayers in -> countdown (3, 2, 1; nobody moves) -> the round (the timer runs;
---   open chests for coins and keys, poke and throw needles; once the last chest is open, everyone
---   has Config.Round.grace seconds) -> results (places by chests, tag-outs, coins) -> the lobby.
---   A lone player still gets rounds (practice).
+					<ProtectedString name="Source"><![CDATA[-- A round, all on the server, for a group of players (RoundManager.play: a game platform's
+-- players, server/GamePads, or everyone on a game's own server, server/GameServer):
+--   loading: pick a map, difficulty, modifier and maybe a Golden Chest, build the map, place the
+--   chests (server/ChestSpawner), move the players in -> countdown (3, 2, 1; nobody moves) -> the
+--   round (the timer runs; open chests for coins and power-ups, poke and throw needles; once the
+--   last chest is open, everyone has Config.Round.grace seconds) -> results (places by chests,
+--   tag-outs, coins) -> the lobby.
 -- The phase is published as attributes on ReplicatedStorage (Phase, EndsAt, MapName,
 -- Difficulty, Modifiers, Golden, ChestsLeft, ChestCount) and announced with Remotes.RoundState.
 -- The search phase is still called "search" (the name other scripts check).
@@ -7804,6 +8024,7 @@ local RoundManager = {}
 local rng = Random.new()
 local round = nil -- the round in play: { participants, chests, chestsLeft, started, ends, duration, diff, modifiers, golden, ... }
 local lastMap = nil
+local playing = false -- a round is being built or played (RoundManager.play)
 
 local function now()
 	return workspace:GetServerTimeNow()
@@ -7847,15 +8068,13 @@ local function move(player, cf)
 	end
 end
 
--- Players who'll play this round: loaded, alive, and not sitting out (Settings: Auto-join), up to
--- Config.Round.maxPlayers (the rest wait in the lobby for the next one).
-local function players()
+-- Of a group, the players who can play: still here, loaded, alive and not in the Practice Yard, up
+-- to Config.Round.maxPlayers.
+local function players(group)
 	local list = {}
-	for _, p in ipairs(Players:GetPlayers()) do
-		local d = DataManager.get(p)
+	for _, p in ipairs(group) do
 		local h = humanoid(p)
-		local wants = p:GetAttribute("Queued") == true or d and d.settings.autoJoin -- on the Play pad, PLAY pressed, or auto-join on
-		if d and wants and h and h.Health > 0 and not p:GetAttribute("Practicing") and #list < Config.Round.maxPlayers then -- a Time Trial isn't cut short
+		if p.Parent and DataManager.get(p) and h and h.Health > 0 and not p:GetAttribute("Practicing") and #list < Config.Round.maxPlayers then
 			table.insert(list, p)
 		end
 	end
@@ -7890,7 +8109,7 @@ local function pickModifiers()
 	return mods
 end
 
-local function playRound()
+local function playRound(group)
 	-- choose and build
 	local options = {}
 	for _, m in ipairs(Maps.list) do
@@ -7924,7 +8143,7 @@ local function playRound()
 	ReplicatedStorage:SetAttribute("Golden", golden)
 	phase("loading", 3)
 	builders[def.builder](ctx)
-	local list = players()
+	local list = players(group)
 	local full = def.duration or Config.Round.duration -- a big map has longer
 	local duration = if mods.speed then math.floor(full / 2) else full
 	round = { participants = {}, order = {}, diff = diff, modifiers = mods, golden = golden, duration = duration, count = #list, spawns = ctx.spawns }
@@ -7979,7 +8198,6 @@ local function playRound()
 	for i, p in ipairs(Players:GetPlayers()) do
 		if round.participants[p] then
 			p:SetAttribute("InRound", false)
-			p:SetAttribute("Queued", false) -- back to roaming until you join again
 			move(p, LobbyBuilder.spawnPoint(i))
 		end
 	end
@@ -8013,44 +8231,46 @@ function RoundManager.start()
 		end)
 	end)
 	light(Maps.lobbyLighting)
-	require(script.Parent.JoinQueue).init() -- PLAY and the Play pad
-	task.spawn(function()
-		while true do
-			if #players() < Config.Round.minPlayers then -- nobody's joined: roam, no countdown
-				phase("waiting", 0)
-				repeat
-					task.wait(0.5)
-				until #players() >= Config.Round.minPlayers
-			end
-			phase("lobby", Config.Round.lobbyCountdown)
-			local left = Config.Round.lobbyCountdown
-			while left > 0 and #players() >= Config.Round.minPlayers do
-				left -= task.wait(0.5)
-			end
-			if #players() >= Config.Round.minPlayers then
-				local ok, err = pcall(playRound)
-				if not ok then
-					warn("[Round] " .. tostring(err))
-					for i, p in ipairs(Players:GetPlayers()) do -- nobody is left in a broken map
-						p:SetAttribute("InRound", false)
-						freeze(p, false)
-						move(p, LobbyBuilder.spawnPoint(i))
-					end
-					round = nil
-					ChestSpawner.clear()
-					RoundExtras.stop()
-					light(Maps.lobbyLighting)
-				end
+	phase("waiting", 0)
+end
+
+-- Is a round being played on this server?
+function RoundManager.busy()
+	return round ~= nil or playing
+end
+
+-- Plays one round for `group` (a list of players) and returns when it's over. A round that breaks
+-- puts everyone back in the lobby.
+function RoundManager.play(group)
+	if RoundManager.busy() then
+		return false
+	end
+	playing = true
+	local ok, err = pcall(playRound, group)
+	if not ok then
+		warn("[Round] " .. tostring(err))
+		for i, p in ipairs(group) do -- nobody is left in a broken map
+			if p.Parent then
+				p:SetAttribute("InRound", false)
+				freeze(p, false)
+				move(p, LobbyBuilder.spawnPoint(i))
 			end
 		end
-	end)
+		round = nil
+		ChestSpawner.clear()
+		RoundExtras.stop()
+		light(Maps.lobbyLighting)
+	end
+	playing = false
+	phase("waiting", 0)
+	return true
 end
 
 return RoundManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00057">
+			<Item class="ModuleScript" referent="RBX00058">
 				<Properties>
 					<string name="Name">ShopManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Cosmetics and purchases. With Haystack Coins: buy a cosmetic (Remotes.Shop "buy"), and wear
@@ -8307,7 +8527,7 @@ return ShopManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00058">
+			<Item class="ModuleScript" referent="RBX00059">
 				<Properties>
 					<string name="Name">Streaks</string>
 					<ProtectedString name="Source"><![CDATA[-- Tag-out streaks, the Marked player and the tag-out feed (Config.Streak), called by server/Combat
@@ -8441,7 +8661,7 @@ return Streaks
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00059">
+			<Item class="ModuleScript" referent="RBX0005A">
 				<Properties>
 					<string name="Name">TradeManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Trading needles between two players in the lobby (Config.Trading). Remotes.Trade asks; the
@@ -8709,24 +8929,24 @@ return TradeManager
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerStorage" referent="RBX0005A">
+	<Item class="ServerStorage" referent="RBX0005B">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX0005B">
+	<Item class="StarterPlayer" referent="RBX0005C">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX0005C">
+		<Item class="StarterPlayerScripts" referent="RBX0005D">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX0005D">
+			<Item class="Folder" referent="RBX0005E">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX0005E">
+				<Item class="ModuleScript" referent="RBX0005F">
 					<Properties>
 						<string name="Name">Aim</string>
 						<ProtectedString name="Source"><![CDATA[-- Your aim settings (Settings, Aim; Config.Aim): mouse sensitivity, field of view, and the reticle
@@ -8839,7 +9059,7 @@ return Aim
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005F">
+				<Item class="ModuleScript" referent="RBX00060">
 					<Properties>
 						<string name="Name">BoxReel</string>
 						<ProtectedString name="Source"><![CDATA[-- The box opening on your screen: a strip of needle cards slides along under a gold marker,
@@ -8942,7 +9162,7 @@ return BoxReel
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00060">
+				<Item class="ModuleScript" referent="RBX00061">
 					<Properties>
 						<string name="Name">BoxScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Boxes screen: each box with its price (coins; the dearer ones also Robux), a key button
@@ -9147,7 +9367,7 @@ return BoxScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00061">
+				<Item class="ModuleScript" referent="RBX00062">
 					<Properties>
 						<string name="Name">CombatFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Needle combat on your screen (server/Combat decides every hit):
@@ -9349,7 +9569,7 @@ return CombatFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00062">
+				<Item class="ModuleScript" referent="RBX00063">
 					<Properties>
 						<string name="Name">CooldownBars</string>
 						<ProtectedString name="Source"><![CDATA[-- POKE and THROW bars, top left under the DASH bar (client/DashFx), in the same style: each empties
@@ -9401,7 +9621,7 @@ return CooldownBars
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00063">
+				<Item class="ModuleScript" referent="RBX00064">
 					<Properties>
 						<string name="Name">DashFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Dashing (Config.Dash): C, B on a controller, or the Dash button on a phone. Your character
@@ -9522,7 +9742,7 @@ return DashFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00064">
+				<Item class="ModuleScript" referent="RBX00065">
 					<Properties>
 						<string name="Name">Effects</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback you can see and hear, on your own screen only: sounds, a burst of particles where a
@@ -9604,7 +9824,7 @@ return Effects
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00065">
+				<Item class="ModuleScript" referent="RBX00066">
 					<Properties>
 						<string name="Name">FeedFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The tag-out feed, top right beside the menu (server/Streaks sends every tag-out to everyone; Config.Streak.feed):
@@ -9688,7 +9908,7 @@ return FeedFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00066">
+				<Item class="ModuleScript" referent="RBX00067">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: your coins and level (with an XP bar) at the top left; the round's
@@ -9778,20 +9998,19 @@ function Hud.mount(gui, open)
 		local text, why = Remotes.Hint:InvokeServer()
 		Hud.toast(text or why or "No hint.", if text then "good" else "bad")
 	end)
-	-- PLAY: join the next round (or step on the Play pad); press again to stay in the lobby
+	-- PLAY: onto the fullest game platform with room (or walk onto one)
 	local play = UiKit.button("PLAY", UiKit.colors.green, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 124), Size = UDim2.fromOffset(240, 46), Parent = gui })
 	UiKit.autoScale(play)
 	play.Activated:Connect(function()
 		Effects.sound("click")
-		ReplicatedStorage.Remotes.Queue:InvokeServer(not player:GetAttribute("Queued"))
+		if not ReplicatedStorage.Remotes.Queue:InvokeServer() then
+			Hud.toast("Every game is full or starting: try again in a moment.", "bad")
+		end
 	end)
 	local function showPlay()
-		local queued = player:GetAttribute("Queued") == true
 		play.Visible = not player:GetAttribute("InRound") and not player:GetAttribute("Practicing")
-		play.Text = if queued then "IN THE NEXT ROUND ✓" else "PLAY"
-		play.BackgroundColor3 = if queued then UiKit.colors.gold else UiKit.colors.green
 	end
-	for _, a in ipairs({ "Queued", "InRound", "Practicing" }) do
+	for _, a in ipairs({ "InRound", "Practicing" }) do
 		player:GetAttributeChangedSignal(a):Connect(showPlay)
 	end
 	showPlay()
@@ -9808,12 +10027,9 @@ function Hud.mount(gui, open)
 			local mods = ReplicatedStorage:GetAttribute("Modifiers") or ""
 			local golden = ReplicatedStorage:GetAttribute("Golden")
 			local inRound = player.Character and player.Character.PrimaryPart and (player.Character.PrimaryPart.Position - Config.ArenaCentre).Magnitude < 200
-			if phase == "waiting" then
-				headline.Text, timer.Text = "Explore the lobby", ""
-				info.Text = "Press PLAY or step on the Play pad to start a round"
-			elseif phase == "lobby" then
-				headline.Text, timer.Text = "Next round in", Rules.clock(left)
-				info.Text = if not player:GetAttribute("Queued") then "Press PLAY to join this round" elseif #game:GetService("Players"):GetPlayers() == 1 then "Practice round: invite friends to race!" else "Get ready: 5 chests, first come first served!"
+			if phase == "waiting" or phase == "lobby" then
+				headline.Text, timer.Text = "Pick a game", ""
+				info.Text = "Stand on a game platform (or press PLAY): 10 players and it starts"
 			elseif phase == "loading" or phase == "countdown" then
 				headline.Text, timer.Text = ReplicatedStorage:GetAttribute("MapName") or "Loading...", if phase == "countdown" then tostring(math.max(1, math.ceil(left))) else "..."
 				info.Text = (ReplicatedStorage:GetAttribute("Difficulty") or "") .. (if mods ~= "" then "  ·  " .. mods else "") .. (if golden then "  ·  ✦ GOLDEN CHEST ✦" else "")
@@ -9844,7 +10060,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00067">
+				<Item class="ModuleScript" referent="RBX00068">
 					<Properties>
 						<string name="Name">KeyHints</string>
 						<ProtectedString name="Source"><![CDATA[-- What each key does, for players on a keyboard: a small guide low on the left, above the Show off
@@ -9901,7 +10117,7 @@ return KeyHints
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00068">
+				<Item class="ModuleScript" referent="RBX00069">
 					<Properties>
 						<string name="Name">LobbyUi</string>
 						<ProtectedString name="Source"><![CDATA[-- The lobby, on your screen:
@@ -9999,7 +10215,7 @@ return LobbyUi
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX00069">
+				<Item class="LocalScript" referent="RBX0006A">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- Starts the client: the whole UI (UIController). The client only shows things and asks the
@@ -10009,7 +10225,7 @@ UIController.start()
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006A">
+				<Item class="ModuleScript" referent="RBX0006B">
 					<Properties>
 						<string name="Name">NeedleView</string>
 						<ProtectedString name="Source"><![CDATA[-- A needle in 3D inside the UI: a ViewportFrame with the needle (shared/NeedleLook) lit and
@@ -10061,7 +10277,7 @@ return NeedleView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006B">
+				<Item class="ModuleScript" referent="RBX0006C">
 					<Properties>
 						<string name="Name">PowerupFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Power-ups on your screen (server/Powerups decides; Remotes.Powerup says what you got):
@@ -10195,7 +10411,7 @@ return PowerupFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006C">
+				<Item class="ModuleScript" referent="RBX0006D">
 					<Properties>
 						<string name="Name">PracticeFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The Time Trial on your screen (server/Practice decides everything): the Practice window (your
@@ -10359,7 +10575,7 @@ return PracticeFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006D">
+				<Item class="ModuleScript" referent="RBX0006E">
 					<Properties>
 						<string name="Name">Results</string>
 						<ProtectedString name="Source"><![CDATA[-- The round's big moments on screen: the 3, 2, 1; CHEST OPENED! when you open one (coins, or a
@@ -10519,7 +10735,7 @@ return Results
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006E">
+				<Item class="ModuleScript" referent="RBX0006F">
 					<Properties>
 						<string name="Name">Screens</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop and Inventory screens. The Shop sells cosmetics for Haystack Coins (needle skins,
@@ -10710,7 +10926,7 @@ return Screens
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006F">
+				<Item class="ModuleScript" referent="RBX00070">
 					<Properties>
 						<string name="Name">Screens2</string>
 						<ProtectedString name="Source"><![CDATA[-- The Quests, Leaderboard and Settings screens (Settings: sound and effects toggles, and Aim).
@@ -10907,7 +11123,7 @@ return Screens2
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00070">
+				<Item class="ModuleScript" referent="RBX00071">
 					<Properties>
 						<string name="Name">Screens3</string>
 						<ProtectedString name="Source"><![CDATA[-- The Collection screen: every needle you've found, by type, shown in 3D with its rarity, value
@@ -11044,7 +11260,7 @@ return Screens3
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00071">
+				<Item class="ModuleScript" referent="RBX00072">
 					<Properties>
 						<string name="Name">StreakFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Tag-outs and streaks on your screen (server/Combat decides them; Config.Streak):
@@ -11147,7 +11363,7 @@ return StreakFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00072">
+				<Item class="ModuleScript" referent="RBX00073">
 					<Properties>
 						<string name="Name">ThrowFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Throwing your needle on your screen (server/CombatThrow decides): Q, or the Throw button while
@@ -11265,7 +11481,7 @@ return ThrowFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00073">
+				<Item class="ModuleScript" referent="RBX00074">
 					<Properties>
 						<string name="Name">TradeScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Trade screen (server/TradeManager decides everything). Not trading: everyone in the server
@@ -11460,7 +11676,7 @@ return TradeScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00074">
+				<Item class="ModuleScript" referent="RBX00075">
 					<Properties>
 						<string name="Name">UIController</string>
 						<ProtectedString name="Source"><![CDATA[-- Puts the whole UI together: one ScreenGui with the HUD, the round moments (Results), and the
@@ -11619,7 +11835,7 @@ return UIController
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00075">
+				<Item class="ModuleScript" referent="RBX00076">
 					<Properties>
 						<string name="Name">UiKit</string>
 						<ProtectedString name="Source"><![CDATA[-- The UI's look in one place: a clean, modern dark-glass style with warm gold accents, big
@@ -11759,7 +11975,7 @@ return UiKit
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00076">
+				<Item class="ModuleScript" referent="RBX00077">
 					<Properties>
 						<string name="Name">ViewModel</string>
 						<ProtectedString name="Source"><![CDATA[-- First person: your arms and your needle drawn in front of the camera, posed and animated from
@@ -11967,7 +12183,7 @@ return ViewModel
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX00077">
+	<Item class="Workspace" referent="RBX00078">
 		<Properties>
 			<string name="Name">Workspace</string>
 		</Properties>

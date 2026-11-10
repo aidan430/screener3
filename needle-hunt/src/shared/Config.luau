@@ -4,7 +4,6 @@ local Config = {}
 
 -- Rounds (server/RoundManager). Seconds.
 Config.Round = {
-	lobbyCountdown = 30, -- in the lobby, once someone has joined (Play pad or PLAY), before the round
 	loadCountdown = 3, -- 3, 2, 1 in the map before the round starts
 	duration = 180, -- a normal round (a map can set its own: Hayfield Farm's is 300)
 	onlyMap = "bigfarm", -- play just this map (shared/Maps); nil = all of them in turn
@@ -229,6 +228,19 @@ Config.Music = "" -- a looping lobby track ID, or "" for none
 -- Where things are. The lobby sits at the origin; maps are built far away, one at a time.
 Config.LobbyCentre = Vector3.new(0, 0, 0)
 Config.ArenaCentre = Vector3.new(0, 0, 600)
+
+-- The game platforms in the lobby (server/GamePads): `count` of them, each for a game of up to
+-- `size` players. Stand on one to join (PLAY takes you to the fullest). At `size` it starts after
+-- `fullCountdown` seconds; with at least `minPlayers` (`studioMinPlayers` in Studio) a `countdown`
+-- starts and the game goes with whoever is on it. A game gets its own server (a private server of
+-- this place, server/GameServer), plays one round and sends everyone back to the lobby. In Studio,
+-- where teleports don't work, the round is played in this server instead.
+Config.Pads = { count = 4, size = 10, minPlayers = 2, studioMinPlayers = 1, countdown = 60, fullCountdown = 5, radius = 6,
+	colours = { { 255, 206, 80 }, { 110, 200, 120 }, { 90, 160, 240 }, { 230, 120, 170 } } }
+
+-- A game's own server (server/GameServer): it waits up to `wait` seconds for the players a platform
+-- sent, plays one round, then `afterRound` seconds later sends everyone back to the lobby.
+Config.GameServer = { wait = 20, afterRound = 2 }
 
 -- The Practice Yard's Time Trial (server/Practice, server/PracticeYard, client/PracticeFx): your own
 -- yard of straw dummies and chests on perches. A countdown, then `seconds` to tag out every dummy

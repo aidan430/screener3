@@ -170,7 +170,8 @@ Earned board.
 
 ## How a round works
 
-1. **Lobby:** a 15-second countdown, shown on the HUD and above the Play pad.
+1. **Lobby:** stand on one of the 4 game platforms. At 10/10 the game starts in 5 seconds; with 2 or
+   more on it a 60-second countdown starts and the game goes with whoever is on it then.
 2. **Loading:** the server picks the round's settings:
    - a map (never the same one twice in a row)
    - a difficulty: Easy, Normal or Hard (more clutter, darker, drifting hay; chests pay more)
@@ -265,9 +266,13 @@ ladder, in the barn loft (jump up the bales), on the lookout deck and the windmi
 stepping stones), on the water tower (ladder), deep in the mazes; the Golden Chest is on top of the
 Hay Tower. Rounds last 5 minutes, with 18 power-ups about. Preview: `previews/hayfield_farm.png`.
 
-**Joining and the lobby:** nobody is pulled into a round. Press PLAY or step on the Play pad to join
-(`server/JoinQueue`); with nobody joined the lobby just waits, and once someone joins there are 30
-seconds before the round. You're out of the queue after each round (Settings can auto-join you).
+**Joining and the lobby:** nobody is pulled into a round; roam the lobby as long as you like. Four
+game platforms (`Config.Pads`, `server/GamePads`) each show how many are on them (3/10). At 10 the
+game starts in 5 seconds; with at least 2 a 60-second countdown starts. PLAY puts you on the fullest
+platform with room. A starting game teleports its players to their own private server of this place
+(`server/GameServer` plays the round there, then sends everyone back to a lobby server). In Studio,
+where teleports don't work, the round is played in the lobby server instead, and 1 player is
+enough. Set the place's Max Players (Game Settings) to about 50 so the lobby holds four full games.
 
 **Chests** never hold a needle: coins, or a power-up that works at once; the Golden Chest holds big
 coins and a power-up. (The 1 of 1s now come from boxes: see below.)
@@ -540,7 +545,7 @@ remotes, but it can't run Roblox. Play mode in Studio is the real test.
 ## Test checklist (Studio)
 
 1. Turn on API access (above). Press **Play** (1 player).
-   - The lobby appears: the title sign with the turning needle, the Play pad countdown, the leaderboard, the Daily Challenge board, and the Shop and Wardrobe stalls.
+   - The lobby appears: the title sign with the turning needle, the 4 game platforms with their counts, the leaderboard, the Daily Challenge board, and the Shop and Wardrobe stalls.
    - The HUD shows your coins, level and XP, the round banner and the menu.
 2. You get the "Day 1 login bonus" toast and +25 coins.
 3. After 15 seconds:
@@ -592,5 +597,5 @@ The previews led to these fixes:
 - the open maps and the lobby now run into countryside with invisible walls at the edge
   (`MapKit.edges`)
 - the attic roof slopes the right way
-- the lobby countdown sits low over the Play pad
+- each game platform shows its count (0/10) and status above it
 - windows open a little lower, clear of the round banner
