@@ -130,6 +130,11 @@ Config.Dash = { speed = 55, seconds = 0.22, cooldown = 3 }
 -- the needle's length (its +X, point at the end) to the grip's up, so it points out of the hand the
 -- way a sword does. Turn it here if it points the wrong way in Studio. scale = the needle's size in the hand. (How long the inspect lasts comes from the
 -- first-person rig, shared/FirstPerson: anims.inspect.length.)
+-- Classic studs (server/MapKit): parts with these names (floors, walls, platforms) are made plain
+-- Plastic with studs on top and inlets underneath (Roblox draws studs on Plastic only). Parts in a
+-- `keep` material (see-through glass and ice) stay as they are. Props keep their own materials.
+Config.Studs = { on = true, names = { "Ground", "Countryside", "Road", "Plaza", "Path", "PadPaving", "PadRim", "Deck", "StartPad", "MazeWall", "Hedge", "Wall", "Perch", "Step", "Climb", "Shelf" }, keep = { "Glass", "Ice" } }
+
 Config.NeedleTool = { grip = { 0, 180, 90 }, scale = 1.6 }
 
 -- The Heirloom aura (shared/NeedleAura): energy round every Heirloom-shaped needle, in its skin's

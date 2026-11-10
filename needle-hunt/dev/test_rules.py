@@ -428,6 +428,16 @@ class BoxOpenings(unittest.TestCase):
         self.assertIn("GameServer.isGameServer()", main)
         self.assertNotIn("lobbyCountdown", (SERVER / "RoundManager.luau").read_text(), "rounds only start from a platform or a game server")
 
+    def test_floors_walls_and_platforms_have_classic_studs(self):
+        block = CONFIG[CONFIG.index("Config.Studs = {"):].split("\n", 1)[0]
+        names = re.findall(r'"(\w+)"', block[: block.index("keep")])
+        for n in ("Ground", "Plaza", "Path", "MazeWall", "Hedge", "PadRim"):
+            self.assertIn(n, names)
+        self.assertIn('"Glass"', block[block.index("keep"):], "see-through walls stay see-through")
+        kit = (SERVER / "MapKit.luau").read_text()
+        self.assertIn("Enum.SurfaceType.Studs", kit)
+        self.assertIn("Enum.Material.Plastic", kit, "Roblox only draws studs on Plastic")
+
     def test_start_up_never_waits_on_one_system(self):
         main = (SERVER / "Main.server.luau").read_text()
         self.assertIn("waited < 5", main, "a slow start-up step can't stop rounds or the Practice Yard starting")

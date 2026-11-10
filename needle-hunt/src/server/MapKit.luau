@@ -10,12 +10,22 @@ local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Co
 
 local MapKit = {}
 
+-- Config.Studs as sets: the names that get studs, the materials that keep theirs
+local studNames, studKeep = {}, {}
+for _, n in ipairs(Config.Studs.names) do
+	studNames[n] = true
+end
+for _, m in ipairs(Config.Studs.keep) do
+	studKeep[Enum.Material[m]] = true
+end
+
 local function rgb(c)
 	return Color3.fromRGB(c[1], c[2], c[3])
 end
 MapKit.rgb = rgb
 
--- An anchored, smooth part in the map. props: Size, CFrame, Color ({r,g,b} or Color3), Material, Shape...
+-- An anchored, smooth part in the map (a floor, wall or platform named in Config.Studs gets studs).
+-- props: Size, CFrame, Color ({r,g,b} or Color3), Material, Shape...
 function MapKit.part(ctx, props)
 	local p = Instance.new("Part")
 	p.Anchored = true
@@ -29,6 +39,10 @@ function MapKit.part(ctx, props)
 			v = Enum.PartType[v]
 		end
 		p[k] = v
+	end
+	if Config.Studs.on and studNames[p.Name] and not studKeep[p.Material] then -- a floor, wall or platform: classic studs
+		p.Material = Enum.Material.Plastic
+		p.TopSurface, p.BottomSurface = Enum.SurfaceType.Studs, Enum.SurfaceType.Inlet
 	end
 	p.Parent = props.Parent or ctx.model
 	return p

@@ -321,6 +321,11 @@ Config.Dash = { speed = 55, seconds = 0.22, cooldown = 3 }
 -- the needle's length (its +X, point at the end) to the grip's up, so it points out of the hand the
 -- way a sword does. Turn it here if it points the wrong way in Studio. scale = the needle's size in the hand. (How long the inspect lasts comes from the
 -- first-person rig, shared/FirstPerson: anims.inspect.length.)
+-- Classic studs (server/MapKit): parts with these names (floors, walls, platforms) are made plain
+-- Plastic with studs on top and inlets underneath (Roblox draws studs on Plastic only). Parts in a
+-- `keep` material (see-through glass and ice) stay as they are. Props keep their own materials.
+Config.Studs = { on = true, names = { "Ground", "Countryside", "Road", "Plaza", "Path", "PadPaving", "PadRim", "Deck", "StartPad", "MazeWall", "Hedge", "Wall", "Perch", "Step", "Climb", "Shelf" }, keep = { "Glass", "Ice" } }
+
 Config.NeedleTool = { grip = { 0, 180, 90 }, scale = 1.6 }
 
 -- The Heirloom aura (shared/NeedleAura): energy round every Heirloom-shaped needle, in its skin's
@@ -5628,12 +5633,22 @@ local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Co
 
 local MapKit = {}
 
+-- Config.Studs as sets: the names that get studs, the materials that keep theirs
+local studNames, studKeep = {}, {}
+for _, n in ipairs(Config.Studs.names) do
+	studNames[n] = true
+end
+for _, m in ipairs(Config.Studs.keep) do
+	studKeep[Enum.Material[m]] = true
+end
+
 local function rgb(c)
 	return Color3.fromRGB(c[1], c[2], c[3])
 end
 MapKit.rgb = rgb
 
--- An anchored, smooth part in the map. props: Size, CFrame, Color ({r,g,b} or Color3), Material, Shape...
+-- An anchored, smooth part in the map (a floor, wall or platform named in Config.Studs gets studs).
+-- props: Size, CFrame, Color ({r,g,b} or Color3), Material, Shape...
 function MapKit.part(ctx, props)
 	local p = Instance.new("Part")
 	p.Anchored = true
@@ -5647,6 +5662,10 @@ function MapKit.part(ctx, props)
 			v = Enum.PartType[v]
 		end
 		p[k] = v
+	end
+	if Config.Studs.on and studNames[p.Name] and not studKeep[p.Material] then -- a floor, wall or platform: classic studs
+		p.Material = Enum.Material.Plastic
+		p.TopSurface, p.BottomSurface = Enum.SurfaceType.Studs, Enum.SurfaceType.Inlet
 	end
 	p.Parent = props.Parent or ctx.model
 	return p
