@@ -21,6 +21,22 @@ Maps.list = {
 	{ id = "attic", name = "Abandoned Attic", builder = "attic", weight = 20,
 		lighting = { ClockTime = 15, Brightness = 1.2, Ambient = { 110, 100, 90 }, OutdoorAmbient = { 100, 92, 84 }, FogEnd = 300, FogColor = { 110, 100, 90 } },
 		straw = { 206, 176, 112 }, ground = { 112, 86, 64 } },
+	-- from the owner's Gemini map sheets (server/MapsC)
+	{ id = "pumpkin", name = "Pumpkin Patch", builder = "pumpkin", weight = 15,
+		lighting = { ClockTime = 15, Brightness = 2.6, Ambient = { 124, 116, 100 }, OutdoorAmbient = { 156, 146, 128 }, FogEnd = 900, FogColor = { 205, 225, 245 } },
+		straw = { 226, 188, 92 }, ground = { 96, 156, 70 } },
+	{ id = "corn", name = "Harvest Corn Maze", builder = "corn", weight = 15,
+		lighting = { ClockTime = 15.5, Brightness = 2.7, Ambient = { 132, 120, 96 }, OutdoorAmbient = { 168, 150, 118 }, FogEnd = 900, FogColor = { 220, 226, 236 } },
+		straw = { 232, 196, 96 }, ground = { 170, 140, 84 } },
+	{ id = "sunflower", name = "Sunflower Labyrinth", builder = "sunflower", weight = 15,
+		lighting = { ClockTime = 13, Brightness = 2.8, Ambient = { 126, 120, 100 }, OutdoorAmbient = { 160, 152, 128 }, FogEnd = 900, FogColor = { 210, 230, 248 } },
+		straw = { 226, 188, 92 }, ground = { 150, 112, 72 } },
+	{ id = "orchard", name = "Apple Orchard", builder = "orchard", weight = 15,
+		lighting = { ClockTime = 12.5, Brightness = 2.7, Ambient = { 120, 120, 104 }, OutdoorAmbient = { 150, 154, 134 }, FogEnd = 900, FogColor = { 205, 228, 248 } },
+		straw = { 222, 190, 100 }, ground = { 104, 164, 74 } },
+	{ id = "windmill", name = "Windmill Hill", builder = "windmill", weight = 15,
+		lighting = { ClockTime = 16, Brightness = 2.6, Ambient = { 128, 118, 100 }, OutdoorAmbient = { 160, 148, 126 }, FogEnd = 900, FogColor = { 214, 226, 240 } },
+		straw = { 226, 188, 92 }, ground = { 104, 158, 76 } },
 }
 
 -- The lobby's light, between rounds.

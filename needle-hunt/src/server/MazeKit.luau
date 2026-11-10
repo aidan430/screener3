@@ -3,7 +3,7 @@
 -- walks back), and a few 2x2 clearings opened up for big props. Walls are built in a style:
 --   hedge   tall clipped hedges          bales   hay bales stacked four high
 --   planks  wooden stall partitions      crates  stacked wooden boxes
---   thicket dark, uneven bushes (forest)
+--   thicket dark, uneven bushes (forest)     and more in server/MazeWalls (vines, corn, ...)
 -- Every wall is taller than a jump, so you search corridor by corridor. Dead ends get hiding
 -- spots at their back wall, and some corridors get spots along a wall's foot.
 -- MazeKit.build(ctx, opts) -> maze. opts: cols, rows, size (cell width), height, style,
@@ -11,6 +11,7 @@
 -- maze.cellCentre(c, r), maze.cells, maze.deadEnds, maze.rooms ({ centre, cells }),
 -- maze.randomCell(), maze.spawns(n).
 local MapKit = require(script.Parent.MapKit)
+local MazeWalls = require(script.Parent.MazeWalls) -- vines, corn, sunflowers, stone, stonehedge
 
 local MazeKit = {}
 local T = 2 -- wall thickness
@@ -18,7 +19,9 @@ local T = 2 -- wall thickness
 local function wall(ctx, style, a, b, height)
 	local mid, len = (a + b) / 2, (b - a).Magnitude + T
 	local along = CFrame.lookAt(mid, mid + (b - a))
-	if style == "hedge" or style == "thicket" then
+	if MazeWalls[style] then
+		MazeWalls[style](ctx, a, b, height, T)
+	elseif style == "hedge" or style == "thicket" then
 		local colour = if style == "hedge" then { 58, 112, 56 } else { 34, 64, 40 }
 		MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T, height, len), CFrame = along * CFrame.new(0, height / 2, 0), Color = colour, Material = "LeafyGrass" })
 		if style == "thicket" then -- an uneven top

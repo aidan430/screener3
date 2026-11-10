@@ -30,6 +30,9 @@ local builders = require(script.Parent.MapsA)
 for name, fn in pairs(require(script.Parent.MapsB)) do
 	builders[name] = fn
 end
+for name, fn in pairs(require(script.Parent.MapsC)) do -- the maps from the Gemini sheets
+	builders[name] = fn
+end
 
 local RoundManager = {}
 local rng = Random.new()
