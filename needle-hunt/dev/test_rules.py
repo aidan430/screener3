@@ -418,6 +418,8 @@ class BoxOpenings(unittest.TestCase):
         portal = (SERVER / "PadPortal.luau").read_text()
         self.assertIn("ParticleEmitter", portal)
         self.assertIn('"ForceField"', portal, "a shimmering portal column")
+        self.assertIn('"BoardPoint"', portal, "the count hangs over the platform")
+        self.assertNotIn("above.Parent = pad", portal, "not on the turned disc, whose axes would put it to one side")
         self.assertIn("pad.fx.Rate", gp, "the portal livens up as it fills")
         gs = (SERVER / "GameServer.luau").read_text()
         self.assertIn("PrivateServerOwnerId == 0", gs, "a game server knows it's one")
