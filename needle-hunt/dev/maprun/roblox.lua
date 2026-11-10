@@ -135,9 +135,10 @@ R.parts = {}
 local DEFAULTS = {
 	Part = { Size = R.v3(4, 1, 2), Shape = "Block", Material = "Plastic", Transparency = 0, Anchored = false, CanCollide = true, CanQuery = true, CanTouch = true, Color = Color3.fromRGB(163, 162, 165) },
 	SpawnLocation = { Size = R.v3(12, 1, 12), Shape = "Block", Material = "Plastic", Transparency = 0, CanCollide = true, CanQuery = true, Color = Color3.fromRGB(163, 162, 165) },
+	TrussPart = { Size = R.v3(2, 2, 2), Shape = "Block", Material = "Metal", Transparency = 0, CanCollide = true, CanQuery = true, Color = Color3.fromRGB(163, 162, 165) },
 	Seat = { Size = R.v3(2, 1, 2), Shape = "Block", Material = "Plastic", Transparency = 0, CanCollide = true, CanQuery = true, Color = Color3.fromRGB(163, 162, 165) },
 }
-local PARTLIKE = { Part = true, SpawnLocation = true, Seat = true, WedgePart = true, MeshPart = true }
+local PARTLIKE = { Part = true, SpawnLocation = true, Seat = true, WedgePart = true, MeshPart = true, TrussPart = true }
 local function inst(class)
 	local o = { __t = "Instance", __class = class, __props = {}, __kids = {}, __attrs = {} }
 	for k, v in pairs(DEFAULTS[class] or {}) do o.__props[k] = v end

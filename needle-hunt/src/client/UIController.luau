@@ -29,6 +29,7 @@ local PracticeFx = require(script.Parent.PracticeFx)
 local Aim = require(script.Parent.Aim)
 local StreakFx = require(script.Parent.StreakFx)
 local FeedFx = require(script.Parent.FeedFx)
+local KeyHints = require(script.Parent.KeyHints)
 
 local player = Players.LocalPlayer
 local UIController = {}
@@ -59,6 +60,16 @@ function UIController.open(name)
 		Screens.refresh()
 		Screens2.refresh()
 	end
+end
+
+-- Closes whatever window is open (X, Backspace, or B on a controller). Returns whether one was.
+function UIController.closeAll()
+	local any = false
+	for _, w in pairs(windows) do
+		any = any or w.Visible
+		w.Visible = false
+	end
+	return any
 end
 
 local function applySettings()
@@ -109,6 +120,7 @@ function UIController.start()
 	ViewModel.start()
 	StreakFx.start(gui)
 	FeedFx.start(gui)
+	KeyHints.start(gui, UIController.closeAll) -- what each key does; X or Backspace closes menus
 	LobbyUi.start(gui, function(userId) -- a booth's prompt: that player's collection
 		Screens3.view(userId)
 		if windows.Collection.Visible then

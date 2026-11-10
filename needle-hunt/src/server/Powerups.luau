@@ -153,7 +153,7 @@ function Powerups.start(ctx, round)
 	folder.Name = "Powerups"
 	folder.Parent = ctx.model
 	active = { ctx = ctx, round = round, folder = folder, token = rng:NextInteger(1, 2 ^ 30) }
-	for _ = 1, P.count do
+	for _ = 1, ctx.def.powerups or P.count do -- a big map has more
 		spawnOne()
 	end
 end

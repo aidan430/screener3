@@ -110,6 +110,11 @@ function UiKit.window(gui, title, w, h)
 	close.Activated:Connect(function()
 		win.Visible = false
 	end)
+	-- while a window is open the mouse is free (first person locks it to the middle of the screen)
+	UiKit.make("TextButton", { Name = "FreeMouse", Modal = true, Text = "", BackgroundTransparency = 1, Size = UDim2.fromOffset(1, 1), Parent = win })
+	if UserInputService.KeyboardEnabled then
+		UiKit.label({ Text = "X to close", Size = UDim2.fromOffset(110, 40), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -64, 0, 14), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = UiKit.colors.soft, ZIndex = 11, Parent = win }, 16)
+	end
 	local body = UiKit.make("ScrollingFrame", { Size = UDim2.new(1, -36, 1, -78), Position = UDim2.fromOffset(18, 64), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 6, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = 11, Parent = win }, {
 		UiKit.make("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
 	})

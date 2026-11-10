@@ -127,8 +127,24 @@ function MazeKit.build(ctx, o)
 		end
 	end
 	local x1, z1 = x0 + cols * size, z0 + rows * size
-	for _, w in ipairs({ { x0, z0, x1, z0 }, { x0, z1, x1, z1 }, { x0, z0, x0, z1 }, { x1, z0, x1, z1 } }) do
-		wall(ctx, o.style, at(w[1], w[2]), at(w[3], w[4]), o.height)
+	for _, w in ipairs({ { x0, z0, x1, z0, cols }, { x0, z1, x1, z1, cols }, { x0, z0, x0, z1, rows }, { x1, z0, x1, z1, rows } }) do
+		if not o.doors then
+			wall(ctx, o.style, at(w[1], w[2]), at(w[3], w[4]), o.height)
+		else -- gates in the outside wall (o.doors a side), so a maze can be one part of a bigger map
+			local n, gates, from = w[5], {}, nil
+			for _ = 1, o.doors do
+				gates[rng:NextInteger(2, n - 1)] = true
+			end
+			for i = 1, n + 1 do
+				if i <= n and not gates[i] and not from then
+					from = i
+				elseif (i > n or gates[i]) and from then
+					local t0, t1 = (from - 1) / n, (i - 1) / n
+					wall(ctx, o.style, at(w[1] + (w[3] - w[1]) * t0, w[2] + (w[4] - w[2]) * t0), at(w[1] + (w[3] - w[1]) * t1, w[2] + (w[4] - w[2]) * t1), o.height)
+					from = nil
+				end
+			end
+		end
 	end
 	-- cells, dead ends and their hiding spots
 	local inRoom = {}

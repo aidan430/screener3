@@ -6,7 +6,8 @@ local Config = {}
 Config.Round = {
 	lobbyCountdown = 30, -- in the lobby, once someone has joined (Play pad or PLAY), before the round
 	loadCountdown = 3, -- 3, 2, 1 in the map before the round starts
-	duration = 180, -- a normal round
+	duration = 180, -- a normal round (a map can set its own: Hayfield Farm's is 300)
+	onlyMap = "bigfarm", -- play just this map (shared/Maps); nil = all of them in turn
 	speedDuration = 90, -- a Speed Round
 	grace = 15, -- once the last chest is open, this long to finish fights before the results
 	results = 10, -- the results screen

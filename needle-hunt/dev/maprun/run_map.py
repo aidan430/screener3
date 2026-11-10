@@ -61,7 +61,7 @@ def run(map_id, seed=11, golden=True, spread=None, probe=None):
     local Config = require(__SHARED.Config)
     local def = Maps.get("{map_id}")
     local builders = {{}}
-    for _, name in ipairs({{ "MapsA", "MapsB", "MapsC", "MapsD" }}) do
+    for _, name in ipairs({{ "MapsA", "MapsB", "MapsC", "MapsD", "MapsBig" }}) do
         local ok, m = pcall(require, __SERVER[name])
         if ok then for k, v in pairs(m) do builders[k] = v end elseif not tostring(m):find("can't require") then error(m) end
     end

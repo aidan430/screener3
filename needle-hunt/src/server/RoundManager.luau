@@ -36,6 +36,9 @@ end
 for name, fn in pairs(require(script.Parent.MapsD)) do
 	builders[name] = fn
 end
+for name, fn in pairs(require(script.Parent.MapsBig)) do -- Hayfield Farm
+	builders[name] = fn
+end
 
 local RoundManager = {}
 local rng = Random.new()
@@ -135,7 +138,7 @@ local function playRound()
 			table.insert(options, m)
 		end
 	end
-	local def = Rules.pick(options, rng)
+	local def = if Config.Round.onlyMap then Maps.get(Config.Round.onlyMap) else Rules.pick(options, rng)
 	lastMap = def.id
 	local diff = Rules.pick(Config.Difficulty, rng)
 	local mods = pickModifiers()
@@ -162,7 +165,8 @@ local function playRound()
 	phase("loading", 3)
 	builders[def.builder](ctx)
 	local list = players()
-	local duration = if mods.speed then Config.Round.speedDuration else Config.Round.duration
+	local full = def.duration or Config.Round.duration -- a big map has longer
+	local duration = if mods.speed then math.floor(full / 2) else full
 	round = { participants = {}, order = {}, diff = diff, modifiers = mods, golden = golden, duration = duration, count = #list, spawns = ctx.spawns }
 	local chests = ChestSpawner.spawn(ctx, round)
 	round.chests, round.chestsLeft = chests, #chests

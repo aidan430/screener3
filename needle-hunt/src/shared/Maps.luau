@@ -6,6 +6,11 @@
 local Maps = {}
 
 Maps.list = {
+	-- the big map (server/MapsBig): duration = its round length, powerups = orbs about, landmarkChests =
+	-- how many chests go up on its climbable landmarks (the rest deep in its mazes)
+	{ id = "bigfarm", name = "Hayfield Farm", builder = "bigfarm", weight = 20, duration = 300, powerups = 18, landmarkChests = 3,
+		lighting = { ClockTime = 14.5, Brightness = 2.7, Ambient = { 124, 118, 102 }, OutdoorAmbient = { 158, 150, 130 }, FogEnd = 1400, FogColor = { 205, 226, 246 } },
+		straw = { 226, 188, 92 }, ground = { 100, 158, 72 } },
 	{ id = "field", name = "Classic Haystack Field", builder = "field", weight = 25,
 		lighting = { ClockTime = 14, Brightness = 2.6, Ambient = { 120, 116, 104 }, OutdoorAmbient = { 150, 146, 134 }, FogEnd = 900, FogColor = { 200, 225, 245 } },
 		straw = { 226, 188, 92 }, ground = { 104, 160, 76 } },

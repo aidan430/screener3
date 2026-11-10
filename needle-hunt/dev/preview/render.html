@@ -224,6 +224,7 @@ const views = {
   barn: { top: [V(0, 90, 26), V(3, 0, 0)], aerial: [V(0, 38, 70), V(0, 2, -4)], player: [V(10, 5, 14), V(-10, 4, -12)] },
   sunset: { top: [V(0, 150, 40), V(0, 0, 0)], aerial: [V(-55, 36, 66), V(0, 0, -6)], player: [V(20, 5, 40), V(-10, 3, -10)] },
   forest: { top: [V(0, 140, 40), V(0, 0, 0)], aerial: [V(55, 40, 64), V(0, 0, -6)], player: [V(0, 5, 22), V(-5, 3, -20)] },
+  bigfarm: { top: [V(0, 360, 140), V(0, 0, 0)], aerial: [V(230, 150, 260), V(0, 0, -10)], player: [V(0, 5, 168), V(0, 4, 0)] },
   attic: { top: [V(0, 90, 30), V(0, 0, 0)], aerial: [V(0, 26, 46), V(0, 2, 0)], player: [V(24, 5, 3), V(-20, 4, -1)] },
 };
 let [eye, at] = (views[MAP] || views.field)[VIEW] || (views[MAP] || views.field).aerial;
@@ -233,6 +234,11 @@ if (VIEW === 'player' && MAP !== 'lobby' && ctx.spawns.length) { // standing at 
   const solids = scene.children.filter(o => o.isMesh);
   for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2, dir = V(Math.cos(a), 0, Math.sin(a)); ray.set(eye, dir); const hit = ray.intersectObjects(solids, false)[0]; const len = hit ? hit.distance : 200; if (len > bestLen) { bestLen = len; best = dir; } }
   at = eye.clone().add(best.multiplyScalar(10)).add(V(0, -0.6, 0));
+}
+if (VIEW === 'near' && MD && MD.chests.length) { // a chest up on a landmark, from across the way
+  const c = MD.chests[+(q.get('chest') || 0) % MD.chests.length], cp = V(c[0], c[1], c[2]);
+  const away = V(-cp.x, 0, -cp.z).normalize(); if (!isFinite(away.x)) away.set(1, 0, 0);
+  eye = cp.clone().add(away.multiplyScalar(26)).add(V(6, 0, 0)); eye.y = Math.max(8, cp.y * 0.75); at = cp.clone().add(V(0, -2, 0));
 }
 if (VIEW === 'chest' && MD && MD.chests.length) { // standing in the corridor near a chest on its perch
   const c = MD.chests[+(q.get('chest') || 0) % MD.chests.length], cp = V(c[0], c[1], c[2]);

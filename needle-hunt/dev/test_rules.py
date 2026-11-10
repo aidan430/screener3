@@ -145,10 +145,10 @@ class Rewards(unittest.TestCase):
 
 class Content(unittest.TestCase):
     def test_every_map_has_a_builder_and_spawns(self):
-        builders = "".join((SERVER / f"Maps{x}.luau").read_text() for x in "ABCD")
+        builders = "".join((SERVER / f"Maps{x}.luau").read_text() for x in ("A", "B", "C", "D", "Big"))
         self.assertGreaterEqual(len(MAP_ROWS), 15)
         for m in MAP_ROWS:
-            self.assertRegex(builders, rf"function Maps[ABCD]\.{m['builder']}\(ctx\)", m["id"])
+            self.assertRegex(builders, rf"function Maps(?:[ABCD]|Big)\.{m['builder']}\(ctx\)", m["id"])
         ab = "".join((SERVER / f"Maps{x}.luau").read_text() for x in "AB")
         c = (SERVER / "MapsC.luau").read_text() + (SERVER / "MapsD.luau").read_text()
         counts = re.findall(r"maze\.spawns\((\d+)\)", builders)
@@ -408,6 +408,25 @@ class BoxOpenings(unittest.TestCase):
         self.assertIn('SetAttribute("Queued", false)', rounds, "back to roaming after each round")
         self.assertIn("pad.Touched", (SERVER / "JoinQueue.luau").read_text(), "the Play pad joins you")
         self.assertIn("autoJoin = false", (SERVER / "DataManager.luau").read_text())
+
+    def test_menus_free_the_mouse_and_keys_are_explained(self):
+        kit = (ROOT / "src" / "client" / "UiKit.luau").read_text()
+        self.assertIn("Modal = true", kit, "an open window frees the mouse, even in first person")
+        hints = (ROOT / "src" / "client" / "KeyHints.luau").read_text()
+        for key in ("Q", "C", "Hold E", "F", "X"):
+            self.assertIn('{ "' + key + '"', hints, key + " is explained")
+        self.assertIn("KeyCode.Backspace", hints, "X or Backspace closes menus")
+        self.assertIn("UIController.closeAll", (ROOT / "src" / "client" / "UIController.luau").read_text())
+
+    def test_hayfield_farm_is_big_and_its_chests_are_hard(self):
+        big = (SERVER / "MapsBig.luau").read_text()
+        self.assertIn("doors = 2", big, "the quarters open onto the roads")
+        self.assertIn('onlyMap = "bigfarm"', CONFIG, "the big map is the one being played for now")
+        marks = (SERVER / "Landmarks.luau").read_text()
+        for name in ("silo", "lookout", "barnLoft", "windmill", "waterTower", "hayTower"):
+            self.assertIn("function Landmarks." + name, marks)
+        self.assertIn("TrussPart", marks, "ladders you can climb")
+        self.assertIn("ctx.goldenSpot", (SERVER / "ChestSpawner.luau").read_text())
 
     def test_start_up_never_waits_on_one_system(self):
         main = (SERVER / "Main.server.luau").read_text()

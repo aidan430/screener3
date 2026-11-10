@@ -257,6 +257,24 @@ scanning one open field. A new layout is generated every round, so nobody can le
   beside the props.
 - **Spawns:** players start spread out through the maze.
 
+**Hayfield Farm, the big map** (`server/MapsBig`, `server/Landmarks`; the only map played for now:
+`Config.Round.onlyMap = "bigfarm"`, set it to nil for every map in turn). About 360 studs across: four
+maze quarters (corn, pumpkins, orchard, windmill), each with gates out to two roads that cross at the
+Hay Tower, and a ring road round the edge where everyone starts. Chests are hard to reach: up the silo
+ladder, in the barn loft (jump up the bales), on the lookout deck and the windmill balcony (jump up
+stepping stones), on the water tower (ladder), deep in the mazes; the Golden Chest is on top of the
+Hay Tower. Rounds last 5 minutes, with 18 power-ups about. Preview: `previews/hayfield_farm.png`.
+
+**Joining and the lobby:** nobody is pulled into a round. Press PLAY or step on the Play pad to join
+(`server/JoinQueue`); with nobody joined the lobby just waits, and once someone joins there are 30
+seconds before the round. You're out of the queue after each round (Settings can auto-join you).
+
+**Chests** never hold a needle: coins, or a power-up that works at once; the Golden Chest holds big
+coins and a power-up. (The 1 of 1s no longer come from chests: they have no source for now.)
+
+**Keys and menus on PC:** a guide low on the left says what each key does (H hides it); X or
+Backspace closes any menu, and an open menu frees the mouse even in first person.
+
 **The 15 maps** (`shared/Maps.luau`; builders in `server/MapsA` to `MapsD`):
 - The originals: Classic Haystack Field, Barn Interior, Farm at Sunset, Night Forest, Abandoned Attic.
 - From the Gemini map sheets: Pumpkin Patch (vine walls), Harvest Corn Maze (corn walls, a red

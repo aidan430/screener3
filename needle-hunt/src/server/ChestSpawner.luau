@@ -238,11 +238,28 @@ function ChestSpawner.spawn(ctx, round)
 	folder = Instance.new("Folder")
 	folder.Name = "Chests"
 	folder.Parent = ctx.model
-	local spots, goldenAt = places(ctx, round.golden)
+	-- a big map's landmarks first (ctx.landmarks: tops reached by climbing, server/Landmarks): the
+	-- Golden Chest on ctx.goldenSpot, then `landmarkChests` of them at random; the rest on perches
+	local count, golden = CH.count, round.golden
+	if ctx.goldenSpot and golden then
+		table.insert(chests, build(ctx, ctx.goldenSpot, true, #chests + 1))
+		count, golden = count - 1, false
+	end
+	local tops = table.clone(ctx.landmarks or {})
+	for _ = 1, math.min(#tops, ctx.def.landmarkChests or 0) do
+		if count > 0 then
+			table.insert(chests, build(ctx, table.remove(tops, rng:NextInteger(1, #tops)), false, #chests + 1))
+			count -= 1
+		end
+	end
+	local saved = CH.count
+	CH.count = count
+	local spots, goldenAt = places(ctx, golden)
+	CH.count = saved
 	local cap = (ctx.maze and ctx.maze.height or 10) - 1 -- never above the walls
 	for i, ground in ipairs(spots) do
 		local h = if i == goldenAt then CH.goldenPerch else rng:NextNumber(CH.perch[1], CH.perch[2])
-		table.insert(chests, build(ctx, perch(ctx, ground, math.min(h, cap)), i == goldenAt, i))
+		table.insert(chests, build(ctx, perch(ctx, ground, math.min(h, cap)), i == goldenAt, #chests + 1))
 	end
 	return chests
 end
