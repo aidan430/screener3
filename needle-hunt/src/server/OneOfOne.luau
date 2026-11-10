@@ -100,7 +100,7 @@ function OneOfOne.announce(player, key)
 end
 
 function OneOfOne.init()
-	pcall(function()
+	task.spawn(pcall, function() -- in its own thread: in Studio this call can wait a long time
 		MessagingService:SubscribeAsync(TOPIC, function(packet)
 			local data = type(packet) == "table" and packet.Data
 			local m = type(data) == "table" and type(data.name) == "string" and type(data.key) == "string" and message(string.sub(data.name, 1, 40), data.key)

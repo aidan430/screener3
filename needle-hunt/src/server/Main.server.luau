@@ -52,8 +52,21 @@ for _, step in ipairs({
 	{ "Data", DataManager.init },
 	{ "Rounds", RoundManager.start },
 }) do
-	local ok, err = pcall(step[2])
-	if not ok then
-		warn("[Start] " .. step[1] .. " failed: " .. tostring(err))
+	-- each in its own thread: one that errors is reported, and one that waits on the network (in
+	-- Studio a DataStore or MessagingService call can) doesn't hold up the rest for more than 5 s
+	local done = false
+	task.spawn(function()
+		local ok, err = pcall(step[2])
+		done = true
+		if not ok then
+			warn("[Start] " .. step[1] .. " failed: " .. tostring(err))
+		end
+	end)
+	local waited = 0
+	while not done and waited < 5 do
+		waited += task.wait(0.1)
+	end
+	if not done then
+		warn("[Start] " .. step[1] .. " is still starting after 5 s; starting the rest anyway")
 	end
 end

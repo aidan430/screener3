@@ -131,6 +131,10 @@ local function load(player)
 			return DataManager.fresh(saved), true
 		end
 		warn("[Data] load failed for " .. player.Name .. " (try " .. attempt .. "): " .. tostring(saved))
+		local why = tostring(saved)
+		if why:find("Studio") or why:find("API") or why:find("publish") or why:find("403") then
+			break -- saves are switched off here (Studio without API access): play unsaved now, not in 14 s
+		end
 		task.wait(2 ^ attempt)
 	end
 	return DataManager.fresh(nil), false

@@ -397,6 +397,13 @@ class BoxOpenings(unittest.TestCase):
         self.assertIn("Combat.onDummy", (SERVER / "CombatThrow.luau").read_text())
         self.assertIn('"PracticeStall"', (SERVER / "LobbyBuilder.luau").read_text())
 
+    def test_start_up_never_waits_on_one_system(self):
+        main = (SERVER / "Main.server.luau").read_text()
+        self.assertIn("waited < 5", main, "a slow start-up step can't stop rounds or the Practice Yard starting")
+        self.assertIn("task.spawn(pcall", (SERVER / "OneOfOne.luau").read_text(), "cross-server messaging starts in its own thread")
+        self.assertIn('why:find("Studio")', (SERVER / "DataManager.luau").read_text(), "Studio without API access plays unsaved at once")
+        self.assertIn("grip = { 0, 180, 90 }", CONFIG, "the needle points out of the hand, not over the shoulder")
+
     def test_small_maps_still_get_every_chest(self):
         chests = (SERVER / "ChestSpawner.luau").read_text()
         self.assertIn("ctx.maze.cells", chests, "with few dead ends, chests go in other corridors")

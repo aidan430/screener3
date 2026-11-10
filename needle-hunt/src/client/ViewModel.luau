@@ -100,8 +100,10 @@ local function sample(anim, t)
 	return out
 end
 
+-- Your own Needle tool, hidden on your screen while you're in first person (the arms hold the one you
+-- see). Set every frame, so nothing else (the camera's own scripts, a rebuilt tool) can undo it.
 local function setToolHidden(tool)
-	if hiddenTool == tool then
+	if hiddenTool == tool and tool == nil then
 		return
 	end
 	for _, t in ipairs({ hiddenTool, tool }) do
