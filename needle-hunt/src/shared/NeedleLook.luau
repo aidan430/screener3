@@ -8,9 +8,12 @@
 -- fat (1 = true to life) thickens it for display: the UI and pedestals use about 2, so a needle
 -- reads as a bold little trophy instead of a hairline.
 local Needles = require(script.Parent.Needles)
-local Shapes = require(script.Parent.ShapesA) -- shapes kept as data (made by dev/shapes.py)
-for id, ops in pairs(require(script.Parent.ShapesB)) do
-	Shapes[id] = ops
+local Shapes = {} -- shapes kept as data, in as many files as dev/shapes.py needed
+for _, name in ipairs({ "ShapesA", "ShapesB", "ShapesC", "ShapesD", "ShapesE", "ShapesF" }) do
+	local file = script.Parent:FindFirstChild(name)
+	for id, ops in pairs(if file then require(file) else {}) do
+		Shapes[id] = ops
+	end
 end
 local PART = { B = nil, C = "Cylinder", S = "Ball" }
 

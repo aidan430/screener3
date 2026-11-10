@@ -190,7 +190,7 @@ class Content(unittest.TestCase):
 
 
 RARITIES = rows(NEEDLES, "Needles.rarities = {")
-TYPES = rows(NEEDLES, "Needles.types = {")
+TYPES = rows((SHARED / "NeedleTypes.luau").read_text(), "return {")
 SKINS = rows(NEEDLES, "Needles.skins = {")
 
 
@@ -220,7 +220,7 @@ class Collection(unittest.TestCase):
     def test_every_skin_and_type_can_be_drawn(self):
         look = (SHARED / "NeedleLook.luau").read_text()
         for t in TYPES:
-            data = (SHARED / "ShapesA.luau").read_text() + (SHARED / "ShapesB.luau").read_text()
+            data = "".join(f.read_text() for f in sorted(SHARED.glob("Shapes*.luau")))
             if t["id"] != "sewing":  # the default shape
                 self.assertTrue(f'typeId == "{t["id"]}"' in look or f"\t{t['id']} = {{" in data, t["id"])
         for s in SKINS:
@@ -231,8 +231,8 @@ class Collection(unittest.TestCase):
         self.assertTrue(all(t.get("grade") in grades for t in TYPES))
         classic = [t for t in TYPES if t["grade"] == "classic"]
         novel = [t for t in TYPES if t["grade"] != "classic"]
-        self.assertEqual(len(novel), 24, "24 novelty shapes")
-        shapes = (SHARED / "ShapesA.luau").read_text() + (SHARED / "ShapesB.luau").read_text() + (SHARED / "NeedleLook.luau").read_text()
+        self.assertEqual(len(novel), 73, "73 novelty shapes")
+        shapes = "".join(f.read_text() for f in sorted(SHARED.glob("Shapes*.luau"))) + (SHARED / "NeedleLook.luau").read_text()
         for t in novel:
             self.assertTrue(f"\t{t['id']} = {{" in shapes or f'typeId == "{t["id"]}"' in shapes, t["id"] + " is drawn")
         top_classic = max(t["value"] for t in classic)

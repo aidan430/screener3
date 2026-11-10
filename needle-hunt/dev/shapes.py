@@ -340,8 +340,23 @@ def write(path: Path, names: list[str], title: str):
     return len(lines)
 
 
+FILES = ["ShapesA", "ShapesB", "ShapesC", "ShapesD", "ShapesE", "ShapesF"]  # shared/NeedleLook reads these
+
+
 if __name__ == "__main__":
-    a = write(ROOT / "src" / "shared" / "ShapesA.luau", A, "Fancy shapes")
-    b = write(ROOT / "src" / "shared" / "ShapesB.luau", [n for n in OPS if n not in A], "Exotic and Masterwork shapes")
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import shapes_more  # the owner's Gemini sheets, built
+    shapes_more.add(sys.modules[__name__])
+    names, sizes, part = list(OPS), [], 0
+    while names:  # fill each file up to about 260 lines, so every one stays well under 300
+        take, lines = [], 4
+        while names and (not take or lines + 2 + (len(OPS[names[0]]) + 1) // 2 <= 260):
+            lines += 2 + (len(OPS[names[0]]) + 1) // 2
+            take.append(names.pop(0))
+        sizes.append(write(ROOT / "src" / "shared" / (FILES[part] + ".luau"), take, f"Needle shapes, part {part + 1}"))
+        part += 1
+    for extra in FILES[part:]:
+        (ROOT / "src" / "shared" / (extra + ".luau")).unlink(missing_ok=True)
     (ROOT / "dev" / "preview" / "shapes_data.js").write_text("window.SHAPES = " + json.dumps(OPS) + ";\n")
-    print(f"{len(OPS)} shapes: ShapesA.luau {a} lines, ShapesB.luau {b} lines")
+    print(f"{len(OPS)} shapes in {part} files: {sizes} lines")

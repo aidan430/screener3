@@ -1,6 +1,6 @@
 -- The needle collection. Everyone hunts the same plain needle (fair); when you find it, it turns
 -- out to be one TYPE (its shape) in one SKIN (its look), and it's yours to keep. Every type comes
--- in every skin, so the collection has types x skins entries (36 x 60 = 2,160, plus the 1 of 1).
+-- in every skin, so the collection has types x skins entries (85 x 60 = 5,100, plus the 1 of 1s).
 --   value: what one is worth = type.value x the skin's rarity multiplier. A collection's value
 --   is the sum of the different needles in it (duplicates show as x2, x3 but add nothing).
 -- Skins are recipes, not pictures: colours, a material and a pattern, drawn by shared/NeedleLook.
@@ -30,47 +30,8 @@ Needles.grades = {
 	{ id = "masterwork", name = "Masterwork", colour = { 255, 190, 60 } },
 }
 
--- Types: the needle's shape (see NeedleLook). weight = how often it turns up (out of all the
--- weights together); value = its base worth (times the skin's rarity); grade = see above.
-Needles.types = {
-	{ id = "sewing", name = "Sewing Needle", weight = 20, value = 10, grade = "classic" },
-	{ id = "pin", name = "Dressmaker's Pin", weight = 16, value = 8, grade = "classic" },
-	{ id = "quilting", name = "Quilting Needle", weight = 12, value = 12, grade = "classic" },
-	{ id = "darning", name = "Darning Needle", weight = 10, value = 14, grade = "classic" },
-	{ id = "embroidery", name = "Embroidery Needle", weight = 9, value = 16, grade = "classic" },
-	{ id = "tapestry", name = "Tapestry Needle", weight = 8, value = 18, grade = "classic" },
-	{ id = "safety", name = "Safety Pin", weight = 8, value = 15, grade = "classic" },
-	{ id = "knitting", name = "Knitting Needle", weight = 6, value = 22, grade = "classic" },
-	{ id = "crochet", name = "Crochet Hook", weight = 5, value = 24, grade = "classic" },
-	{ id = "bodkin", name = "Bodkin", weight = 3, value = 26, grade = "classic" },
-	{ id = "curved", name = "Curved Upholstery Needle", weight = 2, value = 30, grade = "classic" },
-	{ id = "sailmaker", name = "Sailmaker's Needle", weight = 1, value = 36, grade = "classic" },
-	{ id = "firework", name = "Firework Needle", weight = 2.5, value = 45, grade = "fancy" },
-	{ id = "jackhammer", name = "Jackhammer Needle", weight = 2, value = 50, grade = "fancy" },
-	{ id = "swordfish", name = "Swordfish Needle", weight = 0.7, value = 65, grade = "exotic" },
-	{ id = "shootingstar", name = "Shooting Star Needle", weight = 0.3, value = 90, grade = "masterwork" },
-	-- shapes kept as data (shared/ShapesA and ShapesB, made by dev/shapes.py)
-	{ id = "pencil", name = "Pencil Needle", weight = 1.2, value = 40, grade = "fancy" },
-	{ id = "candle", name = "Candle Needle", weight = 1.0, value = 45, grade = "fancy" },
-	{ id = "wand", name = "Wand Needle", weight = 0.9, value = 50, grade = "fancy" },
-	{ id = "paintbrush", name = "Paintbrush Needle", weight = 1.0, value = 45, grade = "fancy" },
-	{ id = "lollipop", name = "Lollipop Needle", weight = 1.1, value = 42, grade = "fancy" },
-	{ id = "fork", name = "Fork Needle", weight = 1.2, value = 40, grade = "fancy" },
-	{ id = "umbrella", name = "Umbrella Needle", weight = 0.9, value = 48, grade = "fancy" },
-	{ id = "carrot", name = "Carrot Needle", weight = 1.2, value = 42, grade = "fancy" },
-	{ id = "pitchfork", name = "Pitchfork Needle", weight = 1.0, value = 50, grade = "fancy" },
-	{ id = "icecream", name = "Ice Cream Needle", weight = 1.0, value = 52, grade = "fancy" },
-	{ id = "narwhal", name = "Narwhal Needle", weight = 0.6, value = 72, grade = "exotic" },
-	{ id = "hummingbird", name = "Hummingbird Needle", weight = 0.6, value = 68, grade = "exotic" },
-	{ id = "porcupine", name = "Porcupine Quill", weight = 0.7, value = 62, grade = "exotic" },
-	{ id = "icicle", name = "Icicle Needle", weight = 0.8, value = 60, grade = "exotic" },
-	{ id = "thornyrose", name = "Thorny Rose Needle", weight = 0.5, value = 70, grade = "exotic" },
-	{ id = "lightning", name = "Lightning Bolt Needle", weight = 0.2, value = 100, grade = "masterwork" },
-	{ id = "rocketship", name = "Rocket Ship Needle", weight = 0.25, value = 95, grade = "masterwork" },
-	{ id = "cometspear", name = "Comet Spear", weight = 0.3, value = 88, grade = "masterwork" },
-	{ id = "dragontooth", name = "Dragon's Tooth", weight = 0.15, value = 105, grade = "masterwork" },
-	{ id = "crystalshard", name = "Crystal Shard Needle", weight = 0.2, value = 92, grade = "masterwork" },
-}
+-- Types: the needle's shape, kept in shared/NeedleTypes (there are many).
+Needles.types = require(script.Parent.NeedleTypes)
 
 Needles.skins = {
 	-- Common

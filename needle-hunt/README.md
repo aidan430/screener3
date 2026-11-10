@@ -294,20 +294,21 @@ model carries them itself.
 ## The needle collection
 
 Needles come out of boxes (opened with coins, keys from chests, or Robux) and trades. Each is
-one of **36 shapes** in one of **60 skins** (2,160 to collect), plus the one-and-only 1 of 1.
+one of **85 shapes** in one of **60 skins** (5,100 to collect), plus the one-and-only 1 of 1s.
 
 **Shapes** are graded. Every box uses the same shape odds, shown on the Boxes screen:
 
 | Grade | Shapes | Chance | Base value |
 |---|---|---|---|
-| Classic | Sewing, Dressmaker's Pin, Quilting, Darning, Embroidery, Tapestry, Safety Pin, Knitting, Crochet Hook, Bodkin, Curved Upholstery, Sailmaker's | 83.1% | 8 to 36 |
-| Fancy | Firework, Jackhammer, Pencil, Candle, Wand, Paintbrush, Lollipop, Fork, Umbrella, Carrot, Pitchfork, Ice Cream | 12.5% | 40 to 52 |
-| Exotic | Swordfish, Narwhal, Hummingbird, Porcupine Quill, Icicle, Thorny Rose | 3.2% | 60 to 72 |
-| Masterwork | Shooting Star, Lightning Bolt, Rocket Ship, Comet Spear, Dragon's Tooth, Crystal Shard | 1.2% | 88 to 105 |
+| Classic | the 12 classic needles (Sewing to Sailmaker's) | 83.2% | 8 to 36 |
+| Fancy | 32: Firework, Jackhammer, Pencil, Candle, Wand, Paintbrush, Lollipop, Fork, Umbrella, Carrot, Pitchfork, Ice Cream, Corn Cob, Rolling Pin, Broom, Trowel, Wheat Stalk, Milk Bottle, Thimble Awl, Horseshoe, Watering Can, Sunflower, Wooden Spoon, Chopstick, Whisk, Crayon, Spool, Party Horn, Straw, Spinning Top, Toothbrush, Wooden Sword | 11.0% | 40 to 55 |
+| Exotic | 25: Swordfish, Narwhal, Hummingbird, Porcupine Quill, Icicle, Thorny Rose, Pine Cone, Cactus Spine, Raindrop, Snowflake, Volcano, Tornado, Toadstool, Coral, Seashell, Unicorn Horn, Stingray, Woodpecker, Dragonfly, Seahorse, Hedgehog, Beetle, Scorpion Tail, Shark Fin Spear, Snail | 4.8% | 60 to 75 |
+| Masterwork | 16: Shooting Star, Lightning Bolt, Rocket Ship, Comet Spear, Dragon's Tooth, Crystal Shard, Comet Gem, Ringed Planet, Phoenix Feather, Royal Sceptre, Trident, Hourglass, Rainbow Arrow, Moon Wand, Treasure Key, Lighthouse | 1.1% | 88 to 110 |
 
-The 20 newest shapes are kept as data (`shared/ShapesA.luau`, `ShapesB.luau`), made by
-`dev/shapes.py`: change a shape there and run `python3 needle-hunt/dev/shapes.py`, which also
-writes the previews' copy. Previews: `previews/needle_shapes.png`, `previews/needle_shapes_2.png`.
+The types live in `shared/NeedleTypes.luau`. The 69 newest shapes are kept as data (`shared/ShapesA.luau`, `ShapesB`, `ShapesC`), made by
+`dev/shapes.py` and `dev/shapes_more.py` (the 49 from the Gemini sheets): change a shape there and
+run `python3 needle-hunt/dev/shapes.py`, which also writes the previews' copy. Previews:
+`previews/needle_shapes.png`, `needle_shapes_2.png`, `needle_shapes_3.png`.
 
 A needle's worth is its shape's base value × its skin's rarity. The novelty shapes keep the needle
 rule (their point is always at the tip), so they work in the hand and when thrown.
