@@ -22,6 +22,7 @@ local BoxScreen = require(script.Parent.BoxScreen)
 local CombatFx = require(script.Parent.CombatFx)
 local ThrowFx = require(script.Parent.ThrowFx)
 local DashFx = require(script.Parent.DashFx)
+local CooldownBars = require(script.Parent.CooldownBars)
 local TradeScreen = require(script.Parent.TradeScreen)
 
 local player = Players.LocalPlayer
@@ -97,6 +98,7 @@ function UIController.start()
 	CombatFx.start(gui)
 	ThrowFx.start(gui)
 	DashFx.start(gui)
+	CooldownBars.start(gui)
 	LobbyUi.start(gui, function(userId) -- a booth's prompt: that player's collection
 		Screens3.view(userId)
 		if windows.Collection.Visible then

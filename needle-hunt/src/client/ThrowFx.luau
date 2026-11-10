@@ -20,6 +20,9 @@ local player = Players.LocalPlayer
 local ThrowFx = {}
 local T = Config.Throw
 local lastThrow = -math.huge
+function ThrowFx.lastThrow() -- when you last threw (client/CooldownBars shows the wait)
+	return lastThrow
+end
 
 -- Where you're aiming: along the mouse (or the screen's middle on touch) from the camera.
 local function aim()

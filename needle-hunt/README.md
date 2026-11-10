@@ -399,6 +399,9 @@ Click or tap to poke the nearest player in front of you.
 - **Dash:** press C (B on a controller, or the Dash button on a phone) for a quick burst forward,
   along the way you're moving (or facing). Every 3 seconds; works anywhere (`Config.Dash`). The
   DASH bar under your hearts empties when you dash and refills; full and bright means ready.
+- **Cooldowns:** a poke every 0.7 s (`Config.Combat.cooldown`), a throw every 4 s
+  (`Config.Throw.cooldown`), and no pokes for 1.2 s while your needle is flying. The server enforces
+  them; in a round, POKE and THROW bars under the DASH bar refill as each comes back.
 - **Inspect:** press F (or the Inspect button) with the Needle out: it lifts and turns in your
   hand, and everyone sees it. Works in the lobby too.
 - If the needle points the wrong way in your hand, turn it with `Config.NeedleTool.grip`.

@@ -18,6 +18,7 @@ local Effects = require(script.Parent.Effects)
 
 local player = Players.LocalPlayer
 local CombatFx = {}
+CombatFx.lastPoke = -math.huge -- when you last poked (client/CooldownBars shows the wait)
 local C = Config.Combat
 local taggedOut
 
@@ -49,6 +50,10 @@ local function hookTool(tool, inspectButton)
 	end
 	tool:SetAttribute("Hooked", true)
 	tool.Activated:Connect(function()
+		if os.clock() - CombatFx.lastPoke < C.cooldown or player:GetAttribute("NeedleAway") then
+			return -- still on cooldown (the server would ignore it anyway)
+		end
+		CombatFx.lastPoke = os.clock()
 		local t = target()
 		Remotes.Poke:FireServer(t and t.UserId)
 	end)

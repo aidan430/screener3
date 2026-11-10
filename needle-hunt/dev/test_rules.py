@@ -335,6 +335,16 @@ class BoxOpenings(unittest.TestCase):
         self.assertIn("Combat.damage", throw, "the same safe-time rules as a poke")
         self.assertIn("NeedleAway", (SERVER / "Combat.luau").read_text(), "no pokes while it's flying")
 
+    def test_poke_and_throw_have_cooldowns_you_can_see(self):
+        self.assertGreater(table("Combat")["cooldown"], 0)
+        self.assertGreater(table("Throw")["cooldown"], table("Combat")["cooldown"])
+        combat, throw = (SERVER / "Combat.luau").read_text(), (SERVER / "CombatThrow.luau").read_text()
+        self.assertIn("C.cooldown", combat, "the server enforces the poke cooldown")
+        self.assertIn("T.cooldown", throw, "the server enforces the throw cooldown")
+        bars = (ROOT / "src" / "client" / "CooldownBars.luau").read_text()
+        self.assertIn('"POKE"', bars)
+        self.assertIn('"THROW"', bars)
+
     def test_a_dash_never_trips_the_anticheat(self):
         dash, ac = table("Dash"), block_table("AntiCheat")
         moved = dash["speed"] * dash["seconds"] + 26 * (ac["checkEvery"] - dash["seconds"])  # dashing with Hay Boots on
