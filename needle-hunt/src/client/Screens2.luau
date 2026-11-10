@@ -105,13 +105,13 @@ local function aimRows(current, redraw)
 		redraw()
 	end
 	UiKit.label({ LayoutOrder = 10, Text = "Aim", Font = UiKit.bold, Size = UDim2.new(1, -8, 0, 30), TextXAlignment = Enum.TextXAlignment.Left, Parent = settingsBody }, 24)
-	for i, row in ipairs({ { "sensitivity", "Aim sensitivity", "%.1fx" }, { "fov", "Field of view", "%d°" }, { "reticleSize", "Reticle size", "%.1fx" }, { "reticleThickness", "Reticle thickness", "%d px" } }) do
+	for i, row in ipairs({ { "sensitivity", "Aim sensitivity", "%.1fx" }, { "fov", "Field of view", "%d°" }, { "reticleSize", "Reticle size", "%.1fx" }, { "reticleThickness", "Reticle thickness", "%d px" }, { "reticleOpacity", "Reticle opacity", "%d%%", 100 }, { "reticleOutlineThickness", "Outline thickness", "%d px" } }) do
 		local key, r = row[1], A[row[1]]
 		local value = AimSettings.clean(key, current[key]) or r[4]
 		local c = UiKit.make("Frame", { LayoutOrder = 10 + i, Size = UDim2.new(1, -8, 0, 64), BackgroundColor3 = UiKit.colors.card, Parent = settingsBody }, { UiKit.corner(12) })
 		UiKit.label({ Text = row[2], Size = UDim2.new(1, -230, 1, 0), Position = UDim2.fromOffset(16, 0), TextXAlignment = Enum.TextXAlignment.Left, Parent = c }, 22)
 		local minus = UiKit.button("-", UiKit.colors.line, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -164, 0.5, 0), Size = UDim2.fromOffset(46, 46), Parent = c })
-		UiKit.label({ Text = string.format(row[3], value), Font = UiKit.bold, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -62, 0.5, 0), Size = UDim2.fromOffset(96, 46), TextColor3 = UiKit.colors.gold, Parent = c }, 22)
+		UiKit.label({ Text = string.format(row[3], if row[3]:find("%%d") then math.floor(value * (row[4] or 1) + 0.5) else value), Font = UiKit.bold, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -62, 0.5, 0), Size = UDim2.fromOffset(96, 46), TextColor3 = UiKit.colors.gold, Parent = c }, 22)
 		local plus = UiKit.button("+", UiKit.colors.line, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.fromOffset(46, 46), Parent = c })
 		minus.Activated:Connect(function()
 			set(key, value - r[3])
@@ -120,7 +120,7 @@ local function aimRows(current, redraw)
 			set(key, value + r[3])
 		end)
 	end
-	local shapes = UiKit.make("Frame", { LayoutOrder = 15, Size = UDim2.new(1, -8, 0, 100), BackgroundColor3 = UiKit.colors.card, Parent = settingsBody }, { UiKit.corner(12) })
+	local shapes = UiKit.make("Frame", { LayoutOrder = 17, Size = UDim2.new(1, -8, 0, 100), BackgroundColor3 = UiKit.colors.card, Parent = settingsBody }, { UiKit.corner(12) })
 	UiKit.label({ Text = "Reticle", Size = UDim2.new(1, -16, 0, 34), Position = UDim2.fromOffset(16, 4), TextXAlignment = Enum.TextXAlignment.Left, Parent = shapes }, 22)
 	for i, id in ipairs(A.reticles) do
 		local on = current.reticle == id
@@ -129,7 +129,7 @@ local function aimRows(current, redraw)
 			set("reticle", id)
 		end)
 	end
-	local colours = UiKit.make("Frame", { LayoutOrder = 16, Size = UDim2.new(1, -8, 0, 100), BackgroundColor3 = UiKit.colors.card, Parent = settingsBody }, { UiKit.corner(12) })
+	local colours = UiKit.make("Frame", { LayoutOrder = 18, Size = UDim2.new(1, -8, 0, 100), BackgroundColor3 = UiKit.colors.card, Parent = settingsBody }, { UiKit.corner(12) })
 	UiKit.label({ Text = "Reticle colour", Size = UDim2.new(1, -16, 0, 34), Position = UDim2.fromOffset(16, 4), TextXAlignment = Enum.TextXAlignment.Left, Parent = colours }, 22)
 	for i, row in ipairs(A.colours) do
 		local on = current.reticleColour == row[1]
@@ -138,6 +138,15 @@ local function aimRows(current, redraw)
 		edge.Color, edge.Thickness, edge.Parent = if on then Color3.new(1, 1, 1) else Color3.fromRGB(40, 44, 56), if on then 3 else 1, b -- the chosen colour is ringed
 		b.Activated:Connect(function()
 			set("reticleColour", row[1])
+		end)
+	end
+	local edges = UiKit.make("Frame", { LayoutOrder = 19, Size = UDim2.new(1, -8, 0, 100), BackgroundColor3 = UiKit.colors.card, Parent = settingsBody }, { UiKit.corner(12) })
+	UiKit.label({ Text = "Reticle outline", Size = UDim2.new(1, -16, 0, 34), Position = UDim2.fromOffset(16, 4), TextXAlignment = Enum.TextXAlignment.Left, Parent = edges }, 22)
+	for i, id in ipairs(A.outlines) do
+		local on = current.reticleOutline == id
+		local b = UiKit.button(id:sub(1, 1):upper() .. id:sub(2), if on then UiKit.colors.blue else UiKit.colors.line, { Position = UDim2.new((i - 1) / #A.outlines, 8, 0, 44), Size = UDim2.new(1 / #A.outlines, -10, 0, 44), Parent = edges })
+		b.Activated:Connect(function()
+			set("reticleOutline", id)
 		end)
 	end
 end

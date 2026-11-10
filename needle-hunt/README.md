@@ -438,6 +438,7 @@ Settings, **Aim** (`client/Aim`, `Config.Aim`, checked by `shared/AimSettings` o
 - **Reticle** in the middle of the screen in first person: Cross + dot, Dot, Cross, Circle or None,
   in white, red, yellow, green, cyan or pink, with a thin dark edge so it reads on any background.
 - **Reticle size** 0.5x to 2.5x and **reticle thickness** 1 to 6 pixels.
+- **Reticle opacity** 20% to 100%, and an **outline** in black, white or none, 1 to 3 pixels thick.
 Changes show at once and are saved with the player's profile. Preview: `previews/aim_settings.png`.
 
 ## Practice Yard: Time Trial

@@ -8,9 +8,10 @@ local A = Config.Aim
 
 AimSettings.defaults = {
 	sensitivity = A.sensitivity[4], fov = A.fov[4], reticleSize = A.reticleSize[4], reticleThickness = A.reticleThickness[4],
-	reticle = A.reticles[1], reticleColour = A.colours[1][1],
+	reticleOpacity = A.reticleOpacity[4], reticleOutlineThickness = A.reticleOutlineThickness[4],
+	reticle = A.reticles[1], reticleColour = A.colours[1][1], reticleOutline = A.outlines[1],
 }
-local NUMBERS = { sensitivity = true, fov = true, reticleSize = true, reticleThickness = true }
+local NUMBERS = { sensitivity = true, fov = true, reticleSize = true, reticleThickness = true, reticleOpacity = true, reticleOutlineThickness = true }
 
 local function listed(list, value, at)
 	for _, row in ipairs(list) do
@@ -32,6 +33,8 @@ function AimSettings.clean(key, value)
 		return math.floor((value - r[1]) / r[3] + 0.5) * r[3] + r[1]
 	elseif key == "reticle" then
 		return if type(value) == "string" and listed(A.reticles, value) then value else nil
+	elseif key == "reticleOutline" then
+		return if type(value) == "string" and listed(A.outlines, value) then value else nil
 	elseif key == "reticleColour" then
 		return if type(value) == "string" and listed(A.colours, value, 1) then value else nil
 	end

@@ -223,12 +223,16 @@ Config.ArenaCentre = Vector3.new(0, 0, 600)
 -- player's yard is built at centre + (slot - 1) x spacing on Z, and gone when they leave.
 -- Aim settings each player picks (Settings, Aim; shared/AimSettings checks them, client/Aim applies
 -- them): mouse sensitivity, field of view, the reticle's size (x its normal size) and thickness (its
--- lines, in pixels) as { min, max, step, default }; the reticle's shape (none hides it) and colour.
+-- lines, in pixels), opacity (1 = solid) and outline thickness (pixels) as { min, max, step,
+-- default }; the reticle's shape (none hides it), colour and outline colour (none for no outline).
 Config.Aim = {
 	sensitivity = { 0.2, 3, 0.1, 1 },
 	fov = { 60, 100, 5, 70 },
 	reticleSize = { 0.5, 2.5, 0.1, 1 },
 	reticleThickness = { 1, 6, 1, 2 },
+	reticleOpacity = { 0.2, 1, 0.1, 1 },
+	reticleOutlineThickness = { 1, 3, 1, 1 },
+	outlines = { "black", "white", "none" },
 	reticles = { "crossdot", "dot", "cross", "circle", "none" },
 	colours = { { "white", 255, 255, 255 }, { "red", 235, 40, 45 }, { "yellow", 255, 214, 60 }, { "green", 80, 230, 110 }, { "cyan", 70, 220, 240 }, { "pink", 255, 110, 200 } },
 }
