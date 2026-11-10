@@ -104,7 +104,11 @@ Config.MatchXp = { place = { 120, 90, 70, 50 }, played = 20, perCoin = 0.5, perC
 -- yourself raises your multiplier on that tag-out's coins and XP by `step`, up to `max`
 -- (1x, 1.5x, 2x, 2.5x, then 3x). Being tagged out, or the round ending, resets it. From `announceAt`
 -- in a row everyone in the round hears about it. names = the callout for that streak (and above).
-Config.Streak = { step = 0.5, max = 3, announceAt = 3, names = { "TAGGED OUT!", "DOUBLE TAG!", "TRIPLE TAG!", "UNSTOPPABLE!", "HAYSTACK HERO!" } }
+-- marked: at `at` in a row you're Marked (server/Streaks) until you're tagged out or the round ends:
+-- a `colour` outline everyone sees through walls, but you walk `speed` x faster.
+-- feed = how many lines the tag-out feed shows (client/FeedFx), and for how many seconds.
+Config.Streak = { step = 0.5, max = 3, announceAt = 3, names = { "TAGGED OUT!", "DOUBLE TAG!", "TRIPLE TAG!", "UNSTOPPABLE!", "HAYSTACK HERO!" },
+	marked = { at = 10, speed = 1.5, colour = { 255, 0, 0 } }, feed = { lines = 5, seconds = 7 } }
 
 -- Needle combat (server/Combat, client/CombatFx): during the search everyone carries their
 -- showcase needle and can poke others. Three pokes and you're tagged out: you pop back at a maze

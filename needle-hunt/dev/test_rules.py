@@ -350,7 +350,7 @@ class BoxOpenings(unittest.TestCase):
         self.assertIn("Aim.fov()", (ROOT / "src" / "client" / "DashFx.luau").read_text(), "a dash returns to your field of view")
 
     def test_tag_out_streaks_raise_the_multiplier(self):
-        line = re.search(r"^Config\.Streak = \{(.*)\}$", CONFIG, re.M).group(1)
+        line = re.search(r"^Config\.Streak = \{(.*)$", CONFIG, re.M).group(1)
         step = float(re.search(r"step = ([\d.]+)", line).group(1))
         top = float(re.search(r"max = ([\d.]+)", line).group(1))
         mults = [min(top, 1 + step * (n - 1)) for n in range(1, 8)]
@@ -358,11 +358,23 @@ class BoxOpenings(unittest.TestCase):
         self.assertEqual(mults, sorted(mults), "a longer streak never pays less")
         self.assertLessEqual(top, 3, "streaks stay a bonus, not a runaway")
         combat = (SERVER / "Combat.luau").read_text()
-        self.assertIn('target:SetAttribute("Streak", 0)', combat, "being tagged out ends your streak")
-        self.assertIn("streakMultiplier(streak)", combat)
+        streaks = (SERVER / "Streaks.luau").read_text()
+        self.assertIn('target:SetAttribute("Streak", 0)', streaks, "being tagged out ends your streak")
+        self.assertIn("Streaks.multiplier(streak)", streaks)
         self.assertIn('"elimWeight", mult', combat, "the streak carries into match XP")
         self.assertIn("elimWeight * X.perElimination", (SERVER / "MatchXp.luau").read_text())
         self.assertIn("Remotes.TagOut", combat)
+        self.assertIn("Remotes.Feed:FireAllClients", streaks, "every tag-out goes in the feed")
+
+    def test_a_marked_player_glows_through_walls_but_runs_faster(self):
+        line = re.search(r"marked = \{ at = (\d+), speed = ([\d.]+)", CONFIG)
+        self.assertEqual(int(line.group(1)), 10)
+        self.assertEqual(float(line.group(2)), 1.5)
+        streaks = (SERVER / "Streaks.luau").read_text()
+        self.assertIn("AlwaysOnTop", streaks, "seen through walls")
+        self.assertIn("Streaks.unmark(target)", streaks, "tagging a Marked player out ends it")
+        self.assertIn("Streaks.walkSpeed", (SERVER / "Powerups.luau").read_text(), "a speed power-up ending doesn't undo Marked speed")
+        self.assertIn("Streaks.clear()", (SERVER / "Combat.luau").read_text(), "the round ending ends it")
 
     def test_time_trial_practice(self):
         block = CONFIG[CONFIG.index("Config.Practice = {"):]

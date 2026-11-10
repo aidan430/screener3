@@ -46,13 +46,36 @@ function StreakFx.start(gui)
 	player:GetAttributeChangedSignal("Streak"):Connect(showChip)
 	player:GetAttributeChangedSignal("InRound"):Connect(showChip)
 
+	-- Marked (server/Streaks): a banner while it lasts; your own red outline is hidden on your screen
+	local banner = UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -110), Size = UDim2.fromOffset(470, 54), BackgroundColor3 = Color3.fromRGB(70, 0, 0), BackgroundTransparency = 0.15, Visible = false, Parent = gui }, { UiKit.corner(12), UiKit.stroke(Color3.fromRGB(255, 0, 0), 2) })
+	UiKit.autoScale(banner)
+	UiKit.label({ Text = string.format("MARKED  ·  everyone can see you  ·  %gx speed", S.marked.speed), Font = UiKit.bold, Size = UDim2.fromScale(1, 1), TextColor3 = Color3.fromRGB(255, 200, 200), Parent = banner }, 20)
+	local function marked()
+		banner.Visible = player:GetAttribute("Marked") == true
+		if banner.Visible then
+			UiKit.pop(banner, 0.8)
+		end
+	end
+	player:GetAttributeChangedSignal("Marked"):Connect(marked)
+	local function hideOwnGlow(character)
+		character.ChildAdded:Connect(function(c)
+			if c.Name == "MarkedGlow" and c:IsA("Highlight") then
+				c.Enabled = false -- others see it; you don't need your own view outlined
+			end
+		end)
+	end
+	player.CharacterAdded:Connect(hideOwnGlow)
+	if player.Character then
+		hideOwnGlow(player.Character)
+	end
+
 	Remotes.TagOut.OnClientEvent:Connect(function(m)
 		if m.by then -- you were tagged out
 			Hud.toast(m.by .. " tagged you out!" .. (if (m.ended or 0) >= 2 then " Your streak of " .. m.ended .. " ended." else ""), "bad")
 			return
 		end
 		local streak = m.streak or 1
-		title.Text = S.names[math.min(streak, #S.names)]
+		title.Text = if m.marked and streak == S.marked.at then "MARKED!" else S.names[math.min(streak, #S.names)]
 		line.Text = "You tagged out " .. (m.target or "a player") .. "   ·   +" .. (m.coins or 0) .. " coins"
 		badge.Text = if (m.mult or 1) > 1 then "STREAK " .. streak .. "   ·   " .. multText(m.mult) else ""
 		title.TextColor3 = if streak >= 3 then HOT else GOLD

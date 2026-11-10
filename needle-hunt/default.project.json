@@ -83,6 +83,9 @@
         "TagOut": {
           "$className": "RemoteEvent"
         },
+        "Feed": {
+          "$className": "RemoteEvent"
+        },
         "Announce": {
           "$className": "RemoteEvent"
         }

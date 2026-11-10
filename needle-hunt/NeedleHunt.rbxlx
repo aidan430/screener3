@@ -295,7 +295,11 @@ Config.MatchXp = { place = { 120, 90, 70, 50 }, played = 20, perCoin = 0.5, perC
 -- yourself raises your multiplier on that tag-out's coins and XP by `step`, up to `max`
 -- (1x, 1.5x, 2x, 2.5x, then 3x). Being tagged out, or the round ending, resets it. From `announceAt`
 -- in a row everyone in the round hears about it. names = the callout for that streak (and above).
-Config.Streak = { step = 0.5, max = 3, announceAt = 3, names = { "TAGGED OUT!", "DOUBLE TAG!", "TRIPLE TAG!", "UNSTOPPABLE!", "HAYSTACK HERO!" } }
+-- marked: at `at` in a row you're Marked (server/Streaks) until you're tagged out or the round ends:
+-- a `colour` outline everyone sees through walls, but you walk `speed` x faster.
+-- feed = how many lines the tag-out feed shows (client/FeedFx), and for how many seconds.
+Config.Streak = { step = 0.5, max = 3, announceAt = 3, names = { "TAGGED OUT!", "DOUBLE TAG!", "TRIPLE TAG!", "UNSTOPPABLE!", "HAYSTACK HERO!" },
+	marked = { at = 10, speed = 1.5, colour = { 255, 0, 0 } }, feed = { lines = 5, seconds = 7 } }
 
 -- Needle combat (server/Combat, client/CombatFx): during the search everyone carries their
 -- showcase needle and can poke others. Three pokes and you're tagged out: you pop back at a maze
@@ -2474,20 +2478,25 @@ return {
 			</Item>
 			<Item class="RemoteEvent" referent="RBX0002D">
 				<Properties>
+					<string name="Name">Feed</string>
+				</Properties>
+			</Item>
+			<Item class="RemoteEvent" referent="RBX0002E">
+				<Properties>
 					<string name="Name">Announce</string>
 				</Properties>
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerScriptService" referent="RBX0002E">
+	<Item class="ServerScriptService" referent="RBX0002F">
 		<Properties>
 			<string name="Name">ServerScriptService</string>
 		</Properties>
-		<Item class="Folder" referent="RBX0002F">
+		<Item class="Folder" referent="RBX00030">
 			<Properties>
 				<string name="Name">Server</string>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX00030">
+			<Item class="ModuleScript" referent="RBX00031">
 				<Properties>
 					<string name="Name">AntiCheat</string>
 					<ProtectedString name="Source"><![CDATA[-- Basic anti-exploit: every Config.AntiCheat.checkEvery seconds, each character's position is
@@ -2573,7 +2582,7 @@ return AntiCheat
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00031">
+			<Item class="ModuleScript" referent="RBX00032">
 				<Properties>
 					<string name="Name">BoxManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Box openings (Config.Boxes, shared/Boxes). Boxes open through Remotes.Box with coins ("open") or
@@ -2704,7 +2713,7 @@ return BoxManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00032">
+			<Item class="ModuleScript" referent="RBX00033">
 				<Properties>
 					<string name="Name">ChestSpawner</string>
 					<ProtectedString name="Source"><![CDATA[-- The chests each round (Config.Chests), made to be fought over. They go in the dead ends furthest
@@ -2969,7 +2978,7 @@ return ChestSpawner
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00033">
+			<Item class="ModuleScript" referent="RBX00034">
 				<Properties>
 					<string name="Name">CollectionManager</string>
 					<ProtectedString name="Source"><![CDATA[-- The needle collection, on the server. Needles come from boxes (server/BoxManager: coins, keys
@@ -3054,7 +3063,7 @@ return CollectionManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00034">
+			<Item class="ModuleScript" referent="RBX00035">
 				<Properties>
 					<string name="Name">Combat</string>
 					<ProtectedString name="Source"><![CDATA[-- Needle combat. Everyone carries their showcase needle as a tool (the "Needle", rebuilt when the
@@ -3079,6 +3088,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local DataManager = require(script.Parent.DataManager)
 local RewardManager = require(script.Parent.RewardManager)
 local QuestManager = require(script.Parent.QuestManager)
+local Streaks = require(script.Parent.Streaks)
 
 local Combat = {}
 local C, T = Config.Combat, Config.NeedleTool
@@ -3170,20 +3180,12 @@ local function inRound(player)
 end
 Combat.inRound = inRound
 
--- A streak's multiplier (Config.Streak): 1x for the first tag-out in a row, then up by `step`.
-function Combat.streakMultiplier(streak)
-	return math.min(Config.Streak.max, 1 + Config.Streak.step * (math.max(1, streak) - 1))
-end
-
-local function tagOut(attacker, target, humanoid)
+-- A tag-out: the streak (server/Streaks: the multiplier, Marked, the feed), coins, XP, quests.
+local function tagOut(attacker, target, humanoid, how)
 	DataManager.update(attacker, function(d)
 		d.eliminations += 1
 	end)
-	local streak = (attacker:GetAttribute("Streak") or 0) + 1 -- tag-outs in a row without being tagged out
-	local ended = target:GetAttribute("Streak") or 0
-	attacker:SetAttribute("Streak", streak)
-	target:SetAttribute("Streak", 0)
-	local mult = Combat.streakMultiplier(streak)
+	local streak, mult, ended = Streaks.tagOut(attacker, target, how, round and round.participants)
 	QuestManager.record(attacker, "tagout", 1)
 	RewardManager.track(attacker, "elims", 1)
 	RewardManager.track(attacker, "elimWeight", mult) -- match XP for tag-outs carries the streak too
@@ -3194,15 +3196,8 @@ local function tagOut(attacker, target, humanoid)
 	local brawl = round and round.modifiers and round.modifiers.brawl -- a Brawl round pays double
 	local coins = math.floor(C.eliminationCoins * mult * (if RewardManager.hasPass(attacker, "DoubleCoins") then 2 else 1) * (if brawl then 2 else 1) + 0.5)
 	RewardManager.grant(attacker, coins, 0, nil)
-	Remotes.TagOut:FireClient(attacker, { target = target.DisplayName, coins = coins, streak = streak, mult = mult })
+	Remotes.TagOut:FireClient(attacker, { target = target.DisplayName, coins = coins, streak = streak, mult = mult, marked = attacker:GetAttribute("Marked") == true })
 	Remotes.TagOut:FireClient(target, { by = attacker.DisplayName, ended = ended, respawn = C.respawn })
-	if streak >= Config.Streak.announceAt and round then -- everyone in the round hears about a big streak
-		for p in pairs(round.participants) do
-			if p ~= attacker then
-				Remotes.Notify:FireClient(p, { text = attacker.DisplayName .. " is on a " .. streak .. "-tag streak!", tone = "info" })
-			end
-		end
-	end
 	humanoid.BreakJointsOnDeath = false -- a soft pop, not falling apart
 	humanoid.Health = 0
 end
@@ -3258,7 +3253,7 @@ function Combat.damage(attacker, target, amount)
 	lastHit[target] = os.clock()
 	Remotes.Hit:FireAllClients({ from = attacker.UserId, to = target.UserId, hearts = hearts, position = root.Position, amount = amount })
 	if hearts == 0 then
-		tagOut(attacker, target, humanoid)
+		tagOut(attacker, target, humanoid, if amount > 1 then "throw" else "poke")
 	end
 	return true
 end
@@ -3269,19 +3264,17 @@ function Combat.start(r)
 	round = r
 	for p in pairs(r.participants) do
 		p:SetAttribute("Hearts", C.hearts)
-		p:SetAttribute("Streak", 0) -- streaks start fresh each round
-		p:SetAttribute("BestStreak", 0)
 	end
+	Streaks.reset(r.participants) -- streaks start fresh each round
 end
 
 function Combat.stop()
 	round = nil
-	for _, p in ipairs(Players:GetPlayers()) do
-		p:SetAttribute("Streak", 0)
-	end
+	Streaks.clear()
 end
 
 function Combat.init()
+	Streaks.init()
 	Players.RespawnTime = C.respawn
 	Remotes.Poke.OnServerEvent:Connect(poke)
 	Remotes.Inspect.OnServerEvent:Connect(function(player)
@@ -3325,7 +3318,7 @@ return Combat
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00035">
+			<Item class="ModuleScript" referent="RBX00036">
 				<Properties>
 					<string name="Name">CombatThrow</string>
 					<ProtectedString name="Source"><![CDATA[-- Throwing your needle (Config.Throw). The client sends where it's aiming (Remotes.Throw); the
@@ -3424,7 +3417,7 @@ return CombatThrow
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00036">
+			<Item class="ModuleScript" referent="RBX00037">
 				<Properties>
 					<string name="Name">Dash</string>
 					<ProtectedString name="Source"><![CDATA[-- Dashing (Config.Dash; the dash itself is client/DashFx, since each player's device moves its
@@ -3457,7 +3450,7 @@ return Dash
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00037">
+			<Item class="ModuleScript" referent="RBX00038">
 				<Properties>
 					<string name="Name">DataManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Player data: loaded on join, cached for the session, saved with UpdateAsync on an autosave
@@ -3732,7 +3725,7 @@ return DataManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00038">
+			<Item class="ModuleScript" referent="RBX00039">
 				<Properties>
 					<string name="Name">HaystackModel</string>
 					<ProtectedString name="Source"><![CDATA[-- The owner's own haystack model (Config.Haystacks.model): loaded once with InsertService (it must
@@ -3786,7 +3779,7 @@ return HaystackModel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00039">
+			<Item class="ModuleScript" referent="RBX0003A">
 				<Properties>
 					<string name="Name">LeaderboardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Global leaderboards (Config.Boards), each an OrderedDataStore: most chests, most tag-outs,
@@ -3960,7 +3953,7 @@ return LeaderboardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003A">
+			<Item class="ModuleScript" referent="RBX0003B">
 				<Properties>
 					<string name="Name">LobbyBuilder</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby, built once at Config.LobbyCentre: a wooden plaza in a field, the animated title sign
@@ -4201,7 +4194,7 @@ return LobbyBuilder
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003B">
+			<Item class="ModuleScript" referent="RBX0003C">
 				<Properties>
 					<string name="Name">LobbyDecor</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's dressing (LobbyBuilder calls build once): a lawn crossed by cobbled paths (spawn to
@@ -4310,7 +4303,7 @@ return LobbyDecor
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003C">
+			<Item class="ModuleScript" referent="RBX0003D">
 				<Properties>
 					<string name="Name">LobbyShowOff</string>
 					<ProtectedString name="Source"><![CDATA[-- Show off (Remotes.ShowOff): hold your showcase needle (or your best) up over your head for a
@@ -4379,7 +4372,7 @@ return LobbyShowOff
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003D">
+			<Item class="ModuleScript" referent="RBX0003E">
 				<Properties>
 					<string name="Name">LobbySocial</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's social side: showing off collections.
@@ -4659,7 +4652,7 @@ return LobbySocial
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Script" referent="RBX0003E">
+			<Item class="Script" referent="RBX0003F">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Starts A Needle in a Haystack on the server. Systems that react to a player's save loading are
@@ -4724,7 +4717,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003F">
+			<Item class="ModuleScript" referent="RBX00040">
 				<Properties>
 					<string name="Name">MapKit</string>
 					<ProtectedString name="Source"><![CDATA[-- The building kit for maps (server/MapsA, MapsB): ground, hay bales, haystacks, crates, fences,
@@ -4939,7 +4932,7 @@ return MapKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00040">
+			<Item class="ModuleScript" referent="RBX00041">
 				<Properties>
 					<string name="Name">MapsA</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Classic Haystack Field (a hedge maze), Barn Interior (a maze of stall walls) and
@@ -5068,7 +5061,7 @@ return MapsA
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00041">
+			<Item class="ModuleScript" referent="RBX00042">
 				<Properties>
 					<string name="Name">MapsB</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Night Forest (a thicket maze) and Abandoned Attic (a maze of stacked boxes under
@@ -5167,7 +5160,7 @@ return MapsB
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00042">
+			<Item class="ModuleScript" referent="RBX00043">
 				<Properties>
 					<string name="Name">MatchXp</string>
 					<ProtectedString name="Source"><![CDATA[-- The match's stats and its end (Config.MatchXp, Config.Rewards): counted while the round runs
@@ -5246,7 +5239,7 @@ return MatchXp
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00043">
+			<Item class="ModuleScript" referent="RBX00044">
 				<Properties>
 					<string name="Name">MazeKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Mazes for the maps: a grid of cells carved into a maze (a random depth-first walk, so every cell
@@ -5447,7 +5440,7 @@ return MazeKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00044">
+			<Item class="ModuleScript" referent="RBX00045">
 				<Properties>
 					<string name="Name">OneOfOne</string>
 					<ProtectedString name="Source"><![CDATA[-- The 1 of 1s (Config.OneOfOne). A chest rolls for each (roll); the first player to roll one claims it
@@ -5567,7 +5560,7 @@ return OneOfOne
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00045">
+			<Item class="ModuleScript" referent="RBX00046">
 				<Properties>
 					<string name="Name">Powerups</string>
 					<ProtectedString name="Source"><![CDATA[-- Power-ups on the maps (Config.Powerups). When a round's search starts, glowing orbs float in
@@ -5589,6 +5582,7 @@ local Rules = require(Shared:WaitForChild("Rules"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local MapKit = require(script.Parent.MapKit)
+local Streaks = require(script.Parent.Streaks)
 local RewardManager = require(script.Parent.RewardManager)
 
 local Powerups = {}
@@ -5623,12 +5617,13 @@ local function apply(player, kind, root)
 	if kind.id == "speed" then
 		local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 		if h then
-			h.WalkSpeed = kind.walkSpeed
+			local boosted = math.max(kind.walkSpeed, Streaks.walkSpeed(player)) -- never slower than a Marked player's
+			h.WalkSpeed = boosted
 			local token = (player:GetAttribute("SpeedToken") or 0) + 1
 			player:SetAttribute("SpeedToken", token)
 			task.delay(kind.seconds, function()
-				if player:GetAttribute("SpeedToken") == token and h.Parent and h.WalkSpeed == kind.walkSpeed then
-					h.WalkSpeed = 16
+				if player:GetAttribute("SpeedToken") == token and h.Parent and h.WalkSpeed == boosted then
+					h.WalkSpeed = Streaks.walkSpeed(player)
 				end
 			end)
 		end
@@ -5724,8 +5719,8 @@ function Powerups.stop()
 		active.folder:Destroy()
 		for p in pairs(active.round.participants) do
 			local h = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
-			if h and h.WalkSpeed > 16 then
-				h.WalkSpeed = 16
+			if h and h.WalkSpeed > Streaks.walkSpeed(p) then
+				h.WalkSpeed = Streaks.walkSpeed(p)
 			end
 		end
 	end
@@ -5736,7 +5731,7 @@ return Powerups
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00046">
+			<Item class="ModuleScript" referent="RBX00047">
 				<Properties>
 					<string name="Name">Practice</string>
 					<ProtectedString name="Source"><![CDATA[-- The Time Trial in the Practice Yard (Config.Practice). From the lobby (the Practice stall, or
@@ -5991,7 +5986,7 @@ return Practice
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00047">
+			<Item class="ModuleScript" referent="RBX00048">
 				<Properties>
 					<string name="Name">PracticeYard</string>
 					<ProtectedString name="Source"><![CDATA[-- Builds one player's Practice Yard for a Time Trial (server/Practice, Config.Practice): a hedged
@@ -6132,7 +6127,7 @@ return PracticeYard
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00048">
+			<Item class="ModuleScript" referent="RBX00049">
 				<Properties>
 					<string name="Name">QuestManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Daily quests: three a day, the same for everyone (shared/Quests.forDay). Progress is saved;
@@ -6200,7 +6195,7 @@ return QuestManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00049">
+			<Item class="ModuleScript" referent="RBX0004A">
 				<Properties>
 					<string name="Name">Requests</string>
 					<ProtectedString name="Source"><![CDATA[-- Small requests from players, checked on the server: a hint (Remotes.Hint) and saving their
@@ -6263,7 +6258,7 @@ return Requests
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004A">
+			<Item class="ModuleScript" referent="RBX0004B">
 				<Properties>
 					<string name="Name">RewardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Every coin and XP point is given here, on the server: chests, places, playing a round to the
@@ -6416,7 +6411,7 @@ return RewardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004B">
+			<Item class="ModuleScript" referent="RBX0004C">
 				<Properties>
 					<string name="Name">RoundExtras</string>
 					<ProtectedString name="Source"><![CDATA[-- What runs alongside a round's search, started and stopped together by server/RoundManager:
@@ -6450,7 +6445,7 @@ return RoundExtras
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004C">
+			<Item class="ModuleScript" referent="RBX0004D">
 				<Properties>
 					<string name="Name">RoundManager</string>
 					<ProtectedString name="Source"><![CDATA[-- The round loop, all on the server:
@@ -6724,7 +6719,7 @@ return RoundManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004D">
+			<Item class="ModuleScript" referent="RBX0004E">
 				<Properties>
 					<string name="Name">ShopManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Cosmetics and purchases. With Haystack Coins: buy a cosmetic (Remotes.Shop "buy"), and wear
@@ -6975,7 +6970,141 @@ return ShopManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004E">
+			<Item class="ModuleScript" referent="RBX0004F">
+				<Properties>
+					<string name="Name">Streaks</string>
+					<ProtectedString name="Source"><![CDATA[-- Tag-out streaks, the Marked player and the tag-out feed (Config.Streak), called by server/Combat
+-- for every tag-out in a round.
+--   Streak: tag-outs in a row without being tagged out yourself. Each one raises that tag-out's
+--   coins and match XP (Streaks.multiplier). Being tagged out, or a round starting or ending,
+--   resets it. From announceAt in a row the round hears about it.
+--   Marked: at marked.at in a row you glow red and everyone can see you through walls (a
+--   Highlight), but you walk marked.speed x faster, until you're tagged out or the round ends.
+--   Feed: every tag-out goes to everyone's feed (client/FeedFx): who, whom, poke or throw, streak.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local Streaks = {}
+local S = Config.Streak
+local WALK = 16
+
+function Streaks.multiplier(streak)
+	return math.min(S.max, 1 + S.step * (math.max(1, streak) - 1))
+end
+
+-- A player's walking speed when nothing else is boosting it (a Marked player is faster).
+function Streaks.walkSpeed(player)
+	return WALK * (player:GetAttribute("SpeedMult") or 1)
+end
+
+local function humanoidOf(player)
+	return player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+end
+
+local function glow(player) -- the red outline, seen through walls by everyone
+	local character = player.Character
+	if not character or character:FindFirstChild("MarkedGlow") then
+		return
+	end
+	local h = Instance.new("Highlight")
+	h.Name, h.DepthMode = "MarkedGlow", Enum.HighlightDepthMode.AlwaysOnTop
+	h.OutlineColor = Color3.fromRGB(S.marked.colour[1], S.marked.colour[2], S.marked.colour[3])
+	h.FillColor, h.FillTransparency, h.OutlineTransparency = h.OutlineColor, 0.8, 0
+	h.Parent = character
+	local hum = humanoidOf(player)
+	if hum and hum.WalkSpeed < Streaks.walkSpeed(player) then
+		hum.WalkSpeed = Streaks.walkSpeed(player)
+	end
+end
+
+function Streaks.mark(player)
+	player:SetAttribute("Marked", true)
+	player:SetAttribute("SpeedMult", S.marked.speed)
+	glow(player)
+end
+
+function Streaks.unmark(player)
+	if not player:GetAttribute("Marked") then
+		return
+	end
+	player:SetAttribute("Marked", nil)
+	player:SetAttribute("SpeedMult", nil)
+	local glowing = player.Character and player.Character:FindFirstChild("MarkedGlow")
+	if glowing then
+		glowing:Destroy()
+	end
+	local hum = humanoidOf(player)
+	if hum and hum.WalkSpeed > WALK and hum.WalkSpeed <= WALK * S.marked.speed + 0.01 then
+		hum.WalkSpeed = WALK
+	end
+end
+
+-- Records a tag-out. how = "poke" or "throw". Returns the attacker's streak, its multiplier and
+-- the streak the target lost.
+function Streaks.tagOut(attacker, target, how, participants)
+	local streak = (attacker:GetAttribute("Streak") or 0) + 1
+	local ended = target:GetAttribute("Streak") or 0
+	local wasMarked = target:GetAttribute("Marked") == true
+	attacker:SetAttribute("Streak", streak)
+	target:SetAttribute("Streak", 0)
+	Streaks.unmark(target)
+	local function tell(text)
+		for p in pairs(participants or {}) do
+			if p ~= attacker then
+				Remotes.Notify:FireClient(p, { text = text, tone = "bad" })
+			end
+		end
+	end
+	if streak == S.marked.at then
+		Streaks.mark(attacker)
+		tell(attacker.DisplayName .. " is MARKED: " .. streak .. " in a row! You can see them through walls.")
+	elseif streak >= S.announceAt and streak < S.marked.at then
+		tell(attacker.DisplayName .. " is on a " .. streak .. "-tag streak!")
+	end
+	Remotes.Feed:FireAllClients({ by = attacker.DisplayName, byId = attacker.UserId, target = target.DisplayName, targetId = target.UserId, how = how, streak = streak, marked = attacker:GetAttribute("Marked") == true, endedMarked = wasMarked, ended = ended })
+	return streak, Streaks.multiplier(streak), ended
+end
+
+-- A round starting: streaks start fresh for everyone playing.
+function Streaks.reset(participants)
+	for p in pairs(participants) do
+		p:SetAttribute("Streak", 0)
+		p:SetAttribute("BestStreak", 0)
+		Streaks.unmark(p)
+	end
+end
+
+-- A round over: nobody keeps a streak or stays Marked.
+function Streaks.clear()
+	for _, p in ipairs(Players:GetPlayers()) do
+		p:SetAttribute("Streak", 0)
+		Streaks.unmark(p)
+	end
+end
+
+function Streaks.init()
+	local function joined(player)
+		player.CharacterAdded:Connect(function()
+			task.wait(0.6)
+			if player:GetAttribute("Marked") then -- a new body (a fall): the glow and the speed again
+				glow(player)
+			end
+		end)
+	end
+	Players.PlayerAdded:Connect(joined)
+	for _, p in ipairs(Players:GetPlayers()) do
+		joined(p)
+	end
+end
+
+return Streaks
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00050">
 				<Properties>
 					<string name="Name">TradeManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Trading needles between two players in the lobby (Config.Trading). Remotes.Trade asks; the
@@ -7243,24 +7372,24 @@ return TradeManager
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerStorage" referent="RBX0004F">
+	<Item class="ServerStorage" referent="RBX00051">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX00050">
+	<Item class="StarterPlayer" referent="RBX00052">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX00051">
+		<Item class="StarterPlayerScripts" referent="RBX00053">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX00052">
+			<Item class="Folder" referent="RBX00054">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX00053">
+				<Item class="ModuleScript" referent="RBX00055">
 					<Properties>
 						<string name="Name">Aim</string>
 						<ProtectedString name="Source"><![CDATA[-- Your aim settings (Settings, Aim; Config.Aim): mouse sensitivity, field of view, and the reticle
@@ -7373,7 +7502,7 @@ return Aim
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00054">
+				<Item class="ModuleScript" referent="RBX00056">
 					<Properties>
 						<string name="Name">BoxReel</string>
 						<ProtectedString name="Source"><![CDATA[-- The box opening on your screen: a strip of needle cards slides along under a gold marker,
@@ -7476,7 +7605,7 @@ return BoxReel
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00055">
+				<Item class="ModuleScript" referent="RBX00057">
 					<Properties>
 						<string name="Name">BoxScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Boxes screen: each box with its price (coins; the dearer ones also Robux), a key button
@@ -7669,7 +7798,7 @@ return BoxScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00056">
+				<Item class="ModuleScript" referent="RBX00058">
 					<Properties>
 						<string name="Name">CombatFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Needle combat on your screen (server/Combat decides every hit):
@@ -7871,7 +8000,7 @@ return CombatFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00057">
+				<Item class="ModuleScript" referent="RBX00059">
 					<Properties>
 						<string name="Name">CooldownBars</string>
 						<ProtectedString name="Source"><![CDATA[-- POKE and THROW bars, top left under the DASH bar (client/DashFx), in the same style: each empties
@@ -7923,7 +8052,7 @@ return CooldownBars
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00058">
+				<Item class="ModuleScript" referent="RBX0005A">
 					<Properties>
 						<string name="Name">DashFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Dashing (Config.Dash): C, B on a controller, or the Dash button on a phone. Your character
@@ -8044,7 +8173,7 @@ return DashFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00059">
+				<Item class="ModuleScript" referent="RBX0005B">
 					<Properties>
 						<string name="Name">Effects</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback you can see and hear, on your own screen only: sounds, a burst of particles where a
@@ -8126,7 +8255,91 @@ return Effects
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005A">
+				<Item class="ModuleScript" referent="RBX0005C">
+					<Properties>
+						<string name="Name">FeedFx</string>
+						<ProtectedString name="Source"><![CDATA[-- The tag-out feed, top right beside the menu (server/Streaks sends every tag-out to everyone; Config.Streak.feed):
+-- "Sam  →  Riley", THROW for a thrown needle, the tagger's streak from 2, MARKED when they are,
+-- and a line when someone ends a Marked player's streak. Your own name is in gold. Each line eases
+-- in and fades out after a few seconds.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local UiKit = require(script.Parent.UiKit)
+
+local player = Players.LocalPlayer
+local FeedFx = {}
+local F = Config.Streak.feed
+local RED, HOT, GOLD = Color3.fromRGB(255, 70, 70), Color3.fromRGB(255, 140, 70), UiKit.colors.gold
+
+local function esc(s)
+	return (tostring(s):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"))
+end
+
+local function name(text, id, colour)
+	local c = if id == player.UserId then GOLD else colour
+	return string.format('<font color="#%s"><b>%s</b></font>', c:ToHex(), esc(text))
+end
+
+function FeedFx.start(gui)
+	local list = UiKit.make("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -180, 0, 12), Size = UDim2.fromOffset(360, F.lines * 38), BackgroundTransparency = 1, Parent = gui }, {
+		UiKit.make("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Right }),
+	})
+	UiKit.autoScale(list)
+	local order = 0
+	Remotes.Feed.OnClientEvent:Connect(function(m)
+		order -= 1 -- newest on top
+		local tags = {}
+		if m.how == "throw" then
+			table.insert(tags, '<font color="#ffb45a">THROW</font>')
+		end
+		if m.marked then
+			table.insert(tags, '<font color="#ff4646"><b>MARKED</b></font>')
+		elseif (m.streak or 0) >= 2 then
+			table.insert(tags, string.format('<font color="#ff8c46">x%d</font>', m.streak))
+		end
+		local text = name(m.by, m.byId, Color3.new(1, 1, 1)) .. "  →  " .. name(m.target, m.targetId, Color3.fromRGB(200, 205, 220))
+		if #tags > 0 then
+			text ..= "   " .. table.concat(tags, " ")
+		end
+		if m.endedMarked then
+			text ..= '   <font color="#ff4646">ended a Marked streak!</font>'
+		end
+		local row = UiKit.make("Frame", { LayoutOrder = order, Size = UDim2.fromOffset(360, 34), BackgroundColor3 = UiKit.colors.panel, BackgroundTransparency = 0.25, Parent = list }, {
+			UiKit.corner(8), UiKit.stroke(if m.marked or m.endedMarked then RED elseif (m.streak or 0) >= 3 then HOT else UiKit.colors.line, 1.5),
+		})
+		local label = UiKit.label({ Text = text, RichText = true, Size = UDim2.new(1, -16, 1, 0), Position = UDim2.fromOffset(8, 0), TextXAlignment = Enum.TextXAlignment.Right, Parent = row }, 16)
+		UiKit.pop(row, 0.9)
+		local rows = {}
+		for _, r in ipairs(list:GetChildren()) do
+			if r:IsA("Frame") then
+				table.insert(rows, r)
+			end
+		end
+		table.sort(rows, function(a, b)
+			return a.LayoutOrder < b.LayoutOrder
+		end)
+		for i = F.lines + 1, #rows do -- only the newest few
+			rows[i]:Destroy()
+		end
+		task.delay(F.seconds, function()
+			if row.Parent then
+				UiKit.ease(row, 0.6, { BackgroundTransparency = 1 })
+				UiKit.ease(label, 0.6, { TextTransparency = 1 })
+				task.wait(0.65)
+				row:Destroy()
+			end
+		end)
+	end)
+end
+
+return FeedFx
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX0005D">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: your coins and level (with an XP bar) at the top left; the round's
@@ -8262,7 +8475,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005B">
+				<Item class="ModuleScript" referent="RBX0005E">
 					<Properties>
 						<string name="Name">LobbyUi</string>
 						<ProtectedString name="Source"><![CDATA[-- The lobby, on your screen:
@@ -8360,7 +8573,7 @@ return LobbyUi
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX0005C">
+				<Item class="LocalScript" referent="RBX0005F">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- Starts the client: the whole UI (UIController). The client only shows things and asks the
@@ -8370,7 +8583,7 @@ UIController.start()
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005D">
+				<Item class="ModuleScript" referent="RBX00060">
 					<Properties>
 						<string name="Name">NeedleView</string>
 						<ProtectedString name="Source"><![CDATA[-- A needle in 3D inside the UI: a ViewportFrame with the needle (shared/NeedleLook) lit and
@@ -8422,7 +8635,7 @@ return NeedleView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005E">
+				<Item class="ModuleScript" referent="RBX00061">
 					<Properties>
 						<string name="Name">PowerupFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Power-ups on your screen (server/Powerups decides; Remotes.Powerup says what you got):
@@ -8556,7 +8769,7 @@ return PowerupFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005F">
+				<Item class="ModuleScript" referent="RBX00062">
 					<Properties>
 						<string name="Name">PracticeFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The Time Trial on your screen (server/Practice decides everything): the Practice window (your
@@ -8720,7 +8933,7 @@ return PracticeFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00060">
+				<Item class="ModuleScript" referent="RBX00063">
 					<Properties>
 						<string name="Name">Results</string>
 						<ProtectedString name="Source"><![CDATA[-- The round's big moments on screen: the 3, 2, 1; CHEST OPENED! when you open one (coins, or a
@@ -8870,7 +9083,7 @@ return Results
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00061">
+				<Item class="ModuleScript" referent="RBX00064">
 					<Properties>
 						<string name="Name">Screens</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop and Inventory screens. The Shop sells cosmetics for Haystack Coins (needle skins,
@@ -9061,7 +9274,7 @@ return Screens
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00062">
+				<Item class="ModuleScript" referent="RBX00065">
 					<Properties>
 						<string name="Name">Screens2</string>
 						<ProtectedString name="Source"><![CDATA[-- The Quests, Leaderboard and Settings screens (Settings: sound and effects toggles, and Aim).
@@ -9258,7 +9471,7 @@ return Screens2
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00063">
+				<Item class="ModuleScript" referent="RBX00066">
 					<Properties>
 						<string name="Name">Screens3</string>
 						<ProtectedString name="Source"><![CDATA[-- The Collection screen: every needle you've found, by type, shown in 3D with its rarity, value
@@ -9395,7 +9608,7 @@ return Screens3
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00064">
+				<Item class="ModuleScript" referent="RBX00067">
 					<Properties>
 						<string name="Name">StreakFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Tag-outs and streaks on your screen (server/Combat decides them; Config.Streak):
@@ -9446,13 +9659,36 @@ function StreakFx.start(gui)
 	player:GetAttributeChangedSignal("Streak"):Connect(showChip)
 	player:GetAttributeChangedSignal("InRound"):Connect(showChip)
 
+	-- Marked (server/Streaks): a banner while it lasts; your own red outline is hidden on your screen
+	local banner = UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -110), Size = UDim2.fromOffset(470, 54), BackgroundColor3 = Color3.fromRGB(70, 0, 0), BackgroundTransparency = 0.15, Visible = false, Parent = gui }, { UiKit.corner(12), UiKit.stroke(Color3.fromRGB(255, 0, 0), 2) })
+	UiKit.autoScale(banner)
+	UiKit.label({ Text = string.format("MARKED  ·  everyone can see you  ·  %gx speed", S.marked.speed), Font = UiKit.bold, Size = UDim2.fromScale(1, 1), TextColor3 = Color3.fromRGB(255, 200, 200), Parent = banner }, 20)
+	local function marked()
+		banner.Visible = player:GetAttribute("Marked") == true
+		if banner.Visible then
+			UiKit.pop(banner, 0.8)
+		end
+	end
+	player:GetAttributeChangedSignal("Marked"):Connect(marked)
+	local function hideOwnGlow(character)
+		character.ChildAdded:Connect(function(c)
+			if c.Name == "MarkedGlow" and c:IsA("Highlight") then
+				c.Enabled = false -- others see it; you don't need your own view outlined
+			end
+		end)
+	end
+	player.CharacterAdded:Connect(hideOwnGlow)
+	if player.Character then
+		hideOwnGlow(player.Character)
+	end
+
 	Remotes.TagOut.OnClientEvent:Connect(function(m)
 		if m.by then -- you were tagged out
 			Hud.toast(m.by .. " tagged you out!" .. (if (m.ended or 0) >= 2 then " Your streak of " .. m.ended .. " ended." else ""), "bad")
 			return
 		end
 		local streak = m.streak or 1
-		title.Text = S.names[math.min(streak, #S.names)]
+		title.Text = if m.marked and streak == S.marked.at then "MARKED!" else S.names[math.min(streak, #S.names)]
 		line.Text = "You tagged out " .. (m.target or "a player") .. "   ·   +" .. (m.coins or 0) .. " coins"
 		badge.Text = if (m.mult or 1) > 1 then "STREAK " .. streak .. "   ·   " .. multText(m.mult) else ""
 		title.TextColor3 = if streak >= 3 then HOT else GOLD
@@ -9475,7 +9711,7 @@ return StreakFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00065">
+				<Item class="ModuleScript" referent="RBX00068">
 					<Properties>
 						<string name="Name">ThrowFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Throwing your needle on your screen (server/CombatThrow decides): Q, or the Throw button while
@@ -9593,7 +9829,7 @@ return ThrowFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00066">
+				<Item class="ModuleScript" referent="RBX00069">
 					<Properties>
 						<string name="Name">TradeScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Trade screen (server/TradeManager decides everything). Not trading: everyone in the server
@@ -9788,7 +10024,7 @@ return TradeScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00067">
+				<Item class="ModuleScript" referent="RBX0006A">
 					<Properties>
 						<string name="Name">UIController</string>
 						<ProtectedString name="Source"><![CDATA[-- Puts the whole UI together: one ScreenGui with the HUD, the round moments (Results), and the
@@ -9821,6 +10057,7 @@ local ViewModel = require(script.Parent.ViewModel)
 local PracticeFx = require(script.Parent.PracticeFx)
 local Aim = require(script.Parent.Aim)
 local StreakFx = require(script.Parent.StreakFx)
+local FeedFx = require(script.Parent.FeedFx)
 
 local player = Players.LocalPlayer
 local UIController = {}
@@ -9900,6 +10137,7 @@ function UIController.start()
 	CooldownBars.start(gui)
 	ViewModel.start()
 	StreakFx.start(gui)
+	FeedFx.start(gui)
 	LobbyUi.start(gui, function(userId) -- a booth's prompt: that player's collection
 		Screens3.view(userId)
 		if windows.Collection.Visible then
@@ -9933,7 +10171,7 @@ return UIController
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00068">
+				<Item class="ModuleScript" referent="RBX0006B">
 					<Properties>
 						<string name="Name">UiKit</string>
 						<ProtectedString name="Source"><![CDATA[-- The UI's look in one place: a clean, modern dark-glass style with warm gold accents, big
@@ -10068,7 +10306,7 @@ return UiKit
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00069">
+				<Item class="ModuleScript" referent="RBX0006C">
 					<Properties>
 						<string name="Name">ViewModel</string>
 						<ProtectedString name="Source"><![CDATA[-- First person: your arms and your needle drawn in front of the camera, posed and animated from
@@ -10274,7 +10512,7 @@ return ViewModel
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX0006A">
+	<Item class="Workspace" referent="RBX0006D">
 		<Properties>
 			<string name="Name">Workspace</string>
 		</Properties>

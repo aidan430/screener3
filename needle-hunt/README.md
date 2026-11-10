@@ -413,6 +413,11 @@ Click or tap to poke the nearest player in front of you.
   and match XP: 1x, 1.5x, 2x, 2.5x, then 3x (`Config.Streak`). Your streak shows beside your hearts
   from 2; at 3 everyone in the round hears about it. Being tagged out, or the round ending, resets
   it. It stacks with 2x Coins and a Brawl round. Results show your best streak.
+- **Marked:** 10 in a row and you're Marked until you're tagged out or the round ends: a red outline
+  everyone sees through walls, but you walk 1.5x faster (`Config.Streak.marked`). Everyone in the
+  round is told; a banner reminds you. Tagging a Marked player out shows in the feed.
+- **Tag-out feed:** top right, beside the menu, everyone sees each tag-out: "Sam → Riley", THROW for
+  a thrown needle, the tagger's streak (x3) or MARKED. Your name is gold. Lines fade after 7 seconds.
 - The server checks every poke: in the round, within reach, in front, off cooldown, not safe.
 - Every needle pokes the same: skins are looks only, and Robux never buys combat power.
 - **Throw:** press Q (or the Throw button) to throw your needle where you're aiming (the mouse;

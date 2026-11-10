@@ -17,6 +17,7 @@ local Rules = require(Shared:WaitForChild("Rules"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local MapKit = require(script.Parent.MapKit)
+local Streaks = require(script.Parent.Streaks)
 local RewardManager = require(script.Parent.RewardManager)
 
 local Powerups = {}
@@ -51,12 +52,13 @@ local function apply(player, kind, root)
 	if kind.id == "speed" then
 		local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 		if h then
-			h.WalkSpeed = kind.walkSpeed
+			local boosted = math.max(kind.walkSpeed, Streaks.walkSpeed(player)) -- never slower than a Marked player's
+			h.WalkSpeed = boosted
 			local token = (player:GetAttribute("SpeedToken") or 0) + 1
 			player:SetAttribute("SpeedToken", token)
 			task.delay(kind.seconds, function()
-				if player:GetAttribute("SpeedToken") == token and h.Parent and h.WalkSpeed == kind.walkSpeed then
-					h.WalkSpeed = 16
+				if player:GetAttribute("SpeedToken") == token and h.Parent and h.WalkSpeed == boosted then
+					h.WalkSpeed = Streaks.walkSpeed(player)
 				end
 			end)
 		end
@@ -152,8 +154,8 @@ function Powerups.stop()
 		active.folder:Destroy()
 		for p in pairs(active.round.participants) do
 			local h = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
-			if h and h.WalkSpeed > 16 then
-				h.WalkSpeed = 16
+			if h and h.WalkSpeed > Streaks.walkSpeed(p) then
+				h.WalkSpeed = Streaks.walkSpeed(p)
 			end
 		end
 	end

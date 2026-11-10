@@ -28,6 +28,7 @@ local ViewModel = require(script.Parent.ViewModel)
 local PracticeFx = require(script.Parent.PracticeFx)
 local Aim = require(script.Parent.Aim)
 local StreakFx = require(script.Parent.StreakFx)
+local FeedFx = require(script.Parent.FeedFx)
 
 local player = Players.LocalPlayer
 local UIController = {}
@@ -107,6 +108,7 @@ function UIController.start()
 	CooldownBars.start(gui)
 	ViewModel.start()
 	StreakFx.start(gui)
+	FeedFx.start(gui)
 	LobbyUi.start(gui, function(userId) -- a booth's prompt: that player's collection
 		Screens3.view(userId)
 		if windows.Collection.Visible then
