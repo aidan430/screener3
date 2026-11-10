@@ -66,6 +66,17 @@ local function open(box, withKey)
 	end, BoxScreen.refresh)
 end
 
+-- The 1 of 1s, in every box (Config.OneOfOne): their exact chance each open, shown with the odds.
+local function oneOfOneLine(panel)
+	local names = {}
+	for _, e in ipairs(Config.OneOfOne.list) do
+		local _, skinId = Needles.split(e.key)
+		local skin = Needles.skin(skinId)
+		table.insert(names, (if skin then skin.name else e.key) .. " " .. e.odds)
+	end
+	UiKit.label({ LayoutOrder = 98, Text = "And in every open, the 1 of 1s (only one of each in the whole game, until someone has it): " .. table.concat(names, "  ·  ") .. ".", TextWrapped = true, Size = UDim2.new(1, 0, 0, 40), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(225, 240, 255), Parent = panel }, 15)
+end
+
 -- A line of the odds: a name and its chance, a bar, and what it can be underneath.
 local function oddsLine(panel, i, title, percent, colour, detail)
 	local line = UiKit.make("Frame", { LayoutOrder = i, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = panel })
@@ -104,6 +115,7 @@ local function contents(order, box)
 		UiKit.corner(12), UiKit.pad(12), UiKit.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
 	})
 	UiKit.label({ Text = "Inside the " .. box.name .. " (exact odds)", Font = UiKit.bold, Size = UDim2.new(1, 0, 0, 26), TextXAlignment = Enum.TextXAlignment.Left, Parent = panel }, 22)
+	oneOfOneLine(panel)
 	if box.tiers then
 		return tiered(panel, box)
 	end

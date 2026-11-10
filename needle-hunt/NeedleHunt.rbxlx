@@ -248,10 +248,11 @@ Config.Chests = {
 }
 
 -- The 1 of 1s (server/OneOfOne): paper-thin, nearly invisible Sewing Needles, one of each in the
--- whole game. Every chest opened has each one's `chance` of holding it, but only one can ever
--- exist: the first finder claims it (`record`) in a DataStore shared by every server (Studio uses
--- its own store, so testing never claims the real ones). Thrown, any of them takes `throwDamage`
--- hearts: an instant tag-out. Never from a box or anything bought. Found: announced on every server.
+-- whole game. Every box opened (coins, a key or Robux: server/BoxManager) has each one's `chance` of
+-- holding it, shown with the box's odds, but only one can ever exist: the first to open it claims it
+-- (`record`) in a DataStore shared by every server (Studio uses its own store, so testing never
+-- claims the real ones). Thrown, any of them takes `throwDamage` hearts: an instant tag-out. Chests
+-- never hold one. Found: announced on every server.
 Config.OneOfOne = { store = "NH_OneOfOne_v1", throwDamage = 3, list = {
 	{ key = "sewing:gossamer", chance = 1 / 12000000, record = "owner", odds = "1 in 12,000,000" }, -- the rarer is rolled first
 	{ key = "sewing:galaxygossamer", chance = 1 / 5000000, record = "galaxy", odds = "1 in 5,000,000" },
@@ -2651,13 +2652,31 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local DataManager = require(script.Parent.DataManager)
 local CollectionManager = require(script.Parent.CollectionManager)
+local OneOfOne = require(script.Parent.OneOfOne)
 
 local BoxManager = {}
 local rng = Random.new()
 local busy = {}
 
--- Opens `box` into a player's data (call inside DataManager.update). Returns the result.
-function BoxManager.openInto(data, box)
+-- Rolled just before a box opens, every open (coins, key or Robux): the 1 of 1 it holds, or nil.
+-- Each 1 of 1 has its Config.OneOfOne chance, until someone anywhere has it (server/OneOfOne claims
+-- it once, in a DataStore every server shares, which can take a moment: so not inside an update).
+function BoxManager.rollUnique(player)
+	return OneOfOne.roll(player)
+end
+
+-- Opens `box` into a player's data (call inside DataManager.update). unique = the 1 of 1 rolled
+-- for this open (BoxManager.rollUnique), which comes out instead. Returns the result.
+function BoxManager.openInto(data, box, unique)
+	if unique then
+		local typeId, skinId = Needles.split(unique)
+		local result = CollectionManager.addTo(data, typeId, skinId)
+		local entry = OneOfOne.entryFor(unique)
+		data.boxPity, data.boxesOpened = 0, data.boxesOpened + 1
+		result.box, result.pity, result.oneOfOne = box.id, 0, unique
+		result.percent = if entry then entry.chance * 100 else 0
+		return result
+	end
 	local pityHit = data.boxPity >= Config.Boxes.pity - 1
 	local typeId, skinId, percent = Boxes.roll(box, rng, pityHit)
 	local result = CollectionManager.addTo(data, typeId, skinId)
@@ -2676,6 +2695,11 @@ end
 -- After any box opening (coins, key or Robux): a needle whose rarity had Config.Boxes.announceAt
 -- percent or less in its box is announced to everyone in the server.
 function BoxManager.announce(player, result)
+	if result.oneOfOne then -- the only one there is: saved straight away, and every server hears
+		DataManager.save(player)
+		OneOfOne.announce(player, result.oneOfOne)
+		return
+	end
 	if (result.percent or 100) > Config.Boxes.announceAt then
 		return
 	end
@@ -2708,6 +2732,7 @@ local function open(player, boxId, withKey)
 		return false, "You need " .. (box.coins - d.coins) .. " more coins."
 	end
 	busy[player] = true
+	local unique = BoxManager.rollUnique(player)
 	local result
 	DataManager.update(player, function(data)
 		if withKey then
@@ -2715,7 +2740,7 @@ local function open(player, boxId, withKey)
 		else
 			data.coins -= box.coins
 		end
-		result = BoxManager.openInto(data, box)
+		result = BoxManager.openInto(data, box, unique)
 	end)
 	CollectionManager.after(player, result)
 	BoxManager.announce(player, result)
@@ -8157,7 +8182,7 @@ end
 
 -- What each Robux product gives (by its name in Config.Products). Bought coins never count
 -- towards the Most Coins Earned board. Returns the thank-you line.
-local function give(player, name, data)
+local function give(player, name, data, unique)
 	if name == "StarterBundle" then
 		local bundle = Config.StarterBundle
 		data.coins += bundle.coins
@@ -8175,7 +8200,7 @@ local function give(player, name, data)
 	end
 	for _, box in ipairs(Config.Boxes.list) do
 		if box.product == name then -- a box opened with Robux: the reel shows what came out
-			local result = BoxManager.openInto(data, box)
+			local result = BoxManager.openInto(data, box, unique)
 			return "Thank you! Your " .. box.name .. " is opening...", result
 		end
 	end
@@ -8214,9 +8239,15 @@ local function processReceipt(receipt)
 	if table.find(d.receipts, receipt.PurchaseId) then
 		return Enum.ProductPurchaseDecision.PurchaseGranted -- already given
 	end
+	local unique = nil
+	for _, box in ipairs(Config.Boxes.list) do
+		if box.product == name then -- a box: its 1 of 1 roll, before the update (see BoxManager)
+			unique = BoxManager.rollUnique(player)
+		end
+	end
 	local thanks, opened
 	DataManager.update(player, function(data)
-		thanks, opened = give(player, name, data)
+		thanks, opened = give(player, name, data, unique)
 		table.insert(data.receipts, receipt.PurchaseId)
 		while #data.receipts > 50 do
 			table.remove(data.receipts, 1)
@@ -8982,6 +9013,17 @@ local function open(box, withKey)
 	end, BoxScreen.refresh)
 end
 
+-- The 1 of 1s, in every box (Config.OneOfOne): their exact chance each open, shown with the odds.
+local function oneOfOneLine(panel)
+	local names = {}
+	for _, e in ipairs(Config.OneOfOne.list) do
+		local _, skinId = Needles.split(e.key)
+		local skin = Needles.skin(skinId)
+		table.insert(names, (if skin then skin.name else e.key) .. " " .. e.odds)
+	end
+	UiKit.label({ LayoutOrder = 98, Text = "And in every open, the 1 of 1s (only one of each in the whole game, until someone has it): " .. table.concat(names, "  ·  ") .. ".", TextWrapped = true, Size = UDim2.new(1, 0, 0, 40), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(225, 240, 255), Parent = panel }, 15)
+end
+
 -- A line of the odds: a name and its chance, a bar, and what it can be underneath.
 local function oddsLine(panel, i, title, percent, colour, detail)
 	local line = UiKit.make("Frame", { LayoutOrder = i, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = panel })
@@ -9020,6 +9062,7 @@ local function contents(order, box)
 		UiKit.corner(12), UiKit.pad(12), UiKit.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
 	})
 	UiKit.label({ Text = "Inside the " .. box.name .. " (exact odds)", Font = UiKit.bold, Size = UDim2.new(1, 0, 0, 26), TextXAlignment = Enum.TextXAlignment.Left, Parent = panel }, 22)
+	oneOfOneLine(panel)
 	if box.tiers then
 		return tiered(panel, box)
 	end

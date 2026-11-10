@@ -270,7 +270,7 @@ Hay Tower. Rounds last 5 minutes, with 18 power-ups about. Preview: `previews/ha
 seconds before the round. You're out of the queue after each round (Settings can auto-join you).
 
 **Chests** never hold a needle: coins, or a power-up that works at once; the Golden Chest holds big
-coins and a power-up. (The 1 of 1s no longer come from chests: they have no source for now.)
+coins and a power-up. (The 1 of 1s now come from boxes: see below.)
 
 **Keys and menus on PC:** a guide low on the left says what each key does (H hides it); X or
 Backspace closes any menu, and an open menu frees the mouse even in first person.
@@ -361,15 +361,16 @@ rule (their point is always at the tip), so they work in the hand and when throw
 Epic x12, Legendary x40, Mythic x150. Each box has its own exact odds (see Boxes).
 
 **The 1 of 1s** (`Config.OneOfOne`): two paper-thin Sewing Needles, only one of each in the whole game.
-- **Gossamer:** clear as glass, 1 in 12,000,000 per chest.
+- **Gossamer:** clear as glass, 1 in 12,000,000 per box opened.
 - **Galaxy Gossamer:** deep purple to pink to blue, glowing and sparkling, 1 in 5,000,000 per
   chest. A little easier to see than the Gossamer, but still paper thin.
 
 Both work the same way:
 - Paper thin and nearly see-through: in your hand and in flight it's hard to spot.
-- Every chest opened rolls for each (the rarer first). The first finder claims it in a DataStore
-  shared by every server (UpdateAsync, one record each), so neither can be handed out twice;
-  after that, chests never hold it again. It's never in a box and never sold, so it can't be bought.
+- Every box opened (with coins, a key or Robux) rolls for each (the rarer first), and the Boxes
+  screen shows both chances with every box's odds. The first to open one claims it in a DataStore
+  shared by every server (UpdateAsync, one record each), so neither can be handed out twice; after
+  that, boxes never hold it again. Chests never hold one.
 - Put on show (your showcase) it's the needle you carry: **one throw tags anyone out** (pokes are
   the same as any needle, and safe time after respawning still protects people).
 - Finding it is announced on every server (MessagingService). It can be traded; the record follows it.

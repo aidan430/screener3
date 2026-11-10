@@ -57,10 +57,11 @@ Config.Chests = {
 }
 
 -- The 1 of 1s (server/OneOfOne): paper-thin, nearly invisible Sewing Needles, one of each in the
--- whole game. Every chest opened has each one's `chance` of holding it, but only one can ever
--- exist: the first finder claims it (`record`) in a DataStore shared by every server (Studio uses
--- its own store, so testing never claims the real ones). Thrown, any of them takes `throwDamage`
--- hearts: an instant tag-out. Never from a box or anything bought. Found: announced on every server.
+-- whole game. Every box opened (coins, a key or Robux: server/BoxManager) has each one's `chance` of
+-- holding it, shown with the box's odds, but only one can ever exist: the first to open it claims it
+-- (`record`) in a DataStore shared by every server (Studio uses its own store, so testing never
+-- claims the real ones). Thrown, any of them takes `throwDamage` hearts: an instant tag-out. Chests
+-- never hold one. Found: announced on every server.
 Config.OneOfOne = { store = "NH_OneOfOne_v1", throwDamage = 3, list = {
 	{ key = "sewing:gossamer", chance = 1 / 12000000, record = "owner", odds = "1 in 12,000,000" }, -- the rarer is rolled first
 	{ key = "sewing:galaxygossamer", chance = 1 / 5000000, record = "galaxy", odds = "1 in 5,000,000" },

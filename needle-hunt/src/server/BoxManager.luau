@@ -18,13 +18,31 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local DataManager = require(script.Parent.DataManager)
 local CollectionManager = require(script.Parent.CollectionManager)
+local OneOfOne = require(script.Parent.OneOfOne)
 
 local BoxManager = {}
 local rng = Random.new()
 local busy = {}
 
--- Opens `box` into a player's data (call inside DataManager.update). Returns the result.
-function BoxManager.openInto(data, box)
+-- Rolled just before a box opens, every open (coins, key or Robux): the 1 of 1 it holds, or nil.
+-- Each 1 of 1 has its Config.OneOfOne chance, until someone anywhere has it (server/OneOfOne claims
+-- it once, in a DataStore every server shares, which can take a moment: so not inside an update).
+function BoxManager.rollUnique(player)
+	return OneOfOne.roll(player)
+end
+
+-- Opens `box` into a player's data (call inside DataManager.update). unique = the 1 of 1 rolled
+-- for this open (BoxManager.rollUnique), which comes out instead. Returns the result.
+function BoxManager.openInto(data, box, unique)
+	if unique then
+		local typeId, skinId = Needles.split(unique)
+		local result = CollectionManager.addTo(data, typeId, skinId)
+		local entry = OneOfOne.entryFor(unique)
+		data.boxPity, data.boxesOpened = 0, data.boxesOpened + 1
+		result.box, result.pity, result.oneOfOne = box.id, 0, unique
+		result.percent = if entry then entry.chance * 100 else 0
+		return result
+	end
 	local pityHit = data.boxPity >= Config.Boxes.pity - 1
 	local typeId, skinId, percent = Boxes.roll(box, rng, pityHit)
 	local result = CollectionManager.addTo(data, typeId, skinId)
@@ -43,6 +61,11 @@ end
 -- After any box opening (coins, key or Robux): a needle whose rarity had Config.Boxes.announceAt
 -- percent or less in its box is announced to everyone in the server.
 function BoxManager.announce(player, result)
+	if result.oneOfOne then -- the only one there is: saved straight away, and every server hears
+		DataManager.save(player)
+		OneOfOne.announce(player, result.oneOfOne)
+		return
+	end
 	if (result.percent or 100) > Config.Boxes.announceAt then
 		return
 	end
@@ -75,6 +98,7 @@ local function open(player, boxId, withKey)
 		return false, "You need " .. (box.coins - d.coins) .. " more coins."
 	end
 	busy[player] = true
+	local unique = BoxManager.rollUnique(player)
 	local result
 	DataManager.update(player, function(data)
 		if withKey then
@@ -82,7 +106,7 @@ local function open(player, boxId, withKey)
 		else
 			data.coins -= box.coins
 		end
-		result = BoxManager.openInto(data, box)
+		result = BoxManager.openInto(data, box, unique)
 	end)
 	CollectionManager.after(player, result)
 	BoxManager.announce(player, result)

@@ -127,7 +127,7 @@ end
 
 -- What each Robux product gives (by its name in Config.Products). Bought coins never count
 -- towards the Most Coins Earned board. Returns the thank-you line.
-local function give(player, name, data)
+local function give(player, name, data, unique)
 	if name == "StarterBundle" then
 		local bundle = Config.StarterBundle
 		data.coins += bundle.coins
@@ -145,7 +145,7 @@ local function give(player, name, data)
 	end
 	for _, box in ipairs(Config.Boxes.list) do
 		if box.product == name then -- a box opened with Robux: the reel shows what came out
-			local result = BoxManager.openInto(data, box)
+			local result = BoxManager.openInto(data, box, unique)
 			return "Thank you! Your " .. box.name .. " is opening...", result
 		end
 	end
@@ -184,9 +184,15 @@ local function processReceipt(receipt)
 	if table.find(d.receipts, receipt.PurchaseId) then
 		return Enum.ProductPurchaseDecision.PurchaseGranted -- already given
 	end
+	local unique = nil
+	for _, box in ipairs(Config.Boxes.list) do
+		if box.product == name then -- a box: its 1 of 1 roll, before the update (see BoxManager)
+			unique = BoxManager.rollUnique(player)
+		end
+	end
 	local thanks, opened
 	DataManager.update(player, function(data)
-		thanks, opened = give(player, name, data)
+		thanks, opened = give(player, name, data, unique)
 		table.insert(data.receipts, receipt.PurchaseId)
 		while #data.receipts > 50 do
 			table.remove(data.receipts, 1)

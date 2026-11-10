@@ -541,14 +541,16 @@ class BoxOpenings(unittest.TestCase):
         for u in unique:
             self.assertLess(u["thin"], 0.3, u["id"] + " is paper thin")
             self.assertGreater(u["see"], 0.5, u["id"] + " is hard to see")
-        self.assertEqual([r["weight"] for r in RARITIES if r["id"] == "unique"], [0], "never rolled by finds or boxes")
+        self.assertEqual([r["weight"] for r in RARITIES if r["id"] == "unique"], [0], "never in a box's normal rarity roll")
         for line in CONFIG[CONFIG.index("Config.Boxes = {"):].splitlines()[1:4]:
-            self.assertNotIn("unique", line, "no box can give it")
+            self.assertNotIn("unique", line, "its own roll, not a rarity in a box's odds")
         one = (SERVER / "OneOfOne.luau").read_text()
         self.assertIn("UpdateAsync", one, "claimed once, across every server")
         self.assertIn("_Studio", one, "testing in Studio never claims the real one")
-        for f in ("ShopManager.luau", "BoxManager.luau"):
-            self.assertNotIn("OneOfOne", (SERVER / f).read_text(), "never bought")
+        boxes = (SERVER / "BoxManager.luau").read_text()
+        self.assertIn("OneOfOne.roll(player)", boxes, "every box open rolls for the 1 of 1s")
+        self.assertIn("BoxManager.rollUnique(player)", (SERVER / "ShopManager.luau").read_text(), "a box opened with Robux too")
+        self.assertIn("Config.OneOfOne.list", (ROOT / "src" / "client" / "BoxScreen.luau").read_text(), "their odds are shown before every open")
 
     def test_combat_is_the_same_for_every_skin(self):
         combat = (SERVER / "Combat.luau").read_text()
