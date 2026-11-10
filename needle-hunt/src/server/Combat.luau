@@ -111,17 +111,39 @@ local function inRound(player)
 end
 Combat.inRound = inRound
 
+-- A streak's multiplier (Config.Streak): 1x for the first tag-out in a row, then up by `step`.
+function Combat.streakMultiplier(streak)
+	return math.min(Config.Streak.max, 1 + Config.Streak.step * (math.max(1, streak) - 1))
+end
+
 local function tagOut(attacker, target, humanoid)
 	DataManager.update(attacker, function(d)
 		d.eliminations += 1
 	end)
+	local streak = (attacker:GetAttribute("Streak") or 0) + 1 -- tag-outs in a row without being tagged out
+	local ended = target:GetAttribute("Streak") or 0
+	attacker:SetAttribute("Streak", streak)
+	target:SetAttribute("Streak", 0)
+	local mult = Combat.streakMultiplier(streak)
 	QuestManager.record(attacker, "tagout", 1)
 	RewardManager.track(attacker, "elims", 1)
+	RewardManager.track(attacker, "elimWeight", mult) -- match XP for tag-outs carries the streak too
+	if streak > (attacker:GetAttribute("BestStreak") or 0) then
+		attacker:SetAttribute("BestStreak", streak)
+		RewardManager.track(attacker, "bestStreak", 1)
+	end
 	local brawl = round and round.modifiers and round.modifiers.brawl -- a Brawl round pays double
-	local coins = C.eliminationCoins * (if RewardManager.hasPass(attacker, "DoubleCoins") then 2 else 1) * (if brawl then 2 else 1)
+	local coins = math.floor(C.eliminationCoins * mult * (if RewardManager.hasPass(attacker, "DoubleCoins") then 2 else 1) * (if brawl then 2 else 1) + 0.5)
 	RewardManager.grant(attacker, coins, 0, nil)
-	Remotes.Notify:FireClient(attacker, { text = "You tagged out " .. target.DisplayName .. "! +" .. coins .. " coins", tone = "good" })
-	Remotes.Notify:FireClient(target, { text = attacker.DisplayName .. " tagged you out! Back in " .. C.respawn .. "...", tone = "bad" })
+	Remotes.TagOut:FireClient(attacker, { target = target.DisplayName, coins = coins, streak = streak, mult = mult })
+	Remotes.TagOut:FireClient(target, { by = attacker.DisplayName, ended = ended, respawn = C.respawn })
+	if streak >= Config.Streak.announceAt and round then -- everyone in the round hears about a big streak
+		for p in pairs(round.participants) do
+			if p ~= attacker then
+				Remotes.Notify:FireClient(p, { text = attacker.DisplayName .. " is on a " .. streak .. "-tag streak!", tone = "info" })
+			end
+		end
+	end
 	humanoid.BreakJointsOnDeath = false -- a soft pop, not falling apart
 	humanoid.Health = 0
 end
@@ -188,11 +210,16 @@ function Combat.start(r)
 	round = r
 	for p in pairs(r.participants) do
 		p:SetAttribute("Hearts", C.hearts)
+		p:SetAttribute("Streak", 0) -- streaks start fresh each round
+		p:SetAttribute("BestStreak", 0)
 	end
 end
 
 function Combat.stop()
 	round = nil
+	for _, p in ipairs(Players:GetPlayers()) do
+		p:SetAttribute("Streak", 0)
+	end
 end
 
 function Combat.init()

@@ -14,7 +14,7 @@ local stats = nil
 function MatchXp.begin(round)
 	stats = {}
 	for p in pairs(round.participants) do
-		stats[p] = { coins = 0, chests = 0, elims = 0 }
+		stats[p] = { coins = 0, chests = 0, elims = 0, elimWeight = 0, bestStreak = 0 } -- elimWeight: tag-outs x their streak multipliers
 	end
 	RewardManager.tracker = function(player, what, amount)
 		local s = stats and stats[player]
@@ -54,7 +54,7 @@ function MatchXp.finish(round)
 			place = place, placeXp = (if place then X.place[math.min(place, #X.place)] else 0) + X.played,
 			coins = s.coins, coinXp = math.floor(s.coins * X.perCoin + 0.5),
 			chests = s.chests, chestXp = s.chests * X.perChest,
-			elims = s.elims, elimXp = s.elims * X.perElimination,
+			elims = s.elims, elimXp = math.floor(s.elimWeight * X.perElimination + 0.5), bestStreak = s.bestStreak,
 		}
 		row.total = row.placeXp + row.coinXp + row.chestXp + row.elimXp
 		RewardManager.grant(p, 0, row.total, nil)

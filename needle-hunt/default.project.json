@@ -80,6 +80,9 @@
         "PracticeState": {
           "$className": "RemoteEvent"
         },
+        "TagOut": {
+          "$className": "RemoteEvent"
+        },
         "Announce": {
           "$className": "RemoteEvent"
         }

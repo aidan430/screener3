@@ -349,6 +349,21 @@ class BoxOpenings(unittest.TestCase):
         self.assertIn("FieldOfView", client)
         self.assertIn("Aim.fov()", (ROOT / "src" / "client" / "DashFx.luau").read_text(), "a dash returns to your field of view")
 
+    def test_tag_out_streaks_raise_the_multiplier(self):
+        line = re.search(r"^Config\.Streak = \{(.*)\}$", CONFIG, re.M).group(1)
+        step = float(re.search(r"step = ([\d.]+)", line).group(1))
+        top = float(re.search(r"max = ([\d.]+)", line).group(1))
+        mults = [min(top, 1 + step * (n - 1)) for n in range(1, 8)]
+        self.assertEqual(mults[0], 1, "the first tag-out pays the usual")
+        self.assertEqual(mults, sorted(mults), "a longer streak never pays less")
+        self.assertLessEqual(top, 3, "streaks stay a bonus, not a runaway")
+        combat = (SERVER / "Combat.luau").read_text()
+        self.assertIn('target:SetAttribute("Streak", 0)', combat, "being tagged out ends your streak")
+        self.assertIn("streakMultiplier(streak)", combat)
+        self.assertIn('"elimWeight", mult', combat, "the streak carries into match XP")
+        self.assertIn("elimWeight * X.perElimination", (SERVER / "MatchXp.luau").read_text())
+        self.assertIn("Remotes.TagOut", combat)
+
     def test_time_trial_practice(self):
         block = CONFIG[CONFIG.index("Config.Practice = {"):]
         block = block[: block.index("}\n")]
@@ -438,7 +453,7 @@ class BoxOpenings(unittest.TestCase):
 
     def test_very_rare_openings_are_announced_and_keys_open_boxes(self):
         boxes = (SERVER / "BoxManager.luau").read_text()
-        at = float(re.search(r"announceAt = ([\d.]+)", CONFIG).group(1))
+        at = float(re.search(r"Config\.Boxes = \{[^\n]*announceAt = ([\d.]+)", CONFIG).group(1))
         self.assertEqual(at, 0.5)
         self.assertIn("Config.Boxes.announceAt", boxes)
         self.assertIn("Remotes.Announce:FireAllClients", boxes)

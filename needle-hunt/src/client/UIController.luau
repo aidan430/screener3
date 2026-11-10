@@ -27,6 +27,7 @@ local TradeScreen = require(script.Parent.TradeScreen)
 local ViewModel = require(script.Parent.ViewModel)
 local PracticeFx = require(script.Parent.PracticeFx)
 local Aim = require(script.Parent.Aim)
+local StreakFx = require(script.Parent.StreakFx)
 
 local player = Players.LocalPlayer
 local UIController = {}
@@ -105,6 +106,7 @@ function UIController.start()
 	DashFx.start(gui)
 	CooldownBars.start(gui)
 	ViewModel.start()
+	StreakFx.start(gui)
 	LobbyUi.start(gui, function(userId) -- a booth's prompt: that player's collection
 		Screens3.view(userId)
 		if windows.Collection.Visible then

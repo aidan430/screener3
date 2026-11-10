@@ -406,6 +406,13 @@ Click or tap to poke the nearest player in front of you.
 - Three gone and you're **tagged out**: a soft pop, then you're back at a maze start after 5
   seconds, with 3 seconds when nobody can poke you. You keep any needles you've found.
 - Tagging someone out gives +10 coins (doubled with 2x Coins) and match XP.
+- **When you tag someone out** a callout drops in at the top: TAGGED OUT!, then DOUBLE TAG!, TRIPLE
+  TAG!, UNSTOPPABLE! and HAYSTACK HERO! for tag-outs in a row, with who it was, the coins, and your
+  multiplier. The player you tagged sees who did it (and the streak they lost) on their TAGGED OUT panel.
+- **Streaks:** every tag-out in a row without being tagged out yourself raises that tag-out's coins
+  and match XP: 1x, 1.5x, 2x, 2.5x, then 3x (`Config.Streak`). Your streak shows beside your hearts
+  from 2; at 3 everyone in the round hears about it. Being tagged out, or the round ending, resets
+  it. It stacks with 2x Coins and a Brawl round. Results show your best streak.
 - The server checks every poke: in the round, within reach, in front, off cooldown, not safe.
 - Every needle pokes the same: skins are looks only, and Robux never buys combat power.
 - **Throw:** press Q (or the Throw button) to throw your needle where you're aiming (the mouse;

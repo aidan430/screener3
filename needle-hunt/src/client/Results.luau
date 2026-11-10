@@ -129,7 +129,7 @@ function Results.mount(gui, getProfile)
 					(if mine.place then placeName(mine.place) else "Played") .. " +" .. mine.placeXp,
 					mine.coins .. " coins +" .. mine.coinXp,
 					mine.chests .. (if mine.chests == 1 then " chest +" else " chests +") .. mine.chestXp,
-					mine.elims .. " tagged out +" .. mine.elimXp,
+					mine.elims .. " tagged out" .. (if (mine.bestStreak or 0) >= 2 then " (best streak " .. mine.bestStreak .. ")" else "") .. " +" .. mine.elimXp,
 				}
 				UiKit.label({ Text = table.concat(parts, "   ·   "), TextColor3 = UiKit.colors.soft, Size = UDim2.new(1, -20, 0, 26), Position = UDim2.fromOffset(10, 40), TextXAlignment = Enum.TextXAlignment.Left, Parent = box }, 18)
 			end
