@@ -141,15 +141,15 @@ class Rewards(unittest.TestCase):
 
 class Content(unittest.TestCase):
     def test_every_map_has_a_builder_and_spawns(self):
-        builders = "".join((SERVER / f"Maps{x}.luau").read_text() for x in "ABC")
-        self.assertGreaterEqual(len(MAP_ROWS), 10)
+        builders = "".join((SERVER / f"Maps{x}.luau").read_text() for x in "ABCD")
+        self.assertGreaterEqual(len(MAP_ROWS), 15)
         for m in MAP_ROWS:
-            self.assertRegex(builders, rf"function Maps[ABC]\.{m['builder']}\(ctx\)", m["id"])
+            self.assertRegex(builders, rf"function Maps[ABCD]\.{m['builder']}\(ctx\)", m["id"])
         ab = "".join((SERVER / f"Maps{x}.luau").read_text() for x in "AB")
-        c = (SERVER / "MapsC.luau").read_text()
+        c = (SERVER / "MapsC.luau").read_text() + (SERVER / "MapsD.luau").read_text()
         counts = re.findall(r"maze\.spawns\((\d+)\)", builders)
         self.assertEqual(len(re.findall(r"maze\.spawns\(", ab)), len(re.findall(r"function Maps[AB]\.\w+\(ctx\)", ab)), "every map in MapsA and B places its spawns")
-        self.assertEqual(c.count("\n\tfinish(ctx, maze)"), len(re.findall(r"function MapsC\.\w+\(ctx\)", c)), "every MapsC map finishes (spawns) itself")
+        self.assertEqual(c.count("\n\tfinish(ctx, maze)"), len(re.findall(r"function Maps[CD]\.\w+\(ctx\)", c)), "every MapsC/D map finishes (spawns) itself")
         for count in counts:
             self.assertGreaterEqual(int(count), 6, "at least six spawn points per map")
         maze = (SERVER / "MazeKit.luau").read_text()

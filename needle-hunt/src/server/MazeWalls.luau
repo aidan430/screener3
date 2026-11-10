@@ -6,6 +6,12 @@
 --   sunflowers  green stalks topped with big sunflower heads (Sunflower Labyrinth)
 --   stone       a dry-stone wall of grey blocks with a hedge on top (Windmill Hill)
 --   stonehedge  stone or hedge, picked wall by wall (Windmill Hill's mix)
+--   snowbales   hay bales three high under thick snow, with fence posts (Frozen Farm)
+--   glass       greenhouse panels in green and blue frames, frosted so you see shapes, not
+--               faces, with shelves of pots along the bottom (Rainy Greenhouse)
+--   reeds       tall, round-topped marsh reeds (Duck Pond Marsh)
+--   stalls      the backs of market stalls under striped awnings (Hay Market)
+--   tents       fairground tents and booths in candy stripes (County Fair)
 local MapKit = require(script.Parent.MapKit)
 
 local MazeWalls = {}
@@ -84,6 +90,98 @@ function MazeWalls.stonehedge(ctx, a, b, height, T)
 	else
 		local cf, l = along(a, b)
 		MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T, height, l + T), CFrame = cf * CFrame.new(0, height / 2, 0), Color = { 62, 124, 54 }, Material = "LeafyGrass" })
+	end
+end
+
+function MazeWalls.snowbales(ctx, a, b, height, T)
+	local cf, l = along(a, b)
+	local len = l + T
+	local h = height / 3
+	for lv = 0, 2 do
+		MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T + 0.6, h, len - (lv % 2) * 0.6), CFrame = cf * CFrame.new(0, h / 2 + lv * h, 0), Color = { 214, 178, 96 }, Material = "Grass" })
+	end
+	MapKit.part(ctx, { Name = "Snow", Size = Vector3.new(T + 1.4, 1.1, len + 0.4), CFrame = cf * CFrame.new(0, height + 0.4, 0), Color = { 246, 250, 255 }, Material = "Snow" })
+	for i = 0, math.floor(len / 8) do
+		local z = -len / 2 + 0.6 + i * 8
+		for _, side in ipairs({ -1, 1 }) do
+			MapKit.part(ctx, { Name = "Post", Size = Vector3.new(0.6, height + 0.6, 0.6), CFrame = cf * CFrame.new(side * (T / 2 + 0.6), (height + 0.6) / 2, z), Color = { 104, 66, 40 }, Material = "Wood" })
+		end
+	end
+end
+
+function MazeWalls.glass(ctx, a, b, height, T)
+	local cf, l = along(a, b)
+	local len = l + T
+	local frame = if ctx.rng:NextNumber() < 0.5 then { 140, 210, 150 } else { 120, 180, 230 }
+	MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T * 0.4, height, len), CFrame = cf * CFrame.new(0, height / 2, 0), Color = { 200, 230, 240 }, Material = "Glass", Transparency = 0.45 })
+	for i = 0, math.floor(len / 4) do
+		MapKit.part(ctx, { Name = "Frame", Size = Vector3.new(T * 0.6, height, 0.35), CFrame = cf * CFrame.new(0, height / 2, -len / 2 + i * 4), Color = frame, Material = "SmoothPlastic" })
+	end
+	for _, y in ipairs({ height * 0.5, height }) do
+		MapKit.part(ctx, { Name = "Frame", Size = Vector3.new(T * 0.6, 0.35, len), CFrame = cf * CFrame.new(0, y, 0), Color = frame, Material = "SmoothPlastic" })
+	end
+	MapKit.part(ctx, { Name = "Shelf", Size = Vector3.new(T + 1.6, 3, len), CFrame = cf * CFrame.new(0, 1.5, 0), Color = { 176, 130, 84 }, Material = "WoodPlanks" }) -- solid up to the knee
+	for i = 0, math.floor(len / 2.5) do
+		if ctx.rng:NextNumber() < 0.6 then
+			local side = if ctx.rng:NextNumber() < 0.5 then -1 else 1
+			MapKit.part(ctx, { Name = "Pot", Shape = "Cylinder", Size = Vector3.new(1, 1, 1), CFrame = cf * CFrame.new(side * (T / 2 + 0.4), 3.5, -len / 2 + 1 + i * 2.5) * CFrame.Angles(0, 0, math.rad(90)), Color = { 196, 104, 60 }, Material = "Slate" })
+			MapKit.part(ctx, { Name = "Plant", Shape = "Ball", Size = Vector3.new(1.1, 1, 1.1), CFrame = cf * CFrame.new(side * (T / 2 + 0.4), 4.3, -len / 2 + 1 + i * 2.5), Color = { 80, 160, 70 }, Material = "LeafyGrass", CanCollide = false })
+		end
+	end
+end
+
+function MazeWalls.reeds(ctx, a, b, height, T)
+	local cf, l = along(a, b)
+	local len = l + T
+	MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T, height * 0.8, len), CFrame = cf * CFrame.new(0, height * 0.4, 0), Color = { 78, 130, 64 }, Material = "LeafyGrass" })
+	for i = 0, math.floor(len / 1.1) do
+		local h = height + ctx.rng:NextNumber(-1, 2.5)
+		local x, z = ctx.rng:NextNumber(-0.8, 0.8), -len / 2 + 0.5 + i * 1.1
+		local g = ctx.rng:NextInteger(120, 160)
+		MapKit.part(ctx, { Name = "Reed", Size = Vector3.new(0.9, h - 0.45, 0.9), CFrame = cf * CFrame.new(x, (h - 0.45) / 2, z), Color = { 70, g, 60 }, Material = "SmoothPlastic", CanCollide = false })
+		MapKit.part(ctx, { Name = "ReedTip", Shape = "Ball", Size = Vector3.new(0.9, 0.9, 0.9), CFrame = cf * CFrame.new(x, h - 0.45, z), Color = { 70, g, 60 }, Material = "SmoothPlastic", CanCollide = false })
+	end
+end
+
+local STRIPES = { { 220, 60, 60 }, { 70, 130, 220 }, { 70, 170, 90 } }
+
+function MazeWalls.stalls(ctx, a, b, height, T)
+	local cf, l = along(a, b)
+	local len = l + T
+	MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T + 0.4, height, len), CFrame = cf * CFrame.new(0, height / 2, 0), Color = { 176, 160, 110 }, Material = "Plaster" })
+	local n = math.max(1, math.floor(len / 6))
+	for i = 0, n - 1 do -- an awning on one side or the other, white and a colour in stripes
+		local z = -len / 2 + (i + 0.5) * len / n
+		local side = if (i + math.floor(ctx.rng:NextNumber() * 2)) % 2 == 0 then -1 else 1
+		local colour = STRIPES[ctx.rng:NextInteger(1, #STRIPES)]
+		for k = 0, 3 do
+			MapKit.part(ctx, { Name = "Awning", Size = Vector3.new(3, 0.3, len / n / 4), CFrame = cf * CFrame.new(side * (T / 2 + 1.4), height - 2, z - len / n / 2 + (k + 0.5) * len / n / 4) * CFrame.Angles(0, 0, math.rad(side * -18)), Color = if k % 2 == 0 then colour else { 250, 248, 240 }, Material = "Fabric", CanCollide = false })
+		end
+		if ctx.rng:NextNumber() < 0.6 then
+			MapKit.part(ctx, { Name = "Produce", Size = Vector3.new(1.6, 1.2, 2.4), CFrame = cf * CFrame.new(side * (T / 2 + 1), 0.6, z), Color = { 150, 106, 64 }, Material = "WoodPlanks" })
+			MapKit.part(ctx, { Name = "Veg", Size = Vector3.new(1.4, 0.5, 2.2), CFrame = cf * CFrame.new(side * (T / 2 + 1), 1.4, z), Color = if ctx.rng:NextNumber() < 0.5 then { 220, 60, 50 } else { 90, 170, 70 }, Material = "SmoothPlastic", CanCollide = false })
+		end
+	end
+end
+
+local CANDY = { { 245, 140, 190 }, { 120, 180, 240 }, { 250, 200, 90 }, { 240, 150, 90 }, { 180, 140, 230 } }
+
+function MazeWalls.tents(ctx, a, b, height, T)
+	local cf, l = along(a, b)
+	local len = l + T
+	local n = math.max(1, math.floor(len / 4.5))
+	local s = len / n
+	for i = 0, n - 1 do -- one tent or booth per step: a striped block with a peaked top
+		local z = -len / 2 + (i + 0.5) * s
+		local colour = CANDY[ctx.rng:NextInteger(1, #CANDY)]
+		local h = height - 2.5
+		MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T + 2, h, s), CFrame = cf * CFrame.new(0, h / 2, z), Color = colour, Material = "Fabric" })
+		MapKit.part(ctx, { Name = "Stripe", Size = Vector3.new(T + 2.06, h, s * 0.3), CFrame = cf * CFrame.new(0, h / 2, z), Color = { 252, 250, 246 }, Material = "Fabric" })
+		local roof = MapKit.part(ctx, { Name = "Roof", Size = Vector3.new(s * 0.9, 2.6, T + 2.4), CFrame = cf * CFrame.new(0, h + 1.3, z) * CFrame.Angles(0, math.rad(90), 0), Color = colour, Material = "Fabric" })
+		roof.Shape = Enum.PartType.Wedge
+		MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T, 2.5, s), CFrame = cf * CFrame.new(0, h + 1.25, z), Transparency = 1 }) -- keeps the wall full height
+		MapKit.part(ctx, { Name = "Flag", Size = Vector3.new(0.15, 1.6, 0.15), CFrame = cf * CFrame.new(0, h + 3.4, z), Color = { 120, 90, 60 }, Material = "Wood", CanCollide = false })
+		MapKit.part(ctx, { Name = "Pennant", Size = Vector3.new(0.1, 0.6, 0.9), CFrame = cf * CFrame.new(0, h + 3.9, z + 0.5), Color = CANDY[ctx.rng:NextInteger(1, #CANDY)], Material = "Fabric", CanCollide = false })
 	end
 end
 

@@ -37,6 +37,22 @@ Maps.list = {
 	{ id = "windmill", name = "Windmill Hill", builder = "windmill", weight = 15,
 		lighting = { ClockTime = 16, Brightness = 2.6, Ambient = { 128, 118, 100 }, OutdoorAmbient = { 160, 148, 126 }, FogEnd = 900, FogColor = { 214, 226, 240 } },
 		straw = { 226, 188, 92 }, ground = { 104, 158, 76 } },
+	-- the second batch (server/MapsD)
+	{ id = "frozen", name = "Frozen Farm", builder = "frozen", weight = 15,
+		lighting = { ClockTime = 13, Brightness = 2.4, Ambient = { 140, 146, 160 }, OutdoorAmbient = { 176, 184, 200 }, FogEnd = 900, FogColor = { 226, 236, 248 } },
+		straw = { 226, 196, 120 }, ground = { 236, 242, 250 } },
+	{ id = "greenhouse", name = "Rainy Greenhouse", builder = "greenhouse", weight = 15,
+		lighting = { ClockTime = 11, Brightness = 2.0, Ambient = { 120, 128, 132 }, OutdoorAmbient = { 148, 158, 166 }, FogEnd = 900, FogColor = { 196, 210, 220 } },
+		straw = { 214, 184, 104 }, ground = { 150, 150, 156 } },
+	{ id = "marsh", name = "Duck Pond Marsh", builder = "marsh", weight = 15,
+		lighting = { ClockTime = 14, Brightness = 2.6, Ambient = { 118, 124, 106 }, OutdoorAmbient = { 150, 158, 136 }, FogEnd = 900, FogColor = { 206, 228, 236 } },
+		straw = { 214, 184, 104 }, ground = { 150, 112, 76 } },
+	{ id = "market", name = "Hay Market", builder = "market", weight = 15,
+		lighting = { ClockTime = 14.5, Brightness = 2.7, Ambient = { 128, 120, 102 }, OutdoorAmbient = { 162, 152, 128 }, FogEnd = 900, FogColor = { 214, 228, 244 } },
+		straw = { 226, 188, 92 }, ground = { 200, 170, 120 } },
+	{ id = "fair", name = "County Fair", builder = "fair", weight = 15,
+		lighting = { ClockTime = 15, Brightness = 2.8, Ambient = { 130, 122, 112 }, OutdoorAmbient = { 166, 156, 144 }, FogEnd = 900, FogColor = { 218, 230, 248 } },
+		straw = { 226, 188, 92 }, ground = { 214, 186, 140 } },
 }
 
 -- The lobby's light, between rounds.
