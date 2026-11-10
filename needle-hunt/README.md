@@ -142,6 +142,7 @@ round or combat power: coins buy looks (trails, titles, found effects) and boxes
 | Cart of Coins | product (`CoinsLarge`) | 4,000 coins | 229 R$ |
 | Harvest Box | product (`HarvestBox`) | opens one Harvest Box (odds in Boxes) | 49 R$ |
 | Starlight Box | product (`StarlightBox`) | opens one Starlight Box (odds in Boxes) | 149 R$ |
+| Heirloom Box | product (`HeirloomBox`) | opens one Heirloom Box (odds in Boxes) | 1,000 R$ |
 | Coin Shower | product (`CoinShower`) | 100 coins to everyone in the server, buyer too | 49 R$ |
 | 2x Coins | pass (`DoubleCoins`) | every coin earned doubled, forever | 199 R$ |
 | Extra Daily Hint | pass (`ExtraHint`) | one more lobby hint a day | 79 R$ |
@@ -363,6 +364,7 @@ Open a box for a needle for your collection (Boxes in the menu, or the Box Stall
 | Hay Box | 400 coins | the regular skins |
 | Harvest Box | 1,500 coins or Robux | the Harvest Series (10 box-only skins) |
 | Starlight Box | 5,000 coins or Robux | the Starlight Series (10 box-only skins), better odds |
+| Heirloom Box | 100,000 coins or 1,000 Robux | 10% an Heirloom shape, 40% a Mythic skin, 50% an Exotic shape |
 
 - **Odds:** every box's exact chance for each rarity, and the skins at each, are always on the
   Boxes screen, below the boxes. They come from `Config.Boxes` (the same numbers the server uses).
@@ -373,8 +375,15 @@ Open a box for a needle for your collection (Boxes in the menu, or the Box Stall
   nothing. Every needle can still be found in rounds.
 - **The reel:** the server rolls first; the cards on screen are picked by the same odds and the
   strip stops on the result, on the card and never teetering on an edge. Reduce effects shortens it.
-- **Robux:** create the HarvestBox and StarlightBox developer products (Selling with Robux) and put
+- **Robux:** create the HarvestBox, StarlightBox and HeirloomBox developer products (Selling with Robux) and put
   their IDs in `Config.Products`; the R$ button then shows their price.
+
+**The Heirloom Box** works in tiers (`tiers` in `Config.Boxes`): it first picks Heirloom shape
+(10%), Mythic skin (40%) or Exotic shape (50%). A shape tier gives one of that grade's shapes by
+their own weights (the screen lists each one's chance: The Eye of the Needle is 0.48%, so pulling
+it is announced to the server) in a skin rolled Uncommon 45 / Rare 30 / Epic 16 / Legendary 7 /
+Mythic 2. The Mythic tier gives a regular Mythic skin on any shape. Chests never hold Heirloom
+keys: it's coins or Robux only. Set its price to 1,000 Robux on the HeirloomBox product.
 
 **Keys:** each box has a "Use a key" button showing how many of its keys you have. A key opens
 the box free, with the same odds.
@@ -407,6 +416,11 @@ Click or tap to poke the nearest player in front of you.
 - **Inspect:** press F (or the Inspect button) with the Needle out: it lifts and turns in your
   hand, and everyone sees it. Works in the lobby too.
 - If the needle points the wrong way in your hand, turn it with `Config.NeedleTool.grip`.
+- **First person:** zoomed all the way in, you see your own arms holding the needle
+  (`client/ViewModel`), posed and animated from `shared/FirstPerson.luau`: the hold, the inspect,
+  the jab and the throw. The arms take your character's skin colour. Everyone else still sees the
+  Needle tool in your hand. Design a new rig in the Needle Hand Rig artifact and save it to its
+  shelf (or paste its Luau over `shared/FirstPerson.luau`).
 
 All the numbers are in `Config.Combat`.
 

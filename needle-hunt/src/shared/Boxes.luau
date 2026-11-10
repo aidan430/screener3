@@ -47,19 +47,63 @@ function Boxes.odds(box)
 	return out
 end
 
--- Rolls a box. pityHit = this open is guaranteed Rare or better (Config.Boxes.pity). Returns
--- typeId, skinId.
-function Boxes.roll(box, rng, pityHit)
+-- A tiered box (box.tiers, the Heirloom Box): each tier's chance and what it holds, for the odds
+-- shown before opening. A grade tier lists its shapes, each with its own chance in the box.
+function Boxes.tiers(box)
+	local out = {}
+	for _, tier in ipairs(box.tiers or {}) do
+		local row = { tier = tier, percent = tier.percent, shapes = {} }
+		if tier.grade then
+			row.grade = Needles.grade(tier.grade)
+			local total = 0
+			for _, t in ipairs(Needles.types) do
+				total += if t.grade == tier.grade then t.weight else 0
+			end
+			for _, t in ipairs(Needles.types) do
+				if t.grade == tier.grade then
+					table.insert(row.shapes, { type = t, percent = tier.percent * t.weight / total })
+				end
+			end
+		else
+			row.rarity = Needles.rarity(tier.rarity)
+		end
+		table.insert(out, row)
+	end
+	return out
+end
+
+local function skinRoll(box, rarityId, rng, pityHit)
 	local rareMult = Needles.rarity("rare").mult
-	local rarity = Needles.pick(Needles.rarities, function(r)
+	local rarity = rarityId and Needles.rarity(rarityId) or Needles.pick(Needles.rarities, function(r)
 		local w = box.odds[r.id] or 0
 		return if pityHit and r.mult < rareMult then 0 else w
 	end, rng)
+	local skins = Boxes.skins(box, rarity.id)
+	return skins[rng:NextInteger(1, #skins)].id
+end
+
+-- Rolls a box. pityHit = this open is guaranteed Rare or better (Config.Boxes.pity). Returns
+-- typeId, skinId, and for a tiered box how likely that pull was (percent, for announcements).
+function Boxes.roll(box, rng, pityHit)
+	if box.tiers then
+		local row = Needles.pick(Boxes.tiers(box), function(r)
+			return r.percent
+		end, rng)
+		if row.grade then
+			local pick = Needles.pick(row.shapes, function(sh)
+				return sh.percent
+			end, rng)
+			return pick.type.id, skinRoll(box, nil, rng, pityHit), pick.percent
+		end
+		local t = Needles.pick(Needles.types, function(r)
+			return r.weight
+		end, rng)
+		return t.id, skinRoll(box, row.rarity.id, rng, pityHit), row.percent
+	end
 	local t = Needles.pick(Needles.types, function(row)
 		return row.weight
 	end, rng)
-	local skins = Boxes.skins(box, rarity.id)
-	return t.id, skins[rng:NextInteger(1, #skins)].id
+	return t.id, skinRoll(box, nil, rng, pityHit)
 end
 
 -- A filler card for the reel (looks only), by the same odds.

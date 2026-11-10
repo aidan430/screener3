@@ -59,19 +59,63 @@ function Boxes.odds(box)
 	return out
 end
 
--- Rolls a box. pityHit = this open is guaranteed Rare or better (Config.Boxes.pity). Returns
--- typeId, skinId.
-function Boxes.roll(box, rng, pityHit)
+-- A tiered box (box.tiers, the Heirloom Box): each tier's chance and what it holds, for the odds
+-- shown before opening. A grade tier lists its shapes, each with its own chance in the box.
+function Boxes.tiers(box)
+	local out = {}
+	for _, tier in ipairs(box.tiers or {}) do
+		local row = { tier = tier, percent = tier.percent, shapes = {} }
+		if tier.grade then
+			row.grade = Needles.grade(tier.grade)
+			local total = 0
+			for _, t in ipairs(Needles.types) do
+				total += if t.grade == tier.grade then t.weight else 0
+			end
+			for _, t in ipairs(Needles.types) do
+				if t.grade == tier.grade then
+					table.insert(row.shapes, { type = t, percent = tier.percent * t.weight / total })
+				end
+			end
+		else
+			row.rarity = Needles.rarity(tier.rarity)
+		end
+		table.insert(out, row)
+	end
+	return out
+end
+
+local function skinRoll(box, rarityId, rng, pityHit)
 	local rareMult = Needles.rarity("rare").mult
-	local rarity = Needles.pick(Needles.rarities, function(r)
+	local rarity = rarityId and Needles.rarity(rarityId) or Needles.pick(Needles.rarities, function(r)
 		local w = box.odds[r.id] or 0
 		return if pityHit and r.mult < rareMult then 0 else w
 	end, rng)
+	local skins = Boxes.skins(box, rarity.id)
+	return skins[rng:NextInteger(1, #skins)].id
+end
+
+-- Rolls a box. pityHit = this open is guaranteed Rare or better (Config.Boxes.pity). Returns
+-- typeId, skinId, and for a tiered box how likely that pull was (percent, for announcements).
+function Boxes.roll(box, rng, pityHit)
+	if box.tiers then
+		local row = Needles.pick(Boxes.tiers(box), function(r)
+			return r.percent
+		end, rng)
+		if row.grade then
+			local pick = Needles.pick(row.shapes, function(sh)
+				return sh.percent
+			end, rng)
+			return pick.type.id, skinRoll(box, nil, rng, pityHit), pick.percent
+		end
+		local t = Needles.pick(Needles.types, function(r)
+			return r.weight
+		end, rng)
+		return t.id, skinRoll(box, row.rarity.id, rng, pityHit), row.percent
+	end
 	local t = Needles.pick(Needles.types, function(row)
 		return row.weight
 	end, rng)
-	local skins = Boxes.skins(box, rarity.id)
-	return t.id, skins[rng:NextInteger(1, #skins)].id
+	return t.id, skinRoll(box, nil, rng, pityHit)
 end
 
 -- A filler card for the reel (looks only), by the same odds.
@@ -216,6 +260,12 @@ Config.Boxes = { pity = 10, announceAt = 0.5, list = {
 	{ id = "hay", name = "Hay Box", coins = 400, colour = { 226, 186, 88 }, odds = { common = 60, uncommon = 25, rare = 10, epic = 4, legendary = 0.9, mythic = 0.1 } },
 	{ id = "harvest", name = "Harvest Box", coins = 1500, product = "HarvestBox", series = "harvest", colour = { 230, 120, 50 }, odds = { common = 40, uncommon = 30, rare = 18, epic = 8, legendary = 3.5, mythic = 0.5 } },
 	{ id = "starlight", name = "Starlight Box", coins = 5000, product = "StarlightBox", series = "starlight", colour = { 120, 110, 240 }, odds = { common = 0, uncommon = 45, rare = 30, epic = 16, legendary = 7, mythic = 2 } },
+	-- tiers: the box first picks a tier by percent. A grade tier gives a shape of that grade
+	-- (by the shapes' own weights) in a skin rolled by `odds`; a rarity tier gives a skin of that
+	-- rarity on any shape (by the usual shape odds). Every tier, and every Heirloom shape's own
+	-- chance, is shown before opening. Robux price: 1,000 (set on the HeirloomBox product).
+	{ id = "heirloom", name = "Heirloom Box", coins = 100000, product = "HeirloomBox", colour = { 230, 160, 110 }, odds = { uncommon = 45, rare = 30, epic = 16, legendary = 7, mythic = 2 },
+		tiers = { { grade = "heirloom", percent = 10 }, { rarity = "mythic", percent = 40 }, { grade = "exotic", percent = 50 } } },
 } }
 
 -- Trading (server/TradeManager, client/TradeScreen): in the lobby, two players swap needles.
@@ -268,7 +318,7 @@ Config.BoardReadSeconds = 180
 -- The only random things Robux can buy are boxes (Config.Boxes: odds always shown, hidden where
 -- paid random items are restricted). Robux never buys a power-up, a hint mid-round or combat power.
 Config.GamePasses = { DoubleCoins = 0, ExtraHint = 0, Supporter = 0, GrandBooth = 0 }
-Config.Products = { StarterBundle = 0, CoinsSmall = 0, CoinsMedium = 0, CoinsLarge = 0, CoinShower = 0, HarvestBox = 0, StarlightBox = 0 }
+Config.Products = { StarterBundle = 0, CoinsSmall = 0, CoinsMedium = 0, CoinsLarge = 0, CoinShower = 0, HarvestBox = 0, StarlightBox = 0, HeirloomBox = 0 }
 Config.CoinPacks = { CoinsSmall = 500, CoinsMedium = 1500, CoinsLarge = 4000 } -- coins each pack gives
 Config.CoinShower = { coins = 100 } -- every player in the server gets this, the buyer too
 Config.GrandBooth = { needles = 6 } -- needles on show at a Grand Booth (3 otherwise)
@@ -348,6 +398,48 @@ return Cosmetics
 			</Item>
 			<Item class="ModuleScript" referent="RBX00005">
 				<Properties>
+					<string name="Name">FirstPerson</string>
+					<ProtectedString name="Source"><![CDATA[-- The first-person view of your needle (client/ViewModel): the arms and the needle drawn in
+-- front of the camera. Made in the Needle Hand Rig artifact; paste a new rig over this file.
+-- pos in studs, rot in degrees (CFrame.Angles order). right/left: each arm from the camera;
+-- needle: from the right hand. Animation keys are offsets from the hold pose:
+-- { t, right = { x, y, z, rx, ry, rz }, left = {...}, needle = {...} }, eased between keys.
+return {
+	pose = {
+		right = { pos = { 0.85, -0.82, -1 }, rot = { 119, 0, -30 } },
+		left = { pos = { -0.85, -2.4, -1 }, rot = { 119, 0, 30 } },
+		needle = { pos = { 0.04, -0.3, 0 }, rot = { 0, 0, -72 } },
+	},
+	arm = { size = { 0.3, 1.6, 0.3 }, sleeve = 0.5, sleeveColour = { 70, 110, 170 } },
+	needleLook = { scale = 0.45, fat = 1.6 },
+	motion = { bob = 0.05, bobSpeed = 8, sway = 0.08 },
+	anims = {
+		inspect = { length = 2.6, keys = {
+			{ t = 0, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.45, right = { -0.3, 0.3, 0, -15, 0, 30 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.9, right = { -0.3, 0.3, 0, -15, 0, 30 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 120, 0, 0 } },
+			{ t = 1.35, right = { -0.3, 0.3, 0, -15, 0, 30 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 240, 0, 0 } },
+			{ t = 1.8, right = { -0.25, 0.28, 0, -10, 20, 25 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 360, 0, 0 } },
+			{ t = 2.6, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 360, 0, 0 } },
+		} },
+		jab = { length = 0.3, keys = {
+			{ t = 0, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.08, right = { -0.1, 0.12, -0.6, -8, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.3, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+		} },
+		throw = { length = 0.55, keys = {
+			{ t = 0, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.18, right = { 0.1, 0.25, 0.1, 25, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.3, right = { -0.1, 0.05, -0.4, -20, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.55, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+		} },
+	},
+}
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00006">
+				<Properties>
 					<string name="Name">Maps</string>
 					<ProtectedString name="Source"><![CDATA[-- The maps: what each is called, its light and its colours. server/MapsA and server/MapsB build
 -- them (`builder` names the function) and list their hiding spots as they place each prop, so
@@ -390,7 +482,7 @@ return Maps
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00006">
+			<Item class="ModuleScript" referent="RBX00007">
 				<Properties>
 					<string name="Name">NeedleLook</string>
 					<ProtectedString name="Source"><![CDATA[-- Builds a needle of any type in any skin out of parts (shared/Needles): for the NEEDLE FOUND!
@@ -671,7 +763,7 @@ return NeedleLook
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00007">
+			<Item class="ModuleScript" referent="RBX00008">
 				<Properties>
 					<string name="Name">NeedleSkins</string>
 					<ProtectedString name="Source"><![CDATA[-- More needle skins (sheets 6-10 of the skin brief): food, nature, materials, space and magic,
@@ -738,7 +830,7 @@ return {
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00008">
+			<Item class="ModuleScript" referent="RBX00009">
 				<Properties>
 					<string name="Name">NeedleTypes</string>
 					<ProtectedString name="Source"><![CDATA[-- The needle types: each needle's shape (drawn by shared/NeedleLook; the newer ones are data in
@@ -847,7 +939,7 @@ return {
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00009">
+			<Item class="ModuleScript" referent="RBX0000A">
 				<Properties>
 					<string name="Name">Needles</string>
 					<ProtectedString name="Source"><![CDATA[-- The needle collection. Everyone hunts the same plain needle (fair); when you find it, it turns
@@ -1104,7 +1196,7 @@ return Needles
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0000A">
+			<Item class="ModuleScript" referent="RBX0000B">
 				<Properties>
 					<string name="Name">Quests</string>
 					<ProtectedString name="Source"><![CDATA[-- Daily quests: every day (UTC) everyone gets the same three, picked from this pool, so the
@@ -1169,7 +1261,7 @@ return Quests
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0000B">
+			<Item class="ModuleScript" referent="RBX0000C">
 				<Properties>
 					<string name="Name">Robux</string>
 					<ProtectedString name="Source"><![CDATA[-- What the shop's Robux section says about each item (server/ShopManager does the giving; the
@@ -1187,6 +1279,7 @@ Robux.items = {
 	{ key = "CoinShower", pass = false, name = "Coin Shower", text = "Everyone in this server, you too, gets " .. Config.CoinShower.coins .. " coins." },
 	{ key = "HarvestBox", pass = false, box = "harvest", name = "Harvest Box", text = "Opens one Harvest Box: one needle, odds shown in Boxes." },
 	{ key = "StarlightBox", pass = false, box = "starlight", name = "Starlight Box", text = "Opens one Starlight Box: one needle, odds shown in Boxes." },
+	{ key = "HeirloomBox", pass = false, box = "heirloom", name = "Heirloom Box", text = "Opens one Heirloom Box: one needle (10% Heirloom shape, 40% Mythic skin, 50% Exotic shape), odds shown in Boxes." },
 	{ key = "DoubleCoins", pass = true, name = "2x Coins", text = "Every coin you earn, doubled. Forever." },
 	{ key = "ExtraHint", pass = true, name = "Extra Daily Hint", text = "One more hint every day." },
 	{ key = "GrandBooth", pass = true, name = "Grand Booth", text = "Your lobby booth shows your " .. Config.GrandBooth.needles .. " best needles, with a gold sign." },
@@ -1201,7 +1294,7 @@ return Robux
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0000C">
+			<Item class="ModuleScript" referent="RBX0000D">
 				<Properties>
 					<string name="Name">Rules</string>
 					<ProtectedString name="Source"><![CDATA[-- The game's arithmetic in one place, shared by the server (which decides) and the client
@@ -1294,7 +1387,7 @@ return Rules
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0000D">
+			<Item class="ModuleScript" referent="RBX0000E">
 				<Properties>
 					<string name="Name">ShapesA</string>
 					<ProtectedString name="Source"><![CDATA[-- Needle shapes, part 1: needle shapes kept as data. Made by dev/shapes.py: change them there and run it.
@@ -1558,7 +1651,7 @@ return {
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0000E">
+			<Item class="ModuleScript" referent="RBX0000F">
 				<Properties>
 					<string name="Name">ShapesB</string>
 					<ProtectedString name="Source"><![CDATA[-- Needle shapes, part 2: needle shapes kept as data. Made by dev/shapes.py: change them there and run it.
@@ -1820,7 +1913,7 @@ return {
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0000F">
+			<Item class="ModuleScript" referent="RBX00010">
 				<Properties>
 					<string name="Name">ShapesC</string>
 					<ProtectedString name="Source"><![CDATA[-- Needle shapes, part 3: needle shapes kept as data. Made by dev/shapes.py: change them there and run it.
@@ -2050,136 +2143,136 @@ return {
 				</Properties>
 			</Item>
 		</Item>
-		<Item class="Folder" referent="RBX00010">
+		<Item class="Folder" referent="RBX00011">
 			<Properties>
 				<string name="Name">Remotes</string>
 			</Properties>
-			<Item class="RemoteEvent" referent="RBX00011">
+			<Item class="RemoteEvent" referent="RBX00012">
 				<Properties>
 					<string name="Name">RoundState</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00012">
+			<Item class="RemoteEvent" referent="RBX00013">
 				<Properties>
 					<string name="Name">Found</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00013">
+			<Item class="RemoteEvent" referent="RBX00014">
 				<Properties>
 					<string name="Name">Notify</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00014">
+			<Item class="RemoteEvent" referent="RBX00015">
 				<Properties>
 					<string name="Name">Profile</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00015">
+			<Item class="RemoteEvent" referent="RBX00016">
 				<Properties>
 					<string name="Name">SaveSettings</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00016">
+			<Item class="RemoteFunction" referent="RBX00017">
 				<Properties>
 					<string name="Name">Shop</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00017">
+			<Item class="RemoteFunction" referent="RBX00018">
 				<Properties>
 					<string name="Name">Hint</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00018">
+			<Item class="RemoteFunction" referent="RBX00019">
 				<Properties>
 					<string name="Name">Boards</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00019">
+			<Item class="RemoteFunction" referent="RBX0001A">
 				<Properties>
 					<string name="Name">Collection</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0001A">
+			<Item class="RemoteEvent" referent="RBX0001B">
 				<Properties>
 					<string name="Name">ShowOff</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX0001B">
+			<Item class="RemoteFunction" referent="RBX0001C">
 				<Properties>
 					<string name="Name">LobbyInfo</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0001C">
+			<Item class="RemoteEvent" referent="RBX0001D">
 				<Properties>
 					<string name="Name">Powerup</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX0001D">
+			<Item class="RemoteFunction" referent="RBX0001E">
 				<Properties>
 					<string name="Name">Box</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0001E">
+			<Item class="RemoteEvent" referent="RBX0001F">
 				<Properties>
 					<string name="Name">BoxResult</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0001F">
+			<Item class="RemoteEvent" referent="RBX00020">
 				<Properties>
 					<string name="Name">Poke</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00020">
+			<Item class="RemoteEvent" referent="RBX00021">
 				<Properties>
 					<string name="Name">Hit</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00021">
+			<Item class="RemoteEvent" referent="RBX00022">
 				<Properties>
 					<string name="Name">Inspect</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00022">
+			<Item class="RemoteFunction" referent="RBX00023">
 				<Properties>
 					<string name="Name">Trade</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00023">
+			<Item class="RemoteEvent" referent="RBX00024">
 				<Properties>
 					<string name="Name">TradeState</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00024">
+			<Item class="RemoteEvent" referent="RBX00025">
 				<Properties>
 					<string name="Name">Throw</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00025">
+			<Item class="RemoteEvent" referent="RBX00026">
 				<Properties>
 					<string name="Name">Thrown</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00026">
+			<Item class="RemoteEvent" referent="RBX00027">
 				<Properties>
 					<string name="Name">Dash</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00027">
+			<Item class="RemoteEvent" referent="RBX00028">
 				<Properties>
 					<string name="Name">Announce</string>
 				</Properties>
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerScriptService" referent="RBX00028">
+	<Item class="ServerScriptService" referent="RBX00029">
 		<Properties>
 			<string name="Name">ServerScriptService</string>
 		</Properties>
-		<Item class="Folder" referent="RBX00029">
+		<Item class="Folder" referent="RBX0002A">
 			<Properties>
 				<string name="Name">Server</string>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX0002A">
+			<Item class="ModuleScript" referent="RBX0002B">
 				<Properties>
 					<string name="Name">AntiCheat</string>
 					<ProtectedString name="Source"><![CDATA[-- Basic anti-exploit: every Config.AntiCheat.checkEvery seconds, each character's position is
@@ -2265,7 +2358,7 @@ return AntiCheat
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002B">
+			<Item class="ModuleScript" referent="RBX0002C">
 				<Properties>
 					<string name="Name">BoxManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Box openings (Config.Boxes, shared/Boxes). Boxes open through Remotes.Box with coins ("open") or
@@ -2296,13 +2389,13 @@ local busy = {}
 -- Opens `box` into a player's data (call inside DataManager.update). Returns the result.
 function BoxManager.openInto(data, box)
 	local pityHit = data.boxPity >= Config.Boxes.pity - 1
-	local typeId, skinId = Boxes.roll(box, rng, pityHit)
+	local typeId, skinId, percent = Boxes.roll(box, rng, pityHit)
 	local result = CollectionManager.addTo(data, typeId, skinId)
 	local good = Needles.rarity(result.rarityId).mult >= Needles.rarity("rare").mult
 	data.boxPity = if good then 0 else data.boxPity + 1
 	data.boxesOpened += 1
-	result.box, result.pity = box.id, data.boxPity
-	for _, row in ipairs(Boxes.odds(box)) do -- how likely that rarity was in this box
+	result.box, result.pity, result.percent = box.id, data.boxPity, percent
+	for _, row in ipairs(if percent then {} else Boxes.odds(box)) do -- how likely that rarity was in this box
 		if row.rarity.id == result.rarityId then
 			result.percent = row.percent
 		end
@@ -2396,7 +2489,7 @@ return BoxManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002C">
+			<Item class="ModuleScript" referent="RBX0002D">
 				<Properties>
 					<string name="Name">ChestSpawner</string>
 					<ProtectedString name="Source"><![CDATA[-- The chests each round (Config.Chests), made to be fought over. They go in the dead ends furthest
@@ -2661,7 +2754,7 @@ return ChestSpawner
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002D">
+			<Item class="ModuleScript" referent="RBX0002E">
 				<Properties>
 					<string name="Name">CollectionManager</string>
 					<ProtectedString name="Source"><![CDATA[-- The needle collection, on the server. Needles come from boxes (server/BoxManager: coins, keys
@@ -2746,7 +2839,7 @@ return CollectionManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002E">
+			<Item class="ModuleScript" referent="RBX0002F">
 				<Properties>
 					<string name="Name">Combat</string>
 					<ProtectedString name="Source"><![CDATA[-- Needle combat. Everyone carries their showcase needle as a tool (the "Needle", rebuilt when the
@@ -2805,6 +2898,7 @@ function Combat.giveTool(player)
 	local cf, size = model:GetBoundingBox()
 	local tool = Instance.new("Tool")
 	tool.Name, tool.ToolTip, tool.CanBeDropped, tool.Grip = "Needle", Needles.name(typeId, skinId), false, baseGrip()
+	tool:SetAttribute("Key", typeId .. ":" .. skinId) -- client/ViewModel draws this needle in first person
 	local handle = Instance.new("Part")
 	handle.Name, handle.Size, handle.Transparency, handle.CanCollide, handle.Massless = "Handle", Vector3.one * 0.4, 1, false, true
 	handle.CFrame = CFrame.new(cf.Position.X - size.X / 2 + 0.5, 0, 0) -- held near the eye end, point outwards
@@ -2982,7 +3076,7 @@ return Combat
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002F">
+			<Item class="ModuleScript" referent="RBX00030">
 				<Properties>
 					<string name="Name">CombatThrow</string>
 					<ProtectedString name="Source"><![CDATA[-- Throwing your needle (Config.Throw). The client sends where it's aiming (Remotes.Throw); the
@@ -3077,7 +3171,7 @@ return CombatThrow
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00030">
+			<Item class="ModuleScript" referent="RBX00031">
 				<Properties>
 					<string name="Name">Dash</string>
 					<ProtectedString name="Source"><![CDATA[-- Dashing (Config.Dash; the dash itself is client/DashFx, since each player's device moves its
@@ -3110,7 +3204,7 @@ return Dash
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00031">
+			<Item class="ModuleScript" referent="RBX00032">
 				<Properties>
 					<string name="Name">DataManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Player data: loaded on join, cached for the session, saved with UpdateAsync on an autosave
@@ -3376,7 +3470,7 @@ return DataManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00032">
+			<Item class="ModuleScript" referent="RBX00033">
 				<Properties>
 					<string name="Name">HaystackModel</string>
 					<ProtectedString name="Source"><![CDATA[-- The owner's own haystack model (Config.Haystacks.model): loaded once with InsertService (it must
@@ -3430,7 +3524,7 @@ return HaystackModel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00033">
+			<Item class="ModuleScript" referent="RBX00034">
 				<Properties>
 					<string name="Name">LeaderboardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Global leaderboards (Config.Boards), each an OrderedDataStore: most chests, most tag-outs,
@@ -3602,7 +3696,7 @@ return LeaderboardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00034">
+			<Item class="ModuleScript" referent="RBX00035">
 				<Properties>
 					<string name="Name">LobbyBuilder</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby, built once at Config.LobbyCentre: a wooden plaza in a field, the animated title sign
@@ -3842,7 +3936,7 @@ return LobbyBuilder
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00035">
+			<Item class="ModuleScript" referent="RBX00036">
 				<Properties>
 					<string name="Name">LobbyDecor</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's dressing (LobbyBuilder calls build once): a lawn crossed by cobbled paths (spawn to
@@ -3951,7 +4045,7 @@ return LobbyDecor
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00036">
+			<Item class="ModuleScript" referent="RBX00037">
 				<Properties>
 					<string name="Name">LobbyShowOff</string>
 					<ProtectedString name="Source"><![CDATA[-- Show off (Remotes.ShowOff): hold your showcase needle (or your best) up over your head for a
@@ -4020,7 +4114,7 @@ return LobbyShowOff
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00037">
+			<Item class="ModuleScript" referent="RBX00038">
 				<Properties>
 					<string name="Name">LobbySocial</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's social side: showing off collections.
@@ -4300,7 +4394,7 @@ return LobbySocial
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Script" referent="RBX00038">
+			<Item class="Script" referent="RBX00039">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Starts A Needle in a Haystack on the server. Systems that react to a player's save loading are
@@ -4363,7 +4457,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00039">
+			<Item class="ModuleScript" referent="RBX0003A">
 				<Properties>
 					<string name="Name">MapKit</string>
 					<ProtectedString name="Source"><![CDATA[-- The building kit for maps (server/MapsA, MapsB): ground, hay bales, haystacks, crates, fences,
@@ -4578,7 +4672,7 @@ return MapKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003A">
+			<Item class="ModuleScript" referent="RBX0003B">
 				<Properties>
 					<string name="Name">MapsA</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Classic Haystack Field (a hedge maze), Barn Interior (a maze of stall walls) and
@@ -4707,7 +4801,7 @@ return MapsA
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003B">
+			<Item class="ModuleScript" referent="RBX0003C">
 				<Properties>
 					<string name="Name">MapsB</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Night Forest (a thicket maze) and Abandoned Attic (a maze of stacked boxes under
@@ -4806,7 +4900,7 @@ return MapsB
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003C">
+			<Item class="ModuleScript" referent="RBX0003D">
 				<Properties>
 					<string name="Name">MatchXp</string>
 					<ProtectedString name="Source"><![CDATA[-- The match's stats and its end (Config.MatchXp, Config.Rewards): counted while the round runs
@@ -4885,7 +4979,7 @@ return MatchXp
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003D">
+			<Item class="ModuleScript" referent="RBX0003E">
 				<Properties>
 					<string name="Name">MazeKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Mazes for the maps: a grid of cells carved into a maze (a random depth-first walk, so every cell
@@ -5086,7 +5180,7 @@ return MazeKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003E">
+			<Item class="ModuleScript" referent="RBX0003F">
 				<Properties>
 					<string name="Name">OneOfOne</string>
 					<ProtectedString name="Source"><![CDATA[-- The 1 of 1s (Config.OneOfOne). A chest rolls for each (roll); the first player to roll one claims it
@@ -5206,7 +5300,7 @@ return OneOfOne
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003F">
+			<Item class="ModuleScript" referent="RBX00040">
 				<Properties>
 					<string name="Name">Powerups</string>
 					<ProtectedString name="Source"><![CDATA[-- Power-ups on the maps (Config.Powerups). When a round's search starts, glowing orbs float in
@@ -5375,7 +5469,7 @@ return Powerups
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00040">
+			<Item class="ModuleScript" referent="RBX00041">
 				<Properties>
 					<string name="Name">QuestManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Daily quests: three a day, the same for everyone (shared/Quests.forDay). Progress is saved;
@@ -5443,7 +5537,7 @@ return QuestManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00041">
+			<Item class="ModuleScript" referent="RBX00042">
 				<Properties>
 					<string name="Name">Requests</string>
 					<ProtectedString name="Source"><![CDATA[-- Small requests from players, checked on the server: a hint (Remotes.Hint) and saving their
@@ -5503,7 +5597,7 @@ return Requests
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00042">
+			<Item class="ModuleScript" referent="RBX00043">
 				<Properties>
 					<string name="Name">RewardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Every coin and XP point is given here, on the server: chests, places, playing a round to the
@@ -5656,7 +5750,7 @@ return RewardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00043">
+			<Item class="ModuleScript" referent="RBX00044">
 				<Properties>
 					<string name="Name">RoundExtras</string>
 					<ProtectedString name="Source"><![CDATA[-- What runs alongside a round's search, started and stopped together by server/RoundManager:
@@ -5690,7 +5784,7 @@ return RoundExtras
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00044">
+			<Item class="ModuleScript" referent="RBX00045">
 				<Properties>
 					<string name="Name">RoundManager</string>
 					<ProtectedString name="Source"><![CDATA[-- The round loop, all on the server:
@@ -5964,7 +6058,7 @@ return RoundManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00045">
+			<Item class="ModuleScript" referent="RBX00046">
 				<Properties>
 					<string name="Name">ShopManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Cosmetics and purchases. With Haystack Coins: buy a cosmetic (Remotes.Shop "buy"), and wear
@@ -6215,7 +6309,7 @@ return ShopManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00046">
+			<Item class="ModuleScript" referent="RBX00047">
 				<Properties>
 					<string name="Name">TradeManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Trading needles between two players in the lobby (Config.Trading). Remotes.Trade asks; the
@@ -6483,24 +6577,24 @@ return TradeManager
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerStorage" referent="RBX00047">
+	<Item class="ServerStorage" referent="RBX00048">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX00048">
+	<Item class="StarterPlayer" referent="RBX00049">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX00049">
+		<Item class="StarterPlayerScripts" referent="RBX0004A">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX0004A">
+			<Item class="Folder" referent="RBX0004B">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX0004B">
+				<Item class="ModuleScript" referent="RBX0004C">
 					<Properties>
 						<string name="Name">BoxReel</string>
 						<ProtectedString name="Source"><![CDATA[-- The box opening on your screen: a strip of needle cards slides along under a gold marker,
@@ -6603,7 +6697,7 @@ return BoxReel
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004C">
+				<Item class="ModuleScript" referent="RBX0004D">
 					<Properties>
 						<string name="Name">BoxScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Boxes screen: each box with its price (coins; the dearer ones also Robux), a key button
@@ -6630,6 +6724,10 @@ local player = Players.LocalPlayer
 local BoxScreen = {}
 local win, body
 local prices = {}
+local hasKey = {} -- boxes that chests hold keys for
+for _, k in ipairs(Config.Chests.keys) do
+	hasKey[k.id] = true
+end
 
 local function rgb(c)
 	return Color3.fromRGB(c[1], c[2], c[3])
@@ -6670,12 +6768,47 @@ local function open(box, withKey)
 	end, BoxScreen.refresh)
 end
 
+-- A line of the odds: a name and its chance, a bar, and what it can be underneath.
+local function oddsLine(panel, i, title, percent, colour, detail)
+	local line = UiKit.make("Frame", { LayoutOrder = i, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = panel })
+	UiKit.label({ Text = string.format("%s  %g%%", title, percent), Font = UiKit.bold, TextColor3 = colour, Size = UDim2.new(0, 260, 0, 22), TextXAlignment = Enum.TextXAlignment.Left, Parent = line }, 18)
+	local _, fill = UiKit.bar(line, { Size = UDim2.new(1, -270, 0, 8), Position = UDim2.fromOffset(270, 8) }, colour)
+	fill.Size = UDim2.fromScale(math.max(percent / 100, 0.01), 1)
+	UiKit.label({ Text = detail, TextWrapped = true, AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 18), Position = UDim2.fromOffset(0, 24), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UiKit.colors.soft, Parent = line }, 14)
+end
+
+-- The Heirloom Box's odds: each tier, every Heirloom and Exotic shape's own chance, the skin odds.
+local function tiered(panel, box)
+	for i, row in ipairs(Boxes.tiers(box)) do
+		local look = row.grade or row.rarity
+		local names = {}
+		for _, sh in ipairs(row.shapes) do
+			table.insert(names, string.format("%s %.2f%%", sh.type.name, sh.percent))
+		end
+		if row.rarity then
+			for _, s in ipairs(Boxes.skins(box, row.rarity.id)) do
+				table.insert(names, s.name)
+			end
+		end
+		local detail = if row.grade then table.concat(names, ", ") else "A " .. row.rarity.name .. " skin (" .. table.concat(names, ", ") .. ") on any shape, by the usual shape odds"
+		oddsLine(panel, i, (if row.grade then row.grade.name .. " shape" else row.rarity.name .. " skin"), row.percent, rgb(look.colour), detail)
+	end
+	local skins = {}
+	for _, row in ipairs(Boxes.odds(box)) do
+		table.insert(skins, string.format("%s %.0f%%", row.rarity.name, row.percent))
+	end
+	UiKit.label({ LayoutOrder = 99, Text = "A shape tier's skin: " .. table.concat(skins, "  ·  ") .. ". A needle you already have still counts: keep it or trade it.", TextWrapped = true, Size = UDim2.new(1, 0, 0, 40), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UiKit.colors.soft, Parent = panel }, 15)
+end
+
 -- What's inside: each rarity's chance, and the skins it can be.
 local function contents(order, box)
 	local panel = UiKit.make("Frame", { LayoutOrder = order, Size = UDim2.new(1, -8, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = UiKit.colors.card, Parent = body }, {
 		UiKit.corner(12), UiKit.pad(12), UiKit.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
 	})
 	UiKit.label({ Text = "Inside the " .. box.name .. " (exact odds)", Font = UiKit.bold, Size = UDim2.new(1, 0, 0, 26), TextXAlignment = Enum.TextXAlignment.Left, Parent = panel }, 22)
+	if box.tiers then
+		return tiered(panel, box)
+	end
 	for i, row in ipairs(Boxes.odds(box)) do
 		local names = {}
 		for _, s in ipairs(Boxes.skins(box, row.rarity.id)) do
@@ -6711,7 +6844,7 @@ function BoxScreen.refresh()
 	})
 	for i, box in ipairs(Config.Boxes.list) do
 		local colour = rgb(box.colour)
-		local c = UiKit.make("Frame", { LayoutOrder = i, Size = UDim2.new(1 / 3, -7, 1, 0), BackgroundColor3 = UiKit.colors.card, Parent = row }, { UiKit.corner(14), UiKit.stroke(colour, 2) })
+		local c = UiKit.make("Frame", { LayoutOrder = i, Size = UDim2.new(1 / #Config.Boxes.list, -8, 1, 0), BackgroundColor3 = UiKit.colors.card, Parent = row }, { UiKit.corner(14), UiKit.stroke(colour, 2) })
 		local crate = UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 12), Size = UDim2.fromOffset(96, 72), BackgroundColor3 = colour, Parent = c }, { UiKit.corner(8), UiKit.stroke(Color3.fromRGB(90, 62, 36), 3) })
 		UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 22), Size = UDim2.new(1, 8, 0, 8), BackgroundColor3 = Color3.fromRGB(90, 62, 36), Parent = crate }) -- the lid's band
 		UiKit.label({ Text = box.name, Font = UiKit.bold, Size = UDim2.new(1, -12, 0, 28), Position = UDim2.fromOffset(6, 92), Parent = c }, 22)
@@ -6720,14 +6853,16 @@ function BoxScreen.refresh()
 			open(box)
 		end)
 		local keys = (info.keys or {})[box.id] or 0 -- keys from chests in rounds
-		local keyButton = UiKit.button("🗝 Use a key (" .. keys .. ")", if keys > 0 then colour else UiKit.colors.line, { Position = UDim2.new(0, 10, 0, 172), Size = UDim2.new(1, -20, 0, 32), Parent = c })
-		keyButton.Activated:Connect(function()
-			if keys > 0 then
-				open(box, true)
-			else
-				Hud.toast("No " .. box.name .. " keys yet: chests in rounds hold them!", "bad")
-			end
-		end)
+		local keyButton = if not hasKey[box.id] then nil else UiKit.button("🗝 Use a key (" .. keys .. ")", if keys > 0 then colour else UiKit.colors.line, { Position = UDim2.new(0, 10, 0, 172), Size = UDim2.new(1, -20, 0, 32), Parent = c })
+		if keyButton then
+			keyButton.Activated:Connect(function()
+				if keys > 0 then
+					open(box, true)
+				else
+					Hud.toast("No " .. box.name .. " keys yet: chests in rounds hold them!", "bad")
+				end
+			end)
+		end
 		local productId = box.product and Config.Products[box.product] or 0
 		if productId ~= 0 then
 			local r = UiKit.button("R$", UiKit.colors.blue, { Position = UDim2.new(0, 10, 0, 210), Size = UDim2.new(1, -20, 0, 32), Parent = c })
@@ -6755,7 +6890,7 @@ return BoxScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004D">
+				<Item class="ModuleScript" referent="RBX0004E">
 					<Properties>
 						<string name="Name">CombatFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Needle combat on your screen (server/Combat decides every hit):
@@ -6775,6 +6910,7 @@ local Config = require(Shared:WaitForChild("Config"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local UiKit = require(script.Parent.UiKit)
 local Effects = require(script.Parent.Effects)
+local ViewModel = require(script.Parent.ViewModel)
 
 local player = Players.LocalPlayer
 local CombatFx = {}
@@ -6816,6 +6952,7 @@ local function hookTool(tool, inspectButton)
 		CombatFx.lastPoke = os.clock()
 		local t = target()
 		Remotes.Poke:FireServer(t and t.UserId)
+		ViewModel.play("jab")
 	end)
 	tool.Equipped:Connect(function()
 		inspectButton.Visible = true
@@ -6906,6 +7043,7 @@ function CombatFx.start(gui)
 		if os.clock() - lastInspect > Config.NeedleTool.inspect then
 			lastInspect = os.clock()
 			Remotes.Inspect:FireServer()
+			ViewModel.play("inspect")
 		end
 	end
 	inspectButton.Activated:Connect(doInspect)
@@ -6942,7 +7080,7 @@ return CombatFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004E">
+				<Item class="ModuleScript" referent="RBX0004F">
 					<Properties>
 						<string name="Name">CooldownBars</string>
 						<ProtectedString name="Source"><![CDATA[-- POKE and THROW bars, top left under the DASH bar (client/DashFx), in the same style: each empties
@@ -6994,7 +7132,7 @@ return CooldownBars
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004F">
+				<Item class="ModuleScript" referent="RBX00050">
 					<Properties>
 						<string name="Name">DashFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Dashing (Config.Dash): C, B on a controller, or the Dash button on a phone. Your character
@@ -7114,7 +7252,7 @@ return DashFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00050">
+				<Item class="ModuleScript" referent="RBX00051">
 					<Properties>
 						<string name="Name">Effects</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback you can see and hear, on your own screen only: sounds, a burst of particles where a
@@ -7195,7 +7333,7 @@ return Effects
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00051">
+				<Item class="ModuleScript" referent="RBX00052">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: your coins and level (with an XP bar) at the top left; the round's
@@ -7331,7 +7469,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00052">
+				<Item class="ModuleScript" referent="RBX00053">
 					<Properties>
 						<string name="Name">LobbyUi</string>
 						<ProtectedString name="Source"><![CDATA[-- The lobby, on your screen:
@@ -7429,7 +7567,7 @@ return LobbyUi
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX00053">
+				<Item class="LocalScript" referent="RBX00054">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- Starts the client: the whole UI (UIController). The client only shows things and asks the
@@ -7439,7 +7577,7 @@ UIController.start()
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00054">
+				<Item class="ModuleScript" referent="RBX00055">
 					<Properties>
 						<string name="Name">NeedleView</string>
 						<ProtectedString name="Source"><![CDATA[-- A needle in 3D inside the UI: a ViewportFrame with the needle (shared/NeedleLook) lit and
@@ -7486,7 +7624,7 @@ return NeedleView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00055">
+				<Item class="ModuleScript" referent="RBX00056">
 					<Properties>
 						<string name="Name">PowerupFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Power-ups on your screen (server/Powerups decides; Remotes.Powerup says what you got):
@@ -7620,7 +7758,7 @@ return PowerupFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00056">
+				<Item class="ModuleScript" referent="RBX00057">
 					<Properties>
 						<string name="Name">Results</string>
 						<ProtectedString name="Source"><![CDATA[-- The round's big moments on screen: the 3, 2, 1; CHEST OPENED! when you open one (coins, or a
@@ -7770,7 +7908,7 @@ return Results
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00057">
+				<Item class="ModuleScript" referent="RBX00058">
 					<Properties>
 						<string name="Name">Screens</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop and Inventory screens. The Shop sells cosmetics for Haystack Coins (needle skins,
@@ -7961,7 +8099,7 @@ return Screens
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00058">
+				<Item class="ModuleScript" referent="RBX00059">
 					<Properties>
 						<string name="Name">Screens2</string>
 						<ProtectedString name="Source"><![CDATA[-- The Quests, Leaderboard and Settings screens.
@@ -8095,7 +8233,7 @@ return Screens2
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00059">
+				<Item class="ModuleScript" referent="RBX0005A">
 					<Properties>
 						<string name="Name">Screens3</string>
 						<ProtectedString name="Source"><![CDATA[-- The Collection screen: every needle you've found, by type, shown in 3D with its rarity, value
@@ -8232,7 +8370,7 @@ return Screens3
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005A">
+				<Item class="ModuleScript" referent="RBX0005B">
 					<Properties>
 						<string name="Name">ThrowFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Throwing your needle on your screen (server/CombatThrow decides): Q, or the Throw button while
@@ -8251,6 +8389,7 @@ local Needles = require(Shared:WaitForChild("Needles"))
 local NeedleLook = require(Shared:WaitForChild("NeedleLook"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local UiKit = require(script.Parent.UiKit)
+local ViewModel = require(script.Parent.ViewModel)
 local Effects = require(script.Parent.Effects)
 
 local player = Players.LocalPlayer
@@ -8285,6 +8424,7 @@ local function throw()
 	if dir then
 		lastThrow = os.clock()
 		Remotes.Throw:FireServer(dir)
+		ViewModel.play("throw")
 	end
 end
 
@@ -8348,7 +8488,7 @@ return ThrowFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005B">
+				<Item class="ModuleScript" referent="RBX0005C">
 					<Properties>
 						<string name="Name">TradeScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Trade screen (server/TradeManager decides everything). Not trading: everyone in the server
@@ -8543,7 +8683,7 @@ return TradeScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005C">
+				<Item class="ModuleScript" referent="RBX0005D">
 					<Properties>
 						<string name="Name">UIController</string>
 						<ProtectedString name="Source"><![CDATA[-- Puts the whole UI together: one ScreenGui with the HUD, the round moments (Results), and the
@@ -8572,6 +8712,7 @@ local ThrowFx = require(script.Parent.ThrowFx)
 local DashFx = require(script.Parent.DashFx)
 local CooldownBars = require(script.Parent.CooldownBars)
 local TradeScreen = require(script.Parent.TradeScreen)
+local ViewModel = require(script.Parent.ViewModel)
 
 local player = Players.LocalPlayer
 local UIController = {}
@@ -8647,6 +8788,7 @@ function UIController.start()
 	ThrowFx.start(gui)
 	DashFx.start(gui)
 	CooldownBars.start(gui)
+	ViewModel.start()
 	LobbyUi.start(gui, function(userId) -- a booth's prompt: that player's collection
 		Screens3.view(userId)
 		if windows.Collection.Visible then
@@ -8680,7 +8822,7 @@ return UIController
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005D">
+				<Item class="ModuleScript" referent="RBX0005E">
 					<Properties>
 						<string name="Name">UiKit</string>
 						<ProtectedString name="Source"><![CDATA[-- The UI's look in one place: a clean, modern dark-glass style with warm gold accents, big
@@ -8815,10 +8957,203 @@ return UiKit
 ]]></ProtectedString>
 					</Properties>
 				</Item>
+				<Item class="ModuleScript" referent="RBX0005F">
+					<Properties>
+						<string name="Name">ViewModel</string>
+						<ProtectedString name="Source"><![CDATA[-- First person: your arms and your needle drawn in front of the camera, posed and animated from
+-- shared/FirstPerson (made in the Needle Hand Rig artifact). Only you see these; everyone else
+-- sees the Needle tool in your character's hand (server/Combat), which is hidden on your own
+-- screen while you're in first person. Plays the inspect (F), jab (a poke) and throw (Q).
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local FP = require(Shared:WaitForChild("FirstPerson"))
+local Needles = require(Shared:WaitForChild("Needles"))
+local NeedleLook = require(Shared:WaitForChild("NeedleLook"))
+
+local player = Players.LocalPlayer
+local ViewModel = {}
+local rig = nil -- { model, right, left, needle, key }
+local playing = nil -- { name, start }
+local lastYaw, sway, hiddenTool = nil, 0, nil
+local ZERO = { 0, 0, 0, 0, 0, 0 }
+
+local function v3(t)
+	return Vector3.new(t[1], t[2], t[3])
+end
+
+-- pos + the offset's first three, rot + its last three (degrees), as the artifact does it
+local function place(base, off, extra)
+	local p = v3(base.pos) + Vector3.new(off[1], off[2], off[3]) + (extra or Vector3.zero)
+	return CFrame.new(p) * CFrame.Angles(math.rad(base.rot[1] + off[4]), math.rad(base.rot[2] + off[5]), math.rad(base.rot[3] + off[6]))
+end
+
+local function block(model, size, colour, material)
+	local p = Instance.new("Part")
+	p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
+	p.Size, p.Color, p.Material = size, colour, material
+	p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
+	p.Parent = model
+	return p
+end
+
+local function skinColour(character)
+	local colours = character:FindFirstChildOfClass("BodyColors")
+	if colours then
+		return colours.RightArmColor3
+	end
+	local arm = character:FindFirstChild("RightLowerArm") or character:FindFirstChild("Right Arm")
+	return if arm then arm.Color else Color3.fromRGB(234, 184, 146)
+end
+
+local function makeArm(model, colour)
+	local size, s = v3(FP.arm.size), math.min(FP.arm.sleeve, 0.98)
+	local arm = { skin = block(model, size, colour, Enum.Material.SmoothPlastic), half = size.Y / 2 }
+	if s > 0.01 then
+		arm.sleeve = block(model, Vector3.new(size.X * 1.08, size.Y * s, size.Z * 1.08), Color3.fromRGB(table.unpack(FP.arm.sleeveColour)), Enum.Material.Fabric)
+		arm.sleeveAt = CFrame.new(0, size.Y / 2 - size.Y * s / 2 + 0.001, 0)
+	end
+	return arm
+end
+
+local function build(character, key)
+	if rig then
+		rig.model:Destroy()
+	end
+	local typeId, skinId = Needles.split(key)
+	local model = Instance.new("Model")
+	model.Name = "NeedleViewModel"
+	local colour = skinColour(character)
+	rig = { model = model, key = key, right = makeArm(model, colour), left = makeArm(model, colour) }
+	rig.needle = NeedleLook.build(typeId or "sewing", skinId or "steel", FP.needleLook.scale, FP.needleLook.fat)
+	rig.needle.Parent = model
+	model.Parent = workspace.CurrentCamera
+end
+
+-- The offsets at time t of an animation: between the two keys around t, eased (as in the artifact).
+local function sample(anim, t)
+	local keys = anim.keys
+	local a, b = keys[1], keys[#keys]
+	for i = 1, #keys - 1 do
+		if t >= keys[i].t and t <= keys[i + 1].t then
+			a, b = keys[i], keys[i + 1]
+			break
+		end
+	end
+	local f = if b.t > a.t then math.clamp((t - a.t) / (b.t - a.t), 0, 1) else 0
+	f = f * f * (3 - 2 * f)
+	local out = {}
+	for _, part in ipairs({ "right", "left", "needle" }) do
+		local row = {}
+		for i = 1, 6 do
+			row[i] = a[part][i] + (b[part][i] - a[part][i]) * f
+		end
+		out[part] = row
+	end
+	return out
+end
+
+local function setToolHidden(tool)
+	if hiddenTool == tool then
+		return
+	end
+	for _, t in ipairs({ hiddenTool, tool }) do
+		if t and t.Parent then
+			for _, p in ipairs(t:GetDescendants()) do
+				if p:IsA("BasePart") then
+					p.LocalTransparencyModifier = if t == tool then 1 else 0
+				end
+			end
+		end
+	end
+	hiddenTool = tool
+end
+
+local function step(dt)
+	local camera = workspace.CurrentCamera
+	local character = player.Character
+	local head = character and character:FindFirstChild("Head")
+	local tool = character and character:FindFirstChild("Needle")
+	local firstPerson = head and (camera.CFrame.Position - head.Position).Magnitude < 1.5
+	if not (tool and firstPerson) then
+		setToolHidden(nil)
+		if rig then
+			rig.model.Parent = nil
+		end
+		return
+	end
+	setToolHidden(tool)
+	local key = tool:GetAttribute("Key") or "sewing:steel"
+	if not rig or rig.key ~= key then
+		build(character, key)
+	end
+	rig.model.Parent = camera
+	-- moving: a bob while walking, and the arms lag a little when you turn
+	local look = camera.CFrame.LookVector
+	local yaw = math.atan2(-look.X, -look.Z)
+	local turn = if lastYaw then (yaw - lastYaw + math.pi) % (2 * math.pi) - math.pi else 0
+	lastYaw = yaw
+	sway += (math.clamp(-turn / math.max(dt, 1 / 240) * FP.motion.sway * 0.25, -0.25, 0.25) - sway) * math.min(1, dt * 12)
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	local walking = humanoid and humanoid.MoveDirection.Magnitude > 0.1 and humanoid.FloorMaterial ~= Enum.Material.Air
+	local now, bob = os.clock(), if walking then FP.motion.bob else 0
+	local move = Vector3.new(math.sin(now * FP.motion.bobSpeed) * bob * 0.5 + sway, -math.abs(math.cos(now * FP.motion.bobSpeed)) * bob, 0)
+	local off = { right = ZERO, left = ZERO, needle = ZERO }
+	if playing then
+		local anim = FP.anims[playing.name]
+		local t = now - playing.start
+		if t >= anim.length then
+			playing = nil
+		else
+			off = sample(anim, t)
+		end
+	end
+	for _, side in ipairs({ "right", "left" }) do
+		local arm, cf = rig[side], camera.CFrame * place(FP.pose[side], off[side], move)
+		arm.skin.CFrame = cf
+		if arm.sleeve then
+			arm.sleeve.CFrame = cf * arm.sleeveAt
+		end
+		arm.at = cf
+	end
+	local hand = rig.right.at * CFrame.new(0, -rig.right.half, 0)
+	rig.needle:PivotTo(hand * place(FP.pose.needle, off.needle))
+	local away = player:GetAttribute("NeedleAway") == true -- thrown: the hand is empty until it's back
+	for _, p in ipairs(rig.needle:GetDescendants()) do
+		if p:IsA("BasePart") and p.Name ~= "Root" then
+			p.LocalTransparencyModifier = if away then 1 else 0
+		end
+	end
+end
+
+-- Plays one of FirstPerson's animations ("inspect", "jab" or "throw") on your screen.
+function ViewModel.play(name)
+	if FP.anims[name] then
+		playing = { name = name, start = os.clock() }
+	end
+end
+
+function ViewModel.start()
+	RunService:BindToRenderStep("NeedleViewModel", Enum.RenderPriority.Camera.Value + 1, step)
+	player.CharacterAdded:Connect(function()
+		if rig then
+			rig.model:Destroy()
+			rig = nil
+		end
+		hiddenTool, playing = nil, nil
+	end)
+end
+
+return ViewModel
+]]></ProtectedString>
+					</Properties>
+				</Item>
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX0005E">
+	<Item class="Workspace" referent="RBX00060">
 		<Properties>
 			<string name="Name">Workspace</string>
 		</Properties>

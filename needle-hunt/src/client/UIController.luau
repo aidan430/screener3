@@ -24,6 +24,7 @@ local ThrowFx = require(script.Parent.ThrowFx)
 local DashFx = require(script.Parent.DashFx)
 local CooldownBars = require(script.Parent.CooldownBars)
 local TradeScreen = require(script.Parent.TradeScreen)
+local ViewModel = require(script.Parent.ViewModel)
 
 local player = Players.LocalPlayer
 local UIController = {}
@@ -99,6 +100,7 @@ function UIController.start()
 	ThrowFx.start(gui)
 	DashFx.start(gui)
 	CooldownBars.start(gui)
+	ViewModel.start()
 	LobbyUi.start(gui, function(userId) -- a booth's prompt: that player's collection
 		Screens3.view(userId)
 		if windows.Collection.Visible then

@@ -15,6 +15,7 @@ local Config = require(Shared:WaitForChild("Config"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local UiKit = require(script.Parent.UiKit)
 local Effects = require(script.Parent.Effects)
+local ViewModel = require(script.Parent.ViewModel)
 
 local player = Players.LocalPlayer
 local CombatFx = {}
@@ -56,6 +57,7 @@ local function hookTool(tool, inspectButton)
 		CombatFx.lastPoke = os.clock()
 		local t = target()
 		Remotes.Poke:FireServer(t and t.UserId)
+		ViewModel.play("jab")
 	end)
 	tool.Equipped:Connect(function()
 		inspectButton.Visible = true
@@ -146,6 +148,7 @@ function CombatFx.start(gui)
 		if os.clock() - lastInspect > Config.NeedleTool.inspect then
 			lastInspect = os.clock()
 			Remotes.Inspect:FireServer()
+			ViewModel.play("inspect")
 		end
 	end
 	inspectButton.Activated:Connect(doInspect)

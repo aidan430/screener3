@@ -26,13 +26,13 @@ local busy = {}
 -- Opens `box` into a player's data (call inside DataManager.update). Returns the result.
 function BoxManager.openInto(data, box)
 	local pityHit = data.boxPity >= Config.Boxes.pity - 1
-	local typeId, skinId = Boxes.roll(box, rng, pityHit)
+	local typeId, skinId, percent = Boxes.roll(box, rng, pityHit)
 	local result = CollectionManager.addTo(data, typeId, skinId)
 	local good = Needles.rarity(result.rarityId).mult >= Needles.rarity("rare").mult
 	data.boxPity = if good then 0 else data.boxPity + 1
 	data.boxesOpened += 1
-	result.box, result.pity = box.id, data.boxPity
-	for _, row in ipairs(Boxes.odds(box)) do -- how likely that rarity was in this box
+	result.box, result.pity, result.percent = box.id, data.boxPity, percent
+	for _, row in ipairs(if percent then {} else Boxes.odds(box)) do -- how likely that rarity was in this box
 		if row.rarity.id == result.rarityId then
 			result.percent = row.percent
 		end

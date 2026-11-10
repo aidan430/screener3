@@ -94,7 +94,7 @@ class Rounds(unittest.TestCase):
         self.assertEqual(CHESTS["count"], 5, "five chests a map")
         self.assertTrue(0 < CHESTS["keyChance"] < 1, "a chest holds coins or a key")
         keys = re.findall(r'\{ id = "(\w+)", name = "\w+ Key"', CONFIG)
-        self.assertEqual(set(keys), {b["id"] for b in rows(CONFIG, "Config.Boxes = {")}, "a key for every box")
+        self.assertEqual(set(keys), {b["id"] for b in rows(CONFIG, "Config.Boxes = {")} - {"heirloom"}, "a key for every box but the Heirloom Box (coins or Robux only)")
         spawner = (SERVER / "ChestSpawner.luau").read_text()
         for check in ("canOpen", "CH.reach", "chest.opened", "AntiCheat.flagged", "chest.top", "CH.hitLock"):
             self.assertIn(check, spawner, "the server checks every chest opening")
@@ -293,7 +293,7 @@ BOXES = rows(CONFIG, "Config.Boxes = {")
 
 class BoxOpenings(unittest.TestCase):
     def test_odds_add_up_and_every_rarity_has_skins(self):
-        self.assertEqual({b["id"] for b in BOXES}, {"hay", "harvest", "starlight"})
+        self.assertEqual({b["id"] for b in BOXES}, {"hay", "harvest", "starlight", "heirloom"})
         rarity_ids = [r["id"] for r in RARITIES]
         for line in CONFIG[CONFIG.index("Config.Boxes = {"):].splitlines()[1:4]:
             box = re.search(r'id = "(\w+)"', line).group(1)
@@ -307,6 +307,39 @@ class BoxOpenings(unittest.TestCase):
                     self.assertTrue(own or regular, f"{box} {rid}")
         top = [b for b in BOXES if b["id"] == "starlight"][0]
         self.assertGreater(top["coins"], [b for b in BOXES if b["id"] == "hay"][0]["coins"], "dearer boxes cost more")
+
+    def test_heirloom_box_tiers_price_and_odds_on_show(self):
+        box = [b for b in BOXES if b["id"] == "heirloom"][0]
+        self.assertEqual(box["coins"], 100000)
+        self.assertEqual(box["product"], "HeirloomBox")
+        line = CONFIG[CONFIG.index('{ id = "heirloom"'):]
+        line = line[: line.index("} } },") + 6]
+        tiers = re.findall(r'\{ (grade|rarity) = "(\w+)", percent = ([\d.]+) \}', line)
+        self.assertEqual([(k, i, float(p)) for k, i, p in tiers], [("grade", "heirloom", 10.0), ("rarity", "mythic", 40.0), ("grade", "exotic", 50.0)])
+        odds = dict((k, float(v)) for k, v in re.findall(r"(\w+) = ([\d.]+)", line.split("odds = {")[1].split("}")[0]))
+        self.assertAlmostEqual(sum(odds.values()), 100, msg="the shape tiers' skin odds")
+        self.assertTrue([x for x in SKINS if x["rarity"] == "mythic" and "series" not in x], "regular Mythic skins exist")
+        self.assertTrue([t for t in TYPES if t["grade"] == "exotic"] and [t for t in TYPES if t["grade"] == "heirloom"])
+        self.assertIn("Boxes.tiers", (ROOT / "src" / "client" / "BoxScreen.luau").read_text(), "every tier's odds are shown")
+        self.assertIn("HeirloomBox", (SHARED / "Robux.luau").read_text())
+        self.assertIn("HeirloomBox = 0", CONFIG)
+
+    def test_first_person_rig_is_complete_and_wired(self):
+        fp = (SHARED / "FirstPerson.luau").read_text()
+        for name in ("inspect", "jab", "throw"):
+            block = fp[fp.index(f"\t\t{name} = {{"):]
+            block = block[: block.index("\n\t\t} },")]
+            length = float(re.search(r"length = ([\d.]+)", block).group(1))
+            times = [float(t) for t in re.findall(r"\{ t = ([\d.]+),", block)]
+            self.assertEqual(times[0], 0, name + " starts at the hold pose")
+            self.assertAlmostEqual(times[-1], length, msg=name + " ends at its length")
+            self.assertEqual(times, sorted(times), name + " keys in order")
+        view = (ROOT / "src" / "client" / "ViewModel.luau").read_text()
+        self.assertIn('GetAttribute("Key")', view)
+        self.assertIn('SetAttribute("Key"', (SERVER / "Combat.luau").read_text(), "the tool says which needle it is")
+        self.assertIn('ViewModel.play("inspect")', (ROOT / "src" / "client" / "CombatFx.luau").read_text())
+        self.assertIn('ViewModel.play("throw")', (ROOT / "src" / "client" / "ThrowFx.luau").read_text())
+        self.assertIn("ViewModel.start()", (ROOT / "src" / "client" / "UIController.luau").read_text())
 
     def test_series_skins_only_from_their_box(self):
         series = {x["series"] for x in SKINS if "series" in x}

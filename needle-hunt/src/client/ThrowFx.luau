@@ -14,6 +14,7 @@ local Needles = require(Shared:WaitForChild("Needles"))
 local NeedleLook = require(Shared:WaitForChild("NeedleLook"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local UiKit = require(script.Parent.UiKit)
+local ViewModel = require(script.Parent.ViewModel)
 local Effects = require(script.Parent.Effects)
 
 local player = Players.LocalPlayer
@@ -48,6 +49,7 @@ local function throw()
 	if dir then
 		lastThrow = os.clock()
 		Remotes.Throw:FireServer(dir)
+		ViewModel.play("throw")
 	end
 end
 

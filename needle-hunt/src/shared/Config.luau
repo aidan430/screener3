@@ -128,6 +128,12 @@ Config.Boxes = { pity = 10, announceAt = 0.5, list = {
 	{ id = "hay", name = "Hay Box", coins = 400, colour = { 226, 186, 88 }, odds = { common = 60, uncommon = 25, rare = 10, epic = 4, legendary = 0.9, mythic = 0.1 } },
 	{ id = "harvest", name = "Harvest Box", coins = 1500, product = "HarvestBox", series = "harvest", colour = { 230, 120, 50 }, odds = { common = 40, uncommon = 30, rare = 18, epic = 8, legendary = 3.5, mythic = 0.5 } },
 	{ id = "starlight", name = "Starlight Box", coins = 5000, product = "StarlightBox", series = "starlight", colour = { 120, 110, 240 }, odds = { common = 0, uncommon = 45, rare = 30, epic = 16, legendary = 7, mythic = 2 } },
+	-- tiers: the box first picks a tier by percent. A grade tier gives a shape of that grade
+	-- (by the shapes' own weights) in a skin rolled by `odds`; a rarity tier gives a skin of that
+	-- rarity on any shape (by the usual shape odds). Every tier, and every Heirloom shape's own
+	-- chance, is shown before opening. Robux price: 1,000 (set on the HeirloomBox product).
+	{ id = "heirloom", name = "Heirloom Box", coins = 100000, product = "HeirloomBox", colour = { 230, 160, 110 }, odds = { uncommon = 45, rare = 30, epic = 16, legendary = 7, mythic = 2 },
+		tiers = { { grade = "heirloom", percent = 10 }, { rarity = "mythic", percent = 40 }, { grade = "exotic", percent = 50 } } },
 } }
 
 -- Trading (server/TradeManager, client/TradeScreen): in the lobby, two players swap needles.
@@ -180,7 +186,7 @@ Config.BoardReadSeconds = 180
 -- The only random things Robux can buy are boxes (Config.Boxes: odds always shown, hidden where
 -- paid random items are restricted). Robux never buys a power-up, a hint mid-round or combat power.
 Config.GamePasses = { DoubleCoins = 0, ExtraHint = 0, Supporter = 0, GrandBooth = 0 }
-Config.Products = { StarterBundle = 0, CoinsSmall = 0, CoinsMedium = 0, CoinsLarge = 0, CoinShower = 0, HarvestBox = 0, StarlightBox = 0 }
+Config.Products = { StarterBundle = 0, CoinsSmall = 0, CoinsMedium = 0, CoinsLarge = 0, CoinShower = 0, HarvestBox = 0, StarlightBox = 0, HeirloomBox = 0 }
 Config.CoinPacks = { CoinsSmall = 500, CoinsMedium = 1500, CoinsLarge = 4000 } -- coins each pack gives
 Config.CoinShower = { coins = 100 } -- every player in the server gets this, the buyer too
 Config.GrandBooth = { needles = 6 } -- needles on show at a Grand Booth (3 otherwise)

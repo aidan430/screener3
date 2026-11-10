@@ -54,6 +54,7 @@ function Combat.giveTool(player)
 	local cf, size = model:GetBoundingBox()
 	local tool = Instance.new("Tool")
 	tool.Name, tool.ToolTip, tool.CanBeDropped, tool.Grip = "Needle", Needles.name(typeId, skinId), false, baseGrip()
+	tool:SetAttribute("Key", typeId .. ":" .. skinId) -- client/ViewModel draws this needle in first person
 	local handle = Instance.new("Part")
 	handle.Name, handle.Size, handle.Transparency, handle.CanCollide, handle.Massless = "Handle", Vector3.one * 0.4, 1, false, true
 	handle.CFrame = CFrame.new(cf.Position.X - size.X / 2 + 0.5, 0, 0) -- held near the eye end, point outwards
