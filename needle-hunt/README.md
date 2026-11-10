@@ -307,7 +307,8 @@ one of **94 shapes** in one of **110 skins** (10,340 to collect; the newest 50 a
 | Masterwork | 16: Shooting Star, Lightning Bolt, Rocket Ship, Comet Spear, Dragon's Tooth, Crystal Shard, Comet Gem, Ringed Planet, Phoenix Feather, Royal Sceptre, Trident, Hourglass, Rainbow Arrow, Moon Wand, Treasure Key, Lighthouse | 1.1% | 88 to 110 |
 | Heirloom | 9, the special collection: **The Eye of the Needle** (1 in 15,049, the rarest shape), Treasure Map, Heirloom Tome, Star Chart, Crystal Cluster, Clockwork Gear, Astrolabe, Brass Compass, Heirloom Key | 0.14% | 150 to 260 |
 
-**Heirloom aura:** every Heirloom shape gives off energy in its skin's colours (`shared/NeedleAura`,
+**Heirloom aura:** every Heirloom shape gives off energy, shaded from deep crimson at the eye to bright red at
+the point (`Config.Aura.gradient`; remove it to use each skin's own colours) (`shared/NeedleAura`,
 `Config.Aura`): a rippling ForceField skin round each piece, rising wisps, sparks and a soft light,
 in a hand, in first person, in flight and on pedestals. On UI screens (no particles there) it shows
 as a soft glow. Preview: `previews/heirloom_aura.png`.
