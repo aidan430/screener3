@@ -430,6 +430,15 @@ Click or tap to poke the nearest player in front of you.
 
 All the numbers are in `Config.Combat`.
 
+## Aim settings
+
+Settings, **Aim** (`client/Aim`, `Config.Aim`, checked by `shared/AimSettings` on load and save):
+- **Aim sensitivity** 0.2x to 3x (mouse; it scales Roblox's own camera sensitivity).
+- **Field of view** 60° to 100° (Roblox's default is 70°). Dashes and finds kick it and come back to yours.
+- **Reticle** in the middle of the screen in first person: Cross + dot, Dot, Cross, Circle or None,
+  in white, red, yellow, green, cyan or pink, with a thin dark edge so it reads on any background.
+Changes show at once and are saved with the player's profile. Preview: `previews/aim_settings.png`.
+
 ## Practice Yard: Time Trial
 
 From the lobby's **Practice** stall (next to the Wardrobe) or **Practice** in the menu, start a

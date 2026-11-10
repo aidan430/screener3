@@ -14,6 +14,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local UiKit = require(script.Parent.UiKit)
+local Aim = require(script.Parent.Aim)
 local Effects = require(script.Parent.Effects)
 
 local player = Players.LocalPlayer
@@ -58,7 +59,7 @@ local function dash()
 	Effects.sound("whoosh", 1.1)
 	if not Effects.settings.reduceEffects then
 		local camera = workspace.CurrentCamera
-		local fov = camera.FieldOfView
+		local fov = Aim.fov() -- the player's own field of view (Settings)
 		UiKit.ease(camera, D.seconds, { FieldOfView = fov + 8 }, Enum.EasingStyle.Sine)
 		task.delay(D.seconds, function()
 			UiKit.ease(camera, 0.35, { FieldOfView = fov }, Enum.EasingStyle.Sine)

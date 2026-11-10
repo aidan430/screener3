@@ -1,8 +1,9 @@
 -- Small requests from players, checked on the server: a hint (Remotes.Hint) and saving their
--- settings (Remotes.SaveSettings: only known settings, only true/false).
+-- settings (Remotes.SaveSettings: only known settings: true/false, or aim settings shared/AimSettings allows).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local AimSettings = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("AimSettings"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local DataManager = require(script.Parent.DataManager)
@@ -43,8 +44,10 @@ function Requests.init()
 		end
 		DataManager.update(player, function(d)
 			for key, value in pairs(settings) do
-				if type(value) == "boolean" and d.settings[key] ~= nil then
+				if type(value) == "boolean" and type(d.settings[key]) == "boolean" then
 					d.settings[key] = value
+				elseif type(key) == "string" and AimSettings.clean(key, value) ~= nil then -- aim settings, checked
+					d.settings[key] = AimSettings.clean(key, value)
 				end
 			end
 		end)

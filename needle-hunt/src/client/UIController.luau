@@ -26,6 +26,7 @@ local CooldownBars = require(script.Parent.CooldownBars)
 local TradeScreen = require(script.Parent.TradeScreen)
 local ViewModel = require(script.Parent.ViewModel)
 local PracticeFx = require(script.Parent.PracticeFx)
+local Aim = require(script.Parent.Aim)
 
 local player = Players.LocalPlayer
 local UIController = {}
@@ -63,6 +64,7 @@ local function applySettings()
 	Effects.settings.sfx = s.sfx ~= false
 	Effects.settings.reduceEffects = s.reduceEffects == true
 	Effects.settings.music = s.music ~= false
+	Aim.apply(s) -- sensitivity, field of view, reticle
 	if music then
 		music.Volume = if Effects.settings.music then 0.3 else 0
 	end
@@ -71,6 +73,7 @@ end
 function UIController.start()
 	local gui = UiKit.make("ScreenGui", { Name = "NeedleUi", ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
 	Effects.mount(gui)
+	Aim.mount(gui)
 	Hud.mount(gui, UIController.open)
 	Results.mount(gui, getProfile)
 	for name, w in pairs(Screens.mount(gui, getProfile)) do

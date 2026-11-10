@@ -12,6 +12,7 @@ local Config = require(Shared:WaitForChild("Config"))
 local Rules = require(Shared:WaitForChild("Rules"))
 local Cosmetics = require(Shared:WaitForChild("Cosmetics"))
 local Needles = require(Shared:WaitForChild("Needles"))
+local AimSettings = require(Shared:WaitForChild("AimSettings"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local DataManager = {}
@@ -79,10 +80,17 @@ function DataManager.fresh(saved)
 			end
 		end
 	end
+	for key, default in pairs(AimSettings.defaults) do -- aim: sensitivity, field of view, reticle
+		d.settings[key] = default
+	end
 	if type(saved.settings) == "table" then
 		for key, default in pairs(d.settings) do
 			local v = saved.settings[key]
-			d.settings[key] = if type(v) == "boolean" then v else default
+			if type(default) == "boolean" then
+				d.settings[key] = if type(v) == "boolean" then v else default
+			else
+				d.settings[key] = AimSettings.clean(key, v) or default
+			end
 		end
 	end
 	if type(saved.collection) == "table" then

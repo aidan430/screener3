@@ -324,6 +324,24 @@ class BoxOpenings(unittest.TestCase):
         self.assertIn("HeirloomBox", (SHARED / "Robux.luau").read_text())
         self.assertIn("HeirloomBox = 0", CONFIG)
 
+    def test_aim_settings_are_checked_and_applied(self):
+        block = CONFIG[CONFIG.index("Config.Aim = {"):]
+        block = block[: block.index("\n}\n")]
+        sens = [float(v) for v in re.search(r"sensitivity = \{ ([\d., ]+) \}", block).group(1).split(",")]
+        fov = [float(v) for v in re.search(r"fov = \{ ([\d., ]+) \}", block).group(1).split(",")]
+        for lo, hi, step, default in (sens, fov):
+            self.assertTrue(lo < default < hi and step > 0)
+        self.assertEqual(fov[3], 70, "Roblox's own field of view is the default")
+        self.assertIn('"none"', block, "the reticle can be hidden")
+        aim = (SHARED / "AimSettings.luau").read_text()
+        self.assertIn("math.clamp", aim)
+        self.assertIn("AimSettings.clean", (SERVER / "Requests.luau").read_text(), "saved aim settings are checked")
+        self.assertIn("AimSettings.clean", (SERVER / "DataManager.luau").read_text(), "loaded aim settings are checked")
+        client = (ROOT / "src" / "client" / "Aim.luau").read_text()
+        self.assertIn("MouseDeltaSensitivity", client)
+        self.assertIn("FieldOfView", client)
+        self.assertIn("Aim.fov()", (ROOT / "src" / "client" / "DashFx.luau").read_text(), "a dash returns to your field of view")
+
     def test_time_trial_practice(self):
         block = CONFIG[CONFIG.index("Config.Practice = {"):]
         block = block[: block.index("}\n")]

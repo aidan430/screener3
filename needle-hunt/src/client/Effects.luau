@@ -54,8 +54,9 @@ function Effects.flash()
 	Debris:AddItem(f, 0.6)
 	local camera = workspace.CurrentCamera
 	if camera then
-		camera.FieldOfView = 62
-		UiKit.ease(camera, 0.4, { FieldOfView = 70 }, Enum.EasingStyle.Back)
+		local fov = require(script.Parent.Aim).fov() -- back to the player's own field of view
+		camera.FieldOfView = fov - 8
+		UiKit.ease(camera, 0.4, { FieldOfView = fov }, Enum.EasingStyle.Back)
 	end
 end
 

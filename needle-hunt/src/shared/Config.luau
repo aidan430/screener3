@@ -221,6 +221,16 @@ Config.ArenaCentre = Vector3.new(0, 0, 600)
 -- Time Trial board. Dummies have `hearts` (a poke takes 1, a throw Config.Throw.damage); `moving`
 -- of them slide to and fro. Chests sit `perch` studs up and open with Config.Chests.hold. Each
 -- player's yard is built at centre + (slot - 1) x spacing on Z, and gone when they leave.
+-- Aim settings each player picks (Settings, Aim; shared/AimSettings checks them, client/Aim applies
+-- them): mouse sensitivity and field of view as { min, max, step, default }, the reticle's shape
+-- (none hides it) and its colour.
+Config.Aim = {
+	sensitivity = { 0.2, 3, 0.1, 1 },
+	fov = { 60, 100, 5, 70 },
+	reticles = { "crossdot", "dot", "cross", "circle", "none" },
+	colours = { { "white", 255, 255, 255 }, { "red", 235, 40, 45 }, { "yellow", 255, 214, 60 }, { "green", 80, 230, 110 }, { "cyan", 70, 220, 240 }, { "pink", 255, 110, 200 } },
+}
+
 Config.Practice = { seconds = 180, countdown = 3, dummies = 8, moving = 3, hearts = 3, chests = 5, perch = { 3.5, 7 },
 	size = 100, centre = Vector3.new(-700, 0, 0), spacing = 180, backAfter = 10 }
 

@@ -1,4 +1,4 @@
--- The Quests, Leaderboard and Settings screens.
+-- The Quests, Leaderboard and Settings screens (Settings: sound and effects toggles, and Aim).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -6,9 +6,11 @@ local Config = require(Shared:WaitForChild("Config"))
 local Quests = require(Shared:WaitForChild("Quests"))
 local Cosmetics = require(Shared:WaitForChild("Cosmetics"))
 local Rules = require(Shared:WaitForChild("Rules"))
+local AimSettings = require(Shared:WaitForChild("AimSettings"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local UiKit = require(script.Parent.UiKit)
 local Effects = require(script.Parent.Effects)
+local Aim = require(script.Parent.Aim)
 
 local Screens2 = {}
 local quests, questBody, boards, boardBody, settings, settingsBody
@@ -89,9 +91,61 @@ end
 
 local LABELS = { { "music", "Music" }, { "sfx", "Sound effects" }, { "reduceEffects", "Reduce effects (no flash or shake)" }, { "autoJoin", "Join rounds automatically" } }
 
+local RETICLE_NAMES = { crossdot = "Cross + dot", dot = "Dot", cross = "Cross", circle = "Circle", none = "None" }
+
+-- Aim: sensitivity and field of view with - and + steps, the reticle's shape and colour. Each
+-- change shows at once (client/Aim) and is saved (checked on the server by shared/AimSettings).
+local function aimRows(current, redraw)
+	local A = Config.Aim
+	local function set(key, value)
+		Effects.sound("click")
+		current[key] = AimSettings.clean(key, value) or current[key]
+		Remotes.SaveSettings:FireServer({ [key] = current[key] })
+		Aim.apply(current)
+		redraw()
+	end
+	UiKit.label({ LayoutOrder = 10, Text = "Aim", Font = UiKit.bold, Size = UDim2.new(1, -8, 0, 30), TextXAlignment = Enum.TextXAlignment.Left, Parent = settingsBody }, 24)
+	for i, row in ipairs({ { "sensitivity", "Aim sensitivity", "%.1fx" }, { "fov", "Field of view", "%d°" } }) do
+		local key, r = row[1], A[row[1]]
+		local value = AimSettings.clean(key, current[key]) or r[4]
+		local c = UiKit.make("Frame", { LayoutOrder = 10 + i, Size = UDim2.new(1, -8, 0, 64), BackgroundColor3 = UiKit.colors.card, Parent = settingsBody }, { UiKit.corner(12) })
+		UiKit.label({ Text = row[2], Size = UDim2.new(1, -230, 1, 0), Position = UDim2.fromOffset(16, 0), TextXAlignment = Enum.TextXAlignment.Left, Parent = c }, 22)
+		local minus = UiKit.button("-", UiKit.colors.line, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -164, 0.5, 0), Size = UDim2.fromOffset(46, 46), Parent = c })
+		UiKit.label({ Text = string.format(row[3], value), Font = UiKit.bold, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -62, 0.5, 0), Size = UDim2.fromOffset(96, 46), TextColor3 = UiKit.colors.gold, Parent = c }, 22)
+		local plus = UiKit.button("+", UiKit.colors.line, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.fromOffset(46, 46), Parent = c })
+		minus.Activated:Connect(function()
+			set(key, value - r[3])
+		end)
+		plus.Activated:Connect(function()
+			set(key, value + r[3])
+		end)
+	end
+	local shapes = UiKit.make("Frame", { LayoutOrder = 13, Size = UDim2.new(1, -8, 0, 100), BackgroundColor3 = UiKit.colors.card, Parent = settingsBody }, { UiKit.corner(12) })
+	UiKit.label({ Text = "Reticle", Size = UDim2.new(1, -16, 0, 34), Position = UDim2.fromOffset(16, 4), TextXAlignment = Enum.TextXAlignment.Left, Parent = shapes }, 22)
+	for i, id in ipairs(A.reticles) do
+		local on = current.reticle == id
+		local b = UiKit.button(RETICLE_NAMES[id] or id, if on then UiKit.colors.blue else UiKit.colors.line, { Position = UDim2.new((i - 1) / #A.reticles, 8, 0, 44), Size = UDim2.new(1 / #A.reticles, -10, 0, 44), Parent = shapes })
+		b.Activated:Connect(function()
+			set("reticle", id)
+		end)
+	end
+	local colours = UiKit.make("Frame", { LayoutOrder = 14, Size = UDim2.new(1, -8, 0, 100), BackgroundColor3 = UiKit.colors.card, Parent = settingsBody }, { UiKit.corner(12) })
+	UiKit.label({ Text = "Reticle colour", Size = UDim2.new(1, -16, 0, 34), Position = UDim2.fromOffset(16, 4), TextXAlignment = Enum.TextXAlignment.Left, Parent = colours }, 22)
+	for i, row in ipairs(A.colours) do
+		local on = current.reticleColour == row[1]
+		local b = UiKit.button("", Color3.fromRGB(row[2], row[3], row[4]), { Position = UDim2.new((i - 1) / #A.colours, 8, 0, 44), Size = UDim2.new(1 / #A.colours, -10, 0, 44), Parent = colours })
+		local edge = b:FindFirstChildOfClass("UIStroke") or UiKit.stroke()
+		edge.Color, edge.Thickness, edge.Parent = if on then Color3.new(1, 1, 1) else Color3.fromRGB(40, 44, 56), if on then 3 else 1, b -- the chosen colour is ringed
+		b.Activated:Connect(function()
+			set("reticleColour", row[1])
+		end)
+	end
+end
+
 local function settingsPage()
 	clear(settingsBody)
 	local current = getProfile().settings or {}
+	aimRows(current, settingsPage)
 	for i, row in ipairs(LABELS) do
 		local key = row[1]
 		local on = current[key] == true
@@ -121,7 +175,7 @@ function Screens2.mount(gui, profileGetter)
 	getProfile = profileGetter
 	quests, questBody = UiKit.window(gui, "Daily Quests", 560, 440)
 	boards, boardBody = UiKit.window(gui, "Leaderboard", 680, 520)
-	settings, settingsBody = UiKit.window(gui, "Settings", 520, 400)
+	settings, settingsBody = UiKit.window(gui, "Settings", 560, 560)
 	return { Quests = quests, Leaderboard = boards, Settings = settings }, { Leaderboard = boardsPage }
 end
 
