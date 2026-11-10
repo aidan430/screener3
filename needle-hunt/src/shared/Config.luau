@@ -123,7 +123,8 @@ Config.NeedleTool = { grip = { 0, 90, 0 }, scale = 1.6 }
 -- studs at scale 1); wisps and
 -- sparks = particles a second; rise = how fast wisps float up; lift = how much the colours are
 -- brightened towards white (so dark skins glow too); light = the glow's brightness and range.
-Config.Aura = { shell = true, shellGrow = 1.14, shellPad = 0.07, wisps = 16, wispSize = 0.45, sparks = 10, rise = 1.8, lift = 0.12, light = 2.2, lightRange = 8 }
+-- gradient = the aura's own colours, from the eye end to the point (remove it to use the skin's).
+Config.Aura = { gradient = { { 120, 0, 18 }, { 255, 60, 40 } }, shell = true, shellGrow = 1.14, shellPad = 0.07, wisps = 16, wispSize = 0.45, sparks = 10, rise = 1.8, lift = 0.12, light = 2.2, lightRange = 8 }
 
 -- Boxes (server/BoxManager, client/BoxScreen): open one for a needle for your collection. odds are
 -- each rarity's chance in percent (shown in the game before you open one). series = the box's own

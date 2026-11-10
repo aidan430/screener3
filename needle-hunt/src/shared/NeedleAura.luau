@@ -14,8 +14,12 @@ local function rgb(c)
 	return Color3.fromRGB(c[1], c[2], c[3])
 end
 
--- The skin's brightest colours, lifted a little, so a dark skin still glows.
+-- The aura's two colours: Config.Aura.gradient (eye end, point end) if it's set, otherwise the
+-- skin's brightest colours, lifted a little, so a dark skin still glows.
 local function colours(skin)
+	if A.gradient then
+		return rgb(A.gradient[1]), rgb(A.gradient[2])
+	end
 	if skin.pattern == "rainbow" then
 		return Color3.fromHSV(0.8, 0.55, 1), Color3.fromHSV(0.45, 0.55, 1)
 	end
@@ -49,7 +53,8 @@ function NeedleAura.add(model, skin, scale)
 			if part:IsA("BasePart") and part.Name ~= "Root" and part ~= aura then
 				local shell = part:Clone()
 				shell:ClearAllChildren()
-				shell.Name, shell.Material, shell.Color, shell.Transparency = "AuraShell", Enum.Material.ForceField, main, 0
+				local along = math.clamp((part.Position.X - (cf.Position.X - size.X / 2)) / math.max(size.X, 0.01), 0, 1)
+				shell.Name, shell.Material, shell.Color, shell.Transparency = "AuraShell", Enum.Material.ForceField, main:Lerp(second, along), 0 -- shaded along the needle
 				shell.Size = part.Size * A.shellGrow + Vector3.one * A.shellPad * scale
 				shell.CFrame = part.CFrame
 				shell.Parent = model
@@ -64,7 +69,7 @@ function NeedleAura.add(model, skin, scale)
 	wisps.Rotation, wisps.RotSpeed = NumberRange.new(0, 360), NumberRange.new(-60, 60)
 	wisps.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.35, A.wispSize * scale), NumberSequenceKeypoint.new(1, 0) })
 	wisps.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.25), NumberSequenceKeypoint.new(1, 1) })
-	wisps.Color, wisps.LightEmission, wisps.LightInfluence = seq(main, second), 1, 0
+	wisps.Color, wisps.LightEmission, wisps.LightInfluence = seq(second, main), 1, 0 -- bright as they leave, deeper as they fade
 	wisps.Parent = aura
 	local sparks = Instance.new("ParticleEmitter") -- little flicks of power outwards
 	sparks.Name, sparks.Texture = "AuraSparks", "rbxasset://textures/particles/sparkles_main.dds"
@@ -76,7 +81,7 @@ function NeedleAura.add(model, skin, scale)
 	sparks.Color, sparks.LightEmission, sparks.LightInfluence = seq(second, main), 1, 0
 	sparks.Parent = aura
 	local light = Instance.new("PointLight")
-	light.Name, light.Color, light.Range, light.Brightness = "AuraLight", main, A.lightRange * scale, A.light
+	light.Name, light.Color, light.Range, light.Brightness = "AuraLight", main:Lerp(second, 0.6), A.lightRange * scale, A.light
 	light.Parent = aura
 	return aura
 end
