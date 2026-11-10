@@ -311,7 +311,7 @@ Epic x12, Legendary x40, Mythic x150. Each box has its own exact odds (see Boxes
 
 **The 1 of 1s** (`Config.OneOfOne`): two paper-thin Sewing Needles, only one of each in the whole game.
 - **Gossamer:** clear as glass, 1 in 12,000,000 per chest.
-- **Galaxy Gossamer:** deep purple to pink to blue, glowing and sparkling, 1 in 1,000,000 per
+- **Galaxy Gossamer:** deep purple to pink to blue, glowing and sparkling, 1 in 5,000,000 per
   chest. A little easier to see than the Gossamer, but still paper thin.
 
 Both work the same way:

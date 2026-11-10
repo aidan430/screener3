@@ -346,7 +346,7 @@ class BoxOpenings(unittest.TestCase):
         block = CONFIG[CONFIG.index("Config.OneOfOne = {"):]
         block = block[: block.index("} }")]
         self.assertIn("chance = 1 / 12000000", block)
-        self.assertIn("chance = 1 / 1000000", block, "the Galaxy Gossamer: 1 in a million")
+        self.assertIn("chance = 1 / 5000000", block, "the Galaxy Gossamer: 1 in 5 million")
         chances = [int(n) for n in re.findall(r"chance = 1 / (\d+)", block)]
         self.assertEqual(chances, sorted(chances, reverse=True), "the rarer is rolled first")
         self.assertEqual(len(set(re.findall(r'record = "(\w+)"', block))), 2, "each has its own one-time claim")
