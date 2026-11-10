@@ -57,10 +57,10 @@ function PadPortal.build(ctx, i, x, z, text)
 	-- on an attachment in the (unrotated) sparks part: a billboard's offset follows its part's axes,
 	-- and the disc is turned on its side, so hung on the disc it sat beside the platform
 	local top = Instance.new("Attachment")
-	top.Name, top.Position = "BoardPoint", Vector3.new(0, look.height + 3.5, 0)
+	top.Name, top.Position = "BoardPoint", Vector3.new(0, look.height + look.boardHeight / 2 + 1, 0)
 	top.Parent = emitterPart
 	local above = Instance.new("BillboardGui")
-	above.Size, above.MaxDistance, above.Adornee = UDim2.fromOffset(240, 130), 140, top
+	above.Size, above.MaxDistance, above.Adornee = UDim2.fromScale(look.boardWidth, look.boardHeight), 140, top -- in studs: smaller further off
 	above.Parent = top
 	local name = text(above, { Size = UDim2.new(1, 0, 0.32, 0), Text = "GAME " .. i, TextStrokeTransparency = 0.3 })
 	local count = text(above, { Size = UDim2.new(1, 0, 0.4, 0), Position = UDim2.fromScale(0, 0.3), Text = "0/" .. P.size, TextColor3 = Color3.fromRGB(255, 214, 90), TextStrokeTransparency = 0.3 })
