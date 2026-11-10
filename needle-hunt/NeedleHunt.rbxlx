@@ -18,7 +18,11 @@ local Config = require(script.Parent.Config)
 local AimSettings = {}
 local A = Config.Aim
 
-AimSettings.defaults = { sensitivity = A.sensitivity[4], fov = A.fov[4], reticle = A.reticles[1], reticleColour = A.colours[1][1] }
+AimSettings.defaults = {
+	sensitivity = A.sensitivity[4], fov = A.fov[4], reticleSize = A.reticleSize[4], reticleThickness = A.reticleThickness[4],
+	reticle = A.reticles[1], reticleColour = A.colours[1][1],
+}
+local NUMBERS = { sensitivity = true, fov = true, reticleSize = true, reticleThickness = true }
 
 local function listed(list, value, at)
 	for _, row in ipairs(list) do
@@ -31,7 +35,7 @@ end
 
 -- The value to keep for `key`, or nil if it isn't an aim setting or the value isn't allowed.
 function AimSettings.clean(key, value)
-	if key == "sensitivity" or key == "fov" then
+	if NUMBERS[key] then
 		local r = A[key]
 		if type(value) ~= "number" or value ~= value then
 			return nil
@@ -406,11 +410,13 @@ Config.ArenaCentre = Vector3.new(0, 0, 600)
 -- of them slide to and fro. Chests sit `perch` studs up and open with Config.Chests.hold. Each
 -- player's yard is built at centre + (slot - 1) x spacing on Z, and gone when they leave.
 -- Aim settings each player picks (Settings, Aim; shared/AimSettings checks them, client/Aim applies
--- them): mouse sensitivity and field of view as { min, max, step, default }, the reticle's shape
--- (none hides it) and its colour.
+-- them): mouse sensitivity, field of view, the reticle's size (x its normal size) and thickness (its
+-- lines, in pixels) as { min, max, step, default }; the reticle's shape (none hides it) and colour.
 Config.Aim = {
 	sensitivity = { 0.2, 3, 0.1, 1 },
 	fov = { 60, 100, 5, 70 },
+	reticleSize = { 0.5, 2.5, 0.1, 1 },
+	reticleThickness = { 1, 6, 1, 2 },
 	reticles = { "crossdot", "dot", "cross", "circle", "none" },
 	colours = { { "white", 255, 255, 255 }, { "red", 235, 40, 45 }, { "yellow", 255, 214, 60 }, { "green", 80, 230, 110 }, { "cyan", 70, 220, 240 }, { "pink", 255, 110, 200 } },
 }
@@ -7243,28 +7249,33 @@ local function piece(size, pos, colour, round)
 	return f
 end
 
--- Draws the reticle: shape is crossdot | dot | cross | circle | none.
-function Aim.draw(shape, colourName)
+-- Draws the reticle: shape is crossdot | dot | cross | circle | none; size scales it (1 = normal)
+-- and thickness is its lines' width in pixels (the dot grows with it).
+function Aim.draw(shape, colourName, size, thickness)
 	if not holder then
 		return
 	end
 	holder:ClearAllChildren()
 	local colour = AimSettings.colour(colourName)
+	size, thickness = size or 1, thickness or 2
+	local gap, arm = math.max(2, 4 * size), math.max(3, 10 * size)
+	holder.Size = UDim2.fromOffset(80 * size + 20, 80 * size + 20)
 	if shape == "dot" or shape == "crossdot" then
-		piece(Vector2.new(if shape == "dot" then 6 else 4, if shape == "dot" then 6 else 4), Vector2.zero, colour, true)
+		local d = math.max(2, (if shape == "dot" then 6 * size else 2 * size) + thickness)
+		piece(Vector2.new(d, d), Vector2.zero, colour, true)
 	end
 	if shape == "cross" or shape == "crossdot" then
-		for _, d in ipairs({ Vector2.new(1, 0), Vector2.new(-1, 0), Vector2.new(0, 1), Vector2.new(0, -1) }) do
-			local along = d * 9 -- 4 px gap, 10 px arms
-			piece(if d.X ~= 0 then Vector2.new(10, 2) else Vector2.new(2, 10), along, colour, false)
+		for _, dir in ipairs({ Vector2.new(1, 0), Vector2.new(-1, 0), Vector2.new(0, 1), Vector2.new(0, -1) }) do
+			piece(if dir.X ~= 0 then Vector2.new(arm, thickness) else Vector2.new(thickness, arm), dir * (gap + arm / 2), colour, false)
 		end
 	elseif shape == "circle" then
-		local ring = UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, Parent = holder }, {
+		local r = math.max(8, 20 * size)
+		local ring = UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(r, r), BackgroundTransparency = 1, Parent = holder }, {
 			UiKit.make("UICorner", { CornerRadius = UDim.new(1, 0) }),
-			UiKit.make("UIStroke", { Color = colour, Thickness = 2 }),
+			UiKit.make("UIStroke", { Color = colour, Thickness = thickness }),
 		})
 		ring.Name = "Ring"
-		piece(Vector2.new(2, 2), Vector2.zero, colour, true)
+		piece(Vector2.new(thickness, thickness), Vector2.zero, colour, true)
 	end
 end
 
@@ -7278,12 +7289,12 @@ function Aim.apply(settings)
 	if camera then
 		camera.FieldOfView = current.fov
 	end
-	Aim.draw(current.reticle, current.reticleColour)
+	Aim.draw(current.reticle, current.reticleColour, current.reticleSize, current.reticleThickness)
 end
 
 function Aim.mount(gui)
 	holder = UiKit.make("Frame", { Name = "Reticle", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(40, 40), BackgroundTransparency = 1, Visible = false, ZIndex = 5, Parent = gui })
-	Aim.draw(current.reticle, current.reticleColour)
+	Aim.draw(current.reticle, current.reticleColour, current.reticleSize, current.reticleThickness)
 	RunService.RenderStepped:Connect(function()
 		local head = player.Character and player.Character:FindFirstChild("Head")
 		local camera = workspace.CurrentCamera
@@ -9098,7 +9109,7 @@ local function aimRows(current, redraw)
 		redraw()
 	end
 	UiKit.label({ LayoutOrder = 10, Text = "Aim", Font = UiKit.bold, Size = UDim2.new(1, -8, 0, 30), TextXAlignment = Enum.TextXAlignment.Left, Parent = settingsBody }, 24)
-	for i, row in ipairs({ { "sensitivity", "Aim sensitivity", "%.1fx" }, { "fov", "Field of view", "%d°" } }) do
+	for i, row in ipairs({ { "sensitivity", "Aim sensitivity", "%.1fx" }, { "fov", "Field of view", "%d°" }, { "reticleSize", "Reticle size", "%.1fx" }, { "reticleThickness", "Reticle thickness", "%d px" } }) do
 		local key, r = row[1], A[row[1]]
 		local value = AimSettings.clean(key, current[key]) or r[4]
 		local c = UiKit.make("Frame", { LayoutOrder = 10 + i, Size = UDim2.new(1, -8, 0, 64), BackgroundColor3 = UiKit.colors.card, Parent = settingsBody }, { UiKit.corner(12) })
@@ -9113,7 +9124,7 @@ local function aimRows(current, redraw)
 			set(key, value + r[3])
 		end)
 	end
-	local shapes = UiKit.make("Frame", { LayoutOrder = 13, Size = UDim2.new(1, -8, 0, 100), BackgroundColor3 = UiKit.colors.card, Parent = settingsBody }, { UiKit.corner(12) })
+	local shapes = UiKit.make("Frame", { LayoutOrder = 15, Size = UDim2.new(1, -8, 0, 100), BackgroundColor3 = UiKit.colors.card, Parent = settingsBody }, { UiKit.corner(12) })
 	UiKit.label({ Text = "Reticle", Size = UDim2.new(1, -16, 0, 34), Position = UDim2.fromOffset(16, 4), TextXAlignment = Enum.TextXAlignment.Left, Parent = shapes }, 22)
 	for i, id in ipairs(A.reticles) do
 		local on = current.reticle == id
@@ -9122,7 +9133,7 @@ local function aimRows(current, redraw)
 			set("reticle", id)
 		end)
 	end
-	local colours = UiKit.make("Frame", { LayoutOrder = 14, Size = UDim2.new(1, -8, 0, 100), BackgroundColor3 = UiKit.colors.card, Parent = settingsBody }, { UiKit.corner(12) })
+	local colours = UiKit.make("Frame", { LayoutOrder = 16, Size = UDim2.new(1, -8, 0, 100), BackgroundColor3 = UiKit.colors.card, Parent = settingsBody }, { UiKit.corner(12) })
 	UiKit.label({ Text = "Reticle colour", Size = UDim2.new(1, -16, 0, 34), Position = UDim2.fromOffset(16, 4), TextXAlignment = Enum.TextXAlignment.Left, Parent = colours }, 22)
 	for i, row in ipairs(A.colours) do
 		local on = current.reticleColour == row[1]

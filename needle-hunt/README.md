@@ -437,6 +437,7 @@ Settings, **Aim** (`client/Aim`, `Config.Aim`, checked by `shared/AimSettings` o
 - **Field of view** 60° to 100° (Roblox's default is 70°). Dashes and finds kick it and come back to yours.
 - **Reticle** in the middle of the screen in first person: Cross + dot, Dot, Cross, Circle or None,
   in white, red, yellow, green, cyan or pink, with a thin dark edge so it reads on any background.
+- **Reticle size** 0.5x to 2.5x and **reticle thickness** 1 to 6 pixels.
 Changes show at once and are saved with the player's profile. Preview: `previews/aim_settings.png`.
 
 ## Practice Yard: Time Trial

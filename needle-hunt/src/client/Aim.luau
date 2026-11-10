@@ -29,28 +29,33 @@ local function piece(size, pos, colour, round)
 	return f
 end
 
--- Draws the reticle: shape is crossdot | dot | cross | circle | none.
-function Aim.draw(shape, colourName)
+-- Draws the reticle: shape is crossdot | dot | cross | circle | none; size scales it (1 = normal)
+-- and thickness is its lines' width in pixels (the dot grows with it).
+function Aim.draw(shape, colourName, size, thickness)
 	if not holder then
 		return
 	end
 	holder:ClearAllChildren()
 	local colour = AimSettings.colour(colourName)
+	size, thickness = size or 1, thickness or 2
+	local gap, arm = math.max(2, 4 * size), math.max(3, 10 * size)
+	holder.Size = UDim2.fromOffset(80 * size + 20, 80 * size + 20)
 	if shape == "dot" or shape == "crossdot" then
-		piece(Vector2.new(if shape == "dot" then 6 else 4, if shape == "dot" then 6 else 4), Vector2.zero, colour, true)
+		local d = math.max(2, (if shape == "dot" then 6 * size else 2 * size) + thickness)
+		piece(Vector2.new(d, d), Vector2.zero, colour, true)
 	end
 	if shape == "cross" or shape == "crossdot" then
-		for _, d in ipairs({ Vector2.new(1, 0), Vector2.new(-1, 0), Vector2.new(0, 1), Vector2.new(0, -1) }) do
-			local along = d * 9 -- 4 px gap, 10 px arms
-			piece(if d.X ~= 0 then Vector2.new(10, 2) else Vector2.new(2, 10), along, colour, false)
+		for _, dir in ipairs({ Vector2.new(1, 0), Vector2.new(-1, 0), Vector2.new(0, 1), Vector2.new(0, -1) }) do
+			piece(if dir.X ~= 0 then Vector2.new(arm, thickness) else Vector2.new(thickness, arm), dir * (gap + arm / 2), colour, false)
 		end
 	elseif shape == "circle" then
-		local ring = UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, Parent = holder }, {
+		local r = math.max(8, 20 * size)
+		local ring = UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(r, r), BackgroundTransparency = 1, Parent = holder }, {
 			UiKit.make("UICorner", { CornerRadius = UDim.new(1, 0) }),
-			UiKit.make("UIStroke", { Color = colour, Thickness = 2 }),
+			UiKit.make("UIStroke", { Color = colour, Thickness = thickness }),
 		})
 		ring.Name = "Ring"
-		piece(Vector2.new(2, 2), Vector2.zero, colour, true)
+		piece(Vector2.new(thickness, thickness), Vector2.zero, colour, true)
 	end
 end
 
@@ -64,12 +69,12 @@ function Aim.apply(settings)
 	if camera then
 		camera.FieldOfView = current.fov
 	end
-	Aim.draw(current.reticle, current.reticleColour)
+	Aim.draw(current.reticle, current.reticleColour, current.reticleSize, current.reticleThickness)
 end
 
 function Aim.mount(gui)
 	holder = UiKit.make("Frame", { Name = "Reticle", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(40, 40), BackgroundTransparency = 1, Visible = false, ZIndex = 5, Parent = gui })
-	Aim.draw(current.reticle, current.reticleColour)
+	Aim.draw(current.reticle, current.reticleColour, current.reticleSize, current.reticleThickness)
 	RunService.RenderStepped:Connect(function()
 		local head = player.Character and player.Character:FindFirstChild("Head")
 		local camera = workspace.CurrentCamera

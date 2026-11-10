@@ -6,7 +6,11 @@ local Config = require(script.Parent.Config)
 local AimSettings = {}
 local A = Config.Aim
 
-AimSettings.defaults = { sensitivity = A.sensitivity[4], fov = A.fov[4], reticle = A.reticles[1], reticleColour = A.colours[1][1] }
+AimSettings.defaults = {
+	sensitivity = A.sensitivity[4], fov = A.fov[4], reticleSize = A.reticleSize[4], reticleThickness = A.reticleThickness[4],
+	reticle = A.reticles[1], reticleColour = A.colours[1][1],
+}
+local NUMBERS = { sensitivity = true, fov = true, reticleSize = true, reticleThickness = true }
 
 local function listed(list, value, at)
 	for _, row in ipairs(list) do
@@ -19,7 +23,7 @@ end
 
 -- The value to keep for `key`, or nil if it isn't an aim setting or the value isn't allowed.
 function AimSettings.clean(key, value)
-	if key == "sensitivity" or key == "fov" then
+	if NUMBERS[key] then
 		local r = A[key]
 		if type(value) ~= "number" or value ~= value then
 			return nil

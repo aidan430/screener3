@@ -332,6 +332,10 @@ class BoxOpenings(unittest.TestCase):
         for lo, hi, step, default in (sens, fov):
             self.assertTrue(lo < default < hi and step > 0)
         self.assertEqual(fov[3], 70, "Roblox's own field of view is the default")
+        for key in ("reticleSize", "reticleThickness"):
+            lo, hi, step, default = [float(v) for v in re.search(key + r" = \{ ([\d., ]+) \}", block).group(1).split(",")]
+            self.assertTrue(0 < lo <= default <= hi and step > 0, key)
+        self.assertIn("reticleThickness", (ROOT / "src" / "client" / "Screens2.luau").read_text(), "players can change it")
         self.assertIn('"none"', block, "the reticle can be hidden")
         aim = (SHARED / "AimSettings.luau").read_text()
         self.assertIn("math.clamp", aim)

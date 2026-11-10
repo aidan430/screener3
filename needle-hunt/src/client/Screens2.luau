@@ -105,7 +105,7 @@ local function aimRows(current, redraw)
 		redraw()
 	end
 	UiKit.label({ LayoutOrder = 10, Text = "Aim", Font = UiKit.bold, Size = UDim2.new(1, -8, 0, 30), TextXAlignment = Enum.TextXAlignment.Left, Parent = settingsBody }, 24)
-	for i, row in ipairs({ { "sensitivity", "Aim sensitivity", "%.1fx" }, { "fov", "Field of view", "%d°" } }) do
+	for i, row in ipairs({ { "sensitivity", "Aim sensitivity", "%.1fx" }, { "fov", "Field of view", "%d°" }, { "reticleSize", "Reticle size", "%.1fx" }, { "reticleThickness", "Reticle thickness", "%d px" } }) do
 		local key, r = row[1], A[row[1]]
 		local value = AimSettings.clean(key, current[key]) or r[4]
 		local c = UiKit.make("Frame", { LayoutOrder = 10 + i, Size = UDim2.new(1, -8, 0, 64), BackgroundColor3 = UiKit.colors.card, Parent = settingsBody }, { UiKit.corner(12) })
@@ -120,7 +120,7 @@ local function aimRows(current, redraw)
 			set(key, value + r[3])
 		end)
 	end
-	local shapes = UiKit.make("Frame", { LayoutOrder = 13, Size = UDim2.new(1, -8, 0, 100), BackgroundColor3 = UiKit.colors.card, Parent = settingsBody }, { UiKit.corner(12) })
+	local shapes = UiKit.make("Frame", { LayoutOrder = 15, Size = UDim2.new(1, -8, 0, 100), BackgroundColor3 = UiKit.colors.card, Parent = settingsBody }, { UiKit.corner(12) })
 	UiKit.label({ Text = "Reticle", Size = UDim2.new(1, -16, 0, 34), Position = UDim2.fromOffset(16, 4), TextXAlignment = Enum.TextXAlignment.Left, Parent = shapes }, 22)
 	for i, id in ipairs(A.reticles) do
 		local on = current.reticle == id
@@ -129,7 +129,7 @@ local function aimRows(current, redraw)
 			set("reticle", id)
 		end)
 	end
-	local colours = UiKit.make("Frame", { LayoutOrder = 14, Size = UDim2.new(1, -8, 0, 100), BackgroundColor3 = UiKit.colors.card, Parent = settingsBody }, { UiKit.corner(12) })
+	local colours = UiKit.make("Frame", { LayoutOrder = 16, Size = UDim2.new(1, -8, 0, 100), BackgroundColor3 = UiKit.colors.card, Parent = settingsBody }, { UiKit.corner(12) })
 	UiKit.label({ Text = "Reticle colour", Size = UDim2.new(1, -16, 0, 34), Position = UDim2.fromOffset(16, 4), TextXAlignment = Enum.TextXAlignment.Left, Parent = colours }, 22)
 	for i, row in ipairs(A.colours) do
 		local on = current.reticleColour == row[1]
