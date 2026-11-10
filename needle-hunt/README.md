@@ -294,7 +294,7 @@ model carries them itself.
 ## The needle collection
 
 Needles come out of boxes (opened with coins, keys from chests, or Robux) and trades. Each is
-one of **85 shapes** in one of **60 skins** (5,100 to collect), plus the one-and-only 1 of 1s.
+one of **85 shapes** in one of **110 skins** (9,350 to collect; the newest 50 are in `shared/NeedleSkins`, with two more patterns, fleck and wave), plus the one-and-only 1 of 1s.
 
 **Shapes** are graded. Every box uses the same shape odds, shown on the Boxes screen:
 

@@ -191,7 +191,7 @@ class Content(unittest.TestCase):
 
 RARITIES = rows(NEEDLES, "Needles.rarities = {")
 TYPES = rows((SHARED / "NeedleTypes.luau").read_text(), "return {")
-SKINS = rows(NEEDLES, "Needles.skins = {")
+SKINS = rows(NEEDLES, "Needles.skins = {") + rows((SHARED / "NeedleSkins.luau").read_text(), "return {")
 
 
 class Collection(unittest.TestCase):
@@ -224,7 +224,7 @@ class Collection(unittest.TestCase):
             if t["id"] != "sewing":  # the default shape
                 self.assertTrue(f'typeId == "{t["id"]}"' in look or f"\t{t['id']} = {{" in data, t["id"])
         for s in SKINS:
-            self.assertIn(s["pattern"], ("solid", "two", "stripes", "gradient", "rainbow", "bands", "sheen", "split", "tri", "candy"), s["id"])
+            self.assertIn(s["pattern"], ("solid", "two", "stripes", "gradient", "rainbow", "bands", "sheen", "split", "tri", "candy", "fleck", "wave"), s["id"])
 
     def test_novelty_shapes_are_graded_rarer_and_worth_more(self):
         grades = {"classic", "fancy", "exotic", "masterwork"}

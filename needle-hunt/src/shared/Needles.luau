@@ -1,12 +1,13 @@
 -- The needle collection. Everyone hunts the same plain needle (fair); when you find it, it turns
 -- out to be one TYPE (its shape) in one SKIN (its look), and it's yours to keep. Every type comes
--- in every skin, so the collection has types x skins entries (85 x 60 = 5,100, plus the 1 of 1s).
+-- in every skin, so the collection has types x skins entries (85 x 110 = 9,350, plus the 1 of 1s).
 --   value: what one is worth = type.value x the skin's rarity multiplier. A collection's value
 --   is the sum of the different needles in it (duplicates show as x2, x3 but add nothing).
 -- Skins are recipes, not pictures: colours, a material and a pattern, drawn by shared/NeedleLook.
 --   pattern: solid | two (eye/tip in the second colour) | stripes | gradient | rainbow | bands
 --   (thin bands of the second colour) | sheen (light running along it) | split (two halves) |
---   tri (three colours, the third on the eye) | candy (all its colours in turn)
+--   tri (three colours, the third on the eye) | candy (all its colours in turn) | fleck (spots of
+--   the other colours) | wave (the first two swirling). More skins live in shared/NeedleSkins.
 --   glow = true lights it up; sparkle = true adds twinkles. Add a skin or a type with a line.
 --   series = a box's own skin: only from that box (Config.Boxes), never from a find.
 -- Needles come from finds and from boxes (odds shown before opening), and can be traded.
@@ -108,6 +109,9 @@ Needles.skins = {
 	{ id = "cornucopiacopy", name = "Cornucopia Copy", rarity = "mythic", series = "harvest", colours = { { 255, 120, 40 }, { 220, 40, 60 } }, material = "Neon", pattern = "gradient", glow = true, sparkle = true },
 	{ id = "celestialcopy", name = "Celestial Copy", rarity = "mythic", series = "starlight", colours = { { 255, 255, 255 }, { 165, 255, 139 } }, material = "Fabric", pattern = "gradient", glow = true, sparkle = true },
 }
+for _, s in ipairs(require(script.Parent.NeedleSkins)) do -- 50 more: food, nature, materials, space, patterns
+	table.insert(Needles.skins, s)
+end
 
 local byType, bySkin, byRarity = {}, {}, {}
 for _, t in ipairs(Needles.types) do

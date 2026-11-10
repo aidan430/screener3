@@ -4,7 +4,7 @@
 -- novelty shapes (swordfish, firework, jackhammer, shooting star) keep that rule: their point (a
 -- bill, a nose cone, a chisel, a star) is at +X.
 -- The shaft is cut into segments so patterns (stripes, gradient, rainbow, bands, sheen, split,
--- tri, candy) show along it.
+-- tri, candy, fleck, wave) show along it.
 -- fat (1 = true to life) thickens it for display: the UI and pedestals use about 2, so a needle
 -- reads as a bold little trophy instead of a hairline.
 local Needles = require(script.Parent.Needles)
@@ -44,6 +44,10 @@ local function colourAt(skin, i, n)
 		return rgb(skin.colours[math.min(3, math.floor(t * 2) + 1)] or skin.colours[1])
 	elseif pattern == "candy" then -- every colour in turn
 		return rgb(skin.colours[(i - 1) % #skin.colours + 1])
+	elseif pattern == "fleck" then -- spots of the other colours, in a fixed scatter
+		return if (i * 5) % 7 < 2 then rgb(skin.colours[2 + i % math.max(1, #skin.colours - 1)] or skin.colours[1]) else a
+	elseif pattern == "wave" then -- the two colours swirling into each other
+		return a:Lerp(b, 0.5 + 0.5 * math.sin(t * math.pi * 5))
 	end
 	return a
 end
