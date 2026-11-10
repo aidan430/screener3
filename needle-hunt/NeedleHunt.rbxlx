@@ -425,8 +425,11 @@ Config.ArenaCentre = Vector3.new(0, 0, 600)
 -- `fullCountdown` seconds; with at least `minPlayers` (`studioMinPlayers` in Studio) a `countdown`
 -- starts and the game goes with whoever is on it. A game gets its own server (a private server of
 -- this place, server/GameServer), plays one round and sends everyone back to the lobby. In Studio,
--- where teleports don't work, the round is played in this server instead.
-Config.Pads = { count = 4, size = 10, minPlayers = 2, studioMinPlayers = 1, countdown = 60, fullCountdown = 5, radius = 6,
+-- where teleports don't work, the round is played in this server instead. Each is `radius` studs
+-- across the middle, `spacing` apart in a row at z = `z`. `portal`: the column's height, its slow
+-- breath (seconds), sparks a second when empty and when full, and its light's range.
+Config.Pads = { count = 4, size = 10, minPlayers = 2, studioMinPlayers = 1, countdown = 60, fullCountdown = 5, radius = 9, spacing = 22, z = 8,
+	portal = { height = 9, breathe = 2.5, rate = 12, fullRate = 45, light = 20 },
 	colours = { { 255, 206, 80 }, { 110, 200, 120 }, { 90, 160, 240 }, { 230, 120, 170 } } }
 
 -- A game's own server (server/GameServer): it waits up to `wait` seconds for the players a platform
@@ -4325,6 +4328,7 @@ local function tick()
 		local s = state[i]
 		local list = onPad(i)
 		pad.count.Text = #list .. "/" .. P.size
+		pad.fx.Rate = P.portal.rate + (P.portal.fullRate - P.portal.rate) * math.min(#list / P.size, 1) -- the portal livens up as it fills
 		if s.launching then
 			pad.status.Text = "Loading the game..."
 		elseif #list >= P.size then
@@ -4832,7 +4836,7 @@ return LeaderboardManager
 				<Properties>
 					<string name="Name">LobbyBuilder</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby, built once at Config.LobbyCentre: a wooden plaza in a field, the animated title sign
--- (a giant needle turns above it), the glowing Play pad with the next round's countdown, a
+-- (a giant needle turns above it), the 4 game platforms (server/PadPortal), a
 -- leaderboard that cycles through every board, the Daily Challenge board, a Shop stall and a
 -- Wardrobe (their prompts open those screens on the player's own UI), and haystacks round the edge.
 -- Paths, fountains, flowers, lamps, trees and the hay yard are in LobbyDecor.
@@ -4845,6 +4849,7 @@ local Config = require(Shared:WaitForChild("Config"))
 local Quests = require(Shared:WaitForChild("Quests"))
 local Rules = require(Shared:WaitForChild("Rules"))
 local MapKit = require(script.Parent.MapKit)
+local PadPortal = require(script.Parent.PadPortal)
 local LeaderboardManager = require(script.Parent.LeaderboardManager)
 local DataManager = require(script.Parent.DataManager)
 local Needles = require(Shared:WaitForChild("Needles"))
@@ -4968,7 +4973,7 @@ end
 
 function LobbyBuilder.spawnPoint(i)
 	local a = (i or 1) * 2.399 -- spread out round the pad
-	return CFrame.new(MapKit.at(ctx, math.cos(a) * 10, 3, 18 + math.sin(a) * 6))
+	return CFrame.new(MapKit.at(ctx, math.cos(a) * 10, 3, 25 + math.sin(a) * 3)) -- just behind the game platforms
 end
 
 function LobbyBuilder.build()
@@ -5000,16 +5005,7 @@ function LobbyBuilder.build()
 	TweenService:Create(needle, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = needle.Position + Vector3.new(0, 1.2, 0) }):Play()
 	-- the game platforms (server/GamePads runs them): stand on one to join its game
 	for i = 1, Config.Pads.count do
-		local x = (i - (Config.Pads.count + 1) / 2) * 14
-		local d = Config.Pads.radius * 2
-		local pad = MapKit.part(ctx, { Name = "GamePad" .. i, Shape = "Cylinder", Size = Vector3.new(0.4, d, d), CFrame = CFrame.new(MapKit.at(ctx, x, 0.6, 6)) * CFrame.Angles(0, 0, math.rad(90)), Color = Config.Pads.colours[(i - 1) % #Config.Pads.colours + 1], Material = "Neon", CanCollide = false })
-		local above = Instance.new("BillboardGui")
-		above.Size, above.StudsOffset, above.MaxDistance = UDim2.fromOffset(220, 120), Vector3.new(0, 5, 0), 120
-		above.Parent = pad
-		local name = text(above, { Size = UDim2.new(1, 0, 0.32, 0), Text = "GAME " .. i, TextStrokeTransparency = 0.3 })
-		local count = text(above, { Size = UDim2.new(1, 0, 0.4, 0), Position = UDim2.fromScale(0, 0.3), Text = "0/" .. Config.Pads.size, TextColor3 = Color3.fromRGB(255, 214, 90), TextStrokeTransparency = 0.3 })
-		local status = text(above, { Size = UDim2.new(1, 0, 0.28, 0), Position = UDim2.fromScale(0, 0.72), Text = "Stand here to play", TextColor3 = Color3.fromRGB(220, 226, 240), TextStrokeTransparency = 0.3 })
-		pads[i] = { part = pad, name = name, count = count, status = status, position = pad.Position }
+		pads[i] = PadPortal.build(ctx, i, (i - (Config.Pads.count + 1) / 2) * Config.Pads.spacing, Config.Pads.z, text)
 	end
 	-- the leaderboard: cycles through every board
 	local lb = board("Leaderboard", -34, 9, -8, 18, 16)
@@ -5095,7 +5091,7 @@ local PATHS = {
 	{ -59, 0, 8, 116 }, { 59, 0, 8, 116 }, -- walks along the booths
 	{ 0, -26, 40, 20 }, -- the Hall's square
 }
-local BEDS = { { -12, 62, 6, 10 }, { 12, 62, 6, 10 }, { -12, 40, 6, 8 }, { 12, 40, 6, 8 }, { -46, -36, 10, 6 }, { 46, -36, 10, 6 }, { -46, 16, 10, 6 }, { 46, 16, 10, 6 }, { -40, 82, 12, 4 }, { 40, 82, 12, 4 } }
+local BEDS = { { -12, 62, 6, 10 }, { 12, 62, 6, 10 }, { -12, 40, 6, 8 }, { 12, 40, 6, 8 }, { -46, -36, 10, 6 }, { 46, -36, 10, 6 }, { -49, 19, 10, 6 }, { 49, 19, 10, 6 }, { -40, 82, 12, 4 }, { 40, 82, 12, 4 } }
 local LAMPS = { { -9, 76 }, { 9, 76 }, { -9, 54 }, { 9, 54 }, { -9, 36 }, { 9, 36 }, { -9, -40 }, { 9, -40 }, { -20, -14 }, { 20, -14 }, { -50, -14 }, { 50, -14 }, { -54, 40 }, { 54, 40 }, { -54, -40 }, { 54, -40 } }
 local FOUNTAINS = { { -40, 72, { 196, 64, 50 } }, { 40, 72, { 76, 106, 170 } } }
 local HAYSTACKS = { { -48, -70, 7, 12 }, { 48, -72, 7, 12 }, { -76, -78, 5, 9 }, { 76, -76, 5, 9 }, { -22, -78, 5, 8 }, { 24, -79, 5, 8 } }
@@ -5150,7 +5146,7 @@ function LobbyDecor.build(ctx)
 	for _, p in ipairs(PATHS) do
 		MapKit.part(ctx, { Name = "Path", Size = Vector3.new(p[3], 0.12, p[4]), CFrame = CFrame.new(MapKit.at(ctx, p[1], 0.44, p[2])), Color = STONE, Material = "Cobblestone" })
 	end
-	MapKit.part(ctx, { Name = "PadPaving", Size = Vector3.new(62, 0.12, 18), CFrame = CFrame.new(MapKit.at(ctx, 0, 0.46, 6)), Color = STONE, Material = "Cobblestone" }) -- under the game platforms
+	MapKit.part(ctx, { Name = "PadPaving", Size = Vector3.new(96, 0.12, 26), CFrame = CFrame.new(MapKit.at(ctx, 0, 0.46, 8)), Color = STONE, Material = "Cobblestone" }) -- under the game platforms
 	for _, b in ipairs(BEDS) do
 		bed(ctx, b[1], b[2], b[3], b[4])
 	end
@@ -7089,6 +7085,78 @@ return OneOfOne
 			</Item>
 			<Item class="ModuleScript" referent="RBX00050">
 				<Properties>
+					<string name="Name">PadPortal</string>
+					<ProtectedString name="Source"><![CDATA[-- One lobby game platform (LobbyBuilder builds Config.Pads.count of them; server/GamePads runs them):
+-- a wide glowing disc in a darker rim, a shimmering portal column over it that breathes slowly, sparks
+-- drifting up through it (more of them as the platform fills: GamePads sets the rate), a soft light,
+-- and the board above it (game number, count, status). Gentle on purpose: nothing flashes.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local MapKit = require(script.Parent.MapKit)
+
+local PadPortal = {}
+
+local function upright(at, height, diameter) -- a cylinder standing up (its axis is its X)
+	return CFrame.new(at) * CFrame.Angles(0, 0, math.rad(90)), Vector3.new(height, diameter, diameter)
+end
+
+local function ghost(p) -- to look at only: nothing walks on, touches or aims at it
+	p.CanCollide, p.CanTouch, p.CanQuery, p.CastShadow = false, false, false, false
+	return p
+end
+
+-- Builds platform i at map-local (x, z); `text` is LobbyBuilder's label helper. Returns the
+-- platform's record: { part, name, count, status, position, fx }.
+function PadPortal.build(ctx, i, x, z, text)
+	local P, look = Config.Pads, Config.Pads.portal
+	local colour = P.colours[(i - 1) % #P.colours + 1]
+	local c3 = Color3.fromRGB(colour[1], colour[2], colour[3])
+	local d = P.radius * 2
+	local base = MapKit.at(ctx, x, 0, z)
+	local cf, size = upright(base + Vector3.new(0, 0.5, 0), 0.6, d + 2)
+	MapKit.part(ctx, { Name = "PadRim", Shape = "Cylinder", Size = size, CFrame = cf, Color = c3:Lerp(Color3.new(0, 0, 0), 0.55), Material = "Metal" })
+	cf, size = upright(base + Vector3.new(0, 0.62, 0), 0.6, d)
+	local pad = ghost(MapKit.part(ctx, { Name = "GamePad" .. i, Shape = "Cylinder", Size = size, CFrame = cf, Color = c3, Material = "Neon" }))
+	pad.CanQuery = true
+	-- the portal column: ForceField shimmers on its own; it breathes in and out
+	cf, size = upright(base + Vector3.new(0, 0.9 + look.height / 2, 0), look.height, d - 0.4)
+	local column = ghost(MapKit.part(ctx, { Name = "PortalColumn", Shape = "Cylinder", Size = size, CFrame = cf, Color = c3, Material = "ForceField", Transparency = 0.15 }))
+	TweenService:Create(column, TweenInfo.new(look.breathe, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Transparency = 0.55, Size = size + Vector3.new(0, 0.8, 0.8) }):Play()
+	-- a ring hovering at the top of the column, turning slowly
+	cf, size = upright(base + Vector3.new(0, 0.9 + look.height, 0), 0.25, d + 0.6)
+	local ring = ghost(MapKit.part(ctx, { Name = "PortalRing", Shape = "Cylinder", Size = size, CFrame = cf, Color = c3, Material = "Neon", Transparency = 0.6 }))
+	TweenService:Create(ring, TweenInfo.new(look.breathe, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { CFrame = cf + Vector3.new(0, -0.8, 0) }):Play()
+	-- sparks rising from the disc
+	local emitterPart = ghost(MapKit.part(ctx, { Name = "PortalSparks", Size = Vector3.new(d - 2, 0.1, d - 2), CFrame = CFrame.new(base + Vector3.new(0, 1, 0)), Transparency = 1 }))
+	local fx = Instance.new("ParticleEmitter")
+	fx.EmissionDirection, fx.Rate = Enum.NormalId.Top, look.rate
+	fx.Lifetime, fx.Speed, fx.SpreadAngle = NumberRange.new(1.6, 2.6), NumberRange.new(3, 6), Vector2.new(6, 6)
+	fx.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 0) })
+	fx.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
+	fx.Color = ColorSequence.new(c3, Color3.new(1, 1, 1))
+	fx.LightEmission, fx.Drag, fx.RotSpeed = 0.8, 0.6, NumberRange.new(-90, 90)
+	fx.Parent = emitterPart
+	local light = Instance.new("PointLight")
+	light.Color, light.Range, light.Brightness = c3, look.light, 1.4
+	light.Parent = emitterPart
+	-- the board above it
+	local above = Instance.new("BillboardGui")
+	above.Size, above.StudsOffsetWorldSpace, above.MaxDistance = UDim2.fromOffset(240, 130), Vector3.new(0, look.height + 4, 0), 140
+	above.Parent = pad
+	local name = text(above, { Size = UDim2.new(1, 0, 0.32, 0), Text = "GAME " .. i, TextStrokeTransparency = 0.3 })
+	local count = text(above, { Size = UDim2.new(1, 0, 0.4, 0), Position = UDim2.fromScale(0, 0.3), Text = "0/" .. P.size, TextColor3 = Color3.fromRGB(255, 214, 90), TextStrokeTransparency = 0.3 })
+	local status = text(above, { Size = UDim2.new(1, 0, 0.28, 0), Position = UDim2.fromScale(0, 0.72), Text = "Stand here to play", TextColor3 = Color3.fromRGB(220, 226, 240), TextStrokeTransparency = 0.3 })
+	return { part = pad, name = name, count = count, status = status, position = pad.Position, fx = fx }
+end
+
+return PadPortal
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00051">
+				<Properties>
 					<string name="Name">Powerups</string>
 					<ProtectedString name="Source"><![CDATA[-- Power-ups on the maps (Config.Powerups). When a round's search starts, glowing orbs float in
 -- random maze cells; walk into one to take it (the server checks you're in the round, it's the
@@ -7268,7 +7336,7 @@ return Powerups
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00051">
+			<Item class="ModuleScript" referent="RBX00052">
 				<Properties>
 					<string name="Name">Practice</string>
 					<ProtectedString name="Source"><![CDATA[-- The Time Trial in the Practice Yard (Config.Practice). From the lobby (the Practice stall, or
@@ -7523,7 +7591,7 @@ return Practice
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00052">
+			<Item class="ModuleScript" referent="RBX00053">
 				<Properties>
 					<string name="Name">PracticeYard</string>
 					<ProtectedString name="Source"><![CDATA[-- Builds one player's Practice Yard for a Time Trial (server/Practice, Config.Practice): a hedged
@@ -7664,7 +7732,7 @@ return PracticeYard
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00053">
+			<Item class="ModuleScript" referent="RBX00054">
 				<Properties>
 					<string name="Name">QuestManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Daily quests: three a day, the same for everyone (shared/Quests.forDay). Progress is saved;
@@ -7732,7 +7800,7 @@ return QuestManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00054">
+			<Item class="ModuleScript" referent="RBX00055">
 				<Properties>
 					<string name="Name">Requests</string>
 					<ProtectedString name="Source"><![CDATA[-- Small requests from players, checked on the server: a hint (Remotes.Hint) and saving their
@@ -7795,7 +7863,7 @@ return Requests
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00055">
+			<Item class="ModuleScript" referent="RBX00056">
 				<Properties>
 					<string name="Name">RewardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Every coin and XP point is given here, on the server: chests, places, playing a round to the
@@ -7941,7 +8009,7 @@ return RewardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00056">
+			<Item class="ModuleScript" referent="RBX00057">
 				<Properties>
 					<string name="Name">RoundExtras</string>
 					<ProtectedString name="Source"><![CDATA[-- What runs alongside a round's search, started and stopped together by server/RoundManager:
@@ -7975,7 +8043,7 @@ return RoundExtras
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00057">
+			<Item class="ModuleScript" referent="RBX00058">
 				<Properties>
 					<string name="Name">RoundManager</string>
 					<ProtectedString name="Source"><![CDATA[-- A round, all on the server, for a group of players (RoundManager.play: a game platform's
@@ -8270,7 +8338,7 @@ return RoundManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00058">
+			<Item class="ModuleScript" referent="RBX00059">
 				<Properties>
 					<string name="Name">ShopManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Cosmetics and purchases. With Haystack Coins: buy a cosmetic (Remotes.Shop "buy"), and wear
@@ -8527,7 +8595,7 @@ return ShopManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00059">
+			<Item class="ModuleScript" referent="RBX0005A">
 				<Properties>
 					<string name="Name">Streaks</string>
 					<ProtectedString name="Source"><![CDATA[-- Tag-out streaks, the Marked player and the tag-out feed (Config.Streak), called by server/Combat
@@ -8661,7 +8729,7 @@ return Streaks
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005A">
+			<Item class="ModuleScript" referent="RBX0005B">
 				<Properties>
 					<string name="Name">TradeManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Trading needles between two players in the lobby (Config.Trading). Remotes.Trade asks; the
@@ -8929,24 +8997,24 @@ return TradeManager
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerStorage" referent="RBX0005B">
+	<Item class="ServerStorage" referent="RBX0005C">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX0005C">
+	<Item class="StarterPlayer" referent="RBX0005D">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX0005D">
+		<Item class="StarterPlayerScripts" referent="RBX0005E">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX0005E">
+			<Item class="Folder" referent="RBX0005F">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX0005F">
+				<Item class="ModuleScript" referent="RBX00060">
 					<Properties>
 						<string name="Name">Aim</string>
 						<ProtectedString name="Source"><![CDATA[-- Your aim settings (Settings, Aim; Config.Aim): mouse sensitivity, field of view, and the reticle
@@ -9059,7 +9127,7 @@ return Aim
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00060">
+				<Item class="ModuleScript" referent="RBX00061">
 					<Properties>
 						<string name="Name">BoxReel</string>
 						<ProtectedString name="Source"><![CDATA[-- The box opening on your screen: a strip of needle cards slides along under a gold marker,
@@ -9162,7 +9230,7 @@ return BoxReel
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00061">
+				<Item class="ModuleScript" referent="RBX00062">
 					<Properties>
 						<string name="Name">BoxScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Boxes screen: each box with its price (coins; the dearer ones also Robux), a key button
@@ -9367,7 +9435,7 @@ return BoxScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00062">
+				<Item class="ModuleScript" referent="RBX00063">
 					<Properties>
 						<string name="Name">CombatFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Needle combat on your screen (server/Combat decides every hit):
@@ -9569,7 +9637,7 @@ return CombatFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00063">
+				<Item class="ModuleScript" referent="RBX00064">
 					<Properties>
 						<string name="Name">CooldownBars</string>
 						<ProtectedString name="Source"><![CDATA[-- POKE and THROW bars, top left under the DASH bar (client/DashFx), in the same style: each empties
@@ -9621,7 +9689,7 @@ return CooldownBars
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00064">
+				<Item class="ModuleScript" referent="RBX00065">
 					<Properties>
 						<string name="Name">DashFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Dashing (Config.Dash): C, B on a controller, or the Dash button on a phone. Your character
@@ -9742,7 +9810,7 @@ return DashFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00065">
+				<Item class="ModuleScript" referent="RBX00066">
 					<Properties>
 						<string name="Name">Effects</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback you can see and hear, on your own screen only: sounds, a burst of particles where a
@@ -9824,7 +9892,7 @@ return Effects
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00066">
+				<Item class="ModuleScript" referent="RBX00067">
 					<Properties>
 						<string name="Name">FeedFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The tag-out feed, top right beside the menu (server/Streaks sends every tag-out to everyone; Config.Streak.feed):
@@ -9908,7 +9976,7 @@ return FeedFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00067">
+				<Item class="ModuleScript" referent="RBX00068">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: your coins and level (with an XP bar) at the top left; the round's
@@ -10060,7 +10128,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00068">
+				<Item class="ModuleScript" referent="RBX00069">
 					<Properties>
 						<string name="Name">KeyHints</string>
 						<ProtectedString name="Source"><![CDATA[-- What each key does, for players on a keyboard: a small guide low on the left, above the Show off
@@ -10117,7 +10185,7 @@ return KeyHints
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00069">
+				<Item class="ModuleScript" referent="RBX0006A">
 					<Properties>
 						<string name="Name">LobbyUi</string>
 						<ProtectedString name="Source"><![CDATA[-- The lobby, on your screen:
@@ -10215,7 +10283,7 @@ return LobbyUi
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX0006A">
+				<Item class="LocalScript" referent="RBX0006B">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- Starts the client: the whole UI (UIController). The client only shows things and asks the
@@ -10225,7 +10293,7 @@ UIController.start()
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006B">
+				<Item class="ModuleScript" referent="RBX0006C">
 					<Properties>
 						<string name="Name">NeedleView</string>
 						<ProtectedString name="Source"><![CDATA[-- A needle in 3D inside the UI: a ViewportFrame with the needle (shared/NeedleLook) lit and
@@ -10277,7 +10345,7 @@ return NeedleView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006C">
+				<Item class="ModuleScript" referent="RBX0006D">
 					<Properties>
 						<string name="Name">PowerupFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Power-ups on your screen (server/Powerups decides; Remotes.Powerup says what you got):
@@ -10411,7 +10479,7 @@ return PowerupFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006D">
+				<Item class="ModuleScript" referent="RBX0006E">
 					<Properties>
 						<string name="Name">PracticeFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The Time Trial on your screen (server/Practice decides everything): the Practice window (your
@@ -10575,7 +10643,7 @@ return PracticeFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006E">
+				<Item class="ModuleScript" referent="RBX0006F">
 					<Properties>
 						<string name="Name">Results</string>
 						<ProtectedString name="Source"><![CDATA[-- The round's big moments on screen: the 3, 2, 1; CHEST OPENED! when you open one (coins, or a
@@ -10735,7 +10803,7 @@ return Results
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006F">
+				<Item class="ModuleScript" referent="RBX00070">
 					<Properties>
 						<string name="Name">Screens</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop and Inventory screens. The Shop sells cosmetics for Haystack Coins (needle skins,
@@ -10926,7 +10994,7 @@ return Screens
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00070">
+				<Item class="ModuleScript" referent="RBX00071">
 					<Properties>
 						<string name="Name">Screens2</string>
 						<ProtectedString name="Source"><![CDATA[-- The Quests, Leaderboard and Settings screens (Settings: sound and effects toggles, and Aim).
@@ -11123,7 +11191,7 @@ return Screens2
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00071">
+				<Item class="ModuleScript" referent="RBX00072">
 					<Properties>
 						<string name="Name">Screens3</string>
 						<ProtectedString name="Source"><![CDATA[-- The Collection screen: every needle you've found, by type, shown in 3D with its rarity, value
@@ -11260,7 +11328,7 @@ return Screens3
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00072">
+				<Item class="ModuleScript" referent="RBX00073">
 					<Properties>
 						<string name="Name">StreakFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Tag-outs and streaks on your screen (server/Combat decides them; Config.Streak):
@@ -11363,7 +11431,7 @@ return StreakFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00073">
+				<Item class="ModuleScript" referent="RBX00074">
 					<Properties>
 						<string name="Name">ThrowFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Throwing your needle on your screen (server/CombatThrow decides): Q, or the Throw button while
@@ -11481,7 +11549,7 @@ return ThrowFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00074">
+				<Item class="ModuleScript" referent="RBX00075">
 					<Properties>
 						<string name="Name">TradeScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Trade screen (server/TradeManager decides everything). Not trading: everyone in the server
@@ -11676,7 +11744,7 @@ return TradeScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00075">
+				<Item class="ModuleScript" referent="RBX00076">
 					<Properties>
 						<string name="Name">UIController</string>
 						<ProtectedString name="Source"><![CDATA[-- Puts the whole UI together: one ScreenGui with the HUD, the round moments (Results), and the
@@ -11835,7 +11903,7 @@ return UIController
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00076">
+				<Item class="ModuleScript" referent="RBX00077">
 					<Properties>
 						<string name="Name">UiKit</string>
 						<ProtectedString name="Source"><![CDATA[-- The UI's look in one place: a clean, modern dark-glass style with warm gold accents, big
@@ -11975,7 +12043,7 @@ return UiKit
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00077">
+				<Item class="ModuleScript" referent="RBX00078">
 					<Properties>
 						<string name="Name">ViewModel</string>
 						<ProtectedString name="Source"><![CDATA[-- First person: your arms and your needle drawn in front of the camera, posed and animated from
@@ -12183,7 +12251,7 @@ return ViewModel
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX00078">
+	<Item class="Workspace" referent="RBX00079">
 		<Properties>
 			<string name="Name">Workspace</string>
 		</Properties>

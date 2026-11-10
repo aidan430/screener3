@@ -98,6 +98,7 @@ local function tick()
 		local s = state[i]
 		local list = onPad(i)
 		pad.count.Text = #list .. "/" .. P.size
+		pad.fx.Rate = P.portal.rate + (P.portal.fullRate - P.portal.rate) * math.min(#list / P.size, 1) -- the portal livens up as it fills
 		if s.launching then
 			pad.status.Text = "Loading the game..."
 		elseif #list >= P.size then

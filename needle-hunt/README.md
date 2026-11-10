@@ -267,7 +267,8 @@ stepping stones), on the water tower (ladder), deep in the mazes; the Golden Che
 Hay Tower. Rounds last 5 minutes, with 18 power-ups about. Preview: `previews/hayfield_farm.png`.
 
 **Joining and the lobby:** nobody is pulled into a round; roam the lobby as long as you like. Four
-game platforms (`Config.Pads`, `server/GamePads`) each show how many are on them (3/10). At 10 the
+big game platforms (`Config.Pads`, `server/GamePads`), each a glowing portal (a shimmering
+column, a hovering ring and sparks that pick up as it fills: `server/PadPortal`), each show how many are on them (3/10). At 10 the
 game starts in 5 seconds; with at least 2 a 60-second countdown starts. PLAY puts you on the fullest
 platform with room. A starting game teleports its players to their own private server of this place
 (`server/GameServer` plays the round there, then sends everyone back to a lobby server). In Studio,

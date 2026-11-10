@@ -234,8 +234,11 @@ Config.ArenaCentre = Vector3.new(0, 0, 600)
 -- `fullCountdown` seconds; with at least `minPlayers` (`studioMinPlayers` in Studio) a `countdown`
 -- starts and the game goes with whoever is on it. A game gets its own server (a private server of
 -- this place, server/GameServer), plays one round and sends everyone back to the lobby. In Studio,
--- where teleports don't work, the round is played in this server instead.
-Config.Pads = { count = 4, size = 10, minPlayers = 2, studioMinPlayers = 1, countdown = 60, fullCountdown = 5, radius = 6,
+-- where teleports don't work, the round is played in this server instead. Each is `radius` studs
+-- across the middle, `spacing` apart in a row at z = `z`. `portal`: the column's height, its slow
+-- breath (seconds), sparks a second when empty and when full, and its light's range.
+Config.Pads = { count = 4, size = 10, minPlayers = 2, studioMinPlayers = 1, countdown = 60, fullCountdown = 5, radius = 9, spacing = 22, z = 8,
+	portal = { height = 9, breathe = 2.5, rate = 12, fullRate = 45, light = 20 },
 	colours = { { 255, 206, 80 }, { 110, 200, 120 }, { 90, 160, 240 }, { 230, 120, 170 } } }
 
 -- A game's own server (server/GameServer): it waits up to `wait` seconds for the players a platform

@@ -1,5 +1,5 @@
 -- The lobby, built once at Config.LobbyCentre: a wooden plaza in a field, the animated title sign
--- (a giant needle turns above it), the glowing Play pad with the next round's countdown, a
+-- (a giant needle turns above it), the 4 game platforms (server/PadPortal), a
 -- leaderboard that cycles through every board, the Daily Challenge board, a Shop stall and a
 -- Wardrobe (their prompts open those screens on the player's own UI), and haystacks round the edge.
 -- Paths, fountains, flowers, lamps, trees and the hay yard are in LobbyDecor.
@@ -12,6 +12,7 @@ local Config = require(Shared:WaitForChild("Config"))
 local Quests = require(Shared:WaitForChild("Quests"))
 local Rules = require(Shared:WaitForChild("Rules"))
 local MapKit = require(script.Parent.MapKit)
+local PadPortal = require(script.Parent.PadPortal)
 local LeaderboardManager = require(script.Parent.LeaderboardManager)
 local DataManager = require(script.Parent.DataManager)
 local Needles = require(Shared:WaitForChild("Needles"))
@@ -135,7 +136,7 @@ end
 
 function LobbyBuilder.spawnPoint(i)
 	local a = (i or 1) * 2.399 -- spread out round the pad
-	return CFrame.new(MapKit.at(ctx, math.cos(a) * 10, 3, 18 + math.sin(a) * 6))
+	return CFrame.new(MapKit.at(ctx, math.cos(a) * 10, 3, 25 + math.sin(a) * 3)) -- just behind the game platforms
 end
 
 function LobbyBuilder.build()
@@ -167,16 +168,7 @@ function LobbyBuilder.build()
 	TweenService:Create(needle, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = needle.Position + Vector3.new(0, 1.2, 0) }):Play()
 	-- the game platforms (server/GamePads runs them): stand on one to join its game
 	for i = 1, Config.Pads.count do
-		local x = (i - (Config.Pads.count + 1) / 2) * 14
-		local d = Config.Pads.radius * 2
-		local pad = MapKit.part(ctx, { Name = "GamePad" .. i, Shape = "Cylinder", Size = Vector3.new(0.4, d, d), CFrame = CFrame.new(MapKit.at(ctx, x, 0.6, 6)) * CFrame.Angles(0, 0, math.rad(90)), Color = Config.Pads.colours[(i - 1) % #Config.Pads.colours + 1], Material = "Neon", CanCollide = false })
-		local above = Instance.new("BillboardGui")
-		above.Size, above.StudsOffset, above.MaxDistance = UDim2.fromOffset(220, 120), Vector3.new(0, 5, 0), 120
-		above.Parent = pad
-		local name = text(above, { Size = UDim2.new(1, 0, 0.32, 0), Text = "GAME " .. i, TextStrokeTransparency = 0.3 })
-		local count = text(above, { Size = UDim2.new(1, 0, 0.4, 0), Position = UDim2.fromScale(0, 0.3), Text = "0/" .. Config.Pads.size, TextColor3 = Color3.fromRGB(255, 214, 90), TextStrokeTransparency = 0.3 })
-		local status = text(above, { Size = UDim2.new(1, 0, 0.28, 0), Position = UDim2.fromScale(0, 0.72), Text = "Stand here to play", TextColor3 = Color3.fromRGB(220, 226, 240), TextStrokeTransparency = 0.3 })
-		pads[i] = { part = pad, name = name, count = count, status = status, position = pad.Position }
+		pads[i] = PadPortal.build(ctx, i, (i - (Config.Pads.count + 1) / 2) * Config.Pads.spacing, Config.Pads.z, text)
 	end
 	-- the leaderboard: cycles through every board
 	local lb = board("Leaderboard", -34, 9, -8, 18, 16)

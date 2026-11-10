@@ -17,7 +17,7 @@ local PATHS = {
 	{ -59, 0, 8, 116 }, { 59, 0, 8, 116 }, -- walks along the booths
 	{ 0, -26, 40, 20 }, -- the Hall's square
 }
-local BEDS = { { -12, 62, 6, 10 }, { 12, 62, 6, 10 }, { -12, 40, 6, 8 }, { 12, 40, 6, 8 }, { -46, -36, 10, 6 }, { 46, -36, 10, 6 }, { -46, 16, 10, 6 }, { 46, 16, 10, 6 }, { -40, 82, 12, 4 }, { 40, 82, 12, 4 } }
+local BEDS = { { -12, 62, 6, 10 }, { 12, 62, 6, 10 }, { -12, 40, 6, 8 }, { 12, 40, 6, 8 }, { -46, -36, 10, 6 }, { 46, -36, 10, 6 }, { -49, 19, 10, 6 }, { 49, 19, 10, 6 }, { -40, 82, 12, 4 }, { 40, 82, 12, 4 } }
 local LAMPS = { { -9, 76 }, { 9, 76 }, { -9, 54 }, { 9, 54 }, { -9, 36 }, { 9, 36 }, { -9, -40 }, { 9, -40 }, { -20, -14 }, { 20, -14 }, { -50, -14 }, { 50, -14 }, { -54, 40 }, { 54, 40 }, { -54, -40 }, { 54, -40 } }
 local FOUNTAINS = { { -40, 72, { 196, 64, 50 } }, { 40, 72, { 76, 106, 170 } } }
 local HAYSTACKS = { { -48, -70, 7, 12 }, { 48, -72, 7, 12 }, { -76, -78, 5, 9 }, { 76, -76, 5, 9 }, { -22, -78, 5, 8 }, { 24, -79, 5, 8 } }
@@ -72,7 +72,7 @@ function LobbyDecor.build(ctx)
 	for _, p in ipairs(PATHS) do
 		MapKit.part(ctx, { Name = "Path", Size = Vector3.new(p[3], 0.12, p[4]), CFrame = CFrame.new(MapKit.at(ctx, p[1], 0.44, p[2])), Color = STONE, Material = "Cobblestone" })
 	end
-	MapKit.part(ctx, { Name = "PadPaving", Size = Vector3.new(62, 0.12, 18), CFrame = CFrame.new(MapKit.at(ctx, 0, 0.46, 6)), Color = STONE, Material = "Cobblestone" }) -- under the game platforms
+	MapKit.part(ctx, { Name = "PadPaving", Size = Vector3.new(96, 0.12, 26), CFrame = CFrame.new(MapKit.at(ctx, 0, 0.46, 8)), Color = STONE, Material = "Cobblestone" }) -- under the game platforms
 	for _, b in ipairs(BEDS) do
 		bed(ctx, b[1], b[2], b[3], b[4])
 	end
