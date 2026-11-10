@@ -86,6 +86,9 @@
         "Feed": {
           "$className": "RemoteEvent"
         },
+        "Queue": {
+          "$className": "RemoteFunction"
+        },
         "Announce": {
           "$className": "RemoteEvent"
         }

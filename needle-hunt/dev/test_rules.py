@@ -75,7 +75,7 @@ CHEST_COINS = [float(v) for v in re.search(r"coins = \{ (\d+), (\d+) \}", CONFIG
 
 class Rounds(unittest.TestCase):
     def test_timings_follow_the_brief(self):
-        self.assertTrue(10 <= ROUND["lobbyCountdown"] <= 20)
+        self.assertTrue(20 <= ROUND["lobbyCountdown"] <= 60, "time to roam the lobby once someone joins")
         self.assertTrue(120 <= ROUND["duration"] <= 300)
         self.assertLess(ROUND["speedDuration"], ROUND["duration"])
         self.assertEqual(ROUND["results"], 10)
@@ -89,10 +89,14 @@ class Rounds(unittest.TestCase):
         self.assertGreater(hard["coins"], easy["coins"], "harder rounds pay more")
 
     def test_modifiers_and_chests(self):
-        self.assertEqual({m["id"] for m in MODS}, {"speed", "lowlight", "keys", "brawl"})
+        self.assertEqual({m["id"] for m in MODS}, {"speed", "lowlight", "powers", "brawl"})
         self.assertIn("Config.GoldenChance", CONFIG)
         self.assertEqual(CHESTS["count"], 5, "five chests a map")
-        self.assertTrue(0 < CHESTS["keyChance"] < 1, "a chest holds coins or a key")
+        self.assertTrue(0 < CHESTS["powerupChance"] < 1, "a chest holds coins or a power-up")
+        spawner_roll = (SERVER / "ChestSpawner.luau").read_text()
+        self.assertNotIn("key =", spawner_roll, "chests never hold a key (keys open boxes of needles)")
+        self.assertNotIn("OneOfOne", (SERVER / "RoundManager.luau").read_text(), "chests never hold a needle, not even a 1 of 1")
+        self.assertIn("Powerups.give", (SERVER / "RoundManager.luau").read_text(), "a chest's power-up works at once")
         keys = re.findall(r'\{ id = "(\w+)", name = "\w+ Key"', CONFIG)
         self.assertEqual(set(keys), {b["id"] for b in rows(CONFIG, "Config.Boxes = {")} - {"heirloom"}, "a key for every box but the Heirloom Box (coins or Robux only)")
         spawner = (SERVER / "ChestSpawner.luau").read_text()
@@ -168,7 +172,7 @@ class Content(unittest.TestCase):
         self.assertIn(bundle, ids)
 
     def test_quests(self):
-        kinds = {"chest", "win", "play", "key", "hard", "tagout", "collect", "rare"}
+        kinds = {"chest", "win", "play", "power", "hard", "tagout", "collect", "rare"}
         ids = {i["id"] for i in ITEMS}
         self.assertTrue(all(q["kind"] in kinds for q in POOL))
         self.assertGreaterEqual(len({q["kind"] for q in POOL}), 3, "three different kinds a day")
@@ -396,6 +400,14 @@ class BoxOpenings(unittest.TestCase):
         self.assertIn('GetAttribute("Practicing")', (SERVER / "RoundManager.luau").read_text(), "a run isn't cut short by a round")
         self.assertIn("Combat.onDummy", (SERVER / "CombatThrow.luau").read_text())
         self.assertIn('"PracticeStall"', (SERVER / "LobbyBuilder.luau").read_text())
+
+    def test_players_choose_to_join_and_roam_the_lobby_meanwhile(self):
+        rounds = (SERVER / "RoundManager.luau").read_text()
+        self.assertIn('GetAttribute("Queued")', rounds, "only players who joined go in")
+        self.assertIn('phase("waiting", 0)', rounds, "no countdown until someone joins")
+        self.assertIn('SetAttribute("Queued", false)', rounds, "back to roaming after each round")
+        self.assertIn("pad.Touched", (SERVER / "JoinQueue.luau").read_text(), "the Play pad joins you")
+        self.assertIn("autoJoin = false", (SERVER / "DataManager.luau").read_text())
 
     def test_start_up_never_waits_on_one_system(self):
         main = (SERVER / "Main.server.luau").read_text()

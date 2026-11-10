@@ -20,7 +20,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local DataManager = require(script.Parent.DataManager)
 local ChestSpawner = require(script.Parent.ChestSpawner)
-local OneOfOne = require(script.Parent.OneOfOne)
+local Powerups = require(script.Parent.Powerups) -- a chest's power-up is used at once
 local RewardManager = require(script.Parent.RewardManager)
 local AntiCheat = require(script.Parent.AntiCheat)
 local MapKit = require(script.Parent.MapKit)
@@ -91,7 +91,8 @@ local function players()
 	for _, p in ipairs(Players:GetPlayers()) do
 		local d = DataManager.get(p)
 		local h = humanoid(p)
-		if d and d.settings.autoJoin and h and h.Health > 0 and not p:GetAttribute("Practicing") and #list < Config.Round.maxPlayers then -- a Time Trial isn't cut short
+		local wants = p:GetAttribute("Queued") == true or d and d.settings.autoJoin -- on the Play pad, PLAY pressed, or auto-join on
+		if d and wants and h and h.Health > 0 and not p:GetAttribute("Practicing") and #list < Config.Round.maxPlayers then -- a Time Trial isn't cut short
 			table.insert(list, p)
 		end
 	end
@@ -105,11 +106,10 @@ local function onOpen(player, chest, reward)
 	if not r or not r.participants[player] then
 		return
 	end
-	local unique = OneOfOne.roll(player) -- 1 in 12 (or 120) million, and only if nobody, anywhere, has it yet
-	if unique then
-		reward = { oneOfOne = unique }
+	local got = RewardManager.chest(player, reward) -- coins and/or a power-up: chests never hold a needle
+	if reward.powerup then
+		Powerups.give(player, reward.powerup)
 	end
-	local got = RewardManager.chest(player, reward)
 	r.chestsLeft -= 1
 	ReplicatedStorage:SetAttribute("ChestsLeft", r.chestsLeft)
 	Remotes.Found:FireAllClients({ userId = player.UserId, name = player.DisplayName, golden = chest.golden, position = chest.position, got = got, left = r.chestsLeft })
@@ -215,6 +215,7 @@ local function playRound()
 	for i, p in ipairs(Players:GetPlayers()) do
 		if round.participants[p] then
 			p:SetAttribute("InRound", false)
+			p:SetAttribute("Queued", false) -- back to roaming until you join again
 			move(p, LobbyBuilder.spawnPoint(i))
 		end
 	end
@@ -248,10 +249,20 @@ function RoundManager.start()
 		end)
 	end)
 	light(Maps.lobbyLighting)
+	require(script.Parent.JoinQueue).init() -- PLAY and the Play pad
 	task.spawn(function()
 		while true do
+			if #players() < Config.Round.minPlayers then -- nobody's joined: roam, no countdown
+				phase("waiting", 0)
+				repeat
+					task.wait(0.5)
+				until #players() >= Config.Round.minPlayers
+			end
 			phase("lobby", Config.Round.lobbyCountdown)
-			task.wait(Config.Round.lobbyCountdown)
+			local left = Config.Round.lobbyCountdown
+			while left > 0 and #players() >= Config.Round.minPlayers do
+				left -= task.wait(0.5)
+			end
 			if #players() >= Config.Round.minPlayers then
 				local ok, err = pcall(playRound)
 				if not ok then

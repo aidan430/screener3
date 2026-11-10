@@ -15,7 +15,7 @@ Quests.pool = {
 	{ id = "win1", kind = "win", n = 1, text = "Win a round", coins = 80, xp = 110 },
 	{ id = "play10", kind = "play", n = 10, text = "Play 10 rounds", coins = 120, xp = 180 },
 	{ id = "play5", kind = "play", n = 5, text = "Play 5 rounds", coins = 60, xp = 90 },
-	{ id = "key1", kind = "key", n = 1, text = "Find a key in a chest", coins = 120, xp = 160, cosmetic = "ti_eagle" },
+	{ id = "power1", kind = "power", n = 1, text = "Find a power-up in a chest", coins = 120, xp = 160, cosmetic = "ti_eagle" },
 	{ id = "tagout3", kind = "tagout", n = 3, text = "Tag out 3 players", coins = 120, xp = 160 },
 	{ id = "tagout8", kind = "tagout", n = 8, text = "Tag out 8 players", coins = 220, xp = 300 },
 	{ id = "hard1", kind = "hard", n = 1, text = "Complete a Hard round", coins = 100, xp = 150 },

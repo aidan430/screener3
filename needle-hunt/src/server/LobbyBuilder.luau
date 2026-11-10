@@ -19,6 +19,7 @@ local NeedleLook = require(Shared:WaitForChild("NeedleLook"))
 
 local LobbyBuilder = {}
 local ctx = nil
+local playPad = nil -- step on it to join the next round (server/RoundManager)
 
 -- A board at map-local (x, y, z) facing the plaza, with a SurfaceGui on its front (a part's
 -- Front face looks down its LookVector); returns the frame to write on.
@@ -128,6 +129,10 @@ function LobbyBuilder.showcase()
 	end)
 end
 
+function LobbyBuilder.playPad()
+	return playPad
+end
+
 function LobbyBuilder.spawnPoint(i)
 	local a = (i or 1) * 2.399 -- spread out round the pad
 	return CFrame.new(MapKit.at(ctx, math.cos(a) * 10, 3, 18 + math.sin(a) * 6))
@@ -162,6 +167,7 @@ function LobbyBuilder.build()
 	TweenService:Create(needle, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = needle.Position + Vector3.new(0, 1.2, 0) }):Play()
 	-- the Play pad
 	local pad = MapKit.part(ctx, { Name = "PlayPad", Shape = "Cylinder", Size = Vector3.new(0.4, 18, 18), CFrame = CFrame.new(MapKit.at(ctx, 0, 0.6, 6)) * CFrame.Angles(0, 0, math.rad(90)), Color = { 255, 206, 80 }, Material = "Neon", CanCollide = false })
+	playPad = pad
 	local above = Instance.new("BillboardGui")
 	above.Size, above.StudsOffset, above.AlwaysOnTop = UDim2.fromOffset(420, 120), Vector3.new(0, 4, 0), false -- low over the pad, clear of the title sign
 	above.Parent = pad
@@ -170,7 +176,7 @@ function LobbyBuilder.build()
 		while true do
 			local phase = ReplicatedStorage:GetAttribute("Phase")
 			local left = (ReplicatedStorage:GetAttribute("EndsAt") or 0) - workspace:GetServerTimeNow()
-			status.Text = if phase == "lobby" then "NEXT ROUND IN " .. Rules.clock(left) elseif phase == "search" then "ROUND IN PLAY: " .. Rules.clock(left) else "GET READY..."
+			status.Text = if phase == "waiting" then "STEP ON TO PLAY" elseif phase == "lobby" then "NEXT ROUND IN " .. Rules.clock(left) elseif phase == "search" then "ROUND IN PLAY: " .. Rules.clock(left) else "GET READY..."
 			task.wait(0.5)
 		end
 	end)

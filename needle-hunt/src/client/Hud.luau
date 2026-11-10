@@ -85,8 +85,25 @@ function Hud.mount(gui, open)
 		local text, why = Remotes.Hint:InvokeServer()
 		Hud.toast(text or why or "No hint.", if text then "good" else "bad")
 	end)
+	-- PLAY: join the next round (or step on the Play pad); press again to stay in the lobby
+	local play = UiKit.button("PLAY", UiKit.colors.green, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 124), Size = UDim2.fromOffset(240, 46), Parent = gui })
+	UiKit.autoScale(play)
+	play.Activated:Connect(function()
+		Effects.sound("click")
+		ReplicatedStorage.Remotes.Queue:InvokeServer(not player:GetAttribute("Queued"))
+	end)
+	local function showPlay()
+		local queued = player:GetAttribute("Queued") == true
+		play.Visible = not player:GetAttribute("InRound") and not player:GetAttribute("Practicing")
+		play.Text = if queued then "IN THE NEXT ROUND ✓" else "PLAY"
+		play.BackgroundColor3 = if queued then UiKit.colors.gold else UiKit.colors.green
+	end
+	for _, a in ipairs({ "Queued", "InRound", "Practicing" }) do
+		player:GetAttributeChangedSignal(a):Connect(showPlay)
+	end
+	showPlay()
 	-- toasts, under the banner
-	toasts = UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 130), Size = UDim2.fromOffset(440, 260), BackgroundTransparency = 1, Parent = gui }, {
+	toasts = UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 180), Size = UDim2.fromOffset(440, 260), BackgroundTransparency = 1, Parent = gui }, {
 		UiKit.make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
 	})
 	UiKit.autoScale(toasts)
@@ -98,9 +115,12 @@ function Hud.mount(gui, open)
 			local mods = ReplicatedStorage:GetAttribute("Modifiers") or ""
 			local golden = ReplicatedStorage:GetAttribute("Golden")
 			local inRound = player.Character and player.Character.PrimaryPart and (player.Character.PrimaryPart.Position - Config.ArenaCentre).Magnitude < 200
-			if phase == "lobby" then
+			if phase == "waiting" then
+				headline.Text, timer.Text = "Explore the lobby", ""
+				info.Text = "Press PLAY or step on the Play pad to start a round"
+			elseif phase == "lobby" then
 				headline.Text, timer.Text = "Next round in", Rules.clock(left)
-				info.Text = if #game:GetService("Players"):GetPlayers() == 1 then "Practice round: invite friends to race!" else "Get ready: 5 chests, first come first served!"
+				info.Text = if not player:GetAttribute("Queued") then "Press PLAY to join this round" elseif #game:GetService("Players"):GetPlayers() == 1 then "Practice round: invite friends to race!" else "Get ready: 5 chests, first come first served!"
 			elseif phase == "loading" or phase == "countdown" then
 				headline.Text, timer.Text = ReplicatedStorage:GetAttribute("MapName") or "Loading...", if phase == "countdown" then tostring(math.max(1, math.ceil(left))) else "..."
 				info.Text = (ReplicatedStorage:GetAttribute("Difficulty") or "") .. (if mods ~= "" then "  ·  " .. mods else "") .. (if golden then "  ·  ✦ GOLDEN CHEST ✦" else "")

@@ -4,7 +4,7 @@ local Config = {}
 
 -- Rounds (server/RoundManager). Seconds.
 Config.Round = {
-	lobbyCountdown = 15, -- in the lobby before a round
+	lobbyCountdown = 30, -- in the lobby, once someone has joined (Play pad or PLAY), before the round
 	loadCountdown = 3, -- 3, 2, 1 in the map before the round starts
 	duration = 180, -- a normal round
 	speedDuration = 90, -- a Speed Round
@@ -30,22 +30,24 @@ Config.ModifierChance = 0.35
 Config.Modifiers = {
 	{ id = "speed", name = "Speed Round", text = "Half the time!", weight = 35 },
 	{ id = "lowlight", name = "Low Light", text = "The lights are low", weight = 30 },
-	{ id = "keys", name = "Key Round", text = "Every chest holds a key", weight = 15 },
+	{ id = "powers", name = "Power Round", text = "Every chest holds a power-up", weight = 15 },
 	{ id = "brawl", name = "Brawl", text = "Tag-outs pay double", weight = 20 },
 }
-Config.GoldenChance = 0.08 -- one chest is a Golden Chest, with a Starlight Key inside
+Config.GoldenChance = 0.08 -- one chest is a Golden Chest: big coins and a power-up
 
 -- Chests (server/ChestSpawner): `count` on every map, worth fighting for. They go in the dead ends
 -- furthest from where players start, at least `spread` studs apart, each up on a perch `perch`
 -- studs high (min, max; never above the maze's walls) reached by jumping up a few steps; a Golden
 -- Chest stands on the tallest perch in the middle of a clearing. You must be up on the perch,
 -- within `reach`, and hold E for `hold` seconds; a poke or a throw stops you, and for `hitLock`
--- seconds after a hit you can't open one. Inside: a key with `keyChance` (which key by weight),
--- otherwise `coins` (min, max; times the difficulty's coins). A key opens one box of its kind in
--- the lobby (the Boxes screen), free.
+-- seconds after a hit you can't open one. Inside, never a needle: a power-up (one of
+-- Config.Powerups' kinds, used at once) with `powerupChance`, otherwise `coins` (min, max; times
+-- the difficulty's coins). The Golden Chest holds `goldenCoins` and a power-up. `keys` are the box
+-- keys players already have from before (chests no longer hold them; the Boxes screen still opens
+-- one with each).
 Config.Chests = {
 	count = 5, spread = 30, hold = 3, reach = 8, hitLock = 1.5, perch = { 4.5, 8 }, goldenPerch = 9.5,
-	keyChance = 0.3, coins = { 30, 90 }, goldenKey = "starlight",
+	powerupChance = 0.4, coins = { 30, 90 }, goldenCoins = { 200, 300 },
 	keys = {
 		{ id = "hay", name = "Hay Key", weight = 70 },
 		{ id = "harvest", name = "Harvest Key", weight = 25 },

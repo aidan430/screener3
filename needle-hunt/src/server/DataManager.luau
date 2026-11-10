@@ -42,7 +42,7 @@ function DataManager.fresh(saved)
 		trialBest = number(saved, "trialBest", 0), trialRuns = number(saved, "trialRuns", 0), -- Time Trial: best clear in tenths (0 = none)
 		chests = number(saved, "chests", 0), keys = {}, -- chests opened; keys from chests: [box id] = how many
 		collection = {}, showcase = "", -- needles kept: ["type:skin"] = how many; the one on show
-		settings = { music = true, sfx = true, reduceEffects = false, autoJoin = true },
+		settings = { music = true, sfx = true, reduceEffects = false, autoJoin = false }, -- autoJoin: in every round without the Play pad
 	}
 	if type(saved.weekly) == "table" then
 		d.weekly = { week = number(saved.weekly, "week", 0), wins = number(saved.weekly, "wins", 0) }

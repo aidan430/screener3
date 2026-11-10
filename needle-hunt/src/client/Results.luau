@@ -55,9 +55,22 @@ function Results.mount(gui, getProfile)
 	-- a chest opened: yours gets the popup; anyone else's, a note
 	Remotes.Found.OnClientEvent:Connect(function(m)
 		local got = m.got or {}
-		local what = if got.oneOfOne then "THE 1 OF 1, the " .. got.name elseif got.key then "a " .. got.name else Rules.commas(got.coins or 0) .. " coins"
+		local kind
+		for _, k in ipairs(Config.Powerups.kinds) do
+			if k.id == got.powerup then
+				kind = k
+			end
+		end
+		local parts = {}
+		if got.coins then
+			table.insert(parts, Rules.commas(got.coins) .. " coins")
+		end
+		if kind then
+			table.insert(parts, kind.name)
+		end
+		local what = table.concat(parts, " + ")
 		if m.userId ~= player.UserId then
-			Hud.toast(m.name .. " opened a " .. (if m.golden then "Golden Chest" else "chest") .. ": " .. what .. "!  (" .. m.left .. " left)", if got.key then "level" else "good")
+			Hud.toast(m.name .. " opened a " .. (if m.golden then "Golden Chest" else "chest") .. ": " .. what .. "!  (" .. m.left .. " left)", if m.golden then "level" else "good")
 			return
 		end
 		local profile = getProfile() or {}
@@ -65,16 +78,13 @@ function Results.mount(gui, getProfile)
 		for _, c in ipairs(art:GetChildren()) do
 			c:Destroy()
 		end
-		if got.oneOfOne then -- the needle itself, turning (it's nearly invisible: look closely)
-			NeedleView.make(art, got.type, got.skin, { Size = UDim2.new(1, -40, 1, 0), Position = UDim2.fromOffset(20, 0), ZIndex = 32 }, true)
-		else
-			local icon = UiKit.label({ Font = UiKit.bold, Text = if got.key then "🗝" else "●", TextColor3 = if got.key then keyColour(got.key) else UiKit.colors.gold, Size = UDim2.new(1, 0, 1, 0), ZIndex = 32, Parent = art }, 96)
-			UiKit.pop(icon, 0.4)
-		end
-		big.Text = if got.oneOfOne then "THE 1 OF 1!" elseif m.golden then "GOLDEN CHEST!" else "CHEST OPENED!"
-		kept.Text = if got.oneOfOne then got.name .. ": the only one there is" elseif got.key then got.name .. "!" else "+" .. what
-		kept.TextColor3 = if got.oneOfOne then Color3.fromRGB(225, 240, 255) elseif got.key then keyColour(got.key) else UiKit.colors.gold
-		line.Text = if got.oneOfOne then "Put it on show to carry it: one throw tags anyone out." elseif got.key then "Open a box with it in the lobby (Boxes)." else "Coins buy trails, titles, effects and boxes."
+		local colour = if kind then Color3.fromRGB(kind.colour[1], kind.colour[2], kind.colour[3]) else UiKit.colors.gold
+		local icon = UiKit.label({ Font = UiKit.bold, Text = if kind then kind.icon else "●", TextColor3 = colour, Size = UDim2.new(1, 0, 1, 0), ZIndex = 32, Parent = art }, 96)
+		UiKit.pop(icon, 0.4)
+		big.Text = if m.golden then "GOLDEN CHEST!" else "CHEST OPENED!"
+		kept.Text = "+" .. what
+		kept.TextColor3 = colour
+		line.Text = if kind then kind.name .. " is working now!" else "Coins buy trails, titles, effects and boxes."
 		keep.Text = m.left .. (if m.left == 1 then " chest left" else " chests left") .. " on this map  ·  XP at the end"
 		popup.Visible = true
 		UiKit.pop(popup, 0.5)

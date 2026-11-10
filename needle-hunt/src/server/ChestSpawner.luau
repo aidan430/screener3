@@ -197,12 +197,14 @@ local function build(ctx, ground, golden, index)
 	return chest
 end
 
--- What's inside: a key (which box it opens, by weight) or a handful of coins.
+-- What's inside, never a needle: a power-up, or a handful of coins; the Golden Chest, big coins
+-- and a power-up.
 local function roll(chest, round)
+	local power = Rules.pick(Config.Powerups.kinds, rng).id
 	if chest.golden then
-		return { key = CH.goldenKey }
-	elseif round.modifiers.keys or rng:NextNumber() < CH.keyChance then
-		return { key = Rules.pick(CH.keys, rng).id }
+		return { coins = math.floor(rng:NextInteger(CH.goldenCoins[1], CH.goldenCoins[2]) * round.diff.coins + 0.5), powerup = power }
+	elseif round.modifiers.powers or rng:NextNumber() < CH.powerupChance then
+		return { powerup = power }
 	end
 	return { coins = math.floor(rng:NextInteger(CH.coins[1], CH.coins[2]) * round.diff.coins + 0.5) }
 end

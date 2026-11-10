@@ -136,6 +136,16 @@ spawnOne = function() -- (declared above, so take() can call it)
 	end)
 end
 
+-- Uses a power-up straight away for `player` (one found in a chest, server/RoundManager).
+function Powerups.give(player, kindId)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	for _, kind in ipairs(P.kinds) do
+		if kind.id == kindId and root then
+			apply(player, kind, root)
+		end
+	end
+end
+
 -- Starts a round's power-ups (call as the search begins).
 function Powerups.start(ctx, round)
 	Powerups.stop()

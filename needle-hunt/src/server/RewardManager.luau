@@ -52,35 +52,28 @@ function RewardManager.grant(player, coins, xp, why)
 	return gained
 end
 
--- A chest opened: its coins (doubled with 2x Coins) or its key. Returns what the player got,
--- for their screen: { coins = n } or { key = id, name = "Harvest Key" }.
+-- A chest opened: its coins (doubled with 2x Coins) and/or its power-up (server/RoundManager uses
+-- it at once). Never a needle. Returns what the player got, for their screen:
+-- { coins = n, powerup = id, name = "Hay Boots" } (either or both).
 function RewardManager.chest(player, reward)
 	local got = {}
 	DataManager.update(player, function(d)
 		d.chests += 1
-		if reward.oneOfOne then
-			local kept = CollectionManager.addTo(d, Needles.split(reward.oneOfOne))
-			got = { oneOfOne = true, name = kept.name, type = kept.type, skin = kept.skin }
-		elseif reward.key then
-			d.keys[reward.key] = (d.keys[reward.key] or 0) + 1
-		end
 	end)
 	RewardManager.track(player, "chests", 1)
 	QuestManager.record(player, "chest", 1)
-	if reward.oneOfOne then
-		DataManager.save(player) -- the only one there is: saved straight away
-		require(script.Parent.OneOfOne).announce(player, reward.oneOfOne)
-	elseif reward.key then
-		QuestManager.record(player, "key", 1)
-		for _, k in ipairs(Config.Chests.keys) do
-			if k.id == reward.key then
-				got = { key = k.id, name = k.name }
-			end
-		end
-	elseif not reward.oneOfOne then
+	if reward.coins then
 		local coins = reward.coins * (if hasPass(player, "DoubleCoins") then 2 else 1)
 		RewardManager.grant(player, coins, 0, nil)
-		got = { coins = coins }
+		got.coins = coins
+	end
+	if reward.powerup then
+		QuestManager.record(player, "power", 1)
+		for _, k in ipairs(Config.Powerups.kinds) do
+			if k.id == reward.powerup then
+				got.powerup, got.name = k.id, k.name
+			end
+		end
 	end
 	LeaderboardManager.mark(player)
 	return got
