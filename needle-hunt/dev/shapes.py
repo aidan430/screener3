@@ -348,6 +348,8 @@ if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import shapes_more  # the owner's Gemini sheets, built
     shapes_more.add(sys.modules[__name__])
+    import shapes_heirloom  # the Heirloom collection, the grade above Masterwork
+    shapes_heirloom.add(sys.modules[__name__])
     names, sizes, part = list(OPS), [], 0
     while names:  # fill each file up to about 260 lines, so every one stays well under 300
         take, lines = [], 4

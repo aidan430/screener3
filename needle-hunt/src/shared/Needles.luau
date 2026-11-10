@@ -1,6 +1,6 @@
 -- The needle collection. Everyone hunts the same plain needle (fair); when you find it, it turns
 -- out to be one TYPE (its shape) in one SKIN (its look), and it's yours to keep. Every type comes
--- in every skin, so the collection has types x skins entries (85 x 110 = 9,350, plus the 1 of 1s).
+-- in every skin, so the collection has types x skins entries (94 x 110 = 10,340, plus the 1 of 1s).
 --   value: what one is worth = type.value x the skin's rarity multiplier. A collection's value
 --   is the sum of the different needles in it (duplicates show as x2, x3 but add nothing).
 -- Skins are recipes, not pictures: colours, a material and a pattern, drawn by shared/NeedleLook.
@@ -29,6 +29,7 @@ Needles.grades = {
 	{ id = "fancy", name = "Fancy", colour = { 110, 200, 160 } },
 	{ id = "exotic", name = "Exotic", colour = { 90, 170, 255 } },
 	{ id = "masterwork", name = "Masterwork", colour = { 255, 190, 60 } },
+	{ id = "heirloom", name = "Heirloom", colour = { 230, 160, 110 } }, -- the Heirloom collection, rarest of all
 }
 
 -- Types: the needle's shape, kept in shared/NeedleTypes (there are many).

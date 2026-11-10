@@ -90,4 +90,14 @@ return {
 	{ id = "moonwand", name = "Moon Wand", weight = 0.18, value = 104, grade = "masterwork" },
 	{ id = "treasurekey", name = "Treasure Key Needle", weight = 0.18, value = 90, grade = "masterwork" },
 	{ id = "lighthouse", name = "Lighthouse Needle", weight = 0.18, value = 92, grade = "masterwork" },
+	-- Heirloom: the special collection (dev/shapes_heirloom.py); The Eye of the Needle is the rarest shape of all
+	{ id = "eyeofneedle", name = "The Eye of the Needle", weight = 0.02, value = 260, grade = "heirloom" },
+	{ id = "treasuremap", name = "Treasure Map Needle", weight = 0.05, value = 150, grade = "heirloom" },
+	{ id = "heirloomtome", name = "Heirloom Tome", weight = 0.05, value = 155, grade = "heirloom" },
+	{ id = "starchart", name = "Star Chart Needle", weight = 0.05, value = 160, grade = "heirloom" },
+	{ id = "crystalcluster", name = "Crystal Cluster", weight = 0.05, value = 165, grade = "heirloom" },
+	{ id = "clockgear", name = "Clockwork Gear", weight = 0.05, value = 150, grade = "heirloom" },
+	{ id = "astrolabe", name = "Astrolabe Needle", weight = 0.05, value = 170, grade = "heirloom" },
+	{ id = "brasscompass", name = "Brass Compass", weight = 0.05, value = 158, grade = "heirloom" },
+	{ id = "heirloomkey", name = "Heirloom Key", weight = 0.05, value = 152, grade = "heirloom" },
 }

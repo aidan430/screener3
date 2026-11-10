@@ -227,16 +227,16 @@ class Collection(unittest.TestCase):
             self.assertIn(s["pattern"], ("solid", "two", "stripes", "gradient", "rainbow", "bands", "sheen", "split", "tri", "candy", "fleck", "wave"), s["id"])
 
     def test_novelty_shapes_are_graded_rarer_and_worth_more(self):
-        grades = {"classic", "fancy", "exotic", "masterwork"}
+        grades = {"classic", "fancy", "exotic", "masterwork", "heirloom"}
         self.assertTrue(all(t.get("grade") in grades for t in TYPES))
         classic = [t for t in TYPES if t["grade"] == "classic"]
         novel = [t for t in TYPES if t["grade"] != "classic"]
-        self.assertEqual(len(novel), 73, "73 novelty shapes")
+        self.assertEqual(len(novel), 82, "82 novelty shapes")
         shapes = "".join(f.read_text() for f in sorted(SHARED.glob("Shapes*.luau"))) + (SHARED / "NeedleLook.luau").read_text()
         for t in novel:
             self.assertTrue(f"\t{t['id']} = {{" in shapes or f'typeId == "{t["id"]}"' in shapes, t["id"] + " is drawn")
         top_classic = max(t["value"] for t in classic)
-        order = ["fancy", "exotic", "masterwork"]
+        order = ["fancy", "exotic", "masterwork", "heirloom"]
         for t in novel:
             self.assertGreater(t["value"], top_classic, t["id"] + " is worth more than any classic shape")
         for lo, hi in zip(order, order[1:]):  # each grade rarer and worth more than the one before
