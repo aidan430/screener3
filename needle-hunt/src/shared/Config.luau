@@ -35,12 +35,16 @@ Config.Modifiers = {
 }
 Config.GoldenChance = 0.08 -- one chest is a Golden Chest, with a Starlight Key inside
 
--- Chests (server/ChestSpawner): `count` on every map, in dead ends first and at least `spread`
--- studs apart. Hold E for `hold` seconds within `reach` studs to open one. Inside: a key with
--- `keyChance` (which key by weight), otherwise `coins` (min, max; times the difficulty's coins).
--- A key opens one box of its kind in the lobby (the Boxes screen), free.
+-- Chests (server/ChestSpawner): `count` on every map, worth fighting for. They go in the dead ends
+-- furthest from where players start, at least `spread` studs apart, each up on a perch `perch`
+-- studs high (min, max; never above the maze's walls) reached by jumping up a few steps; a Golden
+-- Chest stands on the tallest perch in the middle of a clearing. You must be up on the perch,
+-- within `reach`, and hold E for `hold` seconds; a poke or a throw stops you, and for `hitLock`
+-- seconds after a hit you can't open one. Inside: a key with `keyChance` (which key by weight),
+-- otherwise `coins` (min, max; times the difficulty's coins). A key opens one box of its kind in
+-- the lobby (the Boxes screen), free.
 Config.Chests = {
-	count = 5, spread = 30, hold = 1.5, reach = 10,
+	count = 5, spread = 30, hold = 3, reach = 8, hitLock = 1.5, perch = { 4.5, 8 }, goldenPerch = 9.5,
 	keyChance = 0.3, coins = { 30, 90 }, goldenKey = "starlight",
 	keys = {
 		{ id = "hay", name = "Hay Key", weight = 70 },

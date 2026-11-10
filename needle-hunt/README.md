@@ -181,8 +181,8 @@ Earned board.
 3. **Countdown:** up to 10 players (`Config.Round.maxPlayers`) are moved in and held still for 3, 2, 1.
    Anyone beyond 10 waits in the lobby for the next round.
 4. **The round:** 3 minutes (90 seconds in a Speed Round).
-   - Find a chest and hold E (or the on-screen button) for 1.5 seconds to open it. First come,
-     first served: once it's open, it's empty.
+   - Find a chest, climb up to it and hold E (or the on-screen button) for 3 seconds to open it.
+     First come, first served: once it's open, it's empty. A poke or a throw stops you.
    - Inside: coins (30 to 90, times the difficulty), or a key (30%): a Hay Key (70%), Harvest Key
      (25%) or Starlight Key (5%). A key opens one of that box in the lobby, free.
    - Poke, throw and dash (see Needle combat). Tagged out, you're back in 5 seconds.
@@ -190,8 +190,14 @@ Earned board.
 5. **Results:** places by chests opened, then tag-outs, then coins collected. Places pay coins
    (60 / 40 / 25 / 10, times the difficulty) and match XP. Then everyone goes back to the lobby.
 
-**Chests** go in the maze's dead ends first, then any other recorded spot, at least 30 studs apart,
-each checked for a real floor and room round it. The banner counts chests left; everyone sees
+**Chests are made to be fought over:**
+- They go in the dead ends furthest from where players start (a little shuffled each round), then
+  any other recorded spot, at least 30 studs apart, each checked for a real floor and room.
+- Each stands on a stone perch 4.5 to 8 studs high (never above the walls), with two or three steps
+  up from the open side: easy jumps, but you're in plain sight while you climb.
+- A Golden Chest stands on the tallest perch (9.5 studs), in the middle of a clearing.
+- You have to be up on the perch to open it (reaching from below doesn't count), and holding takes
+  3 seconds. Any hit cancels the hold, and for 1.5 seconds after a hit you can't open one. The banner counts chests left; everyone sees
 who opened one and what they got. All the numbers are in `Config.Chests`.
 
 **Anti-exploit:**

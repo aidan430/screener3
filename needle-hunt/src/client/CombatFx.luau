@@ -2,7 +2,8 @@
 --   click or tap with the Needle out to poke the nearest player in front of you (Remotes.Poke;
 --   throwing it is client/ThrowFx);
 --   your hearts, top left under your level, while you're in a round's search;
---   a sparkle and a soft "POP!" where a poke lands; a gentle red edge when you're hit (no flash);
+--   a sparkle and a soft "POP!" where a poke lands; a gentle red edge when you're hit (no flash),
+--   and a hit stops any chest you're holding open;
 --   F (or the Inspect button while the Needle is out) to inspect it: it lifts and turns in your
 --   hand for everyone to see (Remotes.Inspect).
 local ContextActionService = game:GetService("ContextActionService")
@@ -112,6 +113,18 @@ function CombatFx.start(gui)
 		pop(m.position, if m.hearts == 0 then UiKit.colors.gold elseif (m.amount or 1) > 1 then Color3.fromRGB(255, 150, 60) else Color3.fromRGB(255, 120, 150), m.amount or 1)
 		Effects.sound("click", 0.8)
 		if m.to == player.UserId then
+			-- a hit knocks you off a chest: any hold in progress stops, and starts again from empty
+			local arena = workspace:FindFirstChild("Arena")
+			for _, prompt in ipairs(arena and arena:GetDescendants() or {}) do
+				if prompt:IsA("ProximityPrompt") and prompt:GetAttribute("Chest") and not prompt:GetAttribute("Opened") then
+					prompt.Enabled = false
+					task.delay(Config.Chests.hitLock, function()
+						if prompt.Parent and not prompt:GetAttribute("Opened") then
+							prompt.Enabled = true
+						end
+					end)
+				end
+			end
 			local stroke = edge:FindFirstChildOfClass("UIStroke")
 			stroke.Thickness, stroke.Transparency = 18, 0.3
 			UiKit.ease(stroke, 0.8, { Transparency = 1 })

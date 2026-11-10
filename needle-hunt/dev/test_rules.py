@@ -96,8 +96,23 @@ class Rounds(unittest.TestCase):
         keys = re.findall(r'\{ id = "(\w+)", name = "\w+ Key"', CONFIG)
         self.assertEqual(set(keys), {b["id"] for b in rows(CONFIG, "Config.Boxes = {")}, "a key for every box")
         spawner = (SERVER / "ChestSpawner.luau").read_text()
-        for check in ("canOpen", "CH.reach", "chest.opened", "AntiCheat.flagged"):
+        for check in ("canOpen", "CH.reach", "chest.opened", "AntiCheat.flagged", "chest.top", "CH.hitLock"):
             self.assertIn(check, spawner, "the server checks every chest opening")
+
+    def test_chests_are_hard_to_reach(self):
+        c = CONFIG[CONFIG.index("Config.Chests = {"):]
+        c = c[: c.index("\n}")]
+        lo, hi = [float(v) for v in re.search(r"perch = \{ ([\d.]+), ([\d.]+) \}", c).groups()]
+        golden = float(re.search(r"goldenPerch = ([\d.]+)", c).group(1))
+        self.assertGreater(lo, 4, "every chest is up on a perch you have to climb")
+        self.assertGreater(golden, hi, "the Golden Chest stands tallest")
+        self.assertGreaterEqual(CHESTS["hold"], 2.5, "opening takes long enough to be interrupted")
+        self.assertGreater(CHESTS["hitLock"], 0)
+        spawner = (SERVER / "ChestSpawner.luau").read_text()
+        self.assertIn("nearestSpawn", spawner, "chests go far from the spawns")
+        self.assertIn("3.2 * (steps + 1)", spawner, "every jump up a perch stays easy")
+        self.assertIn('"HitAt"', (SERVER / "Combat.luau").read_text())
+        self.assertIn('GetAttribute("Chest")', (ROOT / "src" / "client" / "CombatFx.luau").read_text(), "a hit cancels the hold")
 
 
 class Rewards(unittest.TestCase):

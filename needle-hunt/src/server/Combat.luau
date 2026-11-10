@@ -165,6 +165,7 @@ function Combat.damage(attacker, target, amount)
 	attacker:SetAttribute("SafeUntil", 0) -- attacking ends your own safe time
 	local hearts = math.max(0, (target:GetAttribute("Hearts") or C.hearts) - amount)
 	target:SetAttribute("Hearts", hearts)
+	target:SetAttribute("HitAt", workspace:GetServerTimeNow()) -- a hit stops a chest opening (server/ChestSpawner)
 	lastHit[target] = os.clock()
 	Remotes.Hit:FireAllClients({ from = attacker.UserId, to = target.UserId, hearts = hearts, position = root.Position, amount = amount })
 	if hearts == 0 then

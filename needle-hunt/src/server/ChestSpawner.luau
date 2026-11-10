@@ -1,7 +1,8 @@
--- The chests each round (Config.Chests). They go in the maze's dead ends first (then any checked
--- spot), spread apart, each on a real floor with room round it. Hold E (or tap) to open one; the
--- server checks you're in the round's search, close enough, not flagged, and that nobody opened it
--- first. What's inside is rolled here: coins, or a key that opens a box in the lobby. A Golden
+-- The chests each round (Config.Chests), made to be fought over. They go in the dead ends furthest
+-- from the spawns (then any checked spot), spread apart, each up on a perch you jump up to; a Golden
+-- Chest stands tallest, in a clearing. Hold E (or tap) for a few seconds to open one; the server
+-- checks you're in the round's search, up on the perch and close enough, not just hit, not flagged,
+-- and that nobody opened it first. What's inside is rolled here: coins, or a key that opens a box in the lobby. A Golden
 -- Chest (Config.GoldenChance) always holds a Starlight Key, and a Key Round puts a key in every
 -- chest. The lid swings open for everyone and the chest stays, empty, for the rest of the round.
 local RunService = game:GetService("RunService")
@@ -43,31 +44,51 @@ local function validSpot(pos, ctx)
 	return hit.Position
 end
 
--- Where the chests go: dead ends first, then the map's other spots, at least CH.spread apart.
-local function places(ctx)
+local function nearestSpawn(ctx, pos)
+	local best = math.huge
+	for _, cf in ipairs(ctx.spawns) do
+		local p = if typeof(cf) == "CFrame" then cf.Position else cf
+		best = math.min(best, (Vector3.new(p.X, pos.Y, p.Z) - pos).Magnitude)
+	end
+	return best
+end
+
+-- Where the chests go: the dead ends furthest from the spawns first (a little shuffled, so it's
+-- never the same five), then the map's other spots, at least CH.spread apart. A Golden Chest goes
+-- in a clearing first. Returns the ground positions and, if any, which one is the golden one.
+local function places(ctx, golden)
+	local chosen, goldenAt = {}, nil
+	local rooms = ctx.maze and ctx.maze.rooms or {}
+	if golden and #rooms > 0 then
+		local room = rooms[rng:NextInteger(1, #rooms)]
+		local ground = validSpot(MapKit.at(ctx, room.x, 0, room.z), ctx)
+		if ground then
+			table.insert(chosen, ground)
+			goldenAt = 1
+		end
+	end
 	local candidates = {}
 	for _, cell in ipairs(ctx.maze and ctx.maze.deadEnds or {}) do
-		table.insert(candidates, MapKit.at(ctx, cell.x, 0, cell.z))
+		local pos = MapKit.at(ctx, cell.x, 0, cell.z)
+		table.insert(candidates, { pos = pos, far = nearestSpawn(ctx, pos) * rng:NextNumber(0.75, 1.25) })
 	end
+	table.sort(candidates, function(a, b)
+		return a.far > b.far
+	end)
 	local others = {}
 	for _, spot in ipairs(ctx.spots) do
-		table.insert(others, spot.cf.Position)
-	end
-	for i = #candidates, 2, -1 do -- shuffled, so they're somewhere new each time
-		local j = rng:NextInteger(1, i)
-		candidates[i], candidates[j] = candidates[j], candidates[i]
+		table.insert(others, { pos = spot.cf.Position })
 	end
 	for i = #others, 2, -1 do
 		local j = rng:NextInteger(1, i)
 		others[i], others[j] = others[j], others[i]
 	end
 	table.move(others, 1, #others, #candidates + 1, candidates)
-	local chosen = {}
-	for _, pos in ipairs(candidates) do
-		local ground = validSpot(pos, ctx)
+	for _, c in ipairs(candidates) do
+		local ground = validSpot(c.pos, ctx)
 		local apart = ground ~= nil
-		for _, c in ipairs(chosen) do
-			if apart and (c - ground).Magnitude < CH.spread then
+		for _, g in ipairs(chosen) do
+			if apart and (g - ground).Magnitude < CH.spread then
 				apart = false
 			end
 		end
@@ -78,7 +99,50 @@ local function places(ctx)
 			end
 		end
 	end
-	return chosen
+	if golden and not goldenAt and #chosen > 0 then
+		goldenAt = rng:NextInteger(1, #chosen)
+	end
+	return chosen, goldenAt
+end
+
+local function blocked(ctx, centre, size)
+	local overlap = OverlapParams.new()
+	overlap.FilterType, overlap.FilterDescendantsInstances = Enum.RaycastFilterType.Include, { ctx.model }
+	for _, part in ipairs(workspace:GetPartBoundsInBox(CFrame.new(centre), size, overlap)) do
+		if part.CanCollide then
+			return true
+		end
+	end
+	return false
+end
+
+-- A perch: a stone pillar with the chest on top, and a few steps up to it from the open side of the
+-- dead end (the way with the most room). Each step is an easy jump; the last is onto the pillar.
+-- Returns the top, where the chest stands.
+local function perch(ctx, ground, height)
+	local open, room = Vector3.new(1, 0, 0), -1
+	local params = RaycastParams.new()
+	params.FilterType, params.FilterDescendantsInstances = Enum.RaycastFilterType.Include, { ctx.model }
+	for _, dir in ipairs({ Vector3.new(1, 0, 0), Vector3.new(-1, 0, 0), Vector3.new(0, 0, 1), Vector3.new(0, 0, -1) }) do
+		local hit = workspace:Raycast(ground + Vector3.new(0, 3, 0), dir * 40, params)
+		local d = if hit then hit.Distance else 40
+		if d > room then
+			open, room = dir, d
+		end
+	end
+	local steps = math.clamp(math.floor((room - 4) / 3.4), 1, if height > 6.5 then 3 else 2)
+	height = math.min(height, 3.2 * (steps + 1)) -- every jump stays easy
+	local stone = { 128, 120, 108 }
+	MapKit.part(ctx, { Name = "Perch", Size = Vector3.new(6, height, 6), CFrame = CFrame.new(ground + Vector3.new(0, height / 2, 0)), Color = stone, Material = "Slate" })
+	MapKit.part(ctx, { Name = "PerchCap", Size = Vector3.new(6.6, 0.4, 6.6), CFrame = CFrame.new(ground + Vector3.new(0, height + 0.2, 0)), Color = { 150, 142, 128 }, Material = "Slate" })
+	for i = steps, 1, -1 do -- the highest step stands nearest the pillar
+		local top = height * i / (steps + 1)
+		local at = ground + open * (3 + 3.4 * (steps + 1 - i))
+		if not blocked(ctx, at + Vector3.new(0, top / 2 + 0.2, 0), Vector3.new(2.8, math.max(0.4, top - 0.4), 2.8)) then
+			MapKit.part(ctx, { Name = "Step", Size = Vector3.new(3.2, top, 3.2), CFrame = CFrame.new(at + Vector3.new(0, top / 2, 0)) * CFrame.Angles(0, rng:NextNumber() * 0.3, 0), Color = { 110, 102, 92 }, Material = "Slate" })
+		end
+	end
+	return ground + Vector3.new(0, height + 0.4, 0)
 end
 
 -- A wooden chest with metal bands; the lid hinges at the back.
@@ -102,6 +166,7 @@ local function build(ctx, ground, golden, index)
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText, prompt.ObjectText = "Open", if golden then "Golden Chest" else "Chest"
 	prompt.HoldDuration, prompt.MaxActivationDistance, prompt.RequiresLineOfSight = CH.hold, CH.reach, false
+	prompt:SetAttribute("Chest", true) -- client/CombatFx cancels a hold when you're hit
 	prompt.Parent = body
 	if RunService:IsStudio() and Config.Testing.revealChests then -- Studio testing only
 		local h = Instance.new("Highlight")
@@ -109,7 +174,7 @@ local function build(ctx, ground, golden, index)
 		h.Parent = model
 	end
 	model.Parent = folder
-	local chest = { model = model, lid = lid, hinge = hinge, position = body.Position, golden = golden, opened = false, index = index, prompt = prompt }
+	local chest = { model = model, lid = lid, hinge = hinge, position = body.Position, top = ground.Y, golden = golden, opened = false, index = index, prompt = prompt }
 	prompt.Triggered:Connect(function(player)
 		ChestSpawner.open(player, chest)
 	end)
@@ -133,9 +198,16 @@ function ChestSpawner.open(player, chest)
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	if not root or (root.Position - chest.position).Magnitude > CH.reach + 3 then
 		return
+	elseif root.Position.Y < chest.top + 1.5 then -- reaching up from the ground doesn't count
+		ReplicatedStorage.Remotes.Notify:FireClient(player, { text = "Climb up to it first!", tone = "bad" })
+		return
+	elseif workspace:GetServerTimeNow() - (player:GetAttribute("HitAt") or -100) < CH.hitLock then
+		ReplicatedStorage.Remotes.Notify:FireClient(player, { text = "You were hit! Hold it again.", tone = "bad" })
+		return
 	end
 	chest.opened = true
 	chest.prompt.Enabled = false
+	chest.prompt:SetAttribute("Opened", true)
 	local swing = chest.hinge * CFrame.Angles(math.rad(-105), 0, 0) * CFrame.new(0, 0.3, -1.15)
 	TweenService:Create(chest.lid, TweenInfo.new(0.5, Enum.EasingStyle.Back), { CFrame = swing }):Play()
 	ChestSpawner.onOpen(player, chest, roll(chest, ChestSpawner.round))
@@ -148,10 +220,11 @@ function ChestSpawner.spawn(ctx, round)
 	folder = Instance.new("Folder")
 	folder.Name = "Chests"
 	folder.Parent = ctx.model
-	local spots = places(ctx)
-	local goldenAt = if round.golden then rng:NextInteger(1, math.max(1, #spots)) else 0
+	local spots, goldenAt = places(ctx, round.golden)
+	local cap = (ctx.maze and ctx.maze.height or 10) - 1 -- never above the walls
 	for i, ground in ipairs(spots) do
-		table.insert(chests, build(ctx, ground, i == goldenAt, i))
+		local h = if i == goldenAt then CH.goldenPerch else rng:NextNumber(CH.perch[1], CH.perch[2])
+		table.insert(chests, build(ctx, perch(ctx, ground, math.min(h, cap)), i == goldenAt, i))
 	end
 	return chests
 end
