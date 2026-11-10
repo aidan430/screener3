@@ -40,7 +40,7 @@ local function throw(player, aim)
 	local head = player.Character and player.Character:FindFirstChild("Head")
 	if typeof(aim) ~= "Vector3" or aim.Magnitude < 0.5 or aim.Magnitude > 2 or aim ~= aim then
 		return -- not a direction (or not a number)
-	elseif not tool or not head or not Combat.inRound(player) or player:GetAttribute("NeedleAway") then
+	elseif not tool or not head or not (Combat.inRound(player) or player:GetAttribute("Practicing")) or player:GetAttribute("NeedleAway") then
 		return
 	elseif now - (lastThrow[player] or 0) < T.cooldown then
 		return
@@ -53,12 +53,16 @@ local function throw(player, aim)
 	local hit = workspace:Spherecast(origin, T.radius, dir * T.range, params)
 	local finish = if hit then hit.Position else origin + dir * T.range
 	local target = hit and Players:GetPlayerFromCharacter(hit.Instance:FindFirstAncestorOfClass("Model"))
+	local dummy = hit and hit.Instance:FindFirstAncestorOfClass("Model") -- a Practice Yard dummy?
+	local dummyId = dummy and dummy:GetAttribute("DummyOwner") == player.UserId and dummy:GetAttribute("DummyId")
 	local seconds = (finish - origin).Magnitude / T.speed
 	local d = DataManager.get(player)
-	Remotes.Thrown:FireAllClients({ from = player.UserId, key = d and d.showcase or "", origin = origin, finish = finish, seconds = seconds, hitPlayer = target ~= nil })
+	Remotes.Thrown:FireAllClients({ from = player.UserId, key = d and d.showcase or "", origin = origin, finish = finish, seconds = seconds, hitPlayer = target ~= nil or dummyId ~= nil })
 	setAway(player, tool, true)
 	task.delay(seconds, function()
-		if target then
+		if dummyId and Combat.onDummy then
+			Combat.onDummy(player, dummyId, T.damage, true)
+		elseif target then
 			local d2 = DataManager.get(player)
 			local _, skinId = Needles.split(d2 and d2.showcase or "")
 			local oneOfOne = skinId ~= nil and Needles.skin(skinId).rarity == "unique" -- a 1 of 1 in hand: one throw tags out

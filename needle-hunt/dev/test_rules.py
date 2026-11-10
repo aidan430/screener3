@@ -186,7 +186,7 @@ class Content(unittest.TestCase):
         boards = CONFIG[CONFIG.index("Config.Boards = {"):]
         stores = re.findall(r'store = "(\w+)"', boards[: boards.index("\n}")])
         self.assertEqual(len(stores), len(set(stores)))
-        self.assertEqual(len(stores), 6)
+        self.assertEqual(len(stores), 7)
 
 
 RARITIES = rows(NEEDLES, "Needles.rarities = {")
@@ -323,6 +323,24 @@ class BoxOpenings(unittest.TestCase):
         self.assertIn("Boxes.tiers", (ROOT / "src" / "client" / "BoxScreen.luau").read_text(), "every tier's odds are shown")
         self.assertIn("HeirloomBox", (SHARED / "Robux.luau").read_text())
         self.assertIn("HeirloomBox = 0", CONFIG)
+
+    def test_time_trial_practice(self):
+        block = CONFIG[CONFIG.index("Config.Practice = {"):]
+        block = block[: block.index("}\n")]
+        nums = dict((k, float(v)) for k, v in re.findall(r"(\w+) = (-?[\d.]+)", block))
+        self.assertEqual(nums["seconds"], 180, "3 minutes")
+        self.assertGreater(nums["dummies"], 0)
+        self.assertGreater(nums["chests"], 0)
+        self.assertIn('id = "trial"', CONFIG)
+        self.assertRegex(CONFIG, r'id = "trial".*ascending = true.*seconds = true', "fastest first, in tenths")
+        practice = (SERVER / "Practice.luau").read_text()
+        for word in ("RewardManager", "grant(", "CollectionManager", "d.keys", "MatchXp"):
+            self.assertNotIn(word, practice, "practice gives no coins, XP, keys or needles")
+        self.assertIn("trialBest", practice)
+        self.assertIn("finish(player, run, false)", practice, "the clock runs out")
+        self.assertIn('GetAttribute("Practicing")', (SERVER / "RoundManager.luau").read_text(), "a run isn't cut short by a round")
+        self.assertIn("Combat.onDummy", (SERVER / "CombatThrow.luau").read_text())
+        self.assertIn('"PracticeStall"', (SERVER / "LobbyBuilder.luau").read_text())
 
     def test_heirloom_shapes_give_off_an_aura(self):
         look = (SHARED / "NeedleLook.luau").read_text()

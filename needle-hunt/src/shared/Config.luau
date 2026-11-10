@@ -124,7 +124,7 @@ Config.NeedleTool = { grip = { 0, 90, 0 }, scale = 1.6 }
 -- sparks = particles a second; rise = how fast wisps float up; lift = how much the colours are
 -- brightened towards white (so dark skins glow too); light = the glow's brightness and range.
 -- gradient = the aura's own colours, from the eye end to the point (remove it to use the skin's).
-Config.Aura = { gradient = { { 120, 0, 18 }, { 255, 60, 40 } }, shell = true, shellGrow = 1.14, shellPad = 0.07, wisps = 16, wispSize = 0.45, sparks = 10, rise = 1.8, lift = 0.12, light = 2.2, lightRange = 8 }
+Config.Aura = { gradient = { { 70, 0, 0 }, { 190, 0, 0 } }, shell = true, shellGrow = 1.14, shellPad = 0.07, wisps = 16, wispSize = 0.45, sparks = 10, rise = 1.8, lift = 0.12, light = 2.2, lightRange = 8 }
 
 -- Boxes (server/BoxManager, client/BoxScreen): open one for a needle for your collection. odds are
 -- each rarity's chance in percent (shown in the game before you open one). series = the box's own
@@ -185,6 +185,7 @@ Config.Boards = {
 	{ id = "coins", name = "Most Coins Earned", store = "NH_Coins_v1", ascending = false },
 	{ id = "weekly", name = "This Week's Winners", store = "NH_WeeklyWins_v1_", ascending = false, weekly = true },
 	{ id = "collection", name = "Most Valuable Collection", store = "NH_Collection_v1", ascending = false },
+	{ id = "trial", name = "Fastest Time Trial", store = "NH_TimeTrial_v1", ascending = true, seconds = true }, -- stored in tenths
 }
 Config.BoardRows = 10
 Config.BoardFlushSeconds = 120
@@ -213,5 +214,14 @@ Config.Music = "" -- a looping lobby track ID, or "" for none
 -- Where things are. The lobby sits at the origin; maps are built far away, one at a time.
 Config.LobbyCentre = Vector3.new(0, 0, 0)
 Config.ArenaCentre = Vector3.new(0, 0, 600)
+
+-- The Practice Yard's Time Trial (server/Practice, server/PracticeYard, client/PracticeFx): your own
+-- yard of straw dummies and chests on perches. A countdown, then `seconds` to tag out every dummy
+-- and open every chest. Practice only: no coins, XP or keys, but a full clear goes on the Fastest
+-- Time Trial board. Dummies have `hearts` (a poke takes 1, a throw Config.Throw.damage); `moving`
+-- of them slide to and fro. Chests sit `perch` studs up and open with Config.Chests.hold. Each
+-- player's yard is built at centre + (slot - 1) x spacing on Z, and gone when they leave.
+Config.Practice = { seconds = 180, countdown = 3, dummies = 8, moving = 3, hearts = 3, chests = 5, perch = { 3.5, 7 },
+	size = 100, centre = Vector3.new(-700, 0, 0), spacing = 180, backAfter = 10 }
 
 return Config

@@ -85,7 +85,7 @@ local function players()
 	for _, p in ipairs(Players:GetPlayers()) do
 		local d = DataManager.get(p)
 		local h = humanoid(p)
-		if d and d.settings.autoJoin and h and h.Health > 0 and #list < Config.Round.maxPlayers then
+		if d and d.settings.autoJoin and h and h.Health > 0 and not p:GetAttribute("Practicing") and #list < Config.Round.maxPlayers then -- a Time Trial isn't cut short
 			table.insert(list, p)
 		end
 	end

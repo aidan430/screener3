@@ -136,6 +136,12 @@ local function poke(attacker, targetId)
 		return -- it's flying: nothing in your hand to poke with
 	end
 	jab(attacker)
+	if type(targetId) == "string" then -- a Practice Yard dummy (server/Practice checks it)
+		if Combat.onDummy and toolOf(attacker) then
+			Combat.onDummy(attacker, targetId, 1, false)
+		end
+		return
+	end
 	if not inRound(attacker) or type(targetId) ~= "number" then
 		return
 	end

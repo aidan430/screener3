@@ -256,7 +256,7 @@ Config.NeedleTool = { grip = { 0, 90, 0 }, scale = 1.6 }
 -- sparks = particles a second; rise = how fast wisps float up; lift = how much the colours are
 -- brightened towards white (so dark skins glow too); light = the glow's brightness and range.
 -- gradient = the aura's own colours, from the eye end to the point (remove it to use the skin's).
-Config.Aura = { gradient = { { 120, 0, 18 }, { 255, 60, 40 } }, shell = true, shellGrow = 1.14, shellPad = 0.07, wisps = 16, wispSize = 0.45, sparks = 10, rise = 1.8, lift = 0.12, light = 2.2, lightRange = 8 }
+Config.Aura = { gradient = { { 70, 0, 0 }, { 190, 0, 0 } }, shell = true, shellGrow = 1.14, shellPad = 0.07, wisps = 16, wispSize = 0.45, sparks = 10, rise = 1.8, lift = 0.12, light = 2.2, lightRange = 8 }
 
 -- Boxes (server/BoxManager, client/BoxScreen): open one for a needle for your collection. odds are
 -- each rarity's chance in percent (shown in the game before you open one). series = the box's own
@@ -317,6 +317,7 @@ Config.Boards = {
 	{ id = "coins", name = "Most Coins Earned", store = "NH_Coins_v1", ascending = false },
 	{ id = "weekly", name = "This Week's Winners", store = "NH_WeeklyWins_v1_", ascending = false, weekly = true },
 	{ id = "collection", name = "Most Valuable Collection", store = "NH_Collection_v1", ascending = false },
+	{ id = "trial", name = "Fastest Time Trial", store = "NH_TimeTrial_v1", ascending = true, seconds = true }, -- stored in tenths
 }
 Config.BoardRows = 10
 Config.BoardFlushSeconds = 120
@@ -345,6 +346,15 @@ Config.Music = "" -- a looping lobby track ID, or "" for none
 -- Where things are. The lobby sits at the origin; maps are built far away, one at a time.
 Config.LobbyCentre = Vector3.new(0, 0, 0)
 Config.ArenaCentre = Vector3.new(0, 0, 600)
+
+-- The Practice Yard's Time Trial (server/Practice, server/PracticeYard, client/PracticeFx): your own
+-- yard of straw dummies and chests on perches. A countdown, then `seconds` to tag out every dummy
+-- and open every chest. Practice only: no coins, XP or keys, but a full clear goes on the Fastest
+-- Time Trial board. Dummies have `hearts` (a poke takes 1, a throw Config.Throw.damage); `moving`
+-- of them slide to and fro. Chests sit `perch` studs up and open with Config.Chests.hold. Each
+-- player's yard is built at centre + (slot - 1) x spacing on Z, and gone when they leave.
+Config.Practice = { seconds = 180, countdown = 3, dummies = 8, moving = 3, hearts = 3, chests = 5, perch = { 3.5, 7 },
+	size = 100, centre = Vector3.new(-700, 0, 0), spacing = 180, backAfter = 10 }
 
 return Config
 ]]></ProtectedString>
@@ -2366,22 +2376,32 @@ return {
 					<string name="Name">Dash</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00029">
+			<Item class="RemoteFunction" referent="RBX00029">
+				<Properties>
+					<string name="Name">Practice</string>
+				</Properties>
+			</Item>
+			<Item class="RemoteEvent" referent="RBX0002A">
+				<Properties>
+					<string name="Name">PracticeState</string>
+				</Properties>
+			</Item>
+			<Item class="RemoteEvent" referent="RBX0002B">
 				<Properties>
 					<string name="Name">Announce</string>
 				</Properties>
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerScriptService" referent="RBX0002A">
+	<Item class="ServerScriptService" referent="RBX0002C">
 		<Properties>
 			<string name="Name">ServerScriptService</string>
 		</Properties>
-		<Item class="Folder" referent="RBX0002B">
+		<Item class="Folder" referent="RBX0002D">
 			<Properties>
 				<string name="Name">Server</string>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX0002C">
+			<Item class="ModuleScript" referent="RBX0002E">
 				<Properties>
 					<string name="Name">AntiCheat</string>
 					<ProtectedString name="Source"><![CDATA[-- Basic anti-exploit: every Config.AntiCheat.checkEvery seconds, each character's position is
@@ -2467,7 +2487,7 @@ return AntiCheat
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002D">
+			<Item class="ModuleScript" referent="RBX0002F">
 				<Properties>
 					<string name="Name">BoxManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Box openings (Config.Boxes, shared/Boxes). Boxes open through Remotes.Box with coins ("open") or
@@ -2598,7 +2618,7 @@ return BoxManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002E">
+			<Item class="ModuleScript" referent="RBX00030">
 				<Properties>
 					<string name="Name">ChestSpawner</string>
 					<ProtectedString name="Source"><![CDATA[-- The chests each round (Config.Chests), made to be fought over. They go in the dead ends furthest
@@ -2863,7 +2883,7 @@ return ChestSpawner
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0002F">
+			<Item class="ModuleScript" referent="RBX00031">
 				<Properties>
 					<string name="Name">CollectionManager</string>
 					<ProtectedString name="Source"><![CDATA[-- The needle collection, on the server. Needles come from boxes (server/BoxManager: coins, keys
@@ -2948,7 +2968,7 @@ return CollectionManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00030">
+			<Item class="ModuleScript" referent="RBX00032">
 				<Properties>
 					<string name="Name">Combat</string>
 					<ProtectedString name="Source"><![CDATA[-- Needle combat. Everyone carries their showcase needle as a tool (the "Needle", rebuilt when the
@@ -3089,6 +3109,12 @@ local function poke(attacker, targetId)
 		return -- it's flying: nothing in your hand to poke with
 	end
 	jab(attacker)
+	if type(targetId) == "string" then -- a Practice Yard dummy (server/Practice checks it)
+		if Combat.onDummy and toolOf(attacker) then
+			Combat.onDummy(attacker, targetId, 1, false)
+		end
+		return
+	end
 	if not inRound(attacker) or type(targetId) ~= "number" then
 		return
 	end
@@ -3186,7 +3212,7 @@ return Combat
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00031">
+			<Item class="ModuleScript" referent="RBX00033">
 				<Properties>
 					<string name="Name">CombatThrow</string>
 					<ProtectedString name="Source"><![CDATA[-- Throwing your needle (Config.Throw). The client sends where it's aiming (Remotes.Throw); the
@@ -3231,7 +3257,7 @@ local function throw(player, aim)
 	local head = player.Character and player.Character:FindFirstChild("Head")
 	if typeof(aim) ~= "Vector3" or aim.Magnitude < 0.5 or aim.Magnitude > 2 or aim ~= aim then
 		return -- not a direction (or not a number)
-	elseif not tool or not head or not Combat.inRound(player) or player:GetAttribute("NeedleAway") then
+	elseif not tool or not head or not (Combat.inRound(player) or player:GetAttribute("Practicing")) or player:GetAttribute("NeedleAway") then
 		return
 	elseif now - (lastThrow[player] or 0) < T.cooldown then
 		return
@@ -3244,12 +3270,16 @@ local function throw(player, aim)
 	local hit = workspace:Spherecast(origin, T.radius, dir * T.range, params)
 	local finish = if hit then hit.Position else origin + dir * T.range
 	local target = hit and Players:GetPlayerFromCharacter(hit.Instance:FindFirstAncestorOfClass("Model"))
+	local dummy = hit and hit.Instance:FindFirstAncestorOfClass("Model") -- a Practice Yard dummy?
+	local dummyId = dummy and dummy:GetAttribute("DummyOwner") == player.UserId and dummy:GetAttribute("DummyId")
 	local seconds = (finish - origin).Magnitude / T.speed
 	local d = DataManager.get(player)
-	Remotes.Thrown:FireAllClients({ from = player.UserId, key = d and d.showcase or "", origin = origin, finish = finish, seconds = seconds, hitPlayer = target ~= nil })
+	Remotes.Thrown:FireAllClients({ from = player.UserId, key = d and d.showcase or "", origin = origin, finish = finish, seconds = seconds, hitPlayer = target ~= nil or dummyId ~= nil })
 	setAway(player, tool, true)
 	task.delay(seconds, function()
-		if target then
+		if dummyId and Combat.onDummy then
+			Combat.onDummy(player, dummyId, T.damage, true)
+		elseif target then
 			local d2 = DataManager.get(player)
 			local _, skinId = Needles.split(d2 and d2.showcase or "")
 			local oneOfOne = skinId ~= nil and Needles.skin(skinId).rarity == "unique" -- a 1 of 1 in hand: one throw tags out
@@ -3281,7 +3311,7 @@ return CombatThrow
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00032">
+			<Item class="ModuleScript" referent="RBX00034">
 				<Properties>
 					<string name="Name">Dash</string>
 					<ProtectedString name="Source"><![CDATA[-- Dashing (Config.Dash; the dash itself is client/DashFx, since each player's device moves its
@@ -3314,7 +3344,7 @@ return Dash
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00033">
+			<Item class="ModuleScript" referent="RBX00035">
 				<Properties>
 					<string name="Name">DataManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Player data: loaded on join, cached for the session, saved with UpdateAsync on an autosave
@@ -3357,6 +3387,7 @@ function DataManager.fresh(saved)
 		owned = {}, equipped = {}, receipts = {}, starterBought = saved.starterBought == true, -- the Starter Bundle is once each
 		boxPity = number(saved, "boxPity", 0), boxesOpened = number(saved, "boxesOpened", 0), -- opens since the last Rare or better
 		eliminations = number(saved, "eliminations", 0),
+		trialBest = number(saved, "trialBest", 0), trialRuns = number(saved, "trialRuns", 0), -- Time Trial: best clear in tenths (0 = none)
 		chests = number(saved, "chests", 0), keys = {}, -- chests opened; keys from chests: [box id] = how many
 		collection = {}, showcase = "", -- needles kept: ["type:skin"] = how many; the one on show
 		settings = { music = true, sfx = true, reduceEffects = false, autoJoin = true },
@@ -3580,7 +3611,7 @@ return DataManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00034">
+			<Item class="ModuleScript" referent="RBX00036">
 				<Properties>
 					<string name="Name">HaystackModel</string>
 					<ProtectedString name="Source"><![CDATA[-- The owner's own haystack model (Config.Haystacks.model): loaded once with InsertService (it must
@@ -3634,7 +3665,7 @@ return HaystackModel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00035">
+			<Item class="ModuleScript" referent="RBX00037">
 				<Properties>
 					<string name="Name">LeaderboardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Global leaderboards (Config.Boards), each an OrderedDataStore: most chests, most tag-outs,
@@ -3678,6 +3709,8 @@ local function valueFor(board, d)
 		return d.coinsEarned
 	elseif board.id == "collection" then
 		return if next(d.collection) then Needles.total(d.collection) else nil
+	elseif board.id == "trial" then
+		return if d.trialBest > 0 then d.trialBest else nil -- tenths of a second, lowest first
 	elseif board.id == "weekly" then
 		return if d.weekly.week == Rules.week() and d.weekly.wins > 0 then d.weekly.wins else nil
 	end
@@ -3806,7 +3839,7 @@ return LeaderboardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00036">
+			<Item class="ModuleScript" referent="RBX00038">
 				<Properties>
 					<string name="Name">LobbyBuilder</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby, built once at Config.LobbyCentre: a wooden plaza in a field, the animated title sign
@@ -4028,6 +4061,7 @@ function LobbyBuilder.build()
 	stall("ShopStall", -18, 30, "Shop", { 196, 64, 50 })
 	stall("Wardrobe", 18, 30, "Inventory", { 76, 106, 170 })
 	stall("BoxStall", -34, 30, "Boxes", { 230, 120, 50 })
+	stall("PracticeStall", 34, 30, "Practice", { 150, 20, 20 }) -- the Time Trial (server/Practice)
 	require(script.Parent.LobbySocial).build(ctx, text)
 	require(script.Parent.LobbyDecor).build(ctx)
 	-- the countryside beyond the hedge, and a few bales on the plaza
@@ -4046,7 +4080,7 @@ return LobbyBuilder
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00037">
+			<Item class="ModuleScript" referent="RBX00039">
 				<Properties>
 					<string name="Name">LobbyDecor</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's dressing (LobbyBuilder calls build once): a lawn crossed by cobbled paths (spawn to
@@ -4155,7 +4189,7 @@ return LobbyDecor
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00038">
+			<Item class="ModuleScript" referent="RBX0003A">
 				<Properties>
 					<string name="Name">LobbyShowOff</string>
 					<ProtectedString name="Source"><![CDATA[-- Show off (Remotes.ShowOff): hold your showcase needle (or your best) up over your head for a
@@ -4224,7 +4258,7 @@ return LobbyShowOff
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00039">
+			<Item class="ModuleScript" referent="RBX0003B">
 				<Properties>
 					<string name="Name">LobbySocial</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's social side: showing off collections.
@@ -4504,7 +4538,7 @@ return LobbySocial
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Script" referent="RBX0003A">
+			<Item class="Script" referent="RBX0003C">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Starts A Needle in a Haystack on the server. Systems that react to a player's save loading are
@@ -4531,6 +4565,7 @@ local CombatThrow = require(script.Parent.CombatThrow)
 local Dash = require(script.Parent.Dash)
 local OneOfOne = require(script.Parent.OneOfOne)
 local TradeManager = require(script.Parent.TradeManager)
+local Practice = require(script.Parent.Practice)
 
 -- While testing in Studio, server errors also show on screen.
 if RunService:IsStudio() then
@@ -4556,6 +4591,7 @@ for _, step in ipairs({
 	{ "Dash", Dash.init },
 	{ "OneOfOne", OneOfOne.init },
 	{ "Trading", TradeManager.init },
+	{ "Practice", Practice.init },
 	{ "Data", DataManager.init },
 	{ "Rounds", RoundManager.start },
 }) do
@@ -4567,7 +4603,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003B">
+			<Item class="ModuleScript" referent="RBX0003D">
 				<Properties>
 					<string name="Name">MapKit</string>
 					<ProtectedString name="Source"><![CDATA[-- The building kit for maps (server/MapsA, MapsB): ground, hay bales, haystacks, crates, fences,
@@ -4782,7 +4818,7 @@ return MapKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003C">
+			<Item class="ModuleScript" referent="RBX0003E">
 				<Properties>
 					<string name="Name">MapsA</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Classic Haystack Field (a hedge maze), Barn Interior (a maze of stall walls) and
@@ -4911,7 +4947,7 @@ return MapsA
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003D">
+			<Item class="ModuleScript" referent="RBX0003F">
 				<Properties>
 					<string name="Name">MapsB</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Night Forest (a thicket maze) and Abandoned Attic (a maze of stacked boxes under
@@ -5010,7 +5046,7 @@ return MapsB
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003E">
+			<Item class="ModuleScript" referent="RBX00040">
 				<Properties>
 					<string name="Name">MatchXp</string>
 					<ProtectedString name="Source"><![CDATA[-- The match's stats and its end (Config.MatchXp, Config.Rewards): counted while the round runs
@@ -5089,7 +5125,7 @@ return MatchXp
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003F">
+			<Item class="ModuleScript" referent="RBX00041">
 				<Properties>
 					<string name="Name">MazeKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Mazes for the maps: a grid of cells carved into a maze (a random depth-first walk, so every cell
@@ -5290,7 +5326,7 @@ return MazeKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00040">
+			<Item class="ModuleScript" referent="RBX00042">
 				<Properties>
 					<string name="Name">OneOfOne</string>
 					<ProtectedString name="Source"><![CDATA[-- The 1 of 1s (Config.OneOfOne). A chest rolls for each (roll); the first player to roll one claims it
@@ -5410,7 +5446,7 @@ return OneOfOne
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00041">
+			<Item class="ModuleScript" referent="RBX00043">
 				<Properties>
 					<string name="Name">Powerups</string>
 					<ProtectedString name="Source"><![CDATA[-- Power-ups on the maps (Config.Powerups). When a round's search starts, glowing orbs float in
@@ -5579,7 +5615,403 @@ return Powerups
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00042">
+			<Item class="ModuleScript" referent="RBX00044">
+				<Properties>
+					<string name="Name">Practice</string>
+					<ProtectedString name="Source"><![CDATA[-- The Time Trial in the Practice Yard (Config.Practice). From the lobby (the Practice stall, or
+-- Practice in the menu) you get your own yard (server/PracticeYard): a countdown, then
+-- Config.Practice.seconds to tag out every dummy and open every chest. Practice only: no coins,
+-- XP, keys or needles. A full clear's time goes on the Fastest Time Trial board (your best, in
+-- tenths, server/LeaderboardManager). The server times the run and checks every hit and chest.
+-- Remotes.Practice (ask): "info" | "start" | "leave". Remotes.PracticeState (tell the player):
+--   { phase = "countdown" | "running" | "done" | "off", ... } and { event = "hit" | "chest", ... }.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local DataManager = require(script.Parent.DataManager)
+local AntiCheat = require(script.Parent.AntiCheat)
+local Combat = require(script.Parent.Combat)
+local LeaderboardManager = require(script.Parent.LeaderboardManager)
+local LobbyBuilder = require(script.Parent.LobbyBuilder)
+local PracticeYard = require(script.Parent.PracticeYard)
+
+local Practice = {}
+local P = Config.Practice
+local runs = {} -- [player] = { slot, yard, phase, startAt, endsAt, tagged, opened, token }
+local slots = {} -- [slot] = player
+
+local function now()
+	return workspace:GetServerTimeNow()
+end
+
+local function hold(player, on) -- still during the countdown
+	local character = player.Character
+	local h = character and character:FindFirstChildOfClass("Humanoid")
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if h then
+		h.WalkSpeed, h.JumpHeight = if on then 0 else 16, if on then 0 else 7.2
+	end
+	if root then
+		root.Anchored = on
+	end
+end
+
+local function move(player, cf)
+	local character = player.Character
+	if character then
+		AntiCheat.allow(player, 3)
+		character:PivotTo(cf)
+	end
+end
+
+local function tell(player, run, extra)
+	local msg = { phase = run.phase, startAt = run.startAt, endsAt = run.endsAt, tagged = run.tagged, opened = run.opened, dummies = #run.yard.dummies, chests = #run.yard.chests }
+	for k, v in pairs(extra or {}) do
+		msg[k] = v
+	end
+	Remotes.PracticeState:FireClient(player, msg)
+end
+
+function Practice.leave(player)
+	local run = runs[player]
+	if not run then
+		return
+	end
+	runs[player] = nil
+	slots[run.slot] = nil
+	hold(player, false)
+	player:SetAttribute("Practicing", nil)
+	if player.Parent then
+		move(player, LobbyBuilder.spawnPoint(math.random(1, 10)))
+		Remotes.PracticeState:FireClient(player, { phase = "off" })
+	end
+	run.yard.model:Destroy()
+end
+
+local function finish(player, run, cleared)
+	if run.phase ~= "running" then
+		return
+	end
+	run.phase = "done"
+	local time = now() - run.startAt
+	local tenths = math.max(1, math.floor(time * 10 + 0.5))
+	local best, newBest = 0, false
+	DataManager.update(player, function(d)
+		d.trialRuns += 1
+		if cleared and (d.trialBest == 0 or tenths < d.trialBest) then
+			d.trialBest, newBest = tenths, true
+		end
+		best = d.trialBest
+	end)
+	if newBest then
+		LeaderboardManager.mark(player)
+	end
+	tell(player, run, { cleared = cleared, time = if cleared then tenths / 10 else nil, best = best / 10, newBest = newBest })
+	local token = run.token
+	task.delay(P.backAfter, function()
+		if runs[player] and runs[player].token == token then
+			Practice.leave(player)
+		end
+	end)
+end
+
+local function checkDone(player, run)
+	if run.tagged >= #run.yard.dummies and run.opened >= #run.yard.chests then
+		finish(player, run, true)
+	end
+end
+
+-- A hit on one of your dummies (a poke takes 1 heart, a throw more). thrown = the server already
+-- traced it, so no reach check.
+function Practice.hitDummy(player, id, amount, thrown)
+	local run = runs[player]
+	if not run or run.phase ~= "running" or type(id) ~= "string" then
+		return false
+	end
+	local target
+	for _, d in ipairs(run.yard.dummies) do
+		if d.id == id and not d.out then
+			target = d
+		end
+	end
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not target or not root then
+		return false
+	end
+	if not thrown then
+		local offset = target.root.Position - root.Position
+		local flat = Vector3.new(offset.X, 0, offset.Z)
+		if flat.Magnitude > Config.Combat.reach + 2.5 or math.abs(offset.Y) > 7 or (flat.Magnitude > 0.5 and root.CFrame.LookVector:Dot(flat.Unit) < 0.2) then
+			return false -- too far, or behind you
+		end
+	end
+	target.hearts = math.max(0, target.hearts - amount)
+	target.label.Text = PracticeYard.heartsText(target.hearts)
+	Remotes.PracticeState:FireClient(player, { event = "hit", position = target.root.Position + Vector3.new(0, 4, 0), hearts = target.hearts, amount = amount })
+	if target.hearts == 0 then
+		target.out = true
+		target.model:SetAttribute("Out", true)
+		run.tagged += 1
+		for _, p in ipairs(target.model:GetDescendants()) do -- it tips over and fades away
+			if p:IsA("BasePart") then
+				TweenService:Create(p, TweenInfo.new(0.8, Enum.EasingStyle.Sine), { Transparency = 1 }):Play()
+			end
+		end
+		target.label.Parent.Enabled = false
+		tell(player, run)
+		checkDone(player, run)
+	end
+	return true
+end
+
+local function openChest(player, run, c)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if run.phase ~= "running" or c.opened or not root or AntiCheat.flagged(player) then
+		return
+	elseif (root.Position - c.position).Magnitude > Config.Chests.reach + 3 then
+		return
+	elseif root.Position.Y < c.top + 1.5 then -- as in a round: climb up to it
+		Remotes.Notify:FireClient(player, { text = "Climb up to it first!", tone = "bad" })
+		return
+	end
+	c.opened, c.prompt.Enabled = true, false
+	run.opened += 1
+	local swing = c.hinge * CFrame.Angles(math.rad(-105), 0, 0) * CFrame.new(0, 0.3, -1.15)
+	TweenService:Create(c.lid, TweenInfo.new(0.5, Enum.EasingStyle.Back), { CFrame = swing }):Play()
+	Remotes.PracticeState:FireClient(player, { event = "chest", position = c.position })
+	tell(player, run)
+	checkDone(player, run)
+end
+
+function Practice.start(player)
+	local d = DataManager.get(player)
+	if runs[player] or not d or not player.Character or player:GetAttribute("InRound") then
+		return false, "You can practise from the lobby."
+	end
+	local slot
+	for i = 1, 20 do
+		if not slots[i] then
+			slot = i
+			break
+		end
+	end
+	if not slot then
+		return false, "The Practice Yard is full: try again in a moment."
+	end
+	slots[slot] = player
+	local yard = PracticeYard.build(player, slot)
+	local run = { slot = slot, yard = yard, phase = "countdown", tagged = 0, opened = 0, token = {} }
+	runs[player] = run
+	player:SetAttribute("Practicing", true)
+	for _, c in ipairs(yard.chests) do
+		c.prompt.Triggered:Connect(function(who)
+			if who == player then
+				openChest(player, run, c)
+			end
+		end)
+	end
+	move(player, yard.start)
+	hold(player, true)
+	run.startAt = now() + P.countdown
+	run.endsAt = run.startAt + P.seconds
+	tell(player, run)
+	task.delay(P.countdown, function()
+		if runs[player] ~= run then
+			return
+		end
+		hold(player, false)
+		run.phase = "running"
+		tell(player, run)
+		task.delay(P.seconds, function()
+			if runs[player] == run then
+				finish(player, run, false) -- time's up
+			end
+		end)
+	end)
+	return true
+end
+
+function Practice.init()
+	Combat.onDummy = Practice.hitDummy
+	Remotes.Practice.OnServerInvoke = function(player, action)
+		if action == "start" then
+			return Practice.start(player)
+		elseif action == "leave" then
+			Practice.leave(player)
+			return true
+		elseif action == "info" then
+			local d = DataManager.get(player)
+			local rows = LeaderboardManager.cache().trial or {}
+			return { best = d and d.trialBest / 10 or 0, runs = d and d.trialRuns or 0, top = { table.unpack(rows, 1, 5) }, running = runs[player] ~= nil }
+		end
+		return nil
+	end
+	Players.PlayerRemoving:Connect(Practice.leave)
+	Players.PlayerAdded:Connect(function(player)
+		player.CharacterAdded:Connect(function()
+			task.wait(0.3)
+			local run = runs[player]
+			if run then -- a fall: back to the start, the clock still running
+				move(player, run.yard.start)
+				if run.phase == "countdown" then
+					hold(player, true)
+				end
+			end
+		end)
+	end)
+end
+
+return Practice
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00045">
+				<Properties>
+					<string name="Name">PracticeYard</string>
+					<ProtectedString name="Source"><![CDATA[-- Builds one player's Practice Yard for a Time Trial (server/Practice, Config.Practice): a hedged
+-- paddock of hay bales and crates for cover, straw dummies to tag out (some sliding to and fro),
+-- and chests up on perches with steps. Each player's yard is their own, far from the lobby and
+-- the round arena, and is destroyed when they leave.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local MapKit = require(script.Parent.MapKit)
+
+local PracticeYard = {}
+local P = Config.Practice
+
+local function heartsText(n)
+	return string.rep("♥", n) .. string.rep("♡", P.hearts - n)
+end
+PracticeYard.heartsText = heartsText
+
+-- A straw dummy on a post: a sack body, a round head, a crossbar for arms. Hits find it by the
+-- model's DummyId attribute. moving = it slides `range` studs to and fro along X.
+local function dummy(ctx, id, owner, x, y, z, moving)
+	local model = Instance.new("Model")
+	model.Name = "Dummy"
+	model:SetAttribute("DummyId", id)
+	model:SetAttribute("DummyOwner", owner.UserId)
+	model:SetAttribute("Hearts", P.hearts)
+	local base = CFrame.new(MapKit.at(ctx, x, y, z)) * CFrame.Angles(0, ctx.rng:NextNumber() * math.pi * 2, 0)
+	local root = MapKit.part(ctx, { Name = "Post", Size = Vector3.new(0.5, 3, 0.5), CFrame = base * CFrame.new(0, 1.5, 0), Color = { 110, 78, 46 }, Material = "Wood", Parent = model })
+	local parts = {
+		MapKit.part(ctx, { Name = "Body", Size = Vector3.new(2, 2.6, 1.2), CFrame = base * CFrame.new(0, 4.2, 0), Color = { 196, 160, 98 }, Material = "Fabric", Parent = model }),
+		MapKit.part(ctx, { Name = "Head", Shape = "Ball", Size = Vector3.new(1.5, 1.5, 1.5), CFrame = base * CFrame.new(0, 6.2, 0), Color = { 214, 184, 120 }, Material = "Fabric", Parent = model }),
+		MapKit.part(ctx, { Name = "Arms", Size = Vector3.new(4.2, 0.45, 0.45), CFrame = base * CFrame.new(0, 4.9, 0), Color = { 110, 78, 46 }, Material = "Wood", Parent = model }),
+		MapKit.part(ctx, { Name = "Rope", Size = Vector3.new(2.06, 0.25, 1.26), CFrame = base * CFrame.new(0, 3.4, 0), Color = { 150, 30, 30 }, Material = "Fabric", CanCollide = false, Parent = model }),
+	}
+	for _, p in ipairs(parts) do
+		p.Anchored = false
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0, weld.Part1 = root, p
+		weld.Parent = p
+	end
+	model.PrimaryPart = root
+	local tag = Instance.new("BillboardGui")
+	tag.Size, tag.StudsOffset, tag.MaxDistance = UDim2.fromOffset(120, 34), Vector3.new(0, 6.3, 0), 90
+	tag.Parent = root
+	local label = Instance.new("TextLabel")
+	label.Name, label.Size, label.BackgroundTransparency = "Hearts", UDim2.fromScale(1, 1), 1
+	label.Font, label.TextScaled, label.Text = Enum.Font.GothamBold, true, heartsText(P.hearts)
+	label.TextColor3, label.TextStrokeTransparency = Color3.fromRGB(235, 40, 50), 0.4
+	label.Parent = tag
+	model.Parent = ctx.model
+	if moving then -- slides along X and back, so you have to time it
+		local range = ctx.rng:NextNumber(8, 14)
+		TweenService:Create(root, TweenInfo.new(ctx.rng:NextNumber(2.5, 4), Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { CFrame = root.CFrame * CFrame.new(range, 0, 0) }):Play()
+	end
+	return { model = model, root = root, label = label, id = id, hearts = P.hearts, out = false }
+end
+
+-- A chest up on a perch: a pillar `h` studs high with a couple of crate steps up to it.
+local function chest(ctx, index, x, z, h)
+	MapKit.part(ctx, { Name = "Perch", Size = Vector3.new(5, h, 5), CFrame = CFrame.new(MapKit.at(ctx, x, h / 2, z)), Color = { 140, 100, 62 }, Material = "WoodPlanks" })
+	local a = ctx.rng:NextNumber() * math.pi * 2
+	local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+	for k = 1, math.max(1, math.floor(h / 2.6)) do -- steps spiralling up to the top
+		local step = math.min(h - 0.6, k * 2.6)
+		local p = Vector3.new(x, 0, z) + dir * (3.6 + k * 0.3) + Vector3.new(-dir.Z, 0, dir.X) * (k - 1) * 2.4
+		MapKit.part(ctx, { Name = "Step", Size = Vector3.new(3, step, 3), CFrame = CFrame.new(MapKit.at(ctx, p.X, step / 2, p.Z)), Color = { 150, 106, 64 }, Material = "WoodPlanks" })
+	end
+	local base = CFrame.new(MapKit.at(ctx, x, h, z)) * CFrame.Angles(0, ctx.rng:NextInteger(0, 3) * math.pi / 2, 0)
+	local model = Instance.new("Model")
+	model.Name = "Chest"
+	local body = MapKit.part(ctx, { Name = "Body", Size = Vector3.new(3.2, 1.8, 2.2), CFrame = base * CFrame.new(0, 0.9, 0), Color = { 140, 92, 52 }, Material = "WoodPlanks", Parent = model })
+	for _, bx in ipairs({ -1.2, 1.2 }) do
+		MapKit.part(ctx, { Name = "Band", Size = Vector3.new(0.25, 1.86, 2.26), CFrame = base * CFrame.new(bx, 0.9, 0), Color = { 70, 72, 80 }, Material = "Metal", CanCollide = false, Parent = model })
+	end
+	local hinge = base * CFrame.new(0, 1.8, 1.1)
+	local lid = MapKit.part(ctx, { Name = "Lid", Size = Vector3.new(3.3, 0.6, 2.3), CFrame = hinge * CFrame.new(0, 0.3, -1.15), Color = { 140, 92, 52 }, Material = "WoodPlanks", CanCollide = false, Parent = model })
+	local light = Instance.new("PointLight")
+	light.Color, light.Range, light.Brightness = Color3.fromRGB(255, 214, 120), 9, 0.9
+	light.Parent = body
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText, prompt.ObjectText = "Open", "Practice Chest"
+	prompt.HoldDuration, prompt.MaxActivationDistance, prompt.RequiresLineOfSight = Config.Chests.hold, Config.Chests.reach, false
+	prompt:SetAttribute("Chest", true) -- the same hold as a round's chest
+	prompt.Parent = body
+	model.Parent = ctx.model
+	return { model = model, lid = lid, hinge = hinge, position = body.Position, top = base.Position.Y, prompt = prompt, index = index, opened = false }
+end
+
+-- Builds a player's yard in `slot`. Returns { model, start (CFrame), dummies, chests }.
+function PracticeYard.build(player, slot)
+	local model = Instance.new("Model")
+	model.Name = "PracticeYard_" .. player.UserId
+	model.Parent = workspace
+	local half = P.size / 2
+	local ctx = { model = model, rng = Random.new(), centre = P.centre + Vector3.new(0, 0, (slot - 1) * P.spacing), def = { straw = { 226, 188, 92 } }, spots = {}, spawns = {}, floorY = 0 }
+	MapKit.ground(ctx, P.size + 6, P.size + 6, { 110, 150, 70 }, "Grass")
+	MapKit.edges(ctx, half, half, { 104, 160, 76 })
+	MapKit.part(ctx, { Name = "StartPad", Shape = "Cylinder", Size = Vector3.new(0.3, 10, 10), CFrame = CFrame.new(MapKit.at(ctx, 0, 0.15, -half + 9)) * CFrame.Angles(0, 0, math.rad(90)), Color = { 190, 20, 20 }, Material = "Neon", CanCollide = false })
+	local function free(x, z, r) -- clear of the start and the yard's edge
+		return math.abs(x) < half - r and math.abs(z) < half - r and Vector2.new(x, z + half - 9).Magnitude > 16
+	end
+	local function spot(r)
+		for _ = 1, 40 do
+			local x, z = ctx.rng:NextNumber(-half, half), ctx.rng:NextNumber(-half, half)
+			if free(x, z, r) then
+				return x, z
+			end
+		end
+		return 0, 0
+	end
+	for _ = 1, 14 do -- cover: bales and crates, sometimes stacked
+		local x, z = spot(6)
+		if ctx.rng:NextNumber() < 0.6 then
+			MapKit.bale(ctx, x, 0, z, ctx.rng:NextNumber() * math.pi)
+			if ctx.rng:NextNumber() < 0.4 then
+				MapKit.bale(ctx, x, 2.5, z, ctx.rng:NextNumber() * math.pi)
+			end
+		else
+			MapKit.crate(ctx, x, 0, z, ctx.rng:NextNumber(3, 4.5))
+		end
+	end
+	local yard = { model = model, dummies = {}, chests = {}, start = CFrame.new(MapKit.at(ctx, 0, 3, -half + 9)) * CFrame.Angles(0, math.pi, 0) }
+	for i = 1, P.chests do -- spread round the yard: each in its own slice
+		local a = (i - 0.5) / P.chests * math.pi * 2 + ctx.rng:NextNumber(-0.3, 0.3)
+		local r = ctx.rng:NextNumber(half * 0.45, half * 0.75)
+		table.insert(yard.chests, chest(ctx, i, math.cos(a) * r, math.sin(a) * r, ctx.rng:NextNumber(P.perch[1], P.perch[2])))
+	end
+	for i = 1, P.dummies do
+		local x, z = spot(10)
+		table.insert(yard.dummies, dummy(ctx, "D" .. i, player, x, 0, z, i <= P.moving))
+	end
+	return yard
+end
+
+return PracticeYard
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00046">
 				<Properties>
 					<string name="Name">QuestManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Daily quests: three a day, the same for everyone (shared/Quests.forDay). Progress is saved;
@@ -5647,7 +6079,7 @@ return QuestManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00043">
+			<Item class="ModuleScript" referent="RBX00047">
 				<Properties>
 					<string name="Name">Requests</string>
 					<ProtectedString name="Source"><![CDATA[-- Small requests from players, checked on the server: a hint (Remotes.Hint) and saving their
@@ -5707,7 +6139,7 @@ return Requests
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00044">
+			<Item class="ModuleScript" referent="RBX00048">
 				<Properties>
 					<string name="Name">RewardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Every coin and XP point is given here, on the server: chests, places, playing a round to the
@@ -5860,7 +6292,7 @@ return RewardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00045">
+			<Item class="ModuleScript" referent="RBX00049">
 				<Properties>
 					<string name="Name">RoundExtras</string>
 					<ProtectedString name="Source"><![CDATA[-- What runs alongside a round's search, started and stopped together by server/RoundManager:
@@ -5894,7 +6326,7 @@ return RoundExtras
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00046">
+			<Item class="ModuleScript" referent="RBX0004A">
 				<Properties>
 					<string name="Name">RoundManager</string>
 					<ProtectedString name="Source"><![CDATA[-- The round loop, all on the server:
@@ -5984,7 +6416,7 @@ local function players()
 	for _, p in ipairs(Players:GetPlayers()) do
 		local d = DataManager.get(p)
 		local h = humanoid(p)
-		if d and d.settings.autoJoin and h and h.Health > 0 and #list < Config.Round.maxPlayers then
+		if d and d.settings.autoJoin and h and h.Health > 0 and not p:GetAttribute("Practicing") and #list < Config.Round.maxPlayers then -- a Time Trial isn't cut short
 			table.insert(list, p)
 		end
 	end
@@ -6168,7 +6600,7 @@ return RoundManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00047">
+			<Item class="ModuleScript" referent="RBX0004B">
 				<Properties>
 					<string name="Name">ShopManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Cosmetics and purchases. With Haystack Coins: buy a cosmetic (Remotes.Shop "buy"), and wear
@@ -6419,7 +6851,7 @@ return ShopManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00048">
+			<Item class="ModuleScript" referent="RBX0004C">
 				<Properties>
 					<string name="Name">TradeManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Trading needles between two players in the lobby (Config.Trading). Remotes.Trade asks; the
@@ -6687,24 +7119,24 @@ return TradeManager
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerStorage" referent="RBX00049">
+	<Item class="ServerStorage" referent="RBX0004D">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX0004A">
+	<Item class="StarterPlayer" referent="RBX0004E">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX0004B">
+		<Item class="StarterPlayerScripts" referent="RBX0004F">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX0004C">
+			<Item class="Folder" referent="RBX00050">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX0004D">
+				<Item class="ModuleScript" referent="RBX00051">
 					<Properties>
 						<string name="Name">BoxReel</string>
 						<ProtectedString name="Source"><![CDATA[-- The box opening on your screen: a strip of needle cards slides along under a gold marker,
@@ -6807,7 +7239,7 @@ return BoxReel
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004E">
+				<Item class="ModuleScript" referent="RBX00052">
 					<Properties>
 						<string name="Name">BoxScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Boxes screen: each box with its price (coins; the dearer ones also Robux), a key button
@@ -7000,7 +7432,7 @@ return BoxScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0004F">
+				<Item class="ModuleScript" referent="RBX00053">
 					<Properties>
 						<string name="Name">CombatFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Needle combat on your screen (server/Combat decides every hit):
@@ -7048,7 +7480,18 @@ local function target()
 			end
 		end
 	end
-	return best
+	local yard = workspace:FindFirstChild("PracticeYard_" .. player.UserId) -- your Time Trial's dummies
+	for _, m in ipairs(yard and yard:GetChildren() or {}) do
+		local post = m:GetAttribute("DummyId") and not m:GetAttribute("Out") and m.PrimaryPart
+		if post then
+			local offset = post.Position - me.Position
+			local flat = Vector3.new(offset.X, 0, offset.Z)
+			if flat.Magnitude <= bestDist + 1.5 and (flat.Magnitude < 0.5 or look:Dot(flat.Unit) > 0.3) then
+				best, bestDist = m:GetAttribute("DummyId"), flat.Magnitude
+			end
+		end
+	end
+	return best -- a Player, or a dummy's id
 end
 
 local function hookTool(tool, inspectButton)
@@ -7062,7 +7505,7 @@ local function hookTool(tool, inspectButton)
 		end
 		CombatFx.lastPoke = os.clock()
 		local t = target()
-		Remotes.Poke:FireServer(t and t.UserId)
+		Remotes.Poke:FireServer(if typeof(t) == "Instance" then t.UserId else t)
 		ViewModel.play("jab")
 	end)
 	tool.Equipped:Connect(function()
@@ -7191,7 +7634,7 @@ return CombatFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00050">
+				<Item class="ModuleScript" referent="RBX00054">
 					<Properties>
 						<string name="Name">CooldownBars</string>
 						<ProtectedString name="Source"><![CDATA[-- POKE and THROW bars, top left under the DASH bar (client/DashFx), in the same style: each empties
@@ -7243,7 +7686,7 @@ return CooldownBars
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00051">
+				<Item class="ModuleScript" referent="RBX00055">
 					<Properties>
 						<string name="Name">DashFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Dashing (Config.Dash): C, B on a controller, or the Dash button on a phone. Your character
@@ -7363,7 +7806,7 @@ return DashFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00052">
+				<Item class="ModuleScript" referent="RBX00056">
 					<Properties>
 						<string name="Name">Effects</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback you can see and hear, on your own screen only: sounds, a burst of particles where a
@@ -7444,7 +7887,7 @@ return Effects
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00053">
+				<Item class="ModuleScript" referent="RBX00057">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: your coins and level (with an XP bar) at the top left; the round's
@@ -7516,11 +7959,11 @@ function Hud.mount(gui, open)
 	local timer = UiKit.label({ Font = UiKit.bold, Size = UDim2.new(1, -20, 0, 30), Position = UDim2.fromOffset(10, 40), TextColor3 = UiKit.colors.gold, Parent = banner }, 28)
 	local info = UiKit.label({ Size = UDim2.new(1, -20, 0, 22), Position = UDim2.fromOffset(10, 74), TextColor3 = UiKit.colors.soft, Parent = banner }, 18)
 	-- the menu, down the right
-	local menu = UiKit.make("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0), Size = UDim2.fromOffset(150, 522), BackgroundTransparency = 1, Parent = gui }, {
+	local menu = UiKit.make("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0), Size = UDim2.fromOffset(150, 566), BackgroundTransparency = 1, Parent = gui }, {
 		UiKit.make("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Right }),
 	})
 	UiKit.autoScale(menu)
-	for i, item in ipairs({ { "Collection", Color3.fromRGB(230, 120, 170) }, { "Boxes", Color3.fromRGB(230, 120, 50) }, { "Trade", Color3.fromRGB(70, 170, 190) }, { "Shop", UiKit.colors.gold }, { "Inventory", UiKit.colors.purple }, { "Quests", UiKit.colors.green }, { "Leaderboard", UiKit.colors.blue }, { "Settings", UiKit.colors.card } }) do
+	for i, item in ipairs({ { "Collection", Color3.fromRGB(230, 120, 170) }, { "Boxes", Color3.fromRGB(230, 120, 50) }, { "Trade", Color3.fromRGB(70, 170, 190) }, { "Practice", Color3.fromRGB(200, 30, 30) }, { "Shop", UiKit.colors.gold }, { "Inventory", UiKit.colors.purple }, { "Quests", UiKit.colors.green }, { "Leaderboard", UiKit.colors.blue }, { "Settings", UiKit.colors.card } }) do
 		local b = UiKit.button(item[1], item[2], { LayoutOrder = i, Size = UDim2.fromOffset(150, 54), Parent = menu })
 		b.Activated:Connect(function()
 			Effects.sound("click")
@@ -7580,7 +8023,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00054">
+				<Item class="ModuleScript" referent="RBX00058">
 					<Properties>
 						<string name="Name">LobbyUi</string>
 						<ProtectedString name="Source"><![CDATA[-- The lobby, on your screen:
@@ -7678,7 +8121,7 @@ return LobbyUi
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX00055">
+				<Item class="LocalScript" referent="RBX00059">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- Starts the client: the whole UI (UIController). The client only shows things and asks the
@@ -7688,7 +8131,7 @@ UIController.start()
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00056">
+				<Item class="ModuleScript" referent="RBX0005A">
 					<Properties>
 						<string name="Name">NeedleView</string>
 						<ProtectedString name="Source"><![CDATA[-- A needle in 3D inside the UI: a ViewportFrame with the needle (shared/NeedleLook) lit and
@@ -7740,7 +8183,7 @@ return NeedleView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00057">
+				<Item class="ModuleScript" referent="RBX0005B">
 					<Properties>
 						<string name="Name">PowerupFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Power-ups on your screen (server/Powerups decides; Remotes.Powerup says what you got):
@@ -7874,7 +8317,171 @@ return PowerupFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00058">
+				<Item class="ModuleScript" referent="RBX0005C">
+					<Properties>
+						<string name="Name">PracticeFx</string>
+						<ProtectedString name="Source"><![CDATA[-- The Time Trial on your screen (server/Practice decides everything): the Practice window (your
+-- best, the fastest five, Start), then in the yard a 3-2-1 countdown, the clock counting down,
+-- dummies and chests left, a pop on every hit, and the result: your time and whether it's a new
+-- best, or how far you got. Leave any time. Soft, eased effects only: nothing flashes.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local UiKit = require(script.Parent.UiKit)
+local Hud = require(script.Parent.Hud)
+local Effects = require(script.Parent.Effects)
+
+local player = Players.LocalPlayer
+local PracticeFx = {}
+local win, body, hud, clock, counts, big, result
+local state = { phase = "off" }
+local RED = Color3.fromRGB(200, 30, 30)
+
+local function stamp(seconds) -- 1:42.3
+	seconds = math.max(0, seconds)
+	return string.format("%d:%04.1f", seconds // 60, seconds % 60)
+end
+
+local function clear()
+	for _, c in ipairs(body:GetChildren()) do
+		if not c:IsA("UIListLayout") then
+			c:Destroy()
+		end
+	end
+end
+
+local function start()
+	win.Visible = false
+	local ok, why = Remotes.Practice:InvokeServer("start")
+	if not ok then
+		Hud.toast(why or "Couldn't start the Time Trial.", "bad")
+	end
+end
+
+function PracticeFx.refresh()
+	if not win or not win.Visible then
+		return
+	end
+	clear()
+	local info = Remotes.Practice:InvokeServer("info") or {}
+	local P = Config.Practice
+	UiKit.label({ LayoutOrder = 1, Text = string.format("Your own yard: tag out all %d dummies and open all %d chests in %s. Practice only (no coins or keys), but a full clear goes on the Fastest Time Trial board.", P.dummies, P.chests, stamp(P.seconds):sub(1, -3)), TextWrapped = true, Size = UDim2.new(1, -8, 0, 64), TextXAlignment = Enum.TextXAlignment.Left, Parent = body }, 19)
+	UiKit.label({ LayoutOrder = 2, Text = if (info.best or 0) > 0 then "Your best: " .. stamp(info.best) .. "   ·   runs: " .. (info.runs or 0) else "No clear yet. Runs: " .. (info.runs or 0), Font = UiKit.bold, Size = UDim2.new(1, -8, 0, 28), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UiKit.colors.gold, Parent = body }, 22)
+	UiKit.label({ LayoutOrder = 3, Text = "Fastest Time Trial", Font = UiKit.bold, Size = UDim2.new(1, -8, 0, 26), TextXAlignment = Enum.TextXAlignment.Left, Parent = body }, 20)
+	for i, row in ipairs(info.top or {}) do
+		UiKit.label({ LayoutOrder = 3 + i, Text = string.format("%d.  %s   %s", i, row.name, stamp(row.value)), Size = UDim2.new(1, -8, 0, 22), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UiKit.colors.soft, Parent = body }, 18)
+	end
+	if #(info.top or {}) == 0 then
+		UiKit.label({ LayoutOrder = 4, Text = "Nobody on the board yet: be the first.", Size = UDim2.new(1, -8, 0, 22), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = UiKit.colors.soft, Parent = body }, 18)
+	end
+	local go = UiKit.button(if info.running then "Leave the yard" else "Start the Time Trial", if info.running then UiKit.colors.card else RED, { LayoutOrder = 20, Size = UDim2.new(1, -8, 0, 54), Parent = body })
+	go.Activated:Connect(function()
+		if info.running then
+			win.Visible = false
+			Remotes.Practice:InvokeServer("leave")
+		else
+			start()
+		end
+	end)
+end
+
+local function showResult(m)
+	result.Visible = true
+	result.Title.Text = if m.cleared then "CLEARED IN " .. stamp(m.time) .. "!" else "TIME'S UP"
+	result.Line.Text = if m.cleared
+		then (if m.newBest then "A new best! It's on the Fastest Time Trial board." else "Your best: " .. stamp(m.best))
+		else string.format("Dummies %d / %d   ·   Chests %d / %d. Clear them all to get on the board.", m.tagged, m.dummies, m.opened, m.chests)
+	UiKit.pop(result, 0.9)
+	if m.cleared then
+		Effects.confetti()
+	end
+end
+
+local function onState(m)
+	if m.event == "hit" then
+		Effects.burst(m.position, { RED, Color3.new(1, 1, 1) }, if m.hearts == 0 then 30 else 14)
+		Effects.sound(if m.hearts == 0 then "found" else "click", if m.hearts == 0 then 0.9 else 1.3)
+		return
+	elseif m.event == "chest" then
+		Effects.burst(m.position + Vector3.new(0, 2, 0), { Color3.fromRGB(255, 214, 90), Color3.new(1, 1, 1) }, 30)
+		Effects.sound("found", 1.1)
+		return
+	end
+	state = m
+	hud.Visible = m.phase ~= "off"
+	result.Visible = false
+	if m.phase == "done" then
+		showResult(m)
+	end
+	if m.phase ~= "off" then
+		counts.Text = string.format("Dummies  %d / %d      Chests  %d / %d", m.tagged, m.dummies, m.opened, m.chests)
+	end
+end
+
+function PracticeFx.mount(gui)
+	win, body = UiKit.window(gui, "Practice", 560, 470)
+	hud = UiKit.make("Frame", { Name = "TimeTrial", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, Parent = gui })
+	local top = UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 12), Size = UDim2.fromOffset(420, 96), BackgroundColor3 = UiKit.colors.panel, BackgroundTransparency = 0.1, Parent = hud }, { UiKit.corner(14), UiKit.stroke(RED, 2) })
+	UiKit.autoScale(top)
+	UiKit.label({ Text = "TIME TRIAL", Font = UiKit.bold, Size = UDim2.new(1, 0, 0, 20), Position = UDim2.fromOffset(0, 6), TextColor3 = Color3.fromRGB(255, 120, 110), Parent = top }, 16)
+	clock = UiKit.label({ Text = "3:00.0", Font = UiKit.bold, Size = UDim2.new(1, 0, 0, 40), Position = UDim2.fromOffset(0, 24), Parent = top }, 38)
+	counts = UiKit.label({ Text = "", Size = UDim2.new(1, 0, 0, 22), Position = UDim2.fromOffset(0, 68), TextColor3 = UiKit.colors.soft, Parent = top }, 17)
+	big = UiKit.label({ Text = "", Font = UiKit.bold, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(400, 160), TextColor3 = Color3.new(1, 1, 1), TextStrokeTransparency = 0.5, Parent = hud }, 140)
+	result = UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(520, 220), BackgroundColor3 = UiKit.colors.panel, BackgroundTransparency = 0.05, Visible = false, Parent = hud }, { UiKit.corner(18), UiKit.stroke(RED, 3) })
+	UiKit.autoScale(result)
+	UiKit.label({ Name = "Title", Text = "", Font = UiKit.bold, Size = UDim2.new(1, -24, 0, 56), Position = UDim2.fromOffset(12, 18), TextColor3 = UiKit.colors.gold, Parent = result }, 40)
+	UiKit.label({ Name = "Line", Text = "", TextWrapped = true, Size = UDim2.new(1, -40, 0, 56), Position = UDim2.fromOffset(20, 78), Parent = result }, 20)
+	local again = UiKit.button("Go again", RED, { Position = UDim2.new(0, 20, 1, -66), Size = UDim2.new(0.5, -26, 0, 48), Parent = result })
+	local back = UiKit.button("Back to the lobby", UiKit.colors.card, { Position = UDim2.new(0.5, 6, 1, -66), Size = UDim2.new(0.5, -26, 0, 48), Parent = result })
+	again.Activated:Connect(function()
+		Remotes.Practice:InvokeServer("leave")
+		task.wait(0.4)
+		start()
+	end)
+	back.Activated:Connect(function()
+		Remotes.Practice:InvokeServer("leave")
+	end)
+	local leave = UiKit.button("Leave", UiKit.colors.card, { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -16), Size = UDim2.fromOffset(120, 46), Parent = hud })
+	UiKit.autoScale(leave)
+	leave.Activated:Connect(function()
+		Remotes.Practice:InvokeServer("leave")
+	end)
+	Remotes.PracticeState.OnClientEvent:Connect(onState)
+	local shown = nil
+	RunService.RenderStepped:Connect(function()
+		if state.phase == "off" or not state.startAt then
+			return
+		end
+		local t = workspace:GetServerTimeNow()
+		if state.phase == "countdown" or (state.phase == "running" and t - state.startAt < 0.8) then
+			local n = math.ceil(state.startAt - t)
+			local text = if n > 0 then tostring(n) else "GO!"
+			if text ~= shown then -- each number pops in, then eases away
+				shown, big.Text, big.TextTransparency = text, text, 0
+				UiKit.pop(big, 0.6)
+				UiKit.ease(big, 0.9, { TextTransparency = 1 })
+				Effects.sound("countdown", if n > 0 then 1 else 1.5)
+			end
+		end
+		if state.phase == "running" then
+			clock.Text = stamp(state.endsAt - t)
+			clock.TextColor3 = if state.endsAt - t < 30 then Color3.fromRGB(255, 120, 110) else Color3.new(1, 1, 1)
+		elseif state.phase == "countdown" then
+			clock.Text = stamp(Config.Practice.seconds)
+		end
+	end)
+	return { Practice = win }, { Practice = PracticeFx.refresh }
+end
+
+return PracticeFx
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX0005D">
 					<Properties>
 						<string name="Name">Results</string>
 						<ProtectedString name="Source"><![CDATA[-- The round's big moments on screen: the 3, 2, 1; CHEST OPENED! when you open one (coins, or a
@@ -8024,7 +8631,7 @@ return Results
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00059">
+				<Item class="ModuleScript" referent="RBX0005E">
 					<Properties>
 						<string name="Name">Screens</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop and Inventory screens. The Shop sells cosmetics for Haystack Coins (needle skins,
@@ -8215,7 +8822,7 @@ return Screens
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005A">
+				<Item class="ModuleScript" referent="RBX0005F">
 					<Properties>
 						<string name="Name">Screens2</string>
 						<ProtectedString name="Source"><![CDATA[-- The Quests, Leaderboard and Settings screens.
@@ -8349,7 +8956,7 @@ return Screens2
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005B">
+				<Item class="ModuleScript" referent="RBX00060">
 					<Properties>
 						<string name="Name">Screens3</string>
 						<ProtectedString name="Source"><![CDATA[-- The Collection screen: every needle you've found, by type, shown in 3D with its rarity, value
@@ -8486,7 +9093,7 @@ return Screens3
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005C">
+				<Item class="ModuleScript" referent="RBX00061">
 					<Properties>
 						<string name="Name">ThrowFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Throwing your needle on your screen (server/CombatThrow decides): Q, or the Throw button while
@@ -8604,7 +9211,7 @@ return ThrowFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005D">
+				<Item class="ModuleScript" referent="RBX00062">
 					<Properties>
 						<string name="Name">TradeScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Trade screen (server/TradeManager decides everything). Not trading: everyone in the server
@@ -8799,7 +9406,7 @@ return TradeScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005E">
+				<Item class="ModuleScript" referent="RBX00063">
 					<Properties>
 						<string name="Name">UIController</string>
 						<ProtectedString name="Source"><![CDATA[-- Puts the whole UI together: one ScreenGui with the HUD, the round moments (Results), and the
@@ -8829,6 +9436,7 @@ local DashFx = require(script.Parent.DashFx)
 local CooldownBars = require(script.Parent.CooldownBars)
 local TradeScreen = require(script.Parent.TradeScreen)
 local ViewModel = require(script.Parent.ViewModel)
+local PracticeFx = require(script.Parent.PracticeFx)
 
 local player = Players.LocalPlayer
 local UIController = {}
@@ -8893,7 +9501,7 @@ function UIController.start()
 	for name, fn in pairs(colOpen) do
 		openers[name] = fn
 	end
-	for _, screen in ipairs({ BoxScreen, TradeScreen }) do
+	for _, screen in ipairs({ BoxScreen, TradeScreen, PracticeFx }) do
 		local w, opener = screen.mount(gui, getProfile)
 		for name, frame in pairs(w) do
 			windows[name], openers[name] = frame, opener[name]
@@ -8938,7 +9546,7 @@ return UIController
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0005F">
+				<Item class="ModuleScript" referent="RBX00064">
 					<Properties>
 						<string name="Name">UiKit</string>
 						<ProtectedString name="Source"><![CDATA[-- The UI's look in one place: a clean, modern dark-glass style with warm gold accents, big
@@ -9073,7 +9681,7 @@ return UiKit
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00060">
+				<Item class="ModuleScript" referent="RBX00065">
 					<Properties>
 						<string name="Name">ViewModel</string>
 						<ProtectedString name="Source"><![CDATA[-- First person: your arms and your needle drawn in front of the camera, posed and animated from
@@ -9279,7 +9887,7 @@ return ViewModel
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX00061">
+	<Item class="Workspace" referent="RBX00066">
 		<Properties>
 			<string name="Name">Workspace</string>
 		</Properties>

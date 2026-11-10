@@ -22,6 +22,7 @@ local CombatThrow = require(script.Parent.CombatThrow)
 local Dash = require(script.Parent.Dash)
 local OneOfOne = require(script.Parent.OneOfOne)
 local TradeManager = require(script.Parent.TradeManager)
+local Practice = require(script.Parent.Practice)
 
 -- While testing in Studio, server errors also show on screen.
 if RunService:IsStudio() then
@@ -47,6 +48,7 @@ for _, step in ipairs({
 	{ "Dash", Dash.init },
 	{ "OneOfOne", OneOfOne.init },
 	{ "Trading", TradeManager.init },
+	{ "Practice", Practice.init },
 	{ "Data", DataManager.init },
 	{ "Rounds", RoundManager.start },
 }) do

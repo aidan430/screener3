@@ -74,6 +74,12 @@
         "Dash": {
           "$className": "RemoteEvent"
         },
+        "Practice": {
+          "$className": "RemoteFunction"
+        },
+        "PracticeState": {
+          "$className": "RemoteEvent"
+        },
         "Announce": {
           "$className": "RemoteEvent"
         }

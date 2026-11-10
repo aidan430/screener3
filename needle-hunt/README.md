@@ -307,7 +307,7 @@ one of **94 shapes** in one of **110 skins** (10,340 to collect; the newest 50 a
 | Masterwork | 16: Shooting Star, Lightning Bolt, Rocket Ship, Comet Spear, Dragon's Tooth, Crystal Shard, Comet Gem, Ringed Planet, Phoenix Feather, Royal Sceptre, Trident, Hourglass, Rainbow Arrow, Moon Wand, Treasure Key, Lighthouse | 1.1% | 88 to 110 |
 | Heirloom | 9, the special collection: **The Eye of the Needle** (1 in 15,049, the rarest shape), Treasure Map, Heirloom Tome, Star Chart, Crystal Cluster, Clockwork Gear, Astrolabe, Brass Compass, Heirloom Key | 0.14% | 150 to 260 |
 
-**Heirloom aura:** every Heirloom shape gives off energy, shaded from deep crimson at the eye to bright red at
+**Heirloom aura:** every Heirloom shape gives off energy, shaded from dark blood red at the eye to pure red at
 the point (`Config.Aura.gradient`; remove it to use each skin's own colours) (`shared/NeedleAura`,
 `Config.Aura`): a rippling ForceField skin round each piece, rising wisps, sparks and a soft light,
 in a hand, in first person, in flight and on pedestals. On UI screens (no particles there) it shows
@@ -429,6 +429,20 @@ Click or tap to poke the nearest player in front of you.
   shelf (or paste its Luau over `shared/FirstPerson.luau`).
 
 All the numbers are in `Config.Combat`.
+
+## Practice Yard: Time Trial
+
+From the lobby's **Practice** stall (next to the Wardrobe) or **Practice** in the menu, start a
+Time Trial in your own yard (`server/Practice`, `server/PracticeYard`, `client/PracticeFx`):
+- A hedged paddock with bales and crates for cover, 8 straw dummies (3 slide to and fro) and 5
+  chests up on perches with steps (climb up to open, the same hold as a round's chests).
+- 3-2-1 on the red start pad, then **3:00** to tag out every dummy (3 hearts each: a poke takes
+  one, a throw two) and open every chest. The clock, dummies and chests left are at the top.
+- Clear it all and your time is shown, and your best goes on the **Fastest Time Trial** board
+  (lobby boards and the Leaderboard screen). Run out of time and you see how far you got.
+- Practice only: no coins, XP, keys or needles. Leave any time; you're back in the lobby 10
+  seconds after the end, or press Go again. A round never pulls you out mid-run (you join the next).
+- Every number is in `Config.Practice` (time, dummies, chests, perch heights, yard size).
 
 ## Match XP
 

@@ -39,6 +39,8 @@ local function valueFor(board, d)
 		return d.coinsEarned
 	elseif board.id == "collection" then
 		return if next(d.collection) then Needles.total(d.collection) else nil
+	elseif board.id == "trial" then
+		return if d.trialBest > 0 then d.trialBest else nil -- tenths of a second, lowest first
 	elseif board.id == "weekly" then
 		return if d.weekly.week == Rules.week() and d.weekly.wins > 0 then d.weekly.wins else nil
 	end

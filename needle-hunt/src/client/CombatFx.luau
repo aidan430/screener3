@@ -43,7 +43,18 @@ local function target()
 			end
 		end
 	end
-	return best
+	local yard = workspace:FindFirstChild("PracticeYard_" .. player.UserId) -- your Time Trial's dummies
+	for _, m in ipairs(yard and yard:GetChildren() or {}) do
+		local post = m:GetAttribute("DummyId") and not m:GetAttribute("Out") and m.PrimaryPart
+		if post then
+			local offset = post.Position - me.Position
+			local flat = Vector3.new(offset.X, 0, offset.Z)
+			if flat.Magnitude <= bestDist + 1.5 and (flat.Magnitude < 0.5 or look:Dot(flat.Unit) > 0.3) then
+				best, bestDist = m:GetAttribute("DummyId"), flat.Magnitude
+			end
+		end
+	end
+	return best -- a Player, or a dummy's id
 end
 
 local function hookTool(tool, inspectButton)
@@ -57,7 +68,7 @@ local function hookTool(tool, inspectButton)
 		end
 		CombatFx.lastPoke = os.clock()
 		local t = target()
-		Remotes.Poke:FireServer(t and t.UserId)
+		Remotes.Poke:FireServer(if typeof(t) == "Instance" then t.UserId else t)
 		ViewModel.play("jab")
 	end)
 	tool.Equipped:Connect(function()

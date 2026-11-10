@@ -38,6 +38,7 @@ function DataManager.fresh(saved)
 		owned = {}, equipped = {}, receipts = {}, starterBought = saved.starterBought == true, -- the Starter Bundle is once each
 		boxPity = number(saved, "boxPity", 0), boxesOpened = number(saved, "boxesOpened", 0), -- opens since the last Rare or better
 		eliminations = number(saved, "eliminations", 0),
+		trialBest = number(saved, "trialBest", 0), trialRuns = number(saved, "trialRuns", 0), -- Time Trial: best clear in tenths (0 = none)
 		chests = number(saved, "chests", 0), keys = {}, -- chests opened; keys from chests: [box id] = how many
 		collection = {}, showcase = "", -- needles kept: ["type:skin"] = how many; the one on show
 		settings = { music = true, sfx = true, reduceEffects = false, autoJoin = true },

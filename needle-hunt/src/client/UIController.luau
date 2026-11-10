@@ -25,6 +25,7 @@ local DashFx = require(script.Parent.DashFx)
 local CooldownBars = require(script.Parent.CooldownBars)
 local TradeScreen = require(script.Parent.TradeScreen)
 local ViewModel = require(script.Parent.ViewModel)
+local PracticeFx = require(script.Parent.PracticeFx)
 
 local player = Players.LocalPlayer
 local UIController = {}
@@ -89,7 +90,7 @@ function UIController.start()
 	for name, fn in pairs(colOpen) do
 		openers[name] = fn
 	end
-	for _, screen in ipairs({ BoxScreen, TradeScreen }) do
+	for _, screen in ipairs({ BoxScreen, TradeScreen, PracticeFx }) do
 		local w, opener = screen.mount(gui, getProfile)
 		for name, frame in pairs(w) do
 			windows[name], openers[name] = frame, opener[name]
