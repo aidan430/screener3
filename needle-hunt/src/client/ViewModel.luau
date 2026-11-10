@@ -67,6 +67,13 @@ local function build(character, key)
 	rig = { model = model, key = key, right = makeArm(model, colour), left = makeArm(model, colour) }
 	rig.needle = NeedleLook.build(typeId or "sewing", skinId or "steel", FP.needleLook.scale, FP.needleLook.fat)
 	rig.needle.Parent = model
+	rig.emitters = {}
+	for _, e in ipairs(rig.needle:GetDescendants()) do
+		if e:IsA("ParticleEmitter") then -- an Heirloom's aura, sparkles: they stay with the hand
+			e.LockedToPart = true
+			table.insert(rig.emitters, e)
+		end
+	end
 	model.Parent = workspace.CurrentCamera
 end
 
@@ -163,6 +170,9 @@ local function step(dt)
 		if p:IsA("BasePart") and p.Name ~= "Root" then
 			p.LocalTransparencyModifier = if away then 1 else 0
 		end
+	end
+	for _, e in ipairs(rig.emitters) do
+		e.Enabled = not away
 	end
 end
 

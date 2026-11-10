@@ -117,6 +117,13 @@ Config.Dash = { speed = 55, seconds = 0.22, cooldown = 3 }
 -- way in Studio. scale = the needle's size in the hand. inspect = seconds the inspect lasts.
 Config.NeedleTool = { grip = { 0, 90, 0 }, scale = 1.6, inspect = 2.4 }
 
+-- The Heirloom aura (shared/NeedleAura): energy round every Heirloom-shaped needle, in its skin's
+-- colours. shell = a shimmering ForceField skin round every piece (shellGrow x its size + shellPad
+-- studs at scale 1); wisps and
+-- sparks = particles a second; rise = how fast wisps float up; lift = how much the colours are
+-- brightened towards white (so dark skins glow too); light = the glow's brightness and range.
+Config.Aura = { shell = true, shellGrow = 1.14, shellPad = 0.07, wisps = 16, wispSize = 0.45, sparks = 10, rise = 1.8, lift = 0.12, light = 2.2, lightRange = 8 }
+
 -- Boxes (server/BoxManager, client/BoxScreen): open one for a needle for your collection. odds are
 -- each rarity's chance in percent (shown in the game before you open one). series = the box's own
 -- skins (Needles.skins with that series); a rarity the series doesn't have comes from the regular

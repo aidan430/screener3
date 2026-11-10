@@ -8,6 +8,7 @@
 -- fat (1 = true to life) thickens it for display: the UI and pedestals use about 2, so a needle
 -- reads as a bold little trophy instead of a hairline.
 local Needles = require(script.Parent.Needles)
+local NeedleAura = require(script.Parent.NeedleAura)
 local Shapes = {} -- shapes kept as data, in as many files as dev/shapes.py needed
 for _, name in ipairs({ "ShapesA", "ShapesB", "ShapesC", "ShapesD", "ShapesE", "ShapesF" }) do
 	local file = script.Parent:FindFirstChild(name)
@@ -259,6 +260,10 @@ function NeedleLook.build(typeId, skinId, scale, fat)
 		local light = Instance.new("PointLight")
 		light.Color, light.Range, light.Brightness = rgb(skin.colours[1]), 6 * scale, 1
 		light.Parent = root
+	end
+	local t = Needles.type(typeId)
+	if t and t.grade == "heirloom" then -- Heirloom shapes give off energy (shared/NeedleAura)
+		NeedleAura.add(model, skin, scale)
 	end
 	if skin.sparkle then
 		local e = Instance.new("ParticleEmitter")

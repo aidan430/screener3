@@ -324,6 +324,15 @@ class BoxOpenings(unittest.TestCase):
         self.assertIn("HeirloomBox", (SHARED / "Robux.luau").read_text())
         self.assertIn("HeirloomBox = 0", CONFIG)
 
+    def test_heirloom_shapes_give_off_an_aura(self):
+        look = (SHARED / "NeedleLook.luau").read_text()
+        self.assertIn('grade == "heirloom"', look)
+        self.assertIn("NeedleAura.add", look)
+        aura = (SHARED / "NeedleAura.luau").read_text()
+        self.assertIn("Config.Aura", aura)
+        self.assertNotIn("Flicker", aura, "the aura is steady: nothing flashes")
+        self.assertIn("Config.Aura = {", CONFIG)
+
     def test_first_person_rig_is_complete_and_wired(self):
         fp = (SHARED / "FirstPerson.luau").read_text()
         for name in ("inspect", "jab", "throw"):

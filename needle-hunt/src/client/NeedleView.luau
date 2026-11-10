@@ -15,6 +15,11 @@ function NeedleView.make(parent, typeId, skinId, props, spin)
 		vp[k] = v
 	end
 	local model = NeedleLook.build(typeId, skinId, 1, 2.2) -- thickened to read well at UI size
+	for _, shell in ipairs(model:GetChildren()) do -- an Heirloom's aura: particles don't draw in a
+		if shell.Name == "AuraShell" then -- ViewportFrame, so its energy skin becomes a soft glow here
+			shell.Material, shell.Transparency = Enum.Material.Neon, 0.8
+		end
+	end
 	model:PivotTo(CFrame.Angles(0, 0, math.rad(25)))
 	model.Parent = vp
 	local camera = Instance.new("Camera")
