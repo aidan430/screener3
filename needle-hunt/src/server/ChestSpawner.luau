@@ -54,7 +54,8 @@ local function nearestSpawn(ctx, pos)
 end
 
 -- Where the chests go: the dead ends furthest from the spawns first (a little shuffled, so it's
--- never the same five), then the map's other spots, at least CH.spread apart. A Golden Chest goes
+-- never the same five), then other corridors, then the map's other spots, at least CH.spread apart
+-- (closer, step by step, on a map too small for five that far apart), stepping round any prop. A Golden Chest goes
 -- in a clearing first. Returns the ground positions and, if any, which one is the golden one.
 local function places(ctx, golden)
 	local chosen, goldenAt = {}, nil
@@ -68,13 +69,19 @@ local function places(ctx, golden)
 		end
 	end
 	local candidates = {}
-	for _, cell in ipairs(ctx.maze and ctx.maze.deadEnds or {}) do
-		local pos = MapKit.at(ctx, cell.x, 0, cell.z)
-		table.insert(candidates, { pos = pos, far = nearestSpawn(ctx, pos) * rng:NextNumber(0.75, 1.25) })
+	local function add(list) -- far from the spawns first, a little shuffled
+		local group = {}
+		for _, cell in ipairs(list) do
+			local pos = MapKit.at(ctx, cell.x, 0, cell.z)
+			table.insert(group, { pos = pos, far = nearestSpawn(ctx, pos) * rng:NextNumber(0.75, 1.25) })
+		end
+		table.sort(group, function(a, b)
+			return a.far > b.far
+		end)
+		table.move(group, 1, #group, #candidates + 1, candidates)
 	end
-	table.sort(candidates, function(a, b)
-		return a.far > b.far
-	end)
+	add(ctx.maze and ctx.maze.deadEnds or {}) -- dead ends first: the hardest to reach
+	add(ctx.maze and ctx.maze.cells or {}) -- then any corridor, on a small map with few dead ends
 	local others = {}
 	for _, spot in ipairs(ctx.spots) do
 		table.insert(others, { pos = spot.cf.Position })
@@ -84,18 +91,27 @@ local function places(ctx, golden)
 		others[i], others[j] = others[j], others[i]
 	end
 	table.move(others, 1, #others, #candidates + 1, candidates)
-	for _, c in ipairs(candidates) do
-		local ground = validSpot(c.pos, ctx)
-		local apart = ground ~= nil
-		for _, g in ipairs(chosen) do
-			if apart and (g - ground).Magnitude < CH.spread then
-				apart = false
-			end
-		end
-		if apart then
-			table.insert(chosen, ground)
+	local nudges = { Vector3.zero, Vector3.new(3, 0, 0), Vector3.new(-3, 0, 0), Vector3.new(0, 0, 3), Vector3.new(0, 0, -3) }
+	for _, spread in ipairs({ CH.spread, CH.spread * 0.66, CH.spread * 0.45, 10 }) do -- closer together only if they must be
+		for _, c in ipairs(candidates) do
 			if #chosen >= CH.count then
 				break
+			end
+			local ground
+			for _, nudge in ipairs(nudges) do -- a prop in the way: try beside it
+				ground = validSpot(c.pos + nudge, ctx)
+				if ground then
+					break
+				end
+			end
+			local apart = ground ~= nil
+			for _, g in ipairs(chosen) do
+				if apart and (g - ground).Magnitude < spread then
+					apart = false
+				end
+			end
+			if apart then
+				table.insert(chosen, ground)
 			end
 		end
 	end

@@ -397,6 +397,13 @@ class BoxOpenings(unittest.TestCase):
         self.assertIn("Combat.onDummy", (SERVER / "CombatThrow.luau").read_text())
         self.assertIn('"PracticeStall"', (SERVER / "LobbyBuilder.luau").read_text())
 
+    def test_small_maps_still_get_every_chest(self):
+        chests = (SERVER / "ChestSpawner.luau").read_text()
+        self.assertIn("ctx.maze.cells", chests, "with few dead ends, chests go in other corridors")
+        self.assertIn("CH.spread * 0.45", chests, "closer together only if they must be")
+        self.assertIn("nudges", chests, "a prop in the way: try beside it")
+        self.assertIn("for _, gap in ipairs({ 3, 2, 1 })", (SERVER / "MazeKit.luau").read_text(), "small mazes still give everyone a spawn")
+
     def test_heirloom_shapes_give_off_an_aura(self):
         look = (SHARED / "NeedleLook.luau").read_text()
         self.assertIn('grade == "heirloom"', look)

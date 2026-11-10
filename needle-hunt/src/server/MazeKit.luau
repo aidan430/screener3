@@ -172,21 +172,26 @@ function MazeKit.build(ctx, o)
 	function maze.randomCell()
 		return maze.cells[rng:NextInteger(1, #maze.cells)]
 	end
-	-- n spawn cells spread through the maze (every other cell of a shuffled list, far apart)
+	-- n spawn cells spread through the maze (a shuffled list, far apart where there's room)
 	function maze.spawns(n)
 		local list = table.clone(maze.cells)
 		for i = #list, 2, -1 do
 			local j = rng:NextInteger(1, i)
 			list[i], list[j] = list[j], list[i]
 		end
-		local picked = {}
-		for _, cell in ipairs(list) do
-			local ok = true
-			for _, p in ipairs(picked) do
-				if math.abs(p.c - cell.c) + math.abs(p.r - cell.r) < 3 then ok = false end
+		local picked, used = {}, {}
+		for _, gap in ipairs({ 3, 2, 1 }) do -- 3 cells apart, closer only on a small map
+			for _, cell in ipairs(list) do
+				if #picked >= n then break end
+				local ok = not used[cell]
+				for _, p in ipairs(picked) do
+					if math.abs(p.c - cell.c) + math.abs(p.r - cell.r) < gap then ok = false end
+				end
+				if ok then
+					table.insert(picked, cell)
+					used[cell] = true
+				end
 			end
-			if ok then table.insert(picked, cell) end
-			if #picked >= n then break end
 		end
 		for _, cell in ipairs(picked) do
 			MapKit.spawnAt(ctx, cell.x, cell.z)

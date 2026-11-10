@@ -257,6 +257,24 @@ scanning one open field. A new layout is generated every round, so nobody can le
   beside the props.
 - **Spawns:** players start spread out through the maze.
 
+**The 15 maps** (`shared/Maps.luau`; builders in `server/MapsA` to `MapsD`):
+- The originals: Classic Haystack Field, Barn Interior, Farm at Sunset, Night Forest, Abandoned Attic.
+- From the Gemini map sheets: Pumpkin Patch (vine walls), Harvest Corn Maze (corn walls, a red
+  silo), Sunflower Labyrinth (sunflower walls, a lookout tower you can climb), Apple Orchard (a hedge
+  maze ringed by apple trees, a cider press), Windmill Hill (stone and hedge walls, a turning
+  windmill), Frozen Farm (snow-capped bale walls, a frozen pond), Rainy Greenhouse (frosted glass
+  walls: you can see shapes through them), Duck Pond Marsh (reeds round a boardwalk, ducks), Hay
+  Market (stall lanes under striped awnings, bunting) and County Fair (candy tents, a Ferris wheel
+  and a carousel that turn). Their walls are in `server/MazeWalls`, their props in
+  `server/FarmProps` and `FarmProps2`.
+
+**Checking the maps outside Studio** (`dev/maprun`): `run_map.py` runs the game's own map code in
+Lua 5.4 (via the `lupa` Python package, dev-only) with a small stand-in for Roblox, and writes
+every part for `dev/preview/render.html?json=1&map=<id>` to draw (aerial, top, player or chest
+views). `check_maps.py` builds every map for several seeds and checks each gets its 5 chests and
+enough spawns. It found that the barn and attic were placing only one chest; ChestSpawner now
+falls back to other corridors, steps round props and moves chests closer when a map is small.
+
 ## Power-ups
 
 Each round, 8 glowing orbs float in the maze's corridors (`Config.Powerups`). Walk into one to

@@ -6,6 +6,7 @@
 <script src="maze.js"></script>
 <script src="needles_data.js"></script>
 <script src="needlelook.js"></script>
+<script>{ const q = new URLSearchParams(location.search); if (q.get('json')) document.write('<script src="mapdata/' + q.get('map') + '.js"><\/script>'); }</script>
 <script>
 const q = new URLSearchParams(location.search);
 const MAP = q.get('map') || 'field', VIEW = q.get('view') || 'aerial', W = +(q.get('w') || 1280), H = +(q.get('h') || 720);
@@ -17,11 +18,18 @@ const DEFS = {
   attic: { straw: [206, 176, 112], ground: [112, 86, 64], L: { t: 15, b: 1.2, amb: [110, 100, 90], out: [100, 92, 84], fogEnd: 300, fog: [110, 100, 90] } },
   lobby: { straw: [226, 188, 92], ground: [104, 160, 76], L: { t: 14.5, b: 2.5, amb: [120, 116, 104], out: [150, 146, 134], fogEnd: 1200, fog: [200, 225, 245] } },
 };
-const def = DEFS[MAP];
+// json=1: the map as the game's own Luau builds it (dev/maprun/run_map.py writes mapdata/<map>.js)
+const MD = window.MAPDATA;
+const def = MD ? { straw: MD.def.straw, ground: MD.def.ground, L: { t: MD.def.lighting.ClockTime, b: MD.def.lighting.Brightness, amb: MD.def.lighting.Ambient, out: MD.def.lighting.OutdoorAmbient, fogEnd: MD.def.lighting.FogEnd, fog: MD.def.lighting.FogColor } } : DEFS[MAP];
 window.BOOTHS = { 5: ['StrawBossMax', '5,906'], 4: ['Clover_99', '1,120'], 11: ['You', '2,418'], 10: ['MeadowMia', '640'] };
 const c3 = (c) => new THREE.Color(c[0] / 255, c[1] / 255, c[2] / 255).convertSRGBToLinear();
 const ctx = { parts: [], rng: NH.rng(+(q.get('seed') || 11)), centre: new THREE.Vector3(0, 0, 0), def, spots: [], spawns: [], floorY: 0, diff: { clutter: 260, moving: 0, needle: 2.8 } };
-NH.B[MAP](ctx);
+if (MD) {
+  for (const q2 of MD.parts) { const r = q2.rot, m = new THREE.Matrix4().set(r[0], r[1], r[2], q2.pos[0], r[3], r[4], r[5], q2.pos[1], r[6], r[7], r[8], q2.pos[2], 0, 0, 0, 1);
+    ctx.parts.push({ size: q2.size, m, color: q2.color, material: q2.material, shape: q2.shape, transparency: q2.transparency, name: q2.name, light: q2.light }); }
+  for (const s2 of MD.spawns) ctx.spawns.push(new THREE.Vector3(s2[0], s2[1], s2[2]));
+  ctx.spots.push({ p: new THREE.Vector3(0, -50, 0) });
+} else NH.B[MAP](ctx);
 
 // the needle: a spot from the map's list, nudged and turned, like NeedleSpawner (normal difficulty)
 const nr = NH.rng(+(q.get('needleSeed') || 5));
@@ -29,7 +37,7 @@ const usable = ctx.spots.filter(s => !s.climb || MAP === 'barn');
 const spot = usable[nr.NextInteger(0, usable.length - 1)];
 const np = spot.p.clone().add(new THREE.Vector3((nr.NextNumber() - 0.5) * 1.2, 0.06, (nr.NextNumber() - 0.5) * 1.2));
 const needleTurn = nr.NextNumber() * Math.PI * 2;
-if (MAP !== 'lobby') {
+if (MAP !== 'lobby' && !MD) {
   const m = NH.mul(NH.cf(np.x, np.y, np.z), NH.ang(0, needleTurn, 0));
   ctx.parts.push({ size: [ctx.diff.needle, 0.2, 0.2], m, color: [205, 210, 220], material: 'Metal', shape: 'Cylinder', name: 'Needle' });
   if (VIEW === 'needle') ctx.parts.push({ size: [ctx.diff.needle + 0.12, 0.34, 0.34], m, color: [255, 255, 255], material: 'Neon', shape: 'Cylinder', name: 'Glow', transparency: 0.55 });
@@ -111,11 +119,16 @@ sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -110, right: 110, top: 110, bottom: -110, far: 400 });
 scene.add(sun);
 
-const geo = { Block: new THREE.BoxGeometry(1, 1, 1), Ball: new THREE.SphereGeometry(0.5, 24, 16), Cylinder: new THREE.CylinderGeometry(0.5, 0.5, 1, 24).rotateZ(-Math.PI / 2) };
+const wedge = (() => { // a Roblox wedge: the slope faces -Z, rising to the top at +Z
+  const g = new THREE.BufferGeometry(), A = [-0.5, -0.5, -0.5], B = [-0.5, -0.5, 0.5], C = [-0.5, 0.5, 0.5], D = [0.5, -0.5, -0.5], E = [0.5, -0.5, 0.5], F = [0.5, 0.5, 0.5];
+  const tri = [A, C, B, D, E, F, A, B, E, A, E, D, B, C, F, B, F, E, A, D, F, A, F, C];
+  g.setAttribute('position', new THREE.Float32BufferAttribute(tri.flat(), 3)); g.computeVertexNormals(); return g; })();
+const geo = { Wedge: wedge, Block: new THREE.BoxGeometry(1, 1, 1), Ball: new THREE.SphereGeometry(0.5, 24, 16), Cylinder: new THREE.CylinderGeometry(0.5, 0.5, 1, 24).rotateZ(-Math.PI / 2) };
 let lights = 0;
 const hideNames = (VIEW === 'aerial' || VIEW === 'top') && (MAP === 'barn' || MAP === 'attic') ? ['Roof', 'Loft'] : [];
 for (const p of ctx.parts) {
   if (hideNames.includes(p.name)) continue;
+  if ((p.transparency || 0) >= 1) continue; // invisible walls (the map's edge) aren't drawn
   if ((VIEW === 'aerial' || VIEW === 'top') && MAP === 'barn' && p.name === 'BarnWall' && NH.pos(p.m).z > 0) continue;
   if (VIEW === 'aerial' && MAP === 'attic' && p.name === 'Wall' && NH.pos(p.m).z > 10) continue;
   if (p.shape === 'Dome') { // smooth terrain: a lumpy, soft dome with a straw texture
@@ -146,7 +159,8 @@ for (const p of ctx.parts) {
   if (p.sign) { const sideM = material; const face = new THREE.MeshStandardMaterial({ map: signTex(p.sign), roughness: 0.9 }); material = [sideM, sideM, sideM, sideM, sideM, face]; }
   if (p.name === 'BoothSign') { const sideM = material; const who = (window.BOOTHS || [])[p.booth]; const face = new THREE.MeshStandardMaterial({ map: boothTex(who), roughness: 0.9 }); material = [sideM, sideM, sideM, sideM, sideM, face]; }
   if (p.label) { const sideM = material; const face = new THREE.MeshStandardMaterial({ map: labelTex(p.label, '#' + c3(p.color).getHexString()), roughness: 0.9 }); material = [sideM, sideM, face, sideM, sideM, sideM]; }
-  const mesh = new THREE.Mesh(geo[p.shape], material);
+  if (p.shape === 'Wedge') (Array.isArray(material) ? material : [material]).forEach(mm => mm.side = THREE.DoubleSide);
+  const mesh = new THREE.Mesh(geo[p.shape] || geo.Block, material);
   mesh.applyMatrix4(new THREE.Matrix4().makeScale(...p.size));
   mesh.applyMatrix4(p.m);
   mesh.castShadow = p.name !== 'Straw' && p.name !== 'Ground'; mesh.receiveShadow = true;
@@ -212,13 +226,19 @@ const views = {
   forest: { top: [V(0, 140, 40), V(0, 0, 0)], aerial: [V(55, 40, 64), V(0, 0, -6)], player: [V(0, 5, 22), V(-5, 3, -20)] },
   attic: { top: [V(0, 90, 30), V(0, 0, 0)], aerial: [V(0, 26, 46), V(0, 2, 0)], player: [V(24, 5, 3), V(-20, 4, -1)] },
 };
-let [eye, at] = views[MAP][VIEW] || views[MAP].aerial;
+let [eye, at] = (views[MAP] || views.field)[VIEW] || (views[MAP] || views.field).aerial;
 if (VIEW === 'player' && MAP !== 'lobby' && ctx.spawns.length) { // standing at a spawn, looking down a corridor
   const s = ctx.spawns[+(q.get('spawn') || 0)]; eye = s.clone().add(V(0, 1.6, 0));
   let best = null, bestLen = -1; const ray = new THREE.Raycaster();
   const solids = scene.children.filter(o => o.isMesh);
   for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2, dir = V(Math.cos(a), 0, Math.sin(a)); ray.set(eye, dir); const hit = ray.intersectObjects(solids, false)[0]; const len = hit ? hit.distance : 200; if (len > bestLen) { bestLen = len; best = dir; } }
   at = eye.clone().add(best.multiplyScalar(10)).add(V(0, -0.6, 0));
+}
+if (VIEW === 'chest' && MD && MD.chests.length) { // standing in the corridor near a chest on its perch
+  const c = MD.chests[+(q.get('chest') || 0) % MD.chests.length], cp = V(c[0], c[1], c[2]);
+  let best = null, bestLen = -1; const ray = new THREE.Raycaster(); const solids = scene.children.filter(o => o.isMesh);
+  for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2, dir = V(Math.cos(a), 0, Math.sin(a)); ray.set(cp.clone().setY(2.5), dir); const hit = ray.intersectObjects(solids, false).find(h => h.distance > 3.5); const len = hit ? hit.distance : 40; if (len > bestLen) { bestLen = len; best = dir; } }
+  eye = cp.clone().setY(5.2).add(best.multiplyScalar(Math.min(14, bestLen - 1))); at = cp.clone().add(V(0, 1, 0));
 }
 if (VIEW === 'needle') { // a close look at the hiding place, as a player kneeling 4 studs away
   const dir = new THREE.Vector3(Math.cos(needleTurn + 1.2), 0, Math.sin(needleTurn + 1.2));
