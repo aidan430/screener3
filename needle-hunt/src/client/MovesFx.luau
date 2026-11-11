@@ -29,6 +29,7 @@ local C, P, G, L = Config.Combat, Config.Power, Config.Guard, Config.Lunge
 local held, pressId, chargeStart = false, 0, nil
 local ring, marker, silver
 local kick = 0
+local full = false -- the charge ring has turned gold
 local bubbles = {}
 
 local function pokeReady()
@@ -72,7 +73,7 @@ function MovesFx.press()
 	task.delay(P.hold, function() -- still holding: charge, once the poke is ready again
 		while held and pressId == id and not chargeStart do
 			if pokeReady() and os.clock() - MovesFx.lastPoke >= P.hold then
-				chargeStart = os.clock()
+				chargeStart, full = os.clock(), false
 				Remotes.Charge:FireServer(true)
 				StanceFx.slow("charge", P.slow)
 				ring.Visible = true
@@ -106,7 +107,7 @@ function MovesFx.hit(m)
 			bar.BackgroundColor3, bar.BackgroundTransparency = colour, 0
 			UiKit.ease(bar, 0.22, { BackgroundTransparency = 1 })
 		end
-		Effects.sound("click", if m.result == "blocked" then 2 else 1.4)
+		Effects.sound(if m.result == "blocked" then "click" else "hit", if m.result == "blocked" then 2 elseif m.hearts == 0 or m.kind == "power" then 0.7 else 1.5)
 		if m.result == "blocked" then
 			Mover.push(-dir, Config.Knock.blocked[1], Config.Knock.blocked[2], Config.Knock.blocked[3]) -- bounced off the Thimble
 		end
@@ -114,6 +115,7 @@ function MovesFx.hit(m)
 	if me and m.result ~= "blocked" then
 		local k = Config.Knock[if m.kind == "power" then "power" elseif m.kind == "throw" then "throw" elseif m.combo == 2 then "combo" else "poke"]
 		Mover.push(dir, k[1], k[2], k[3])
+		Effects.sound("hit", 1.1)
 		if not Effects.settings.reduceEffects then
 			kick = if m.kind == "power" then 3.5 else 2.5
 		end
@@ -164,6 +166,10 @@ function MovesFx.start(gui)
 			local f = math.clamp((os.clock() - chargeStart) / P.charge, 0, 1)
 			ring.Size = UDim2.fromOffset(64 - 24 * f, 64 - 24 * f)
 			ring:FindFirstChildOfClass("UIStroke").Color = if f >= 1 then UiKit.colors.gold else Color3.new(1, 1, 1)
+			if f >= 1 and not full then
+				Effects.sound("click", 1.2) -- charged
+			end
+			full = f >= 1
 			if os.clock() - chargeStart >= P.charge + P.auto then
 				endCharge(true) -- held too long: it goes by itself
 			end

@@ -76,6 +76,8 @@ Pose.offsets = (FP, Rig, playing, w) => {
   add(off, M.air, w.air);
   add(off, M.away, w.away);
   add(off, M.wall, w.wall);
+  add(off, M.charge, w.charge || 0);
+  add(off, M.guard, w.guard || 0);
   return off;
 };
 

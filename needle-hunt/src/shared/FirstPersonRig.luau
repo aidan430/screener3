@@ -80,6 +80,10 @@ return {
 		air = { rate = 7, right = { 0, 0.05, 0, 3, 0, 0 }, left = { 0, 0.05, 0, 0, 0, 0 } },
 		-- the needle is away (weight eased to 1 at `rate`; the hand's boxes open by the same weight)
 		away = { rate = 14, right = { 0.05, -0.1, 0.06, -6, 0, 0 }, wrist = { 0, 0, 0, 8, 0, 0 } },
+		-- charging a Power Poke: the hand draws back. Behind a Thimble: the hand comes in and the
+		-- needle stands up across the view (weights eased to 1 at `rate`)
+		charge = { rate = 12, right = { 0.16, 0.06, 0.42, 0, 0, 0 } },
+		guard = { rate = 14, right = { -0.4, 0.22, 0.15, 0, 0, 0 }, wrist = { 0, 0, 0, 0, 0, 55 } },
 		-- a wall: one ray from the camera to where the needle's point would be. Weight 0 when the
 		-- wall is `margin` beyond the point, 1 when it is `near` studs from the camera; in at
 		-- rateIn a second, out at rateOut. The rows pull the hand in and stand the needle up.

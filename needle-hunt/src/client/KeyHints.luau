@@ -13,7 +13,7 @@ local KEYS = {
 	{ "Click", "Poke with your needle" },
 	{ "Hold click", "Power Poke (2 hearts)" },
 	{ "Hold R", "Thimble: block" },
-	{ "Q", "Throw your needle" },
+	{ "Q", "Throw; Q again to catch it" },
 	{ "C", "Dash" },
 	{ "Ctrl or V", "Crouch; slide if running" },
 	{ "Hold E", "Open a chest" },

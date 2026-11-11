@@ -483,6 +483,12 @@ Click or tap to poke the nearest player in front of you.
   - **Thimble:** hold R (L2, or Guard on a phone): a silver bubble blocks pokes and throws from any
     side for up to 1.5 s, at half speed, and the poker bounces off. A Power Poke pops it and still
     takes 2 hearts. A blocked hit still knocks you off a chest.
+  - **Catch:** press Throw again as your needle comes back (from 0.25 s before it's in your hand
+    to 0.15 s after; one try a throw): your next throw is ready 1.5 s sooner (`Config.Catch`).
+  - **Sliding under a throw:** a throw passes over anyone sliding unless it's aimed down at them.
+  - **In first person** the hand draws back while you charge and the needle stands up across the
+    view behind a Thimble (`motion.charge`, `motion.guard` in `shared/FirstPersonRig.luau`).
+  - **Sounds** are only files that ship with Roblox (`Config.Sounds`), pitched where they play.
   - **Impact:** a marker round the reticle when you land a hit (white, orange for 2 hearts, gold
     for a tag-out, grey if blocked); when you're hit, a push back and a small tip of the camera
     ("Reduce effects" turns the tip off).

@@ -42,6 +42,10 @@ local function aim()
 end
 
 local function throw()
+	if player:GetAttribute("NeedleAway") then -- it's on its way back: this press is a catch
+		Remotes.Catch:FireServer()
+		return
+	end
 	if not (player.Character and player.Character:FindFirstChild("Needle")) or os.clock() - lastThrow < T.cooldown then
 		return
 	end
@@ -103,6 +107,15 @@ function ThrowFx.start(gui)
 			button.BackgroundColor3 = if wait > 0 then UiKit.colors.line else Color3.fromRGB(230, 120, 50)
 			task.wait(0.2)
 		end
+	end)
+	player:GetAttributeChangedSignal("CaughtAt"):Connect(function() -- caught: the next throw comes sooner
+		lastThrow -= Config.Catch.gain
+		Effects.sound("catch", 1.5)
+		local note = UiKit.label({ Text = "CATCH!", Font = UiKit.bold, TextColor3 = UiKit.colors.gold, TextStrokeTransparency = 0.4, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 70), Size = UDim2.fromOffset(200, 34), Parent = gui }, 26)
+		UiKit.ease(note, 0.9, { TextTransparency = 1, TextStrokeTransparency = 1 })
+		task.delay(1, function()
+			note:Destroy()
+		end)
 	end)
 	Remotes.Thrown.OnClientEvent:Connect(function(m)
 		task.spawn(flight, m)

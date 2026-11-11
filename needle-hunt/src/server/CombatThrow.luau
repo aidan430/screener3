@@ -19,6 +19,7 @@ local Combat = require(script.Parent.Combat)
 local CombatThrow = {}
 local T = Config.Throw
 local lastThrow = {}
+local backAt = {} -- [player] = when their thrown needle is back (os.clock)
 
 local function setAway(player, tool, away)
 	player:SetAttribute("NeedleAway", away or nil)
@@ -46,11 +47,23 @@ local function throw(player, aim)
 		return
 	end
 	lastThrow[player] = now
+	backAt[player] = now + T.back -- for a catch (Config.Catch): one try a throw
 	local dir = aim.Unit
 	local params = RaycastParams.new()
 	params.FilterType, params.FilterDescendantsInstances = Enum.RaycastFilterType.Exclude, { player.Character }
 	local origin = head.Position + dir * 1.5
-	local hit = workspace:Spherecast(origin, T.radius, dir * T.range, params)
+	local skip = { player.Character }
+	local hit = nil
+	for _ = 1, 4 do -- a throw passes over anyone sliding, unless it's aimed down at them
+		hit = workspace:Spherecast(origin, T.radius, dir * T.range, params)
+		local struck = hit and Players:GetPlayerFromCharacter(hit.Instance:FindFirstAncestorOfClass("Model"))
+		local root = struck and struck.Character:FindFirstChild("HumanoidRootPart")
+		if not (root and struck:GetAttribute("Stance") == "slide" and hit.Position.Y > root.Position.Y - 0.4) then
+			break
+		end
+		table.insert(skip, struck.Character)
+		params.FilterDescendantsInstances = skip
+	end
 	local finish = if hit then hit.Position else origin + dir * T.range
 	local target = hit and Players:GetPlayerFromCharacter(hit.Instance:FindFirstAncestorOfClass("Model"))
 	local dummy = hit and hit.Instance:FindFirstAncestorOfClass("Model") -- a Practice Yard dummy?
@@ -80,8 +93,17 @@ end
 
 function CombatThrow.init()
 	Remotes.Throw.OnServerEvent:Connect(throw)
+	Remotes.Catch.OnServerEvent:Connect(function(player)
+		local at = backAt[player]
+		backAt[player] = nil -- the try is spent, caught or not
+		local now = os.clock()
+		if at and now >= at - Config.Catch.early and now <= at + Config.Catch.late then
+			lastThrow[player] = (lastThrow[player] or 0) - Config.Catch.gain
+			player:SetAttribute("CaughtAt", workspace:GetServerTimeNow())
+		end
+	end)
 	Players.PlayerRemoving:Connect(function(player)
-		lastThrow[player] = nil
+		lastThrow[player], backAt[player] = nil, nil
 	end)
 	Players.PlayerAdded:Connect(function(player)
 		player.CharacterAdded:Connect(function()

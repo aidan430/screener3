@@ -64,6 +64,11 @@ function Motion.step(dt, camera, humanoid, root, away)
 
 	s.away = Pose.ease(s.away, if away then 1 else 0, M.away.rate, dt)
 	w.away = s.away
+	-- charging a Power Poke, and behind a Thimble (the server's attributes)
+	local me = game:GetService("Players").LocalPlayer
+	s.charge = Pose.ease(s.charge or 0, if me:GetAttribute("Charging") then 1 else 0, M.charge.rate, dt)
+	s.guard = Pose.ease(s.guard or 0, if me:GetAttribute("Guarding") then 1 else 0, M.guard.rate, dt)
+	w.charge, w.guard = s.charge, s.guard
 	w.wall = 0
 	return w
 end

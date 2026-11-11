@@ -74,7 +74,7 @@ end
 -- Everything that moves the hold pose this frame, as one set of rows: the animation playing
 -- (already sampled, or nil) plus each of FirstPersonRig.motion's layers times its weight.
 --   w.breath -1..1 | w.step -1..1 and w.dip 0..1 (the walk; times FirstPerson.motion.bob) |
---   w.swayX, w.swayY studs | w.land, w.air, w.away, w.wall 0..1
+--   w.swayX, w.swayY studs | w.land, w.air, w.away, w.wall, w.charge, w.guard 0..1
 function Pose.offsets(FP, Rig, playing, w)
 	local off = { right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 }, wrist = { 0, 0, 0, 0, 0, 0 } }
 	local M = Rig.motion
@@ -88,6 +88,8 @@ function Pose.offsets(FP, Rig, playing, w)
 	add(off, M.air, w.air)
 	add(off, M.away, w.away)
 	add(off, M.wall, w.wall)
+	add(off, M.charge, w.charge or 0)
+	add(off, M.guard, w.guard or 0)
 	return off
 end
 

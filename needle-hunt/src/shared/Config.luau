@@ -223,11 +223,13 @@ Config.GrandBooth = { needles = 6 } -- needles on show at a Grand Booth (3 other
 Config.StarterBundle = { coins = 500, cosmetic = "t_sparkle" } -- what the Starter Bundle gives (never a collectible needle)
 
 -- Sounds: Roblox's built-in sounds; swap in your own Toolbox IDs ("rbxassetid://...").
-Config.Sounds = {
-	found = "rbxasset://sounds/electronicpingshort.wav",
-	click = "rbxasset://sounds/button.wav",
-	whoosh = "rbxasset://sounds/swoosh.wav",
-	countdown = "rbxasset://sounds/clickfast.wav",
+Config.Sounds = { -- only sound files that ship with Roblox itself (nothing uploaded); pitch is set where each is played
+	found = "rbxasset://sounds/action_get_up.mp3",
+	click = "rbxasset://sounds/volume_slider.ogg",
+	whoosh = "rbxasset://sounds/action_jump.mp3",
+	countdown = "rbxasset://sounds/volume_slider.ogg",
+	hit = "rbxasset://sounds/action_jump_land.mp3",
+	catch = "rbxasset://sounds/action_get_up.mp3",
 }
 Config.Music = "" -- a looping lobby track ID, or "" for none
 

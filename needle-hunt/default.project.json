@@ -100,6 +100,9 @@
         },
         "Guard": {
           "$className": "RemoteEvent"
+        },
+        "Catch": {
+          "$className": "RemoteEvent"
         }
       }
     },

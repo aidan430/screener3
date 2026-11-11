@@ -55,4 +55,9 @@ Moves.Knock = { poke = { 22, 6, 0.14 }, combo = { 30, 8, 0.16 }, power = { 34, 8
 -- Most messages a second the server takes from one player, by remote.
 Moves.Rate = { Poke = 6, Charge = 6, Guard = 6 }
 
+-- Catching your thrown needle: press Throw again as it comes back, from `early` seconds before
+-- it's in your hand to `late` after. One try a throw. A catch makes your next throw ready `gain`
+-- seconds sooner.
+Moves.Catch = { early = 0.25, late = 0.15, gain = 1.5 }
+
 return Moves
