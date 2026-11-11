@@ -19,6 +19,7 @@ local RoundManager = require(script.Parent.RoundManager)
 local BoxManager = require(script.Parent.BoxManager)
 local Combat = require(script.Parent.Combat)
 local CombatThrow = require(script.Parent.CombatThrow)
+local CombatPoke = require(script.Parent.CombatPoke)
 local Dash = require(script.Parent.Dash)
 local Stance = require(script.Parent.Stance)
 local OneOfOne = require(script.Parent.OneOfOne)
@@ -49,6 +50,7 @@ for _, step in ipairs({
 	{ "Boxes", BoxManager.init },
 	{ "Combat", Combat.init },
 	{ "Throw", CombatThrow.init },
+	{ "Pokes", CombatPoke.init },
 	{ "Dash", Dash.init },
 	{ "Stance", Stance.init },
 	{ "OneOfOne", OneOfOne.init },

@@ -40,8 +40,8 @@ local function throw(player, aim)
 	local head = player.Character and player.Character:FindFirstChild("Head")
 	if typeof(aim) ~= "Vector3" or aim.Magnitude < 0.5 or aim.Magnitude > 2 or aim ~= aim then
 		return -- not a direction (or not a number)
-	elseif not tool or not head or not (Combat.inRound(player) or player:GetAttribute("Practicing")) or player:GetAttribute("NeedleAway") then
-		return
+	elseif not tool or not head or not (Combat.inRound(player) or player:GetAttribute("Practicing")) or player:GetAttribute("NeedleAway") or player:GetAttribute("Guarding") then
+		return -- (no throwing from behind a Thimble)
 	elseif now - (lastThrow[player] or 0) < T.cooldown then
 		return
 	end

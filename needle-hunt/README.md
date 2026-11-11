@@ -471,6 +471,21 @@ Click or tap to poke the nearest player in front of you.
 - **Dash:** press C (B on a controller, or the Dash button on a phone) for a quick burst forward,
   along the way you're moving (or facing). Every 3 seconds; works anywhere (`Config.Dash`). The
   DASH bar under your hearts empties when you dash and refills; full and bright means ready.
+- **Poke, ONE-TWO, Power Poke, Thimble** (`Config.Combo`, `Power`, `Guard`, `Lunge`, `HitCheck`,
+  `Knock` in `shared/ConfigMoves.luau`; `server/CombatPoke`, `server/Rewind`, `client/MovesFx`,
+  `client/AimAssist`, `client/Mover`):
+  - **Poke:** it goes on the press, at whoever is nearest the middle of your view and in plain
+    sight, and carries you up to 3 studs towards them. The server counts it if the target was in
+    reach at any moment in the last fraction of a second (what you saw), roughly in front, with no
+    wall between. Land one and the next is ready in 0.5 s; land that too (ONE-TWO!) and you wait 0.9.
+  - **Power Poke:** keep holding. A ring at the reticle closes and turns gold after 0.7 s; let go
+    for 2 hearts and a longer lunge. Letting go early, or losing a heart, cancels it.
+  - **Thimble:** hold R (L2, or Guard on a phone): a silver bubble blocks pokes and throws from any
+    side for up to 1.5 s, at half speed, and the poker bounces off. A Power Poke pops it and still
+    takes 2 hearts. A blocked hit still knocks you off a chest.
+  - **Impact:** a marker round the reticle when you land a hit (white, orange for 2 hearts, gold
+    for a tag-out, grey if blocked); when you're hit, a push back and a small tip of the camera
+    ("Reduce effects" turns the tip off).
 - **Crouch and slide:** Left Ctrl or V (L3 on a controller, the Crouch button on a phone). Standing
   still or walking slowly, you crouch: half speed, lower, and your name tag is hidden. Running on
   the ground, you slide for 0.6 s, fast at first (your walk speed + 14, never over 44) and easing

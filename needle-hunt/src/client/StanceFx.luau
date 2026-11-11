@@ -19,7 +19,8 @@ local Effects = require(script.Parent.Effects)
 local player = Players.LocalPlayer
 local StanceFx = {}
 local S = Config.Stance
-local state, standHip, baseSpeed, lastSlide = "stand", nil, nil, -math.huge
+local state, standHip, lastSlide = "stand", nil, -math.huge
+local base, lastSet, slows = 16, nil, {} -- your speed as the server set it, what this script last set, and what is slowing you
 local slide = nil -- { push, attachment, dir, walk, start }
 local button
 
@@ -62,7 +63,7 @@ local function go(stance)
 		return
 	end
 	if state == "stand" then
-		standHip, baseSpeed = humanoid.HipHeight, humanoid.WalkSpeed
+		standHip = humanoid.HipHeight
 	end
 	if stance == "stand" and state ~= "stand" and not headroom(character, root, dropFor(humanoid, state)) then
 		stance = "crouch" -- something overhead: stay down
@@ -74,7 +75,7 @@ local function go(stance)
 	state = stance
 	local hip = if stance == "stand" then standHip else standHip - dropFor(humanoid, stance)
 	UiKit.ease(humanoid, S.ease, { HipHeight = hip }, Enum.EasingStyle.Sine)
-	humanoid.WalkSpeed = if stance == "crouch" then baseSpeed * S.crouchSpeed else baseSpeed
+	StanceFx.slow("stance", if stance == "crouch" then S.crouchSpeed else nil)
 	Remotes.Stance:FireServer(stance)
 	if button then
 		button.Text = if stance == "stand" then "Crouch" else "Stand"
@@ -95,7 +96,7 @@ local function startSlide(humanoid, root, dir)
 	push.PrimaryTangentAxis, push.SecondaryTangentAxis = Vector3.xAxis, Vector3.zAxis
 	push.MaxForce = 1e6
 	push.Parent = root
-	slide = { push = push, attachment = attachment, dir = dir, walk = baseSpeed, start = os.clock() }
+	slide = { push = push, attachment = attachment, dir = dir, walk = base, start = os.clock() }
 	Effects.sound("whoosh", 0.8)
 	if not Effects.settings.reduceEffects then
 		UiKit.ease(workspace.CurrentCamera, 0.15, { FieldOfView = Aim.fov() + S.slide.fov }, Enum.EasingStyle.Sine)
@@ -120,6 +121,11 @@ local function press()
 	end
 end
 
+-- Slows your walk to `factor` x its speed for a named reason (nil ends it). The slowest wins.
+function StanceFx.slow(name, factor)
+	slows[name] = factor
+end
+
 -- Stand up (a dash or anything else that needs you on your feet).
 function StanceFx.stand()
 	go("stand")
@@ -138,9 +144,18 @@ local function step()
 			slide.push.PlaneVelocity = Vector2.new(slide.dir.X, slide.dir.Z) * speed
 		end
 	end
-	if humanoid and state == "crouch" and humanoid.WalkSpeed ~= baseSpeed * S.crouchSpeed then
-		baseSpeed = humanoid.WalkSpeed -- the server changed your speed (boots, held still): half of the new one
-		humanoid.WalkSpeed = baseSpeed * S.crouchSpeed
+	if humanoid then -- your walk speed: the server's, times whatever slows you most (crouch, Thimble, charging)
+		if lastSet == nil or humanoid.WalkSpeed ~= lastSet then
+			base = humanoid.WalkSpeed -- the server changed it (boots, a streak, held still)
+		end
+		local factor = 1
+		for _, f in pairs(slows) do
+			factor = math.min(factor, f)
+		end
+		lastSet = base * factor
+		if humanoid.WalkSpeed ~= lastSet then
+			humanoid.WalkSpeed = lastSet
+		end
 	end
 	for _, p in ipairs(Players:GetPlayers()) do
 		local stance = if p == player then (if state ~= "stand" then state else nil) else p:GetAttribute("Stance")
@@ -182,7 +197,8 @@ function StanceFx.start(gui)
 	end, false, Enum.KeyCode.LeftControl, Enum.KeyCode.V, Enum.KeyCode.ButtonL3)
 	local function fresh(character) -- a new body stands, with its own hip height
 		endSlide()
-		state, standHip, baseSpeed = "stand", nil, nil
+		state, standHip, lastSet = "stand", nil, nil
+		table.clear(slows)
 		local humanoid = character:WaitForChild("Humanoid", 10)
 		if humanoid then
 			humanoid.Jumping:Connect(function(active)

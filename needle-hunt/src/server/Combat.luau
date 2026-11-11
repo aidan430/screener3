@@ -25,7 +25,7 @@ local Streaks = require(script.Parent.Streaks)
 local Combat = {}
 local C, T = Config.Combat, Config.NeedleTool
 local round = nil
-local lastPoke, lastHit, moving = {}, {}, {}
+local lastHit, moving = {}, {}
 
 local function baseGrip()
 	return CFrame.Angles(math.rad(T.grip[1]), math.rad(T.grip[2]), math.rad(T.grip[3]))
@@ -134,43 +134,11 @@ local function tagOut(attacker, target, humanoid, how)
 	humanoid.Health = 0
 end
 
-local function poke(attacker, targetId)
-	local now = os.clock()
-	if now - (lastPoke[attacker] or 0) < C.cooldown then
-		return
-	end
-	lastPoke[attacker] = now
-	if attacker:GetAttribute("NeedleAway") then
-		return -- it's flying: nothing in your hand to poke with
-	end
-	jab(attacker)
-	if type(targetId) == "string" then -- a Practice Yard dummy (server/Practice checks it)
-		if Combat.onDummy and toolOf(attacker) then
-			Combat.onDummy(attacker, targetId, 1, false)
-		end
-		return
-	end
-	if not inRound(attacker) or type(targetId) ~= "number" then
-		return
-	end
-	local target = Players:GetPlayerByUserId(targetId)
-	local a = attacker.Character and attacker.Character:FindFirstChild("HumanoidRootPart")
-	local b = target and target.Character and target.Character:FindFirstChild("HumanoidRootPart")
-	local humanoid = b and target.Character:FindFirstChildOfClass("Humanoid")
-	if not toolOf(attacker) or not humanoid or humanoid.Health <= 0 or not inRound(target) or target == attacker then
-		return
-	end
-	local offset = b.Position - a.Position
-	local flat = Vector3.new(offset.X, 0, offset.Z)
-	if offset.Magnitude > C.reach + 1 or (flat.Magnitude > 0.5 and a.CFrame.LookVector:Dot(flat.Unit) < 0.2) then
-		return -- too far, or behind you
-	end
-	Combat.damage(attacker, target, 1)
-end
-
--- Takes `amount` hearts from `target` (a poke 1, a thrown needle Config.Combat.throwDamage), if
--- both are in the round, the target is alive and isn't in their safe time. Returns true if it hit.
-function Combat.damage(attacker, target, amount)
+-- Takes `amount` hearts from `target` (a poke 1, a Power Poke or a thrown needle 2), if both are
+-- in the round, the target is alive and isn't in their safe time. info: { kind = "poke" | "power"
+-- | "throw", combo, dir }. Returns "hit", or "blocked" if a Thimble stopped it (Combat.guard, set
+-- by server/CombatPoke; a Power Poke breaks it and still hits), or false.
+function Combat.damage(attacker, target, amount, info)
 	local root = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
 	local humanoid = root and target.Character:FindFirstChildOfClass("Humanoid")
 	if not humanoid or humanoid.Health <= 0 or target == attacker or not inRound(attacker) or not inRound(target) then
@@ -178,19 +146,34 @@ function Combat.damage(attacker, target, amount)
 	elseif (target:GetAttribute("SafeUntil") or 0) > workspace:GetServerTimeNow() then
 		return false
 	end
+	info = info or {}
+	local kind = info.kind or (if amount > 1 then "throw" else "poke")
+	local from = attacker.Character and attacker.Character:FindFirstChild("HumanoidRootPart")
+	local away = if from then (root.Position - from.Position) * Vector3.new(1, 0, 1) else Vector3.zero
+	local dir = info.dir or (if away.Magnitude > 0.1 then away.Unit else Vector3.zero)
+	local guard = Combat.guard and Combat.guard(target, kind)
 	attacker:SetAttribute("SafeUntil", 0) -- attacking ends your own safe time
-	local hearts = math.max(0, (target:GetAttribute("Hearts") or C.hearts) - amount)
-	target:SetAttribute("Hearts", hearts)
-	target:SetAttribute("HitAt", workspace:GetServerTimeNow()) -- a hit stops a chest opening (server/ChestSpawner)
-	lastHit[target] = os.clock()
-	Remotes.Hit:FireAllClients({ from = attacker.UserId, to = target.UserId, hearts = hearts, position = root.Position, amount = amount })
-	if hearts == 0 then
-		tagOut(attacker, target, humanoid, if amount > 1 then "throw" else "poke")
+	target:SetAttribute("HitAt", workspace:GetServerTimeNow()) -- a hit, even a blocked one, stops a chest opening (server/ChestSpawner)
+	local hearts = target:GetAttribute("Hearts") or C.hearts
+	if guard == "blocked" then
+		Remotes.Hit:FireAllClients({ from = attacker.UserId, to = target.UserId, hearts = hearts, position = root.Position, amount = 0, result = "blocked", kind = kind, dir = dir })
+		return "blocked"
 	end
-	return true
+	hearts = math.max(0, hearts - amount)
+	target:SetAttribute("Hearts", hearts)
+	lastHit[target] = os.clock()
+	if Combat.onHurt then
+		Combat.onHurt(target)
+	end
+	Remotes.Hit:FireAllClients({ from = attacker.UserId, to = target.UserId, hearts = hearts, position = root.Position, amount = amount, result = if guard then "broken" else "hit", kind = kind, combo = info.combo, dir = dir })
+	if hearts == 0 then
+		tagOut(attacker, target, humanoid, if kind == "throw" then "throw" else "poke")
+	end
+	return "hit"
 end
 
 Combat.toolOf = toolOf
+Combat.jab = jab
 
 function Combat.start(r)
 	round = r
@@ -208,7 +191,6 @@ end
 function Combat.init()
 	Streaks.init()
 	Players.RespawnTime = C.respawn
-	Remotes.Poke.OnServerEvent:Connect(poke)
 	Remotes.Inspect.OnServerEvent:Connect(function(player)
 		if toolOf(player) then
 			inspect(player)
@@ -230,7 +212,7 @@ function Combat.init()
 		joined(p)
 	end
 	Players.PlayerRemoving:Connect(function(player)
-		lastPoke[player], lastHit[player], moving[player] = nil, nil, nil
+		lastHit[player], moving[player] = nil, nil
 	end)
 	task.spawn(function() -- hearts come back, one every Config.Combat.regen seconds without a hit
 		while true do

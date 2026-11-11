@@ -8,7 +8,7 @@ local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local UiKit = require(script.Parent.UiKit)
-local CombatFx = require(script.Parent.CombatFx)
+local MovesFx = require(script.Parent.MovesFx)
 local ThrowFx = require(script.Parent.ThrowFx)
 
 local player = Players.LocalPlayer
@@ -38,7 +38,7 @@ function CooldownBars.start(gui)
 		local now = os.clock()
 		local show = ReplicatedStorage:GetAttribute("Phase") == "search" and player:GetAttribute("InRound") == true
 		local thrown = (now - ThrowFx.lastThrow()) / Config.Throw.back
-		poke(math.clamp(math.min((now - CombatFx.lastPoke) / Config.Combat.cooldown, thrown), 0, 1), show)
+		poke(math.clamp(math.min((now - MovesFx.lastPoke) / Config.Combat.cooldown, thrown), 0, 1), show)
 		throw(math.clamp((now - ThrowFx.lastThrow()) / Config.Throw.cooldown, 0, 1), show)
 	end)
 end

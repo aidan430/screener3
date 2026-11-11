@@ -468,7 +468,9 @@ Config.Aim = {
 Config.Practice = { seconds = 180, countdown = 3, dummies = 8, moving = 3, hearts = 3, chests = 5, perch = { 3.5, 7 },
 	size = 100, centre = Vector3.new(-700, 0, 0), spacing = 180, backAfter = 10 }
 
-Config.Stance = require(script.Parent.ConfigMoves).Stance -- crouch and slide
+for name, value in pairs(require(script.Parent.ConfigMoves)) do -- Stance, Combo, Power, Guard, Lunge, HitCheck, Knock, Rate
+	Config[name] = value
+end
 Config.Look = require(script.Parent.ConfigLook) -- the sun, sky, haze and wind presets
 
 return Config
@@ -588,6 +590,39 @@ Moves.Stance = {
 	server = { rate = 8, slideMax = 0.85 },
 	legs = { 1, -2, 1 }, waist = { crouch = -12, slide = 20 },
 }
+
+-- Poking (server/CombatPoke). After a poke that lands, the next is ready in `first` seconds; land
+-- that one within `window` of the first and it's a ONE-TWO, then `second` before the next. A poke
+-- that a Thimble blocks costs `blocked`. (A plain miss is Config.Combat.cooldown.)
+Moves.Combo = { first = 0.5, second = 0.9, window = 1.2, blocked = 1.1 }
+
+-- The Power Poke: keep holding the poke button. Charging starts `hold` seconds into the hold (and
+-- never before your poke is ready), is full `charge` later and lets itself go `auto` after that.
+-- Letting go early cancels it. It takes `damage` hearts, pops a Thimble, and then `cooldown`.
+-- You walk at `slow` x your speed while charging. Losing a heart ends a charge.
+Moves.Power = { hold = 0.25, charge = 0.7, auto = 1.5, cooldown = 1, damage = 2, slow = 0.7 }
+
+-- The Thimble (hold R, L2 or GUARD): blocks pokes and throws from any side for as long as it's
+-- held, `max` seconds at most; then `cooldown` before the next (`popped` if a Power Poke broke
+-- it). You walk at `slow` x your speed and can't poke, charge or throw behind it.
+Moves.Guard = { max = 1.5, cooldown = 1.2, popped = 2.5, slow = 0.5 }
+
+-- The lunge: a poke at someone further than `from` studs (and within Config.Combat.reach + range)
+-- carries you towards them at `speed` for up to `seconds`. power*: the Power Poke's.
+Moves.Lunge = { range = 3, powerRange = 5, from = 4.5, speed = 40, seconds = 0.1, powerSpeed = 46, powerSeconds = 0.14 }
+
+-- How the server checks a poke: the target may be up to reach + the lunge + `pad` away on the flat
+-- and `up` studs above or below, measured against where they were at any moment in the last
+-- `window` seconds (twice the attacker's ping + the first number, at most the second), so a hit
+-- that looked right on your screen counts. `forgive`: a poke this early still counts.
+-- `history`: seconds of positions kept (server/Rewind).
+Moves.HitCheck = { pad = 1.5, up = 6, window = { 0.1, 0.35 }, forgive = 0.1, history = 1 }
+
+-- Knockback on the player who was hit: { speed at first, speed at the end, seconds }.
+Moves.Knock = { poke = { 22, 6, 0.14 }, combo = { 30, 8, 0.16 }, power = { 34, 8, 0.18 }, throw = { 26, 6, 0.14 }, blocked = { 18, 4, 0.12 } }
+
+-- Most messages a second the server takes from one player, by remote.
+Moves.Rate = { Poke = 6, Charge = 6, Guard = 6 }
 
 return Moves
 ]]></ProtectedString>
@@ -2796,17 +2831,27 @@ return {
 					<string name="Name">Stance</string>
 				</Properties>
 			</Item>
+			<Item class="RemoteEvent" referent="RBX00034">
+				<Properties>
+					<string name="Name">Charge</string>
+				</Properties>
+			</Item>
+			<Item class="RemoteEvent" referent="RBX00035">
+				<Properties>
+					<string name="Name">Guard</string>
+				</Properties>
+			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerScriptService" referent="RBX00034">
+	<Item class="ServerScriptService" referent="RBX00036">
 		<Properties>
 			<string name="Name">ServerScriptService</string>
 		</Properties>
-		<Item class="Folder" referent="RBX00035">
+		<Item class="Folder" referent="RBX00037">
 			<Properties>
 				<string name="Name">Server</string>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX00036">
+			<Item class="ModuleScript" referent="RBX00038">
 				<Properties>
 					<string name="Name">AntiCheat</string>
 					<ProtectedString name="Source"><![CDATA[-- Basic anti-exploit: every Config.AntiCheat.checkEvery seconds, each character's position is
@@ -2892,7 +2937,7 @@ return AntiCheat
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00037">
+			<Item class="ModuleScript" referent="RBX00039">
 				<Properties>
 					<string name="Name">BoxManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Box openings (Config.Boxes, shared/Boxes). Boxes open through Remotes.Box with coins ("open") or
@@ -3047,7 +3092,7 @@ return BoxManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00038">
+			<Item class="ModuleScript" referent="RBX0003A">
 				<Properties>
 					<string name="Name">ChestSpawner</string>
 					<ProtectedString name="Source"><![CDATA[-- The chests each round (Config.Chests), made to be fought over. They go in the dead ends furthest
@@ -3347,7 +3392,7 @@ return ChestSpawner
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00039">
+			<Item class="ModuleScript" referent="RBX0003B">
 				<Properties>
 					<string name="Name">CollectionManager</string>
 					<ProtectedString name="Source"><![CDATA[-- The needle collection, on the server. Needles come from boxes (server/BoxManager: coins, keys
@@ -3432,7 +3477,7 @@ return CollectionManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003A">
+			<Item class="ModuleScript" referent="RBX0003C">
 				<Properties>
 					<string name="Name">Combat</string>
 					<ProtectedString name="Source"><![CDATA[-- Needle combat. Everyone carries their showcase needle as a tool (the "Needle", rebuilt when the
@@ -3462,7 +3507,7 @@ local Streaks = require(script.Parent.Streaks)
 local Combat = {}
 local C, T = Config.Combat, Config.NeedleTool
 local round = nil
-local lastPoke, lastHit, moving = {}, {}, {}
+local lastHit, moving = {}, {}
 
 local function baseGrip()
 	return CFrame.Angles(math.rad(T.grip[1]), math.rad(T.grip[2]), math.rad(T.grip[3]))
@@ -3571,43 +3616,11 @@ local function tagOut(attacker, target, humanoid, how)
 	humanoid.Health = 0
 end
 
-local function poke(attacker, targetId)
-	local now = os.clock()
-	if now - (lastPoke[attacker] or 0) < C.cooldown then
-		return
-	end
-	lastPoke[attacker] = now
-	if attacker:GetAttribute("NeedleAway") then
-		return -- it's flying: nothing in your hand to poke with
-	end
-	jab(attacker)
-	if type(targetId) == "string" then -- a Practice Yard dummy (server/Practice checks it)
-		if Combat.onDummy and toolOf(attacker) then
-			Combat.onDummy(attacker, targetId, 1, false)
-		end
-		return
-	end
-	if not inRound(attacker) or type(targetId) ~= "number" then
-		return
-	end
-	local target = Players:GetPlayerByUserId(targetId)
-	local a = attacker.Character and attacker.Character:FindFirstChild("HumanoidRootPart")
-	local b = target and target.Character and target.Character:FindFirstChild("HumanoidRootPart")
-	local humanoid = b and target.Character:FindFirstChildOfClass("Humanoid")
-	if not toolOf(attacker) or not humanoid or humanoid.Health <= 0 or not inRound(target) or target == attacker then
-		return
-	end
-	local offset = b.Position - a.Position
-	local flat = Vector3.new(offset.X, 0, offset.Z)
-	if offset.Magnitude > C.reach + 1 or (flat.Magnitude > 0.5 and a.CFrame.LookVector:Dot(flat.Unit) < 0.2) then
-		return -- too far, or behind you
-	end
-	Combat.damage(attacker, target, 1)
-end
-
--- Takes `amount` hearts from `target` (a poke 1, a thrown needle Config.Combat.throwDamage), if
--- both are in the round, the target is alive and isn't in their safe time. Returns true if it hit.
-function Combat.damage(attacker, target, amount)
+-- Takes `amount` hearts from `target` (a poke 1, a Power Poke or a thrown needle 2), if both are
+-- in the round, the target is alive and isn't in their safe time. info: { kind = "poke" | "power"
+-- | "throw", combo, dir }. Returns "hit", or "blocked" if a Thimble stopped it (Combat.guard, set
+-- by server/CombatPoke; a Power Poke breaks it and still hits), or false.
+function Combat.damage(attacker, target, amount, info)
 	local root = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
 	local humanoid = root and target.Character:FindFirstChildOfClass("Humanoid")
 	if not humanoid or humanoid.Health <= 0 or target == attacker or not inRound(attacker) or not inRound(target) then
@@ -3615,19 +3628,34 @@ function Combat.damage(attacker, target, amount)
 	elseif (target:GetAttribute("SafeUntil") or 0) > workspace:GetServerTimeNow() then
 		return false
 	end
+	info = info or {}
+	local kind = info.kind or (if amount > 1 then "throw" else "poke")
+	local from = attacker.Character and attacker.Character:FindFirstChild("HumanoidRootPart")
+	local away = if from then (root.Position - from.Position) * Vector3.new(1, 0, 1) else Vector3.zero
+	local dir = info.dir or (if away.Magnitude > 0.1 then away.Unit else Vector3.zero)
+	local guard = Combat.guard and Combat.guard(target, kind)
 	attacker:SetAttribute("SafeUntil", 0) -- attacking ends your own safe time
-	local hearts = math.max(0, (target:GetAttribute("Hearts") or C.hearts) - amount)
-	target:SetAttribute("Hearts", hearts)
-	target:SetAttribute("HitAt", workspace:GetServerTimeNow()) -- a hit stops a chest opening (server/ChestSpawner)
-	lastHit[target] = os.clock()
-	Remotes.Hit:FireAllClients({ from = attacker.UserId, to = target.UserId, hearts = hearts, position = root.Position, amount = amount })
-	if hearts == 0 then
-		tagOut(attacker, target, humanoid, if amount > 1 then "throw" else "poke")
+	target:SetAttribute("HitAt", workspace:GetServerTimeNow()) -- a hit, even a blocked one, stops a chest opening (server/ChestSpawner)
+	local hearts = target:GetAttribute("Hearts") or C.hearts
+	if guard == "blocked" then
+		Remotes.Hit:FireAllClients({ from = attacker.UserId, to = target.UserId, hearts = hearts, position = root.Position, amount = 0, result = "blocked", kind = kind, dir = dir })
+		return "blocked"
 	end
-	return true
+	hearts = math.max(0, hearts - amount)
+	target:SetAttribute("Hearts", hearts)
+	lastHit[target] = os.clock()
+	if Combat.onHurt then
+		Combat.onHurt(target)
+	end
+	Remotes.Hit:FireAllClients({ from = attacker.UserId, to = target.UserId, hearts = hearts, position = root.Position, amount = amount, result = if guard then "broken" else "hit", kind = kind, combo = info.combo, dir = dir })
+	if hearts == 0 then
+		tagOut(attacker, target, humanoid, if kind == "throw" then "throw" else "poke")
+	end
+	return "hit"
 end
 
 Combat.toolOf = toolOf
+Combat.jab = jab
 
 function Combat.start(r)
 	round = r
@@ -3645,7 +3673,6 @@ end
 function Combat.init()
 	Streaks.init()
 	Players.RespawnTime = C.respawn
-	Remotes.Poke.OnServerEvent:Connect(poke)
 	Remotes.Inspect.OnServerEvent:Connect(function(player)
 		if toolOf(player) then
 			inspect(player)
@@ -3667,7 +3694,7 @@ function Combat.init()
 		joined(p)
 	end
 	Players.PlayerRemoving:Connect(function(player)
-		lastPoke[player], lastHit[player], moving[player] = nil, nil, nil
+		lastHit[player], moving[player] = nil, nil
 	end)
 	task.spawn(function() -- hearts come back, one every Config.Combat.regen seconds without a hit
 		while true do
@@ -3687,7 +3714,222 @@ return Combat
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003B">
+			<Item class="ModuleScript" referent="RBX0003D">
+				<Properties>
+					<string name="Name">CombatPoke</string>
+					<ProtectedString name="Source"><![CDATA[-- Pokes, the Power Poke and the Thimble (Config.Combo, Power, Guard, HitCheck). The client only
+-- ever says what it wants (Remotes.Poke: who it aimed at, and whether it let a full charge go;
+-- Remotes.Charge and Remotes.Guard: holding or not); every time, distance, wall and heart is the
+-- server's:
+--   a poke lands if the target was within reach (plus the lunge) at some moment in the last
+--   fraction of a second (server/Rewind: what the attacker saw), roughly in front, no wall between;
+--   a landed poke makes the next one quicker (a ONE-TWO), a blocked one slower;
+--   a Power Poke needs a full charge the server timed itself, takes 2 hearts and pops a Thimble;
+--   a Thimble blocks pokes and throws from any side while it's up (server/Combat.damage asks here).
+-- Attributes others read: Guarding, Charging, PokeAt and GuardAt (server times they're ready again).
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local Combat = require(script.Parent.Combat)
+local Rewind = require(script.Parent.Rewind)
+
+local CombatPoke = {}
+local C, K, P, G, L, H = Config.Combat, Config.Combo, Config.Power, Config.Guard, Config.Lunge, Config.HitCheck
+local states = {}
+
+local function state(player)
+	local s = states[player]
+	if not s then
+		s = { ready = 0, guardReady = 0, rate = {} }
+		states[player] = s
+	end
+	return s
+end
+
+local function allow(player, name) -- a few messages a second each; the rest are dropped
+	local r, now = state(player).rate, os.clock()
+	local w = r[name]
+	if not w or now - w[1] >= 1 then
+		w = { now, 0 }
+		r[name] = w
+	end
+	w[2] += 1
+	return w[2] <= Config.Rate[name]
+end
+
+local function alive(player)
+	local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	return h ~= nil and h.Health > 0 and Combat.toolOf(player) ~= nil
+end
+
+local function endCharge(player)
+	local s = state(player)
+	if s.chargeFrom then
+		s.chargeFrom = nil
+		player:SetAttribute("Charging", nil)
+	end
+end
+
+local function dropGuard(player, popped)
+	local s = state(player)
+	if s.guardSince then
+		s.guardSince = nil
+		local wait = if popped then G.popped else G.cooldown
+		s.guardReady = os.clock() + wait
+		player:SetAttribute("Guarding", nil)
+		player:SetAttribute("GuardAt", workspace:GetServerTimeNow() + wait)
+	end
+end
+
+local function setReady(player, seconds)
+	state(player).ready = os.clock() + seconds
+	player:SetAttribute("PokeAt", workspace:GetServerTimeNow() + seconds)
+end
+
+-- Could `attacker` have reached `target` just now? Their flat direction if so.
+local function reaches(attacker, target, lunge)
+	local a = attacker.Character and attacker.Character:FindFirstChild("HumanoidRootPart")
+	if not a or not (target.Character and target.Character:FindFirstChild("HumanoidRootPart")) then
+		return nil
+	end
+	local range = C.reach + lunge + H.pad
+	local params = RaycastParams.new()
+	params.FilterType, params.RespectCanCollide = Enum.RaycastFilterType.Exclude, true
+	local characters = {}
+	for _, p in ipairs(Players:GetPlayers()) do
+		table.insert(characters, p.Character)
+	end
+	params.FilterDescendantsInstances = characters
+	for _, sample in ipairs(Rewind.samples(target, Rewind.window(attacker))) do
+		local offset = sample.p - a.Position
+		local flat = Vector3.new(offset.X, 0, offset.Z)
+		if flat.Magnitude <= range and math.abs(offset.Y) <= H.up then
+			local facing = flat.Magnitude < 2
+			for _, mine in ipairs(Rewind.samples(attacker, 0.25)) do
+				facing = facing or (mine.look.Magnitude > 0 and mine.look.Unit:Dot(flat.Unit) >= 0)
+			end
+			local from = a.Position + Vector3.new(0, 1.5, 0)
+			if facing and not workspace:Raycast(from, sample.p + Vector3.new(0, 0.5, 0) - from, params) then
+				return if flat.Magnitude > 0.1 then flat.Unit else a.CFrame.LookVector
+			end
+		end
+	end
+	return nil
+end
+
+local function poke(attacker, targetId, power)
+	if not allow(attacker, "Poke") or not alive(attacker) or attacker:GetAttribute("NeedleAway") or attacker:GetAttribute("Guarding") then
+		return
+	end
+	local s, now = state(attacker), os.clock()
+	power = power == true
+	if power then
+		local full = s.chargeFrom and now - s.chargeFrom >= P.charge - H.forgive
+		endCharge(attacker)
+		if not full then
+			return -- not charged: nothing happens (the press already poked)
+		end
+	elseif now < s.ready - H.forgive then
+		return
+	end
+	Combat.jab(attacker)
+	local amount = if power then P.damage else 1
+	local kind = if power then "power" else "poke"
+	local result = nil
+	local combo = if not power and s.chain and now - s.chain <= K.window then 2 else 1
+	if type(targetId) == "string" and #targetId <= 8 then -- a Practice Yard dummy (server/Practice checks it)
+		result = Combat.onDummy and Combat.onDummy(attacker, targetId, amount, false) and "hit"
+	elseif type(targetId) == "number" and Combat.inRound(attacker) then
+		local target = Players:GetPlayerByUserId(targetId)
+		if target and target ~= attacker and Combat.inRound(target) then
+			local dir = reaches(attacker, target, if power then L.powerRange else L.range)
+			if dir then
+				result = Combat.damage(attacker, target, amount, { kind = kind, combo = combo, dir = dir })
+			end
+		end
+	end
+	if power then
+		s.chain = nil
+		setReady(attacker, P.cooldown)
+	elseif result == "blocked" then
+		s.chain = nil
+		setReady(attacker, K.blocked)
+	elseif result and combo == 1 then
+		s.chain = now
+		setReady(attacker, K.first)
+	elseif result then
+		s.chain = nil
+		setReady(attacker, K.second)
+	else
+		s.chain = nil
+		setReady(attacker, C.cooldown)
+	end
+end
+
+function CombatPoke.init()
+	Rewind.init()
+	Remotes.Poke.OnServerEvent:Connect(poke)
+	Remotes.Charge.OnServerEvent:Connect(function(player, on)
+		if not allow(player, "Charge") then
+			return
+		elseif on == true and alive(player) and not player:GetAttribute("NeedleAway") and not player:GetAttribute("Guarding") then
+			local s = state(player)
+			s.chargeFrom = math.max(os.clock(), s.ready) -- never counts from before the poke is ready
+			player:SetAttribute("Charging", true)
+		else
+			endCharge(player)
+		end
+	end)
+	Remotes.Guard.OnServerEvent:Connect(function(player, on)
+		if not allow(player, "Guard") then
+			return
+		end
+		local s = state(player)
+		if on == true and alive(player) and not s.guardSince and os.clock() >= s.guardReady - H.forgive then
+			endCharge(player)
+			s.guardSince = os.clock()
+			player:SetAttribute("Guarding", true)
+		elseif on ~= true then
+			dropGuard(player, false)
+		end
+	end)
+	Combat.guard = function(target, kind) -- asked by Combat.damage: does a Thimble stop this?
+		if not state(target).guardSince then
+			return nil
+		elseif kind == "power" then
+			dropGuard(target, true)
+			return "broken"
+		end
+		return "blocked"
+	end
+	Combat.onHurt = endCharge -- losing a heart ends a charge
+	Players.PlayerRemoving:Connect(function(player)
+		states[player] = nil
+	end)
+	task.spawn(function() -- a Thimble comes down by itself; nobody charges for ever, or while tagged out
+		while true do
+			task.wait(0.1)
+			local now = os.clock()
+			for player, s in pairs(states) do
+				local ok = alive(player)
+				if s.guardSince and (not ok or now - s.guardSince >= G.max) then
+					dropGuard(player, false)
+				end
+				if s.chargeFrom and (not ok or now - s.chargeFrom >= P.charge + P.auto + 0.5) then
+					endCharge(player)
+				end
+			end
+		end
+	end)
+end
+
+return CombatPoke
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX0003E">
 				<Properties>
 					<string name="Name">CombatThrow</string>
 					<ProtectedString name="Source"><![CDATA[-- Throwing your needle (Config.Throw). The client sends where it's aiming (Remotes.Throw); the
@@ -3732,8 +3974,8 @@ local function throw(player, aim)
 	local head = player.Character and player.Character:FindFirstChild("Head")
 	if typeof(aim) ~= "Vector3" or aim.Magnitude < 0.5 or aim.Magnitude > 2 or aim ~= aim then
 		return -- not a direction (or not a number)
-	elseif not tool or not head or not (Combat.inRound(player) or player:GetAttribute("Practicing")) or player:GetAttribute("NeedleAway") then
-		return
+	elseif not tool or not head or not (Combat.inRound(player) or player:GetAttribute("Practicing")) or player:GetAttribute("NeedleAway") or player:GetAttribute("Guarding") then
+		return -- (no throwing from behind a Thimble)
 	elseif now - (lastThrow[player] or 0) < T.cooldown then
 		return
 	end
@@ -3786,7 +4028,7 @@ return CombatThrow
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003C">
+			<Item class="ModuleScript" referent="RBX0003F">
 				<Properties>
 					<string name="Name">Dash</string>
 					<ProtectedString name="Source"><![CDATA[-- Dashing (Config.Dash; the dash itself is client/DashFx, since each player's device moves its
@@ -3819,7 +4061,7 @@ return Dash
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003D">
+			<Item class="ModuleScript" referent="RBX00040">
 				<Properties>
 					<string name="Name">DataManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Player data: loaded on join, cached for the session, saved with UpdateAsync on an autosave
@@ -4098,7 +4340,7 @@ return DataManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003E">
+			<Item class="ModuleScript" referent="RBX00041">
 				<Properties>
 					<string name="Name">FarmProps</string>
 					<ProtectedString name="Source"><![CDATA[-- Farm props for the maps from the owner's Gemini sheets (server/MapsC): pumpkins, scarecrows,
@@ -4270,7 +4512,7 @@ return FarmProps
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003F">
+			<Item class="ModuleScript" referent="RBX00042">
 				<Properties>
 					<string name="Name">FarmProps2</string>
 					<ProtectedString name="Source"><![CDATA[-- More props for the maps from the Gemini sheets (server/MapsD): a snowy barn, snowy pines, a
@@ -4473,7 +4715,7 @@ return FarmProps2
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00040">
+			<Item class="ModuleScript" referent="RBX00043">
 				<Properties>
 					<string name="Name">GamePads</string>
 					<ProtectedString name="Source"><![CDATA[-- The game platforms in the lobby (Config.Pads; built by server/LobbyBuilder). Stand on one to join
@@ -4634,7 +4876,7 @@ return GamePads
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00041">
+			<Item class="ModuleScript" referent="RBX00044">
 				<Properties>
 					<string name="Name">GameServer</string>
 					<ProtectedString name="Source"><![CDATA[-- A game's own server: a private (reserved) server of this same place, made by a lobby game platform
@@ -4717,7 +4959,7 @@ return GameServer
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00042">
+			<Item class="ModuleScript" referent="RBX00045">
 				<Properties>
 					<string name="Name">HaystackModel</string>
 					<ProtectedString name="Source"><![CDATA[-- The owner's own haystack model (Config.Haystacks.model): loaded once with InsertService (it must
@@ -4771,7 +5013,7 @@ return HaystackModel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00043">
+			<Item class="ModuleScript" referent="RBX00046">
 				<Properties>
 					<string name="Name">Landmarks</string>
 					<ProtectedString name="Source"><![CDATA[-- Climbable landmarks for a big map (server/MapsBig). Each is a challenge to reach, and returns the
@@ -4906,7 +5148,7 @@ return Landmarks
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00044">
+			<Item class="ModuleScript" referent="RBX00047">
 				<Properties>
 					<string name="Name">LeaderboardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Global leaderboards (Config.Boards), each an OrderedDataStore: most chests, most tag-outs,
@@ -5080,7 +5322,7 @@ return LeaderboardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00045">
+			<Item class="ModuleScript" referent="RBX00048">
 				<Properties>
 					<string name="Name">LobbyBuilder</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby, built once at Config.LobbyCentre: a wooden plaza in a field, the animated title sign
@@ -5317,7 +5559,7 @@ return LobbyBuilder
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00046">
+			<Item class="ModuleScript" referent="RBX00049">
 				<Properties>
 					<string name="Name">LobbyDecor</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's dressing (LobbyBuilder calls build once): a lawn crossed by cobbled paths (spawn to
@@ -5424,7 +5666,7 @@ return LobbyDecor
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00047">
+			<Item class="ModuleScript" referent="RBX0004A">
 				<Properties>
 					<string name="Name">LobbyShowOff</string>
 					<ProtectedString name="Source"><![CDATA[-- Show off (Remotes.ShowOff): hold your showcase needle (or your best) up over your head for a
@@ -5493,7 +5735,7 @@ return LobbyShowOff
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00048">
+			<Item class="ModuleScript" referent="RBX0004B">
 				<Properties>
 					<string name="Name">LobbySocial</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's social side: showing off collections.
@@ -5773,7 +6015,7 @@ return LobbySocial
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00049">
+			<Item class="ModuleScript" referent="RBX0004C">
 				<Properties>
 					<string name="Name">Look</string>
 					<ProtectedString name="Source"><![CDATA[-- The look of the world, from Config.Look's presets: the sun, sky, haze (Atmosphere), clouds, glow
@@ -5913,7 +6155,7 @@ return Look
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Script" referent="RBX0004A">
+			<Item class="Script" referent="RBX0004D">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Starts A Needle in a Haystack on the server. Systems that react to a player's save loading are
@@ -5937,6 +6179,7 @@ local RoundManager = require(script.Parent.RoundManager)
 local BoxManager = require(script.Parent.BoxManager)
 local Combat = require(script.Parent.Combat)
 local CombatThrow = require(script.Parent.CombatThrow)
+local CombatPoke = require(script.Parent.CombatPoke)
 local Dash = require(script.Parent.Dash)
 local Stance = require(script.Parent.Stance)
 local OneOfOne = require(script.Parent.OneOfOne)
@@ -5967,6 +6210,7 @@ for _, step in ipairs({
 	{ "Boxes", BoxManager.init },
 	{ "Combat", Combat.init },
 	{ "Throw", CombatThrow.init },
+	{ "Pokes", CombatPoke.init },
 	{ "Dash", Dash.init },
 	{ "Stance", Stance.init },
 	{ "OneOfOne", OneOfOne.init },
@@ -6003,7 +6247,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004B">
+			<Item class="ModuleScript" referent="RBX0004E">
 				<Properties>
 					<string name="Name">MapKit</string>
 					<ProtectedString name="Source"><![CDATA[-- The building kit for maps (server/MapsA, MapsB): ground, hay bales, haystacks, crates, fences,
@@ -6232,7 +6476,7 @@ return MapKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004C">
+			<Item class="ModuleScript" referent="RBX0004F">
 				<Properties>
 					<string name="Name">MapsA</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Classic Haystack Field (a hedge maze), Barn Interior (a maze of stall walls) and
@@ -6361,7 +6605,7 @@ return MapsA
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004D">
+			<Item class="ModuleScript" referent="RBX00050">
 				<Properties>
 					<string name="Name">MapsB</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Night Forest (a thicket maze) and Abandoned Attic (a maze of stacked boxes under
@@ -6460,7 +6704,7 @@ return MapsB
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004E">
+			<Item class="ModuleScript" referent="RBX00051">
 				<Properties>
 					<string name="Name">MapsBig</string>
 					<ProtectedString name="Source"><![CDATA[-- Hayfield Farm: one big map (about 360 studs across, several times the others). Four farm quarters,
@@ -6562,7 +6806,7 @@ return MapsBig
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004F">
+			<Item class="ModuleScript" referent="RBX00052">
 				<Properties>
 					<string name="Name">MapsC</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders from the owner's Gemini map sheets: Pumpkin Patch, Harvest Corn Maze, Sunflower
@@ -6713,7 +6957,7 @@ return MapsC
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00050">
+			<Item class="ModuleScript" referent="RBX00053">
 				<Properties>
 					<string name="Name">MapsD</string>
 					<ProtectedString name="Source"><![CDATA[-- More maps from the owner's Gemini sheets: Frozen Farm, Rainy Greenhouse, Duck Pond Marsh, Hay
@@ -6870,7 +7114,7 @@ return MapsD
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00051">
+			<Item class="ModuleScript" referent="RBX00054">
 				<Properties>
 					<string name="Name">MatchXp</string>
 					<ProtectedString name="Source"><![CDATA[-- The match's stats and its end (Config.MatchXp, Config.Rewards): counted while the round runs
@@ -6949,7 +7193,7 @@ return MatchXp
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00052">
+			<Item class="ModuleScript" referent="RBX00055">
 				<Properties>
 					<string name="Name">MazeKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Mazes for the maps: a grid of cells carved into a maze (a random depth-first walk, so every cell
@@ -7174,7 +7418,7 @@ return MazeKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00053">
+			<Item class="ModuleScript" referent="RBX00056">
 				<Properties>
 					<string name="Name">MazeWalls</string>
 					<ProtectedString name="Source"><![CDATA[-- More maze wall styles (server/MazeKit uses these when a map asks for one; it has its own
@@ -7368,7 +7612,7 @@ return MazeWalls
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00054">
+			<Item class="ModuleScript" referent="RBX00057">
 				<Properties>
 					<string name="Name">OneOfOne</string>
 					<ProtectedString name="Source"><![CDATA[-- The 1 of 1s (Config.OneOfOne). A chest rolls for each (roll); the first player to roll one claims it
@@ -7488,7 +7732,7 @@ return OneOfOne
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00055">
+			<Item class="ModuleScript" referent="RBX00058">
 				<Properties>
 					<string name="Name">PadPortal</string>
 					<ProtectedString name="Source"><![CDATA[-- One lobby game platform (LobbyBuilder builds Config.Pads.count of them; server/GamePads runs them):
@@ -7565,7 +7809,7 @@ return PadPortal
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00056">
+			<Item class="ModuleScript" referent="RBX00059">
 				<Properties>
 					<string name="Name">Powerups</string>
 					<ProtectedString name="Source"><![CDATA[-- Power-ups on the maps (Config.Powerups). When a round's search starts, glowing orbs float in
@@ -7746,7 +7990,7 @@ return Powerups
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00057">
+			<Item class="ModuleScript" referent="RBX0005A">
 				<Properties>
 					<string name="Name">Practice</string>
 					<ProtectedString name="Source"><![CDATA[-- The Time Trial in the Practice Yard (Config.Practice). From the lobby (the Practice stall, or
@@ -8001,7 +8245,7 @@ return Practice
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00058">
+			<Item class="ModuleScript" referent="RBX0005B">
 				<Properties>
 					<string name="Name">PracticeYard</string>
 					<ProtectedString name="Source"><![CDATA[-- Builds one player's Practice Yard for a Time Trial (server/Practice, Config.Practice): a hedged
@@ -8142,7 +8386,7 @@ return PracticeYard
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00059">
+			<Item class="ModuleScript" referent="RBX0005C">
 				<Properties>
 					<string name="Name">QuestManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Daily quests: three a day, the same for everyone (shared/Quests.forDay). Progress is saved;
@@ -8210,7 +8454,7 @@ return QuestManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005A">
+			<Item class="ModuleScript" referent="RBX0005D">
 				<Properties>
 					<string name="Name">Requests</string>
 					<ProtectedString name="Source"><![CDATA[-- Small requests from players, checked on the server: a hint (Remotes.Hint) and saving their
@@ -8273,7 +8517,7 @@ return Requests
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005B">
+			<Item class="ModuleScript" referent="RBX0005E">
 				<Properties>
 					<string name="Name">RewardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Every coin and XP point is given here, on the server: chests, places, playing a round to the
@@ -8419,7 +8663,72 @@ return RewardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005C">
+			<Item class="ModuleScript" referent="RBX0005F">
+				<Properties>
+					<string name="Name">Rewind</string>
+					<ProtectedString name="Source"><![CDATA[-- Where everyone was over the last second (Config.HitCheck.history), so a poke can be checked
+-- against what the attacker saw on their screen a moment ago (server/CombatPoke). A teleport
+-- (a jump of more than 30 studs) or a new character starts a player's history afresh.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local Rewind = {}
+local H = Config.HitCheck
+local rings = {} -- [player] = { { p = position, look = flat facing, t = os.clock() }, ... } oldest first
+
+-- How far back to look for this attacker: twice their ping plus a little, within limits.
+function Rewind.window(player)
+	local ok, ping = pcall(player.GetNetworkPing, player)
+	ping = if ok and type(ping) == "number" and ping == ping then ping else 0
+	return math.clamp(2 * ping + H.window[1], H.window[1], H.window[2])
+end
+
+-- The player's positions over the last `seconds`, newest first.
+function Rewind.samples(player, seconds)
+	local out, now = {}, os.clock()
+	local ring = rings[player] or {}
+	for i = #ring, 1, -1 do
+		if now - ring[i].t > seconds and #out > 0 then
+			break
+		end
+		table.insert(out, ring[i])
+	end
+	return out
+end
+
+function Rewind.init()
+	RunService.Heartbeat:Connect(function()
+		local now = os.clock()
+		for _, player in ipairs(Players:GetPlayers()) do
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			if root then
+				local ring = rings[player] or {}
+				rings[player] = ring
+				local last = ring[#ring]
+				if last and (root.Position - last.p).Magnitude > 30 then
+					table.clear(ring)
+				end
+				local look = root.CFrame.LookVector
+				table.insert(ring, { p = root.Position, look = Vector3.new(look.X, 0, look.Z), t = now })
+				while ring[1] and now - ring[1].t > H.history do
+					table.remove(ring, 1)
+				end
+			end
+		end
+	end)
+	Players.PlayerRemoving:Connect(function(player)
+		rings[player] = nil
+	end)
+end
+
+return Rewind
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00060">
 				<Properties>
 					<string name="Name">RoundExtras</string>
 					<ProtectedString name="Source"><![CDATA[-- What runs alongside a round's search, started and stopped together by server/RoundManager:
@@ -8453,7 +8762,7 @@ return RoundExtras
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005D">
+			<Item class="ModuleScript" referent="RBX00061">
 				<Properties>
 					<string name="Name">RoundManager</string>
 					<ProtectedString name="Source"><![CDATA[-- A round, all on the server, for a group of players (RoundManager.play: a game platform's
@@ -8737,7 +9046,7 @@ return RoundManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005E">
+			<Item class="ModuleScript" referent="RBX00062">
 				<Properties>
 					<string name="Name">ShopManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Cosmetics and purchases. With Haystack Coins: buy a cosmetic (Remotes.Shop "buy"), and wear
@@ -8994,7 +9303,7 @@ return ShopManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005F">
+			<Item class="ModuleScript" referent="RBX00063">
 				<Properties>
 					<string name="Name">Stance</string>
 					<ProtectedString name="Source"><![CDATA[-- Crouching and sliding, the server's side (Config.Stance). Each player's device moves its own
@@ -9087,7 +9396,7 @@ return Stance
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00060">
+			<Item class="ModuleScript" referent="RBX00064">
 				<Properties>
 					<string name="Name">Streaks</string>
 					<ProtectedString name="Source"><![CDATA[-- Tag-out streaks, the Marked player and the tag-out feed (Config.Streak), called by server/Combat
@@ -9221,7 +9530,7 @@ return Streaks
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00061">
+			<Item class="ModuleScript" referent="RBX00065">
 				<Properties>
 					<string name="Name">TradeManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Trading needles between two players in the lobby (Config.Trading). Remotes.Trade asks; the
@@ -9489,24 +9798,24 @@ return TradeManager
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerStorage" referent="RBX00062">
+	<Item class="ServerStorage" referent="RBX00066">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX00063">
+	<Item class="StarterPlayer" referent="RBX00067">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX00064">
+		<Item class="StarterPlayerScripts" referent="RBX00068">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX00065">
+			<Item class="Folder" referent="RBX00069">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX00066">
+				<Item class="ModuleScript" referent="RBX0006A">
 					<Properties>
 						<string name="Name">Aim</string>
 						<ProtectedString name="Source"><![CDATA[-- Your aim settings (Settings, Aim; Config.Aim): mouse sensitivity, field of view, and the reticle
@@ -9619,7 +9928,70 @@ return Aim
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00067">
+				<Item class="ModuleScript" referent="RBX0006B">
+					<Properties>
+						<string name="Name">AimAssist</string>
+						<ProtectedString name="Source"><![CDATA[-- Who a poke is aimed at: of the players (and your Time Trial's dummies) within `range`, roughly
+-- where the camera faces and in plain sight, the one nearest the middle of your view. The server
+-- checks every poke again (server/CombatPoke), so this only decides who you meant.
+local Players = game:GetService("Players")
+
+local AimAssist = {}
+local player = Players.LocalPlayer
+
+-- Returns the target (a Player, or a dummy's id), how far it is on the flat, and the flat
+-- direction to it; or nil.
+function AimAssist.target(range)
+	local me = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	local camera = workspace.CurrentCamera
+	if not me or not camera then
+		return nil
+	end
+	local look = camera.CFrame.LookVector
+	look = Vector3.new(look.X, 0, look.Z)
+	if look.Magnitude < 0.01 then
+		return nil
+	end
+	look = look.Unit
+	local yard = workspace:FindFirstChild("PracticeYard_" .. player.UserId) -- your Time Trial's dummies
+	local skip, candidates = {}, {}
+	local inRound = player:GetAttribute("InRound") == true
+	for _, p in ipairs(Players:GetPlayers()) do
+		table.insert(skip, p.Character)
+		local root = p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+		if root and (not inRound or p:GetAttribute("InRound") == true) then
+			table.insert(candidates, { p, root.Position, 0 })
+		end
+	end
+	for _, m in ipairs(yard and yard:GetChildren() or {}) do
+		local post = m:GetAttribute("DummyId") and not m:GetAttribute("Out") and m.PrimaryPart
+		if post then
+			table.insert(skip, m)
+			table.insert(candidates, { m:GetAttribute("DummyId"), post.Position, 1.5 })
+		end
+	end
+	local params = RaycastParams.new()
+	params.FilterType, params.FilterDescendantsInstances, params.RespectCanCollide = Enum.RaycastFilterType.Exclude, skip, true
+	local best, bestDot, bestDist, bestDir = nil, 0.3, nil, nil
+	for _, c in ipairs(candidates) do
+		local offset = c[2] - me.Position
+		local flat = Vector3.new(offset.X, 0, offset.Z)
+		local dot = if flat.Magnitude < 0.5 then 1 else look:Dot(flat.Unit)
+		if flat.Magnitude <= range + c[3] and math.abs(offset.Y) <= 6 and dot > bestDot then
+			local from = camera.CFrame.Position
+			if not workspace:Raycast(from, c[2] - from, params) then
+				best, bestDot, bestDist, bestDir = c[1], dot, flat.Magnitude, if flat.Magnitude > 0.1 then flat.Unit else look
+			end
+		end
+	end
+	return best, bestDist, bestDir
+end
+
+return AimAssist
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX0006C">
 					<Properties>
 						<string name="Name">BoxReel</string>
 						<ProtectedString name="Source"><![CDATA[-- The box opening on your screen: a strip of needle cards slides along under a gold marker,
@@ -9722,7 +10094,7 @@ return BoxReel
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00068">
+				<Item class="ModuleScript" referent="RBX0006D">
 					<Properties>
 						<string name="Name">BoxScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Boxes screen: each box with its price (coins; the dearer ones also Robux), a key button
@@ -9927,7 +10299,7 @@ return BoxScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00069">
+				<Item class="ModuleScript" referent="RBX0006E">
 					<Properties>
 						<string name="Name">CombatFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Needle combat on your screen (server/Combat decides every hit):
@@ -9949,60 +10321,20 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local UiKit = require(script.Parent.UiKit)
 local Effects = require(script.Parent.Effects)
 local ViewModel = require(script.Parent.ViewModel)
+local MovesFx = require(script.Parent.MovesFx)
 
 local player = Players.LocalPlayer
 local CombatFx = {}
-CombatFx.lastPoke = -math.huge -- when you last poked (client/CooldownBars shows the wait)
 local C = Config.Combat
 local taggedOut
-
--- The nearest other player within reach, roughly where you're facing.
-local function target()
-	local me = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-	if not me then
-		return nil
-	end
-	local look = workspace.CurrentCamera.CFrame.LookVector
-	look = Vector3.new(look.X, 0, look.Z).Unit
-	local best, bestDist = nil, C.reach
-	for _, p in ipairs(Players:GetPlayers()) do
-		local root = p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-		if root then
-			local offset = root.Position - me.Position
-			local flat = Vector3.new(offset.X, 0, offset.Z)
-			if offset.Magnitude <= bestDist and (flat.Magnitude < 0.5 or look:Dot(flat.Unit) > 0.3) then
-				best, bestDist = p, offset.Magnitude
-			end
-		end
-	end
-	local yard = workspace:FindFirstChild("PracticeYard_" .. player.UserId) -- your Time Trial's dummies
-	for _, m in ipairs(yard and yard:GetChildren() or {}) do
-		local post = m:GetAttribute("DummyId") and not m:GetAttribute("Out") and m.PrimaryPart
-		if post then
-			local offset = post.Position - me.Position
-			local flat = Vector3.new(offset.X, 0, offset.Z)
-			if flat.Magnitude <= bestDist + 1.5 and (flat.Magnitude < 0.5 or look:Dot(flat.Unit) > 0.3) then
-				best, bestDist = m:GetAttribute("DummyId"), flat.Magnitude
-			end
-		end
-	end
-	return best -- a Player, or a dummy's id
-end
 
 local function hookTool(tool, inspectButton)
 	if tool.Name ~= "Needle" or tool:GetAttribute("Hooked") then
 		return
 	end
 	tool:SetAttribute("Hooked", true)
-	tool.Activated:Connect(function()
-		if os.clock() - CombatFx.lastPoke < C.cooldown or player:GetAttribute("NeedleAway") then
-			return -- still on cooldown (the server would ignore it anyway)
-		end
-		CombatFx.lastPoke = os.clock()
-		local t = target()
-		Remotes.Poke:FireServer(if typeof(t) == "Instance" then t.UserId else t)
-		ViewModel.play("jab")
-	end)
+	tool.Activated:Connect(MovesFx.press) -- the poke; keep holding for a Power Poke (client/MovesFx)
+	tool.Deactivated:Connect(MovesFx.release)
 	tool.Equipped:Connect(function()
 		inspectButton.Visible = true
 	end)
@@ -10011,11 +10343,11 @@ local function hookTool(tool, inspectButton)
 	end)
 end
 
-local function pop(position, colour, amount)
+local function pop(position, colour, amount, text)
 	Effects.burst(position + Vector3.new(0, 1.5, 0), { colour, Color3.new(1, 1, 1) }, 18)
 	local anchor = UiKit.make("Part", { Anchored = true, CanCollide = false, CanQuery = false, CanTouch = false, Transparency = 1, Size = Vector3.one, CFrame = CFrame.new(position + Vector3.new(0, 3, 0)), Parent = workspace })
 	local gui = UiKit.make("BillboardGui", { Size = UDim2.fromOffset(120, 84), AlwaysOnTop = true, Parent = anchor })
-	local label = UiKit.label({ Text = "POP!", Font = UiKit.bold, TextColor3 = colour, TextStrokeTransparency = 0.3, Size = UDim2.new(1, 0, 0, 50), Parent = gui }, 36)
+	local label = UiKit.label({ Text = text or "POP!", Font = UiKit.bold, TextColor3 = colour, TextStrokeTransparency = 0.3, Size = UDim2.new(1, 0, 0, 50), Parent = gui }, 36)
 	UiKit.label({ Text = "-" .. amount .. " ♥", Font = UiKit.bold, TextStrokeTransparency = 0.3, Size = UDim2.new(1, 0, 0, 30), Position = UDim2.fromOffset(0, 50), Parent = gui }, 24) -- hearts lost
 	UiKit.pop(label, 0.6)
 	UiKit.ease(gui, 0.9, { StudsOffset = Vector3.new(0, 2, 0) })
@@ -10061,8 +10393,11 @@ function CombatFx.start(gui)
 	show()
 	-- hits: a sparkle and a pop where they land; your own, a soft red edge that fades
 	Remotes.Hit.OnClientEvent:Connect(function(m)
-		pop(m.position, if m.hearts == 0 then UiKit.colors.gold elseif (m.amount or 1) > 1 then Color3.fromRGB(255, 150, 60) else Color3.fromRGB(255, 120, 150), m.amount or 1)
+		local blocked = m.result == "blocked"
+		pop(m.position, if blocked then Color3.fromRGB(170, 174, 184) elseif m.hearts == 0 then UiKit.colors.gold elseif (m.amount or 1) > 1 then Color3.fromRGB(255, 150, 60) else Color3.fromRGB(255, 120, 150), m.amount or 1,
+			if blocked then "BLOCKED" elseif m.kind == "power" then "POWER!" elseif m.combo == 2 then "ONE-TWO!" else nil)
 		Effects.sound("click", 0.8)
+		MovesFx.hit(m)
 		if m.to == player.UserId then
 			-- a hit knocks you off a chest: any hold in progress stops, and starts again from empty
 			local arena = workspace:FindFirstChild("Arena")
@@ -10076,9 +10411,11 @@ function CombatFx.start(gui)
 					end)
 				end
 			end
-			local stroke = edge:FindFirstChildOfClass("UIStroke")
-			stroke.Thickness, stroke.Transparency = 18, 0.3
-			UiKit.ease(stroke, 0.8, { Transparency = 1 })
+			if not blocked then
+				local stroke = edge:FindFirstChildOfClass("UIStroke")
+				stroke.Thickness, stroke.Transparency = 18, 0.3
+				UiKit.ease(stroke, 0.8, { Transparency = 1 })
+			end
 			if m.hearts == 0 then
 				task.spawn(taggedOut, gui)
 			end
@@ -10129,7 +10466,7 @@ return CombatFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006A">
+				<Item class="ModuleScript" referent="RBX0006F">
 					<Properties>
 						<string name="Name">CooldownBars</string>
 						<ProtectedString name="Source"><![CDATA[-- POKE and THROW bars, top left under the DASH bar (client/DashFx), in the same style: each empties
@@ -10142,7 +10479,7 @@ local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local UiKit = require(script.Parent.UiKit)
-local CombatFx = require(script.Parent.CombatFx)
+local MovesFx = require(script.Parent.MovesFx)
 local ThrowFx = require(script.Parent.ThrowFx)
 
 local player = Players.LocalPlayer
@@ -10172,7 +10509,7 @@ function CooldownBars.start(gui)
 		local now = os.clock()
 		local show = ReplicatedStorage:GetAttribute("Phase") == "search" and player:GetAttribute("InRound") == true
 		local thrown = (now - ThrowFx.lastThrow()) / Config.Throw.back
-		poke(math.clamp(math.min((now - CombatFx.lastPoke) / Config.Combat.cooldown, thrown), 0, 1), show)
+		poke(math.clamp(math.min((now - MovesFx.lastPoke) / Config.Combat.cooldown, thrown), 0, 1), show)
 		throw(math.clamp((now - ThrowFx.lastThrow()) / Config.Throw.cooldown, 0, 1), show)
 	end)
 end
@@ -10181,7 +10518,7 @@ return CooldownBars
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006B">
+				<Item class="ModuleScript" referent="RBX00070">
 					<Properties>
 						<string name="Name">DashFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Dashing (Config.Dash): C, B on a controller, or the Dash button on a phone. Your character
@@ -10303,7 +10640,7 @@ return DashFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006C">
+				<Item class="ModuleScript" referent="RBX00071">
 					<Properties>
 						<string name="Name">Effects</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback you can see and hear, on your own screen only: sounds, a burst of particles where a
@@ -10385,7 +10722,7 @@ return Effects
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006D">
+				<Item class="ModuleScript" referent="RBX00072">
 					<Properties>
 						<string name="Name">FeedFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The tag-out feed, top right beside the menu (server/Streaks sends every tag-out to everyone; Config.Streak.feed):
@@ -10469,7 +10806,7 @@ return FeedFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006E">
+				<Item class="ModuleScript" referent="RBX00073">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: your coins and level (with an XP bar) at the top left; the round's
@@ -10621,7 +10958,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006F">
+				<Item class="ModuleScript" referent="RBX00074">
 					<Properties>
 						<string name="Name">KeyHints</string>
 						<ProtectedString name="Source"><![CDATA[-- What each key does, for players on a keyboard: a small guide low on the left, above the Show off
@@ -10637,6 +10974,8 @@ local KeyHints = {}
 
 local KEYS = {
 	{ "Click", "Poke with your needle" },
+	{ "Hold click", "Power Poke (2 hearts)" },
+	{ "Hold R", "Thimble: block" },
 	{ "Q", "Throw your needle" },
 	{ "C", "Dash" },
 	{ "Ctrl or V", "Crouch; slide if running" },
@@ -10679,7 +11018,7 @@ return KeyHints
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00070">
+				<Item class="ModuleScript" referent="RBX00075">
 					<Properties>
 						<string name="Name">LobbyUi</string>
 						<ProtectedString name="Source"><![CDATA[-- The lobby, on your screen:
@@ -10777,7 +11116,7 @@ return LobbyUi
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX00071">
+				<Item class="LocalScript" referent="RBX00076">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- Starts the client: the whole UI (UIController). The client only shows things and asks the
@@ -10787,7 +11126,272 @@ UIController.start()
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00072">
+				<Item class="ModuleScript" referent="RBX00077">
+					<Properties>
+						<string name="Name">Mover</string>
+						<ProtectedString name="Source"><![CDATA[-- A short push along the ground on your own character (your device moves it): the poke's lunge
+-- and the knockback when you're hit. One push at a time; a new one replaces the old. Gravity and
+-- jumping carry on as normal. Speeds stay under Config.AntiCheat.maxSpeed.
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local Mover = {}
+local current = nil -- { push, attachment, dir, v0, v1, start, seconds }
+
+local function stop()
+	if current then
+		current.push:Destroy()
+		current.attachment:Destroy()
+		current = nil
+	end
+end
+
+-- Pushes you along flat direction `dir`, from v0 studs a second easing to v1, for `seconds`.
+function Mover.push(dir, v0, v1, seconds)
+	local character = Players.LocalPlayer.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local flat = Vector3.new(dir.X, 0, dir.Z)
+	if not root or not humanoid or humanoid.Health <= 0 or root.Anchored or humanoid.WalkSpeed <= 0 or flat.Magnitude < 0.1 or seconds <= 0 then
+		return
+	end
+	stop()
+	local attachment = Instance.new("Attachment")
+	attachment.Parent = root
+	local push = Instance.new("LinearVelocity")
+	push.Attachment0, push.RelativeTo = attachment, Enum.ActuatorRelativeTo.World
+	push.VelocityConstraintMode = Enum.VelocityConstraintMode.Plane
+	push.PrimaryTangentAxis, push.SecondaryTangentAxis = Vector3.xAxis, Vector3.zAxis
+	push.PlaneVelocity = Vector2.new(flat.Unit.X, flat.Unit.Z) * v0
+	push.MaxForce = 1e6
+	push.Parent = root
+	current = { push = push, attachment = attachment, dir = flat.Unit, v0 = v0, v1 = v1, start = os.clock(), seconds = seconds }
+end
+
+function Mover.start()
+	RunService.Heartbeat:Connect(function()
+		if current then
+			local t = (os.clock() - current.start) / current.seconds
+			if t >= 1 or not current.push.Parent then
+				stop()
+			else
+				current.push.PlaneVelocity = Vector2.new(current.dir.X, current.dir.Z) * (current.v0 + (current.v1 - current.v0) * t)
+			end
+		end
+	end)
+	Players.LocalPlayer.CharacterAdded:Connect(stop)
+end
+
+return Mover
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX00078">
+					<Properties>
+						<string name="Name">MovesFx</string>
+						<ProtectedString name="Source"><![CDATA[-- The poke, the Power Poke and the Thimble on your own device (Config.Combo, Power, Guard, Lunge,
+-- Knock), and what a hit feels like. The server decides every hit (server/CombatPoke).
+--   Poke: click (R2, a tap). It goes at once, at whoever client/AimAssist says you meant, and
+--     carries you a little way towards them (the lunge).
+--   Power Poke: keep holding. A ring at the reticle closes as it charges and turns gold when it's
+--     full; let go then for 2 hearts and a longer lunge. Letting go early cancels it.
+--   Thimble: hold R (L2, or the GUARD button): a silver bubble blocks pokes and throws.
+--   A hit you land: a marker round the reticle. A hit you take: a small camera kick and a push back.
+-- "Reduce effects" in Settings turns the kick off. Nothing flashes.
+local ContextActionService = game:GetService("ContextActionService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local UiKit = require(script.Parent.UiKit)
+local Effects = require(script.Parent.Effects)
+local AimAssist = require(script.Parent.AimAssist)
+local Mover = require(script.Parent.Mover)
+local StanceFx = require(script.Parent.StanceFx)
+local ViewModel = require(script.Parent.ViewModel)
+
+local player = Players.LocalPlayer
+local MovesFx = {}
+MovesFx.lastPoke = -math.huge -- when you last poked (client/CooldownBars)
+local C, P, G, L = Config.Combat, Config.Power, Config.Guard, Config.Lunge
+local held, pressId, chargeStart = false, 0, nil
+local ring, marker, silver
+local kick = 0
+local bubbles = {}
+
+local function pokeReady()
+	return workspace:GetServerTimeNow() >= (player:GetAttribute("PokeAt") or 0) - 0.05 and not player:GetAttribute("NeedleAway") and not player:GetAttribute("Guarding")
+end
+
+local function poke(power)
+	local target, distance, dir = AimAssist.target(C.reach + (if power then L.powerRange else L.range))
+	MovesFx.lastPoke = os.clock()
+	Remotes.Poke:FireServer(if typeof(target) == "Instance" then target.UserId else target, if power then true else nil)
+	ViewModel.play("jab")
+	Effects.sound("whoosh", if power then 1.2 else 1.6)
+	if target and distance > L.from then -- the lunge: only towards someone
+		local speed = if power then L.powerSpeed else L.speed
+		Mover.push(dir, speed, speed, math.min(if power then L.powerSeconds else L.seconds, (distance - L.from) / speed))
+	end
+end
+
+local function endCharge(release)
+	if chargeStart then
+		local full = os.clock() - chargeStart >= P.charge
+		chargeStart = nil
+		ring.Visible = false
+		StanceFx.slow("charge", nil)
+		if release and full then
+			poke(true)
+		else
+			Remotes.Charge:FireServer(false)
+		end
+	end
+end
+
+-- The poke button went down (the Needle tool's Activated).
+function MovesFx.press()
+	held = true
+	pressId += 1
+	local id = pressId
+	if pokeReady() and os.clock() - MovesFx.lastPoke > 0.2 then
+		poke(false)
+	end
+	task.delay(P.hold, function() -- still holding: charge, once the poke is ready again
+		while held and pressId == id and not chargeStart do
+			if pokeReady() and os.clock() - MovesFx.lastPoke >= P.hold then
+				chargeStart = os.clock()
+				Remotes.Charge:FireServer(true)
+				StanceFx.slow("charge", P.slow)
+				ring.Visible = true
+				break
+			end
+			task.wait(0.05)
+		end
+	end)
+end
+
+-- The poke button came up (the tool's Deactivated).
+function MovesFx.release()
+	held = false
+	endCharge(true)
+end
+
+local function guard(on)
+	Remotes.Guard:FireServer(on)
+	if on then
+		endCharge(false)
+	end
+end
+
+-- A hit: Remotes.Hit's message (client/CombatFx passes it on).
+function MovesFx.hit(m)
+	local mine, me = m.from == player.UserId, m.to == player.UserId
+	local dir = if typeof(m.dir) == "Vector3" then m.dir else Vector3.zero
+	if mine then -- the marker: white, orange for 2 hearts, gold for a tag-out, grey if blocked
+		local colour = if m.result == "blocked" then Color3.fromRGB(170, 174, 184) elseif m.hearts == 0 then UiKit.colors.gold elseif (m.amount or 1) > 1 then Color3.fromRGB(255, 150, 60) else Color3.new(1, 1, 1)
+		for _, bar in ipairs(marker:GetChildren()) do
+			bar.BackgroundColor3, bar.BackgroundTransparency = colour, 0
+			UiKit.ease(bar, 0.22, { BackgroundTransparency = 1 })
+		end
+		Effects.sound("click", if m.result == "blocked" then 2 else 1.4)
+		if m.result == "blocked" then
+			Mover.push(-dir, Config.Knock.blocked[1], Config.Knock.blocked[2], Config.Knock.blocked[3]) -- bounced off the Thimble
+		end
+	end
+	if me and m.result ~= "blocked" then
+		local k = Config.Knock[if m.kind == "power" then "power" elseif m.kind == "throw" then "throw" elseif m.combo == 2 then "combo" else "poke"]
+		Mover.push(dir, k[1], k[2], k[3])
+		if not Effects.settings.reduceEffects then
+			kick = if m.kind == "power" then 3.5 else 2.5
+		end
+	end
+end
+
+function MovesFx.start(gui)
+	Mover.start()
+	local mid = { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 1, Parent = gui }
+	ring = UiKit.make("Frame", { AnchorPoint = mid.AnchorPoint, Position = mid.Position, Size = UDim2.fromOffset(64, 64), BackgroundTransparency = 1, Visible = false, ZIndex = 6, Parent = gui }, { UiKit.corner(32), UiKit.stroke(Color3.new(1, 1, 1), 3) })
+	marker = UiKit.make("Frame", { AnchorPoint = mid.AnchorPoint, Position = mid.Position, Size = UDim2.fromOffset(44, 44), BackgroundTransparency = 1, ZIndex = 6, Parent = gui })
+	for i = 0, 3 do -- four short bars in an X
+		local a = math.rad(45 + i * 90)
+		UiKit.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, math.cos(a) * 16, 0.5, math.sin(a) * 16), Size = UDim2.fromOffset(12, 3), Rotation = 45 + i * 90, BackgroundTransparency = 1, BorderSizePixel = 0, Parent = marker })
+	end
+	silver = UiKit.make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 39, Parent = gui }, { UiKit.stroke(Color3.fromRGB(200, 208, 222), 10) })
+	silver:FindFirstChildOfClass("UIStroke").Transparency = 1
+	local button = UiKit.button("Guard (R)", UiKit.colors.card, { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -16, 1, -366), Size = UDim2.fromOffset(150, 46), Visible = UserInputService.TouchEnabled, Parent = gui })
+	UiKit.autoScale(button)
+	button.MouseButton1Down:Connect(function()
+		guard(true)
+	end)
+	button.MouseButton1Up:Connect(function()
+		guard(false)
+	end)
+	ContextActionService:BindAction("Thimble", function(_, state)
+		if state == Enum.UserInputState.Begin then
+			guard(true)
+		elseif state == Enum.UserInputState.End or state == Enum.UserInputState.Cancel then
+			guard(false)
+		end
+		return Enum.ContextActionResult.Pass
+	end, false, Enum.KeyCode.R, Enum.KeyCode.ButtonL2)
+	player:GetAttributeChangedSignal("Guarding"):Connect(function()
+		local up = player:GetAttribute("Guarding") == true
+		StanceFx.slow("guard", if up then G.slow else nil)
+		UiKit.ease(silver:FindFirstChildOfClass("UIStroke"), 0.1, { Transparency = if up then 0.5 else 1 })
+	end)
+	player:GetAttributeChangedSignal("Charging"):Connect(function() -- the server ended your charge (you were hit)
+		if not player:GetAttribute("Charging") and chargeStart and os.clock() - chargeStart > 0.3 then
+			chargeStart = nil
+			ring.Visible = false
+			StanceFx.slow("charge", nil)
+		end
+	end)
+	RunService:BindToRenderStep("MovesFx", Enum.RenderPriority.Camera.Value + 2, function(dt)
+		if chargeStart then -- the ring closes as the charge fills, gold and steady when full
+			local f = math.clamp((os.clock() - chargeStart) / P.charge, 0, 1)
+			ring.Size = UDim2.fromOffset(64 - 24 * f, 64 - 24 * f)
+			ring:FindFirstChildOfClass("UIStroke").Color = if f >= 1 then UiKit.colors.gold else Color3.new(1, 1, 1)
+			if os.clock() - chargeStart >= P.charge + P.auto then
+				endCharge(true) -- held too long: it goes by itself
+			end
+		end
+		if kick > 0.01 then -- a hit taken: the view tips up a touch and settles
+			local camera = workspace.CurrentCamera
+			camera.CFrame *= CFrame.Angles(math.rad(kick), 0, 0)
+			kick *= math.exp(-14 * dt)
+		end
+		for _, p in ipairs(Players:GetPlayers()) do -- a silver bubble round anyone behind a Thimble
+			local root = p:GetAttribute("Guarding") and p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+			local bubble = bubbles[p]
+			if root and not bubble then
+				bubble = UiKit.make("Part", { Shape = Enum.PartType.Ball, Size = Vector3.one * 6, Anchored = true, CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false, Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(210, 216, 228), Transparency = 0.8, Parent = workspace })
+				bubbles[p] = bubble
+			end
+			if bubble and root then
+				bubble.CFrame = root.CFrame
+			elseif bubble then
+				bubble:Destroy()
+				bubbles[p] = nil
+			end
+		end
+	end)
+	Players.PlayerRemoving:Connect(function(p)
+		if bubbles[p] then
+			bubbles[p]:Destroy()
+			bubbles[p] = nil
+		end
+	end)
+end
+
+return MovesFx
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX00079">
 					<Properties>
 						<string name="Name">NeedleView</string>
 						<ProtectedString name="Source"><![CDATA[-- A needle in 3D inside the UI: a ViewportFrame with the needle (shared/NeedleLook) lit and
@@ -10839,7 +11443,7 @@ return NeedleView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00073">
+				<Item class="ModuleScript" referent="RBX0007A">
 					<Properties>
 						<string name="Name">PowerupFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Power-ups on your screen (server/Powerups decides; Remotes.Powerup says what you got):
@@ -10973,7 +11577,7 @@ return PowerupFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00074">
+				<Item class="ModuleScript" referent="RBX0007B">
 					<Properties>
 						<string name="Name">PracticeFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The Time Trial on your screen (server/Practice decides everything): the Practice window (your
@@ -11137,7 +11741,7 @@ return PracticeFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00075">
+				<Item class="ModuleScript" referent="RBX0007C">
 					<Properties>
 						<string name="Name">Results</string>
 						<ProtectedString name="Source"><![CDATA[-- The round's big moments on screen: the 3, 2, 1; CHEST OPENED! when you open one (coins, or a
@@ -11297,7 +11901,7 @@ return Results
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00076">
+				<Item class="ModuleScript" referent="RBX0007D">
 					<Properties>
 						<string name="Name">Screens</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop and Inventory screens. The Shop sells cosmetics for Haystack Coins (needle skins,
@@ -11488,7 +12092,7 @@ return Screens
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00077">
+				<Item class="ModuleScript" referent="RBX0007E">
 					<Properties>
 						<string name="Name">Screens2</string>
 						<ProtectedString name="Source"><![CDATA[-- The Quests, Leaderboard and Settings screens (Settings: sound and effects toggles, and Aim).
@@ -11685,7 +12289,7 @@ return Screens2
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00078">
+				<Item class="ModuleScript" referent="RBX0007F">
 					<Properties>
 						<string name="Name">Screens3</string>
 						<ProtectedString name="Source"><![CDATA[-- The Collection screen: every needle you've found, by type, shown in 3D with its rarity, value
@@ -11822,7 +12426,7 @@ return Screens3
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00079">
+				<Item class="ModuleScript" referent="RBX00080">
 					<Properties>
 						<string name="Name">StanceFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Crouching and sliding (Config.Stance): Left Ctrl or V, L3 on a controller, or the CROUCH button
@@ -11846,7 +12450,8 @@ local Effects = require(script.Parent.Effects)
 local player = Players.LocalPlayer
 local StanceFx = {}
 local S = Config.Stance
-local state, standHip, baseSpeed, lastSlide = "stand", nil, nil, -math.huge
+local state, standHip, lastSlide = "stand", nil, -math.huge
+local base, lastSet, slows = 16, nil, {} -- your speed as the server set it, what this script last set, and what is slowing you
 local slide = nil -- { push, attachment, dir, walk, start }
 local button
 
@@ -11889,7 +12494,7 @@ local function go(stance)
 		return
 	end
 	if state == "stand" then
-		standHip, baseSpeed = humanoid.HipHeight, humanoid.WalkSpeed
+		standHip = humanoid.HipHeight
 	end
 	if stance == "stand" and state ~= "stand" and not headroom(character, root, dropFor(humanoid, state)) then
 		stance = "crouch" -- something overhead: stay down
@@ -11901,7 +12506,7 @@ local function go(stance)
 	state = stance
 	local hip = if stance == "stand" then standHip else standHip - dropFor(humanoid, stance)
 	UiKit.ease(humanoid, S.ease, { HipHeight = hip }, Enum.EasingStyle.Sine)
-	humanoid.WalkSpeed = if stance == "crouch" then baseSpeed * S.crouchSpeed else baseSpeed
+	StanceFx.slow("stance", if stance == "crouch" then S.crouchSpeed else nil)
 	Remotes.Stance:FireServer(stance)
 	if button then
 		button.Text = if stance == "stand" then "Crouch" else "Stand"
@@ -11922,7 +12527,7 @@ local function startSlide(humanoid, root, dir)
 	push.PrimaryTangentAxis, push.SecondaryTangentAxis = Vector3.xAxis, Vector3.zAxis
 	push.MaxForce = 1e6
 	push.Parent = root
-	slide = { push = push, attachment = attachment, dir = dir, walk = baseSpeed, start = os.clock() }
+	slide = { push = push, attachment = attachment, dir = dir, walk = base, start = os.clock() }
 	Effects.sound("whoosh", 0.8)
 	if not Effects.settings.reduceEffects then
 		UiKit.ease(workspace.CurrentCamera, 0.15, { FieldOfView = Aim.fov() + S.slide.fov }, Enum.EasingStyle.Sine)
@@ -11947,6 +12552,11 @@ local function press()
 	end
 end
 
+-- Slows your walk to `factor` x its speed for a named reason (nil ends it). The slowest wins.
+function StanceFx.slow(name, factor)
+	slows[name] = factor
+end
+
 -- Stand up (a dash or anything else that needs you on your feet).
 function StanceFx.stand()
 	go("stand")
@@ -11965,9 +12575,18 @@ local function step()
 			slide.push.PlaneVelocity = Vector2.new(slide.dir.X, slide.dir.Z) * speed
 		end
 	end
-	if humanoid and state == "crouch" and humanoid.WalkSpeed ~= baseSpeed * S.crouchSpeed then
-		baseSpeed = humanoid.WalkSpeed -- the server changed your speed (boots, held still): half of the new one
-		humanoid.WalkSpeed = baseSpeed * S.crouchSpeed
+	if humanoid then -- your walk speed: the server's, times whatever slows you most (crouch, Thimble, charging)
+		if lastSet == nil or humanoid.WalkSpeed ~= lastSet then
+			base = humanoid.WalkSpeed -- the server changed it (boots, a streak, held still)
+		end
+		local factor = 1
+		for _, f in pairs(slows) do
+			factor = math.min(factor, f)
+		end
+		lastSet = base * factor
+		if humanoid.WalkSpeed ~= lastSet then
+			humanoid.WalkSpeed = lastSet
+		end
 	end
 	for _, p in ipairs(Players:GetPlayers()) do
 		local stance = if p == player then (if state ~= "stand" then state else nil) else p:GetAttribute("Stance")
@@ -12009,7 +12628,8 @@ function StanceFx.start(gui)
 	end, false, Enum.KeyCode.LeftControl, Enum.KeyCode.V, Enum.KeyCode.ButtonL3)
 	local function fresh(character) -- a new body stands, with its own hip height
 		endSlide()
-		state, standHip, baseSpeed = "stand", nil, nil
+		state, standHip, lastSet = "stand", nil, nil
+		table.clear(slows)
 		local humanoid = character:WaitForChild("Humanoid", 10)
 		if humanoid then
 			humanoid.Jumping:Connect(function(active)
@@ -12038,7 +12658,7 @@ return StanceFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007A">
+				<Item class="ModuleScript" referent="RBX00081">
 					<Properties>
 						<string name="Name">StreakFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Tag-outs and streaks on your screen (server/Combat decides them; Config.Streak):
@@ -12141,7 +12761,7 @@ return StreakFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007B">
+				<Item class="ModuleScript" referent="RBX00082">
 					<Properties>
 						<string name="Name">ThrowFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Throwing your needle on your screen (server/CombatThrow decides): Q, or the Throw button while
@@ -12259,7 +12879,7 @@ return ThrowFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007C">
+				<Item class="ModuleScript" referent="RBX00083">
 					<Properties>
 						<string name="Name">TradeScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Trade screen (server/TradeManager decides everything). Not trading: everyone in the server
@@ -12454,7 +13074,7 @@ return TradeScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007D">
+				<Item class="ModuleScript" referent="RBX00084">
 					<Properties>
 						<string name="Name">UIController</string>
 						<ProtectedString name="Source"><![CDATA[-- Puts the whole UI together: one ScreenGui with the HUD, the round moments (Results), and the
@@ -12482,6 +13102,7 @@ local CombatFx = require(script.Parent.CombatFx)
 local ThrowFx = require(script.Parent.ThrowFx)
 local DashFx = require(script.Parent.DashFx)
 local StanceFx = require(script.Parent.StanceFx)
+local MovesFx = require(script.Parent.MovesFx)
 local CooldownBars = require(script.Parent.CooldownBars)
 local TradeScreen = require(script.Parent.TradeScreen)
 local ViewModel = require(script.Parent.ViewModel)
@@ -12577,6 +13198,7 @@ function UIController.start()
 	ThrowFx.start(gui)
 	DashFx.start(gui)
 	StanceFx.start(gui)
+	MovesFx.start(gui)
 	CooldownBars.start(gui)
 	ViewModel.start()
 	StreakFx.start(gui)
@@ -12615,7 +13237,7 @@ return UIController
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007E">
+				<Item class="ModuleScript" referent="RBX00085">
 					<Properties>
 						<string name="Name">UiKit</string>
 						<ProtectedString name="Source"><![CDATA[-- The UI's look in one place: a clean, modern dark-glass style with warm gold accents, big
@@ -12755,7 +13377,7 @@ return UiKit
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007F">
+				<Item class="ModuleScript" referent="RBX00086">
 					<Properties>
 						<string name="Name">ViewModel</string>
 						<ProtectedString name="Source"><![CDATA[-- First person: your forearm, your hand and your needle drawn in front of the camera. Only you
@@ -12916,7 +13538,7 @@ return ViewModel
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00080">
+				<Item class="ModuleScript" referent="RBX00087">
 					<Properties>
 						<string name="Name">ViewModelMotion</string>
 						<ProtectedString name="Source"><![CDATA[-- The first-person view's sense of movement: breathing, the walk, the lag when you turn, the dip
@@ -13015,7 +13637,7 @@ return Motion
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00081">
+				<Item class="ModuleScript" referent="RBX00088">
 					<Properties>
 						<string name="Name">ViewModelPose</string>
 						<ProtectedString name="Source"><![CDATA[-- The first-person view's placement maths and nothing else: where the arms, the hands' boxes and
@@ -13221,7 +13843,7 @@ return Pose
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00082">
+				<Item class="ModuleScript" referent="RBX00089">
 					<Properties>
 						<string name="Name">ViewModelRig</string>
 						<ProtectedString name="Source"><![CDATA[-- Builds the first-person view's parts and moves them: both forearms and sleeves
@@ -13397,11 +14019,11 @@ return ViewModelRig
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX00083">
+	<Item class="Workspace" referent="RBX0008A">
 		<Properties>
 			<string name="Name">Workspace</string>
 		</Properties>
-		<Item class="Terrain" referent="RBX00084">
+		<Item class="Terrain" referent="RBX0008B">
 			<Properties>
 				<string name="Name">Terrain</string>
 				<bool name="Decoration">true</bool>
@@ -13409,7 +14031,7 @@ return ViewModelRig
 			</Properties>
 		</Item>
 	</Item>
-	<Item class="Lighting" referent="RBX00085">
+	<Item class="Lighting" referent="RBX0008C">
 		<Properties>
 			<string name="Name">Lighting</string>
 			<token name="Technology">4</token>
@@ -13418,7 +14040,7 @@ return ViewModelRig
 			<bool name="GlobalShadows">true</bool>
 		</Properties>
 	</Item>
-	<Item class="MaterialService" referent="RBX00086">
+	<Item class="MaterialService" referent="RBX0008D">
 		<Properties>
 			<string name="Name">MaterialService</string>
 			<bool name="Use2022Materials">true</bool>

@@ -475,6 +475,31 @@ class BoxOpenings(unittest.TestCase):
         self.assertIn("Spherecast", client, "you only stand where there is room")
         self.assertIn('"Stance"', (ROOT / "default.project.json").read_text())
 
+    def test_the_new_moves_keep_combat_fair(self):
+        moves = (SHARED / "ConfigMoves.luau").read_text()
+        def row(name):
+            return dict((k, float(v)) for k, v in re.findall(r"(\w+) = (-?[\d.]+)", re.search(rf"^Moves\.{name} = \{{(.*)\}}$", moves, re.M).group(1)))
+        combo, power, guard, lunge = row("Combo"), row("Power"), row("Guard"), row("Lunge")
+        cooldown = table("Combat")["cooldown"]
+        self.assertGreaterEqual(combo["first"] + combo["second"], 2 * cooldown, "three pokes are no faster than before")
+        self.assertGreaterEqual(combo["first"] + power["charge"], table("Throw")["back"], "poke then Power Poke is no faster than throw then poke")
+        self.assertGreater(combo["blocked"], cooldown, "a blocked poke costs the poker")
+        self.assertEqual(power["damage"], 2)
+        self.assertGreater(guard["popped"], guard["cooldown"])
+        top = float(re.search(r"maxSpeed = (\d+)", CONFIG).group(1))
+        for speed in (lunge["speed"], lunge["powerSpeed"], 34):
+            self.assertLess(speed, 0.8 * top, "no push looks like a speed cheat")
+        poke = (SERVER / "CombatPoke.luau").read_text()
+        for must in ("allow(attacker, \"Poke\")", "Rewind.samples", "workspace:Raycast", "P.charge - H.forgive", "Combat.guard ="):
+            self.assertIn(must, poke)
+        self.assertNotIn("os.clock", (ROOT / "src" / "client" / "MovesFx.luau").read_text().split("Remotes.Poke:FireServer")[1].split("\n")[0], "the client never sends a time")
+        project = (ROOT / "default.project.json").read_text()
+        for remote in ('"Charge"', '"Guard"'):
+            self.assertIn(remote, project)
+        client = (ROOT / "src" / "client" / "MovesFx.luau").read_text()
+        for key in ("KeyCode.R", "ButtonL2", "MouseButton1Down"):
+            self.assertIn(key, client, "the Thimble on keyboard, gamepad and touch")
+
     def test_start_up_never_waits_on_one_system(self):
         main = (SERVER / "Main.server.luau").read_text()
         self.assertIn("waited < 5", main, "a slow start-up step can't stop rounds or the Practice Yard starting")
@@ -588,13 +613,13 @@ class BoxOpenings(unittest.TestCase):
         self.assertLess(t["damage"], table("Combat")["hearts"], "one throw never tags someone out from full")
         self.assertIn("Spherecast", throw, "walls stop a throw")
         self.assertIn("Combat.damage", throw, "the same safe-time rules as a poke")
-        self.assertIn("NeedleAway", (SERVER / "Combat.luau").read_text(), "no pokes while it's flying")
+        self.assertIn("NeedleAway", (SERVER / "CombatPoke.luau").read_text(), "no pokes while it's flying")
 
     def test_poke_and_throw_have_cooldowns_you_can_see(self):
         self.assertGreater(table("Combat")["cooldown"], 0)
         self.assertGreater(table("Throw")["cooldown"], table("Combat")["cooldown"])
         combat, throw = (SERVER / "Combat.luau").read_text(), (SERVER / "CombatThrow.luau").read_text()
-        self.assertIn("C.cooldown", combat, "the server enforces the poke cooldown")
+        self.assertIn("C.cooldown", (SERVER / "CombatPoke.luau").read_text(), "the server enforces the poke cooldown")
         self.assertIn("T.cooldown", throw, "the server enforces the throw cooldown")
         bars = (ROOT / "src" / "client" / "CooldownBars.luau").read_text()
         self.assertIn('"POKE"', bars)

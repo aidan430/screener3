@@ -94,6 +94,12 @@
         },
         "Stance": {
           "$className": "RemoteEvent"
+        },
+        "Charge": {
+          "$className": "RemoteEvent"
+        },
+        "Guard": {
+          "$className": "RemoteEvent"
         }
       }
     },

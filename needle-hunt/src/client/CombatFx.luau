@@ -17,60 +17,20 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local UiKit = require(script.Parent.UiKit)
 local Effects = require(script.Parent.Effects)
 local ViewModel = require(script.Parent.ViewModel)
+local MovesFx = require(script.Parent.MovesFx)
 
 local player = Players.LocalPlayer
 local CombatFx = {}
-CombatFx.lastPoke = -math.huge -- when you last poked (client/CooldownBars shows the wait)
 local C = Config.Combat
 local taggedOut
-
--- The nearest other player within reach, roughly where you're facing.
-local function target()
-	local me = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-	if not me then
-		return nil
-	end
-	local look = workspace.CurrentCamera.CFrame.LookVector
-	look = Vector3.new(look.X, 0, look.Z).Unit
-	local best, bestDist = nil, C.reach
-	for _, p in ipairs(Players:GetPlayers()) do
-		local root = p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-		if root then
-			local offset = root.Position - me.Position
-			local flat = Vector3.new(offset.X, 0, offset.Z)
-			if offset.Magnitude <= bestDist and (flat.Magnitude < 0.5 or look:Dot(flat.Unit) > 0.3) then
-				best, bestDist = p, offset.Magnitude
-			end
-		end
-	end
-	local yard = workspace:FindFirstChild("PracticeYard_" .. player.UserId) -- your Time Trial's dummies
-	for _, m in ipairs(yard and yard:GetChildren() or {}) do
-		local post = m:GetAttribute("DummyId") and not m:GetAttribute("Out") and m.PrimaryPart
-		if post then
-			local offset = post.Position - me.Position
-			local flat = Vector3.new(offset.X, 0, offset.Z)
-			if flat.Magnitude <= bestDist + 1.5 and (flat.Magnitude < 0.5 or look:Dot(flat.Unit) > 0.3) then
-				best, bestDist = m:GetAttribute("DummyId"), flat.Magnitude
-			end
-		end
-	end
-	return best -- a Player, or a dummy's id
-end
 
 local function hookTool(tool, inspectButton)
 	if tool.Name ~= "Needle" or tool:GetAttribute("Hooked") then
 		return
 	end
 	tool:SetAttribute("Hooked", true)
-	tool.Activated:Connect(function()
-		if os.clock() - CombatFx.lastPoke < C.cooldown or player:GetAttribute("NeedleAway") then
-			return -- still on cooldown (the server would ignore it anyway)
-		end
-		CombatFx.lastPoke = os.clock()
-		local t = target()
-		Remotes.Poke:FireServer(if typeof(t) == "Instance" then t.UserId else t)
-		ViewModel.play("jab")
-	end)
+	tool.Activated:Connect(MovesFx.press) -- the poke; keep holding for a Power Poke (client/MovesFx)
+	tool.Deactivated:Connect(MovesFx.release)
 	tool.Equipped:Connect(function()
 		inspectButton.Visible = true
 	end)
@@ -79,11 +39,11 @@ local function hookTool(tool, inspectButton)
 	end)
 end
 
-local function pop(position, colour, amount)
+local function pop(position, colour, amount, text)
 	Effects.burst(position + Vector3.new(0, 1.5, 0), { colour, Color3.new(1, 1, 1) }, 18)
 	local anchor = UiKit.make("Part", { Anchored = true, CanCollide = false, CanQuery = false, CanTouch = false, Transparency = 1, Size = Vector3.one, CFrame = CFrame.new(position + Vector3.new(0, 3, 0)), Parent = workspace })
 	local gui = UiKit.make("BillboardGui", { Size = UDim2.fromOffset(120, 84), AlwaysOnTop = true, Parent = anchor })
-	local label = UiKit.label({ Text = "POP!", Font = UiKit.bold, TextColor3 = colour, TextStrokeTransparency = 0.3, Size = UDim2.new(1, 0, 0, 50), Parent = gui }, 36)
+	local label = UiKit.label({ Text = text or "POP!", Font = UiKit.bold, TextColor3 = colour, TextStrokeTransparency = 0.3, Size = UDim2.new(1, 0, 0, 50), Parent = gui }, 36)
 	UiKit.label({ Text = "-" .. amount .. " ♥", Font = UiKit.bold, TextStrokeTransparency = 0.3, Size = UDim2.new(1, 0, 0, 30), Position = UDim2.fromOffset(0, 50), Parent = gui }, 24) -- hearts lost
 	UiKit.pop(label, 0.6)
 	UiKit.ease(gui, 0.9, { StudsOffset = Vector3.new(0, 2, 0) })
@@ -129,8 +89,11 @@ function CombatFx.start(gui)
 	show()
 	-- hits: a sparkle and a pop where they land; your own, a soft red edge that fades
 	Remotes.Hit.OnClientEvent:Connect(function(m)
-		pop(m.position, if m.hearts == 0 then UiKit.colors.gold elseif (m.amount or 1) > 1 then Color3.fromRGB(255, 150, 60) else Color3.fromRGB(255, 120, 150), m.amount or 1)
+		local blocked = m.result == "blocked"
+		pop(m.position, if blocked then Color3.fromRGB(170, 174, 184) elseif m.hearts == 0 then UiKit.colors.gold elseif (m.amount or 1) > 1 then Color3.fromRGB(255, 150, 60) else Color3.fromRGB(255, 120, 150), m.amount or 1,
+			if blocked then "BLOCKED" elseif m.kind == "power" then "POWER!" elseif m.combo == 2 then "ONE-TWO!" else nil)
 		Effects.sound("click", 0.8)
+		MovesFx.hit(m)
 		if m.to == player.UserId then
 			-- a hit knocks you off a chest: any hold in progress stops, and starts again from empty
 			local arena = workspace:FindFirstChild("Arena")
@@ -144,9 +107,11 @@ function CombatFx.start(gui)
 					end)
 				end
 			end
-			local stroke = edge:FindFirstChildOfClass("UIStroke")
-			stroke.Thickness, stroke.Transparency = 18, 0.3
-			UiKit.ease(stroke, 0.8, { Transparency = 1 })
+			if not blocked then
+				local stroke = edge:FindFirstChildOfClass("UIStroke")
+				stroke.Thickness, stroke.Transparency = 18, 0.3
+				UiKit.ease(stroke, 0.8, { Transparency = 1 })
+			end
 			if m.hearts == 0 then
 				task.spawn(taggedOut, gui)
 			end

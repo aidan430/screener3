@@ -277,7 +277,9 @@ Config.Aim = {
 Config.Practice = { seconds = 180, countdown = 3, dummies = 8, moving = 3, hearts = 3, chests = 5, perch = { 3.5, 7 },
 	size = 100, centre = Vector3.new(-700, 0, 0), spacing = 180, backAfter = 10 }
 
-Config.Stance = require(script.Parent.ConfigMoves).Stance -- crouch and slide
+for name, value in pairs(require(script.Parent.ConfigMoves)) do -- Stance, Combo, Power, Guard, Lunge, HitCheck, Knock, Rate
+	Config[name] = value
+end
 Config.Look = require(script.Parent.ConfigLook) -- the sun, sky, haze and wind presets
 
 return Config
