@@ -5030,6 +5030,154 @@ return HaystackModel
 			</Item>
 			<Item class="ModuleScript" referent="RBX00046">
 				<Properties>
+					<string name="Name">LandmarkSkins</string>
+					<ProtectedString name="Source"><![CDATA[-- Dressing for Hayfield Farm's landmarks (server/Landmarks builds the parts you climb, then calls
+-- these): seams, hoops and a hatch on the silo; braces, a pitched roof and a lamp on the lookout;
+-- weathered red boards, a stone plinth, cream trim, a tin roof and lanterns on the barn; footing
+-- stones, a door, windows and a railing on the windmill; braces and hoops on the water tower.
+-- All of it is to look at only (server/WallKit.deco): nothing new to bump into or stand on.
+local MapKit = require(script.Parent.MapKit)
+local WallKit = require(script.Parent.WallKit)
+
+local Skins = {}
+local deco, tone = WallKit.deco, WallKit.tone
+local TIMBER, TIN, CREAM, STONE = { 112, 96, 80 }, { 132, 136, 138 }, { 232, 226, 210 }, { 138, 132, 122 }
+
+local function at(ctx, x, y, z)
+	return MapKit.at(ctx, x, y, z)
+end
+
+-- A ring of `n` pieces round (x, z) at radius r: fn(angle, position on the ring at height 0).
+local function ring(ctx, x, z, r, n, fn)
+	for i = 0, n - 1 do
+		local a = i / n * math.pi * 2
+		fn(a, x + math.cos(a) * r, z + math.sin(a) * r)
+	end
+end
+
+local function upright(pos, height, diameter) -- a cylinder standing up
+	return CFrame.new(pos) * CFrame.Angles(0, 0, math.rad(90)), Vector3.new(height, diameter, diameter)
+end
+
+function Skins.silo(ctx, x, z, h)
+	ring(ctx, x, z, 4.55, 12, function(a, px, pz) -- seam ribs
+		deco(ctx, { Name = "Rib", Size = Vector3.new(0.18, h, 0.5), CFrame = CFrame.new(at(ctx, px, h / 2, pz)) * CFrame.Angles(0, -a, 0), Color = { 132, 138, 144 }, Material = "Metal" })
+	end)
+	for _, y in ipairs({ 2, 8, 14, 20, 23.6 }) do -- hoops
+		local cf, size = upright(at(ctx, x, y, z), 0.25, 9.25)
+		deco(ctx, { Name = "Hoop", Shape = "Cylinder", Size = size, CFrame = cf, Color = { 120, 126, 132 }, Material = "Metal" })
+	end
+	local cf, size = upright(at(ctx, x, 20.9, z), 1.6, 9.12) -- its red band: the corn quarter's mark from far off
+	deco(ctx, { Name = "Band", Shape = "Cylinder", Size = size, CFrame = cf, Color = { 128, 44, 38 }, Material = "Metal" })
+	for i = 1, 6 do -- rust under the hoops
+		local a = i * 1.1
+		local l = 2 + (i % 3) * 1.6
+		deco(ctx, { Name = "Rust", Size = Vector3.new(0.1, l, 0.8), CFrame = CFrame.new(at(ctx, x + math.cos(a) * 4.58, 14 - l / 2 - (i % 2) * 6, z + math.sin(a) * 4.58)) * CFrame.Angles(0, -a, 0), Color = { 128, 78, 50 }, Material = "CorrodedMetal" }, false, true)
+	end
+	deco(ctx, { Name = "Hatch", Size = Vector3.new(2, 3.2, 0.3), CFrame = CFrame.new(at(ctx, x, 1.8, z - 4.5)), Color = { 96, 102, 108 }, Material = "Metal" })
+	deco(ctx, { Name = "HatchFrame", Size = Vector3.new(2.5, 3.7, 0.2), CFrame = CFrame.new(at(ctx, x, 1.85, z - 4.4)), Color = { 70, 74, 80 }, Material = "Metal" })
+	MapKit.lamp(ctx, at(ctx, x, 4.4, z - 4.9), { 255, 200, 130 }, 18)
+end
+
+function Skins.lookout(ctx, x, z, h)
+	for _, s in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do -- cross braces and girts between the legs
+		local face = CFrame.new(at(ctx, x + s[1] * 3, 0, z + s[2] * 3)) * CFrame.Angles(0, if s[1] ~= 0 then 0 else math.rad(90), 0)
+		for _, y in ipairs({ 5, 11 }) do
+			for _, lean in ipairs({ -1, 1 }) do
+				deco(ctx, { Name = "Brace", Size = Vector3.new(0.35, 0.35, 8), CFrame = face * CFrame.new(0, y, 0) * CFrame.Angles(math.rad(lean * 42), 0, 0), Color = tone(ctx, TIMBER, 0.08), Material = "Wood" })
+			end
+			deco(ctx, { Name = "Girt", Size = Vector3.new(0.4, 0.4, 6), CFrame = face * CFrame.new(0, y + 3, 0), Color = TIMBER, Material = "Wood" })
+		end
+	end
+	for _, side in ipairs({ -1, 1 }) do -- a pitched tin roof over the flat one
+		deco(ctx, { Name = "RoofPitch", Size = Vector3.new(9.8, 0.3, 5.6), CFrame = CFrame.new(at(ctx, x, h + 6.5, z + side * 2.3)) * CFrame.Angles(math.rad(side * 28), 0, 0), Color = tone(ctx, { 96, 112, 98 }, 0.05), Material = "Metal" }, true)
+	end
+	deco(ctx, { Name = "Ridge", Size = Vector3.new(10, 0.4, 0.6), CFrame = CFrame.new(at(ctx, x, h + 7.75, z)), Color = { 80, 92, 82 }, Material = "Metal" })
+	deco(ctx, { Name = "Pole", Size = Vector3.new(0.2, 3, 0.2), CFrame = CFrame.new(at(ctx, x, h + 9.4, z)), Color = TIMBER, Material = "Wood" }, false, true)
+	deco(ctx, { Name = "Pennant", Size = Vector3.new(0.08, 1.2, 2.2), CFrame = CFrame.new(at(ctx, x, h + 10.2, z + 1.2)), Color = { 232, 128, 40 }, Material = "Fabric" }, false, true)
+	MapKit.lamp(ctx, at(ctx, x, h + 4.2, z), { 255, 200, 130 }, 18)
+end
+
+function Skins.barn(ctx, x, z, W, D, H)
+	local reds = { { 142, 52, 44 }, { 128, 46, 40 }, { 156, 64, 52 } }
+	local function boards(cx, cz, along, length, out) -- vertical boards outside one wall
+		local n = math.floor(length / 1.4)
+		for i = 1, n do
+			local t = -length / 2 + (i - 0.5) * length / n
+			local colour = if i % 8 == 0 then { 150, 132, 118 } else reds[(i * 7) % 3 + 1]
+			local px, pz = cx + (if along == "x" then t else out * 0.65), cz + (if along == "z" then t else out * 0.65)
+			deco(ctx, { Name = "Board", Size = if along == "x" then Vector3.new(length / n - 0.1, H, 0.25) else Vector3.new(0.25, H, length / n - 0.1), CFrame = CFrame.new(at(ctx, px, H / 2, pz)), Color = tone(ctx, colour, 0.05), Material = "WoodPlanks" })
+		end
+	end
+	boards(x, z + D / 2, "x", W, 1)
+	boards(x - W / 2, z, "z", D, -1)
+	boards(x + W / 2, z, "z", D, 1)
+	for _, side in ipairs({ -1, 1 }) do
+		boards(x + side * (W / 4 + 2), z - D / 2, "x", W / 2 - 4, -1)
+		deco(ctx, { Name = "DoorPost", Size = Vector3.new(0.5, 12, 0.5), CFrame = CFrame.new(at(ctx, x + side * 4.2, 6, z - D / 2 - 0.7)), Color = CREAM, Material = "WoodPlanks" })
+		for _, cz in ipairs({ -D / 2, D / 2 }) do -- cream corner boards
+			deco(ctx, { Name = "Corner", Size = Vector3.new(0.5, H, 0.5), CFrame = CFrame.new(at(ctx, x + side * (W / 2 + 0.6), H / 2, z + cz + (if cz < 0 then -0.6 else 0.6))), Color = CREAM, Material = "WoodPlanks" })
+		end
+		-- a tin roof pitched from the eaves to a ridge along the barn's length
+		local run = D / 2 + 1.4
+		deco(ctx, { Name = "RoofPitch", Size = Vector3.new(W + 3, 0.35, run / math.cos(math.rad(32))), CFrame = CFrame.new(at(ctx, x, H + 1 + run * math.tan(math.rad(32)) / 2, z + side * run / 2)) * CFrame.Angles(math.rad(side * 32), 0, 0), Color = tone(ctx, TIN, 0.05), Material = "Metal" }, true)
+		for step = 1, 4 do -- the gable ends, in shrinking boards up to the ridge
+			local halfWidth = run * (1 - (step - 0.5) / 4.6)
+			deco(ctx, { Name = "Gable", Size = Vector3.new(0.4, 1.4, halfWidth * 2), CFrame = CFrame.new(at(ctx, x + side * (W / 2 + 0.4), H + 0.3 + step * 1.36, z)), Color = tone(ctx, reds[step % 3 + 1], 0.05), Material = "WoodPlanks" })
+		end
+	end
+	deco(ctx, { Name = "DoorHead", Size = Vector3.new(9, 0.5, 0.5), CFrame = CFrame.new(at(ctx, x, 12.2, z - D / 2 - 0.7)), Color = CREAM, Material = "WoodPlanks" })
+	deco(ctx, { Name = "RidgeCap", Size = Vector3.new(W + 3.4, 0.4, 0.9), CFrame = CFrame.new(at(ctx, x, H + 1.2 + (D / 2 + 1.4) * math.tan(math.rad(32)), z)), Color = { 110, 114, 118 }, Material = "Metal" })
+	for _, p in ipairs({ { 0, D / 2 + 0.85, W + 1.7, 0.7 }, { -W / 2 - 0.85, 0, 0.7, D + 1.7 }, { W / 2 + 0.85, 0, 0.7, D + 1.7 } }) do -- a stone plinth round the foot
+		deco(ctx, { Name = "Plinth", Size = Vector3.new(p[3], 1.4, p[4]), CFrame = CFrame.new(at(ctx, x + p[1], 0.7, z + p[2])), Color = tone(ctx, STONE, 0.05), Material = "Cobblestone" })
+	end
+	local ridge = H + 1.4 + (D / 2 + 1.4) * math.tan(math.rad(32))
+	deco(ctx, { Name = "Cupola", Size = Vector3.new(3, 3, 3), CFrame = CFrame.new(at(ctx, x, ridge + 1.3, z)), Color = CREAM, Material = "WoodPlanks" }, true)
+	deco(ctx, { Name = "CupolaRoof", Size = Vector3.new(3.8, 0.4, 3.8), CFrame = CFrame.new(at(ctx, x, ridge + 3, z)), Color = { 110, 114, 118 }, Material = "Metal" })
+	deco(ctx, { Name = "Vane", Size = Vector3.new(0.12, 2.2, 0.12), CFrame = CFrame.new(at(ctx, x, ridge + 4.3, z)), Color = { 60, 60, 64 }, Material = "Metal" }, false, true)
+	deco(ctx, { Name = "VaneArrow", Size = Vector3.new(2.4, 0.3, 0.08), CFrame = CFrame.new(at(ctx, x, ridge + 5, z)), Color = { 60, 60, 64 }, Material = "Metal" }, false, true)
+	MapKit.lamp(ctx, at(ctx, x - 6, 8.6, z), { 255, 196, 120 }, 20) -- two hanging lanterns inside
+	MapKit.lamp(ctx, at(ctx, x + 6, 8.6, z - 2), { 255, 196, 120 }, 20)
+end
+
+function Skins.windmill(ctx, x, z, balconyY)
+	ring(ctx, x, z, 5.5, 12, function(a, px, pz) -- footing stones round the tower
+		deco(ctx, { Name = "Footing", Size = Vector3.new(0.9, 2.2, 2.9), CFrame = CFrame.new(at(ctx, px, 1.1, pz)) * CFrame.Angles(0, -a, 0), Color = tone(ctx, STONE, 0.08), Material = "Cobblestone" })
+	end)
+	deco(ctx, { Name = "Door", Size = Vector3.new(0.3, 4.6, 2.2), CFrame = CFrame.new(at(ctx, x + 4.6, 2.3, z)), Color = { 70, 52, 38 }, Material = "WoodPlanks" })
+	deco(ctx, { Name = "DoorStone", Size = Vector3.new(0.5, 0.6, 3), CFrame = CFrame.new(at(ctx, x + 4.6, 4.9, z)), Color = STONE, Material = "Slate" })
+	for i, y in ipairs({ 6, 9.5 }) do -- dark windows up the tower
+		local a = i * 2.1
+		deco(ctx, { Name = "Window", Size = Vector3.new(0.2, 1.6, 1), CFrame = CFrame.new(at(ctx, x + math.cos(a) * 4.5, y, z + math.sin(a) * 4.5)) * CFrame.Angles(0, -a, 0), Color = { 40, 40, 48 }, Material = "Glass" }, false, true)
+	end
+	ring(ctx, x, z, 7.3, 12, function(a, px, pz) -- the balcony's railing
+		deco(ctx, { Name = "RailPost", Size = Vector3.new(0.25, 2.6, 0.25), CFrame = CFrame.new(at(ctx, px, balconyY + 1.3, pz)), Color = TIMBER, Material = "Wood" }, false, true)
+		if a > 0.6 then -- open where the stepping stones arrive
+			deco(ctx, { Name = "Rail", Size = Vector3.new(0.2, 0.2, 3.9), CFrame = CFrame.new(at(ctx, x + math.cos(a + 0.26) * 7.3, balconyY + 2.5, z + math.sin(a + 0.26) * 7.3)) * CFrame.Angles(0, -(a + 0.26), 0), Color = TIMBER, Material = "Wood" }, false, true)
+		end
+	end)
+end
+
+function Skins.waterTower(ctx, x, z, h)
+	for _, s in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
+		local face = CFrame.new(at(ctx, x + s[1] * 2.5, h / 2, z + s[2] * 2.5)) * CFrame.Angles(0, if s[1] ~= 0 then 0 else math.rad(90), 0)
+		for _, lean in ipairs({ -1, 1 }) do
+			deco(ctx, { Name = "Brace", Size = Vector3.new(0.3, 0.3, 11), CFrame = face * CFrame.Angles(math.rad(lean * 62), 0, 0), Color = tone(ctx, TIMBER, 0.08), Material = "Wood" })
+		end
+	end
+	for _, y in ipairs({ h + 1, h + 3, h + 5 }) do -- iron hoops round the tank
+		local cf, size = upright(at(ctx, x, y, z), 0.3, 8.2)
+		deco(ctx, { Name = "Hoop", Shape = "Cylinder", Size = size, CFrame = cf, Color = { 70, 66, 62 }, Material = "CorrodedMetal" })
+	end
+	deco(ctx, { Name = "Pipe", Size = Vector3.new(0.5, h, 0.5), CFrame = CFrame.new(at(ctx, x, h / 2, z)), Color = { 96, 100, 104 }, Material = "Metal" })
+end
+
+return Skins
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00047">
+				<Properties>
 					<string name="Name">Landmarks</string>
 					<ProtectedString name="Source"><![CDATA[-- Climbable landmarks for a big map (server/MapsBig). Each is a challenge to reach, and returns the
 -- top where a chest can stand (server/ChestSpawner puts chests on ctx.landmarks):
@@ -5043,6 +5191,8 @@ return HaystackModel
 -- takes care but no tricks. Positions are map-local (x, z on the floor), as MapKit.at.
 local MapKit = require(script.Parent.MapKit)
 local FarmProps = require(script.Parent.FarmProps)
+
+local Skins = require(script.Parent.LandmarkSkins) -- the dressing: boards, hoops, roofs, lamps
 
 local Landmarks = {}
 local WOOD, DARK = { 150, 104, 62 }, { 104, 70, 42 }
@@ -5081,9 +5231,9 @@ end
 
 function Landmarks.silo(ctx, x, z)
 	local h = 24
-	local tube = part(ctx, { Name = "Silo", Shape = "Cylinder", Size = Vector3.new(h, 9, 9), CFrame = CFrame.new(MapKit.at(ctx, x, h / 2, z)) * CFrame.Angles(0, 0, math.rad(90)), Color = { 196, 50, 44 }, Material = "Metal" })
+	local tube = part(ctx, { Name = "Silo", Shape = "Cylinder", Size = Vector3.new(h, 9, 9), CFrame = CFrame.new(MapKit.at(ctx, x, h / 2, z)) * CFrame.Angles(0, 0, math.rad(90)), Color = { 150, 156, 160 }, Material = "Metal" })
 	for i = 1, 3 do
-		part(ctx, { Name = "Band", Shape = "Cylinder", Size = Vector3.new(0.4, 9.2, 9.2), CFrame = CFrame.new(MapKit.at(ctx, x, i * h / 4, z)) * CFrame.Angles(0, 0, math.rad(90)), Color = { 230, 230, 230 }, Material = "Metal" })
+		part(ctx, { Name = "Band", Shape = "Cylinder", Size = Vector3.new(0.4, 9.2, 9.2), CFrame = CFrame.new(MapKit.at(ctx, x, i * h / 4, z)) * CFrame.Angles(0, 0, math.rad(90)), Color = { 120, 126, 132 }, Material = "Metal" })
 	end
 	block(ctx, Vector3.new(12, 1, 12), x, h + 0.6, z, { 120, 124, 130 }, "DiamondPlate") -- the catwalk on top
 	for _, s in ipairs({ { 0, 6 }, { 0, -6 }, { -6, 0 } }) do -- a rail round it (open where the ladder comes up)
@@ -5091,6 +5241,7 @@ function Landmarks.silo(ctx, x, z)
 	end
 	ladder(ctx, x + 6.2, z + 2, h + 0.6)
 	MapKit.spotsOn(ctx, tube, 0, 3)
+	Skins.silo(ctx, x, z, h)
 	return top(ctx, x - 2, h + 0.6, z - 2)
 end
 
@@ -5100,14 +5251,15 @@ function Landmarks.lookout(ctx, x, z)
 		part(ctx, { Name = "Leg", Size = Vector3.new(1, h + 5, 1), CFrame = CFrame.new(MapKit.at(ctx, x + l[1], (h + 5) / 2, z + l[2])), Color = DARK, Material = "Wood" })
 	end
 	block(ctx, Vector3.new(8, 1, 8), x, h, z)
-	part(ctx, { Name = "Roof", Size = Vector3.new(9, 0.6, 9), CFrame = CFrame.new(MapKit.at(ctx, x, h + 5, z)), Color = { 150, 74, 50 }, Material = "WoodPlanks" })
+	part(ctx, { Name = "Roof", Size = Vector3.new(9, 0.6, 9), CFrame = CFrame.new(MapKit.at(ctx, x, h + 5, z)), Color = { 70, 56, 44 }, Material = "WoodPlanks" })
+	Skins.lookout(ctx, x, z, h)
 	spiral(ctx, x, z, 8.5, h - 2.2, 3, WOOD, "WoodPlanks") -- posts up round it, then a jump onto the deck
 	return top(ctx, x, h, z)
 end
 
 function Landmarks.barnLoft(ctx, x, z)
 	local W, D, H, loftY = 26, 18, 16, 10
-	local red = { 170, 60, 50 }
+	local red = { 88, 66, 48 } -- the dark inside skin; the red boards outside are the dressing
 	for _, w in ipairs({ { 0, D / 2, W, 1 }, { -W / 2, 0, 1, D }, { W / 2, 0, 1, D } }) do
 		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, x + w[1], H / 2, z + w[2])), Vector3.new(w[3], H, w[4]), red, "WoodPlanks")
 	end
@@ -5115,7 +5267,8 @@ function Landmarks.barnLoft(ctx, x, z)
 		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, x + side * (W / 4 + 2), H / 2, z - D / 2)), Vector3.new(W / 2 - 4, H, 1), red, "WoodPlanks")
 	end
 	MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, x, H - 2, z - D / 2)), Vector3.new(8, 4, 1), red, "WoodPlanks")
-	part(ctx, { Name = "Roof", Size = Vector3.new(W + 2, 1, D + 2), CFrame = CFrame.new(MapKit.at(ctx, x, H + 0.5, z)), Color = { 90, 70, 60 }, Material = "Slate" })
+	part(ctx, { Name = "Roof", Size = Vector3.new(W + 2, 1, D + 2), CFrame = CFrame.new(MapKit.at(ctx, x, H + 0.5, z)), Color = { 60, 50, 44 }, Material = "Slate" })
+	Skins.barn(ctx, x, z, W, D, H)
 	block(ctx, Vector3.new(W - 2, 1, D / 2), x, loftY, z + D / 4) -- the loft, across the back half
 	for i, b in ipairs({ { -8, -4, 2.5 }, { -3, -6, 5 }, { 2, -4, 7.5 } }) do -- bales stacked up to it
 		for lv = 1, i do
@@ -5129,6 +5282,7 @@ function Landmarks.windmill(ctx, x, z)
 	FarmProps.windmill(ctx, x, z)
 	local h = 12
 	part(ctx, { Name = "Balcony", Shape = "Cylinder", Size = Vector3.new(1, 15, 15), CFrame = CFrame.new(MapKit.at(ctx, x, h - 0.5, z)) * CFrame.Angles(0, 0, math.rad(90)), Color = WOOD, Material = "WoodPlanks" })
+	Skins.windmill(ctx, x, z, h)
 	spiral(ctx, x, z, 10, h - 2.2, 3, { 170, 168, 160 }, "Slate")
 	return top(ctx, x + 6, h, z)
 end
@@ -5141,6 +5295,7 @@ function Landmarks.waterTower(ctx, x, z)
 	part(ctx, { Name = "Tank", Shape = "Cylinder", Size = Vector3.new(6, 8, 8), CFrame = CFrame.new(MapKit.at(ctx, x, h + 3, z)) * CFrame.Angles(0, 0, math.rad(90)), Color = WOOD, Material = "WoodPlanks" })
 	block(ctx, Vector3.new(9, 1, 9), x, h + 6.5, z, DARK)
 	ladder(ctx, x + 4.6, z, h + 6.5)
+	Skins.waterTower(ctx, x, z, h)
 	return top(ctx, x - 1.5, h + 6.5, z)
 end
 
@@ -5163,7 +5318,7 @@ return Landmarks
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00047">
+			<Item class="ModuleScript" referent="RBX00048">
 				<Properties>
 					<string name="Name">Landscape</string>
 					<ProtectedString name="Source"><![CDATA[-- The land, in smooth terrain (Config.Look.Terrain): Hayfield Farm's floor (grass, bare earth, mud
@@ -5302,7 +5457,7 @@ return Landscape
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00048">
+			<Item class="ModuleScript" referent="RBX00049">
 				<Properties>
 					<string name="Name">LeaderboardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Global leaderboards (Config.Boards), each an OrderedDataStore: most chests, most tag-outs,
@@ -5476,7 +5631,7 @@ return LeaderboardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00049">
+			<Item class="ModuleScript" referent="RBX0004A">
 				<Properties>
 					<string name="Name">LobbyBuilder</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby, built once at Config.LobbyCentre: a wooden plaza in a field, the animated title sign
@@ -5713,7 +5868,7 @@ return LobbyBuilder
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004A">
+			<Item class="ModuleScript" referent="RBX0004B">
 				<Properties>
 					<string name="Name">LobbyDecor</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's dressing (LobbyBuilder calls build once): a lawn crossed by cobbled paths (spawn to
@@ -5820,7 +5975,7 @@ return LobbyDecor
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004B">
+			<Item class="ModuleScript" referent="RBX0004C">
 				<Properties>
 					<string name="Name">LobbyShowOff</string>
 					<ProtectedString name="Source"><![CDATA[-- Show off (Remotes.ShowOff): hold your showcase needle (or your best) up over your head for a
@@ -5889,7 +6044,7 @@ return LobbyShowOff
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004C">
+			<Item class="ModuleScript" referent="RBX0004D">
 				<Properties>
 					<string name="Name">LobbySocial</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's social side: showing off collections.
@@ -6169,7 +6324,7 @@ return LobbySocial
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004D">
+			<Item class="ModuleScript" referent="RBX0004E">
 				<Properties>
 					<string name="Name">Look</string>
 					<ProtectedString name="Source"><![CDATA[-- The look of the world, from Config.Look's presets: the sun, sky, haze (Atmosphere), clouds, glow
@@ -6309,7 +6464,7 @@ return Look
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Script" referent="RBX0004E">
+			<Item class="Script" referent="RBX0004F">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Starts A Needle in a Haystack on the server. Systems that react to a player's save loading are
@@ -6407,7 +6562,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004F">
+			<Item class="ModuleScript" referent="RBX00050">
 				<Properties>
 					<string name="Name">MapKit</string>
 					<ProtectedString name="Source"><![CDATA[-- The building kit for maps (server/MapsA, MapsB): ground, hay bales, haystacks, crates, fences,
@@ -6640,7 +6795,7 @@ return MapKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00050">
+			<Item class="ModuleScript" referent="RBX00051">
 				<Properties>
 					<string name="Name">MapsA</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Classic Haystack Field (a hedge maze), Barn Interior (a maze of stall walls) and
@@ -6769,7 +6924,7 @@ return MapsA
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00051">
+			<Item class="ModuleScript" referent="RBX00052">
 				<Properties>
 					<string name="Name">MapsB</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Night Forest (a thicket maze) and Abandoned Attic (a maze of stacked boxes under
@@ -6868,7 +7023,7 @@ return MapsB
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00052">
+			<Item class="ModuleScript" referent="RBX00053">
 				<Properties>
 					<string name="Name">MapsBig</string>
 					<ProtectedString name="Source"><![CDATA[-- Hayfield Farm: one big map (about 360 studs across, several times the others). Four farm quarters,
@@ -6978,7 +7133,7 @@ return MapsBig
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00053">
+			<Item class="ModuleScript" referent="RBX00054">
 				<Properties>
 					<string name="Name">MapsC</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders from the owner's Gemini map sheets: Pumpkin Patch, Harvest Corn Maze, Sunflower
@@ -7129,7 +7284,7 @@ return MapsC
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00054">
+			<Item class="ModuleScript" referent="RBX00055">
 				<Properties>
 					<string name="Name">MapsD</string>
 					<ProtectedString name="Source"><![CDATA[-- More maps from the owner's Gemini sheets: Frozen Farm, Rainy Greenhouse, Duck Pond Marsh, Hay
@@ -7286,7 +7441,7 @@ return MapsD
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00055">
+			<Item class="ModuleScript" referent="RBX00056">
 				<Properties>
 					<string name="Name">MatchXp</string>
 					<ProtectedString name="Source"><![CDATA[-- The match's stats and its end (Config.MatchXp, Config.Rewards): counted while the round runs
@@ -7365,7 +7520,7 @@ return MatchXp
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00056">
+			<Item class="ModuleScript" referent="RBX00057">
 				<Properties>
 					<string name="Name">MazeKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Mazes for the maps: a grid of cells carved into a maze (a random depth-first walk, so every cell
@@ -7590,7 +7745,7 @@ return MazeKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00057">
+			<Item class="ModuleScript" referent="RBX00058">
 				<Properties>
 					<string name="Name">MazeWalls</string>
 					<ProtectedString name="Source"><![CDATA[-- More maze wall styles (server/MazeKit uses these when a map asks for one; it has its own
@@ -7789,7 +7944,7 @@ return MazeWalls
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00058">
+			<Item class="ModuleScript" referent="RBX00059">
 				<Properties>
 					<string name="Name">OneOfOne</string>
 					<ProtectedString name="Source"><![CDATA[-- The 1 of 1s (Config.OneOfOne). A chest rolls for each (roll); the first player to roll one claims it
@@ -7909,7 +8064,7 @@ return OneOfOne
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00059">
+			<Item class="ModuleScript" referent="RBX0005A">
 				<Properties>
 					<string name="Name">PadPortal</string>
 					<ProtectedString name="Source"><![CDATA[-- One lobby game platform (LobbyBuilder builds Config.Pads.count of them; server/GamePads runs them):
@@ -7986,7 +8141,7 @@ return PadPortal
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005A">
+			<Item class="ModuleScript" referent="RBX0005B">
 				<Properties>
 					<string name="Name">Powerups</string>
 					<ProtectedString name="Source"><![CDATA[-- Power-ups on the maps (Config.Powerups). When a round's search starts, glowing orbs float in
@@ -8167,7 +8322,7 @@ return Powerups
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005B">
+			<Item class="ModuleScript" referent="RBX0005C">
 				<Properties>
 					<string name="Name">Practice</string>
 					<ProtectedString name="Source"><![CDATA[-- The Time Trial in the Practice Yard (Config.Practice). From the lobby (the Practice stall, or
@@ -8422,7 +8577,7 @@ return Practice
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005C">
+			<Item class="ModuleScript" referent="RBX0005D">
 				<Properties>
 					<string name="Name">PracticeYard</string>
 					<ProtectedString name="Source"><![CDATA[-- Builds one player's Practice Yard for a Time Trial (server/Practice, Config.Practice): a hedged
@@ -8563,7 +8718,7 @@ return PracticeYard
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005D">
+			<Item class="ModuleScript" referent="RBX0005E">
 				<Properties>
 					<string name="Name">QuestManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Daily quests: three a day, the same for everyone (shared/Quests.forDay). Progress is saved;
@@ -8631,7 +8786,7 @@ return QuestManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005E">
+			<Item class="ModuleScript" referent="RBX0005F">
 				<Properties>
 					<string name="Name">Requests</string>
 					<ProtectedString name="Source"><![CDATA[-- Small requests from players, checked on the server: a hint (Remotes.Hint) and saving their
@@ -8694,7 +8849,7 @@ return Requests
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005F">
+			<Item class="ModuleScript" referent="RBX00060">
 				<Properties>
 					<string name="Name">RewardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Every coin and XP point is given here, on the server: chests, places, playing a round to the
@@ -8840,7 +8995,7 @@ return RewardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00060">
+			<Item class="ModuleScript" referent="RBX00061">
 				<Properties>
 					<string name="Name">Rewind</string>
 					<ProtectedString name="Source"><![CDATA[-- Where everyone was over the last second (Config.HitCheck.history), so a poke can be checked
@@ -8905,7 +9060,7 @@ return Rewind
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00061">
+			<Item class="ModuleScript" referent="RBX00062">
 				<Properties>
 					<string name="Name">RoundExtras</string>
 					<ProtectedString name="Source"><![CDATA[-- What runs alongside a round's search, started and stopped together by server/RoundManager:
@@ -8939,7 +9094,7 @@ return RoundExtras
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00062">
+			<Item class="ModuleScript" referent="RBX00063">
 				<Properties>
 					<string name="Name">RoundManager</string>
 					<ProtectedString name="Source"><![CDATA[-- A round, all on the server, for a group of players (RoundManager.play: a game platform's
@@ -9223,7 +9378,7 @@ return RoundManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00063">
+			<Item class="ModuleScript" referent="RBX00064">
 				<Properties>
 					<string name="Name">ShopManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Cosmetics and purchases. With Haystack Coins: buy a cosmetic (Remotes.Shop "buy"), and wear
@@ -9480,7 +9635,7 @@ return ShopManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00064">
+			<Item class="ModuleScript" referent="RBX00065">
 				<Properties>
 					<string name="Name">Stance</string>
 					<ProtectedString name="Source"><![CDATA[-- Crouching and sliding, the server's side (Config.Stance). Each player's device moves its own
@@ -9573,7 +9728,7 @@ return Stance
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00065">
+			<Item class="ModuleScript" referent="RBX00066">
 				<Properties>
 					<string name="Name">Streaks</string>
 					<ProtectedString name="Source"><![CDATA[-- Tag-out streaks, the Marked player and the tag-out feed (Config.Streak), called by server/Combat
@@ -9707,7 +9862,7 @@ return Streaks
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00066">
+			<Item class="ModuleScript" referent="RBX00067">
 				<Properties>
 					<string name="Name">TradeManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Trading needles between two players in the lobby (Config.Trading). Remotes.Trade asks; the
@@ -9973,7 +10128,7 @@ return TradeManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00067">
+			<Item class="ModuleScript" referent="RBX00068">
 				<Properties>
 					<string name="Name">WallKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Dressing for maze walls (server/MazeWalls builds each wall's solid core, then calls these):
@@ -10117,24 +10272,24 @@ return WallKit
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerStorage" referent="RBX00068">
+	<Item class="ServerStorage" referent="RBX00069">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX00069">
+	<Item class="StarterPlayer" referent="RBX0006A">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX0006A">
+		<Item class="StarterPlayerScripts" referent="RBX0006B">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX0006B">
+			<Item class="Folder" referent="RBX0006C">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX0006C">
+				<Item class="ModuleScript" referent="RBX0006D">
 					<Properties>
 						<string name="Name">Aim</string>
 						<ProtectedString name="Source"><![CDATA[-- Your aim settings (Settings, Aim; Config.Aim): mouse sensitivity, field of view, and the reticle
@@ -10247,7 +10402,7 @@ return Aim
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006D">
+				<Item class="ModuleScript" referent="RBX0006E">
 					<Properties>
 						<string name="Name">AimAssist</string>
 						<ProtectedString name="Source"><![CDATA[-- Who a poke is aimed at: of the players (and your Time Trial's dummies) within `range`, roughly
@@ -10310,7 +10465,7 @@ return AimAssist
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006E">
+				<Item class="ModuleScript" referent="RBX0006F">
 					<Properties>
 						<string name="Name">BoxReel</string>
 						<ProtectedString name="Source"><![CDATA[-- The box opening on your screen: a strip of needle cards slides along under a gold marker,
@@ -10413,7 +10568,7 @@ return BoxReel
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006F">
+				<Item class="ModuleScript" referent="RBX00070">
 					<Properties>
 						<string name="Name">BoxScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Boxes screen: each box with its price (coins; the dearer ones also Robux), a key button
@@ -10618,7 +10773,7 @@ return BoxScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00070">
+				<Item class="ModuleScript" referent="RBX00071">
 					<Properties>
 						<string name="Name">CombatFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Needle combat on your screen (server/Combat decides every hit):
@@ -10785,7 +10940,7 @@ return CombatFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00071">
+				<Item class="ModuleScript" referent="RBX00072">
 					<Properties>
 						<string name="Name">CooldownBars</string>
 						<ProtectedString name="Source"><![CDATA[-- POKE and THROW bars, top left under the DASH bar (client/DashFx), in the same style: each empties
@@ -10837,7 +10992,7 @@ return CooldownBars
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00072">
+				<Item class="ModuleScript" referent="RBX00073">
 					<Properties>
 						<string name="Name">DashFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Dashing (Config.Dash): C, B on a controller, or the Dash button on a phone. Your character
@@ -10959,7 +11114,7 @@ return DashFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00073">
+				<Item class="ModuleScript" referent="RBX00074">
 					<Properties>
 						<string name="Name">Effects</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback you can see and hear, on your own screen only: sounds, a burst of particles where a
@@ -11041,7 +11196,7 @@ return Effects
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00074">
+				<Item class="ModuleScript" referent="RBX00075">
 					<Properties>
 						<string name="Name">FeedFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The tag-out feed, top right beside the menu (server/Streaks sends every tag-out to everyone; Config.Streak.feed):
@@ -11125,7 +11280,7 @@ return FeedFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00075">
+				<Item class="ModuleScript" referent="RBX00076">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: your coins and level (with an XP bar) at the top left; the round's
@@ -11277,7 +11432,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00076">
+				<Item class="ModuleScript" referent="RBX00077">
 					<Properties>
 						<string name="Name">KeyHints</string>
 						<ProtectedString name="Source"><![CDATA[-- What each key does, for players on a keyboard: a small guide low on the left, above the Show off
@@ -11337,7 +11492,7 @@ return KeyHints
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00077">
+				<Item class="ModuleScript" referent="RBX00078">
 					<Properties>
 						<string name="Name">LobbyUi</string>
 						<ProtectedString name="Source"><![CDATA[-- The lobby, on your screen:
@@ -11435,7 +11590,7 @@ return LobbyUi
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX00078">
+				<Item class="LocalScript" referent="RBX00079">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- Starts the client: the whole UI (UIController). The client only shows things and asks the
@@ -11445,7 +11600,7 @@ UIController.start()
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00079">
+				<Item class="ModuleScript" referent="RBX0007A">
 					<Properties>
 						<string name="Name">Mover</string>
 						<ProtectedString name="Source"><![CDATA[-- A short push along the ground on your own character (your device moves it): the poke's lunge
@@ -11505,7 +11660,7 @@ return Mover
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007A">
+				<Item class="ModuleScript" referent="RBX0007B">
 					<Properties>
 						<string name="Name">MovesFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The poke, the Power Poke and the Thimble on your own device (Config.Combo, Power, Guard, Lunge,
@@ -11710,7 +11865,7 @@ return MovesFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007B">
+				<Item class="ModuleScript" referent="RBX0007C">
 					<Properties>
 						<string name="Name">NeedleView</string>
 						<ProtectedString name="Source"><![CDATA[-- A needle in 3D inside the UI: a ViewportFrame with the needle (shared/NeedleLook) lit and
@@ -11762,7 +11917,7 @@ return NeedleView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007C">
+				<Item class="ModuleScript" referent="RBX0007D">
 					<Properties>
 						<string name="Name">PowerupFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Power-ups on your screen (server/Powerups decides; Remotes.Powerup says what you got):
@@ -11896,7 +12051,7 @@ return PowerupFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007D">
+				<Item class="ModuleScript" referent="RBX0007E">
 					<Properties>
 						<string name="Name">PracticeFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The Time Trial on your screen (server/Practice decides everything): the Practice window (your
@@ -12060,7 +12215,7 @@ return PracticeFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007E">
+				<Item class="ModuleScript" referent="RBX0007F">
 					<Properties>
 						<string name="Name">Results</string>
 						<ProtectedString name="Source"><![CDATA[-- The round's big moments on screen: the 3, 2, 1; CHEST OPENED! when you open one (coins, or a
@@ -12220,7 +12375,7 @@ return Results
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007F">
+				<Item class="ModuleScript" referent="RBX00080">
 					<Properties>
 						<string name="Name">Screens</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop and Inventory screens. The Shop sells cosmetics for Haystack Coins (needle skins,
@@ -12411,7 +12566,7 @@ return Screens
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00080">
+				<Item class="ModuleScript" referent="RBX00081">
 					<Properties>
 						<string name="Name">Screens2</string>
 						<ProtectedString name="Source"><![CDATA[-- The Quests, Leaderboard and Settings screens (Settings: sound and effects toggles, and Aim).
@@ -12608,7 +12763,7 @@ return Screens2
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00081">
+				<Item class="ModuleScript" referent="RBX00082">
 					<Properties>
 						<string name="Name">Screens3</string>
 						<ProtectedString name="Source"><![CDATA[-- The Collection screen: every needle you've found, by type, shown in 3D with its rarity, value
@@ -12745,7 +12900,7 @@ return Screens3
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00082">
+				<Item class="ModuleScript" referent="RBX00083">
 					<Properties>
 						<string name="Name">StanceFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Crouching and sliding (Config.Stance): Left Ctrl or V, L3 on a controller, or the CROUCH button
@@ -12977,7 +13132,7 @@ return StanceFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00083">
+				<Item class="ModuleScript" referent="RBX00084">
 					<Properties>
 						<string name="Name">StreakFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Tag-outs and streaks on your screen (server/Combat decides them; Config.Streak):
@@ -13080,7 +13235,7 @@ return StreakFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00084">
+				<Item class="ModuleScript" referent="RBX00085">
 					<Properties>
 						<string name="Name">ThrowFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Throwing your needle on your screen (server/CombatThrow decides): Q, or the Throw button while
@@ -13198,7 +13353,7 @@ return ThrowFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00085">
+				<Item class="ModuleScript" referent="RBX00086">
 					<Properties>
 						<string name="Name">TradeScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Trade screen (server/TradeManager decides everything). Not trading: everyone in the server
@@ -13393,7 +13548,7 @@ return TradeScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00086">
+				<Item class="ModuleScript" referent="RBX00087">
 					<Properties>
 						<string name="Name">UIController</string>
 						<ProtectedString name="Source"><![CDATA[-- Puts the whole UI together: one ScreenGui with the HUD, the round moments (Results), and the
@@ -13556,7 +13711,7 @@ return UIController
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00087">
+				<Item class="ModuleScript" referent="RBX00088">
 					<Properties>
 						<string name="Name">UiKit</string>
 						<ProtectedString name="Source"><![CDATA[-- The UI's look in one place: a clean, modern dark-glass style with warm gold accents, big
@@ -13696,7 +13851,7 @@ return UiKit
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00088">
+				<Item class="ModuleScript" referent="RBX00089">
 					<Properties>
 						<string name="Name">ViewModel</string>
 						<ProtectedString name="Source"><![CDATA[-- First person: your forearm, your hand and your needle drawn in front of the camera. Only you
@@ -13857,7 +14012,7 @@ return ViewModel
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00089">
+				<Item class="ModuleScript" referent="RBX0008A">
 					<Properties>
 						<string name="Name">ViewModelMotion</string>
 						<ProtectedString name="Source"><![CDATA[-- The first-person view's sense of movement: breathing, the walk, the lag when you turn, the dip
@@ -13956,7 +14111,7 @@ return Motion
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0008A">
+				<Item class="ModuleScript" referent="RBX0008B">
 					<Properties>
 						<string name="Name">ViewModelPose</string>
 						<ProtectedString name="Source"><![CDATA[-- The first-person view's placement maths and nothing else: where the arms, the hands' boxes and
@@ -14162,7 +14317,7 @@ return Pose
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0008B">
+				<Item class="ModuleScript" referent="RBX0008C">
 					<Properties>
 						<string name="Name">ViewModelRig</string>
 						<ProtectedString name="Source"><![CDATA[-- Builds the first-person view's parts and moves them: both forearms and sleeves
@@ -14338,11 +14493,11 @@ return ViewModelRig
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX0008C">
+	<Item class="Workspace" referent="RBX0008D">
 		<Properties>
 			<string name="Name">Workspace</string>
 		</Properties>
-		<Item class="Terrain" referent="RBX0008D">
+		<Item class="Terrain" referent="RBX0008E">
 			<Properties>
 				<string name="Name">Terrain</string>
 				<bool name="Decoration">true</bool>
@@ -14350,7 +14505,7 @@ return ViewModelRig
 			</Properties>
 		</Item>
 	</Item>
-	<Item class="Lighting" referent="RBX0008E">
+	<Item class="Lighting" referent="RBX0008F">
 		<Properties>
 			<string name="Name">Lighting</string>
 			<token name="Technology">4</token>
@@ -14359,7 +14514,7 @@ return ViewModelRig
 			<bool name="GlobalShadows">true</bool>
 		</Properties>
 	</Item>
-	<Item class="MaterialService" referent="RBX0008F">
+	<Item class="MaterialService" referent="RBX00090">
 		<Properties>
 			<string name="Name">MaterialService</string>
 			<bool name="Use2022Materials">true</bool>

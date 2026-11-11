@@ -672,4 +672,11 @@ stone under their hedge; the vines are a bean-and-gourd trellis with posts, a ra
 the corn has leaning stalks in mixed green and gold, long leaves and soil ridges. Colours vary a
 little from wall to wall. The smallest pieces sit in a `Fine` folder in the arena.
 
+**Landmarks** (`server/LandmarkSkins.luau`, called by `server/Landmarks`): the silo is galvanised
+with seam ribs, hoops, rust, a red band and a hatch; the lookout has cross braces, a pitched tin
+roof, a pennant and a lamp; the barn has weathered red boards, cream trim, a stone plinth, a tin
+roof with gables, a cupola with a weathervane and two lanterns inside; the windmill has footing
+stones, a door, windows and a balcony rail; the water tower has braces and iron hoops. The parts
+you climb are unchanged. Preview (shapes only): `previews/hayfield_realistic.png`.
+
 **Studs** are switched off for this look (`Config.Studs.on`): they need plain Plastic.

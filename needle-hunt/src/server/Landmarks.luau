@@ -11,6 +11,8 @@
 local MapKit = require(script.Parent.MapKit)
 local FarmProps = require(script.Parent.FarmProps)
 
+local Skins = require(script.Parent.LandmarkSkins) -- the dressing: boards, hoops, roofs, lamps
+
 local Landmarks = {}
 local WOOD, DARK = { 150, 104, 62 }, { 104, 70, 42 }
 
@@ -48,9 +50,9 @@ end
 
 function Landmarks.silo(ctx, x, z)
 	local h = 24
-	local tube = part(ctx, { Name = "Silo", Shape = "Cylinder", Size = Vector3.new(h, 9, 9), CFrame = CFrame.new(MapKit.at(ctx, x, h / 2, z)) * CFrame.Angles(0, 0, math.rad(90)), Color = { 196, 50, 44 }, Material = "Metal" })
+	local tube = part(ctx, { Name = "Silo", Shape = "Cylinder", Size = Vector3.new(h, 9, 9), CFrame = CFrame.new(MapKit.at(ctx, x, h / 2, z)) * CFrame.Angles(0, 0, math.rad(90)), Color = { 150, 156, 160 }, Material = "Metal" })
 	for i = 1, 3 do
-		part(ctx, { Name = "Band", Shape = "Cylinder", Size = Vector3.new(0.4, 9.2, 9.2), CFrame = CFrame.new(MapKit.at(ctx, x, i * h / 4, z)) * CFrame.Angles(0, 0, math.rad(90)), Color = { 230, 230, 230 }, Material = "Metal" })
+		part(ctx, { Name = "Band", Shape = "Cylinder", Size = Vector3.new(0.4, 9.2, 9.2), CFrame = CFrame.new(MapKit.at(ctx, x, i * h / 4, z)) * CFrame.Angles(0, 0, math.rad(90)), Color = { 120, 126, 132 }, Material = "Metal" })
 	end
 	block(ctx, Vector3.new(12, 1, 12), x, h + 0.6, z, { 120, 124, 130 }, "DiamondPlate") -- the catwalk on top
 	for _, s in ipairs({ { 0, 6 }, { 0, -6 }, { -6, 0 } }) do -- a rail round it (open where the ladder comes up)
@@ -58,6 +60,7 @@ function Landmarks.silo(ctx, x, z)
 	end
 	ladder(ctx, x + 6.2, z + 2, h + 0.6)
 	MapKit.spotsOn(ctx, tube, 0, 3)
+	Skins.silo(ctx, x, z, h)
 	return top(ctx, x - 2, h + 0.6, z - 2)
 end
 
@@ -67,14 +70,15 @@ function Landmarks.lookout(ctx, x, z)
 		part(ctx, { Name = "Leg", Size = Vector3.new(1, h + 5, 1), CFrame = CFrame.new(MapKit.at(ctx, x + l[1], (h + 5) / 2, z + l[2])), Color = DARK, Material = "Wood" })
 	end
 	block(ctx, Vector3.new(8, 1, 8), x, h, z)
-	part(ctx, { Name = "Roof", Size = Vector3.new(9, 0.6, 9), CFrame = CFrame.new(MapKit.at(ctx, x, h + 5, z)), Color = { 150, 74, 50 }, Material = "WoodPlanks" })
+	part(ctx, { Name = "Roof", Size = Vector3.new(9, 0.6, 9), CFrame = CFrame.new(MapKit.at(ctx, x, h + 5, z)), Color = { 70, 56, 44 }, Material = "WoodPlanks" })
+	Skins.lookout(ctx, x, z, h)
 	spiral(ctx, x, z, 8.5, h - 2.2, 3, WOOD, "WoodPlanks") -- posts up round it, then a jump onto the deck
 	return top(ctx, x, h, z)
 end
 
 function Landmarks.barnLoft(ctx, x, z)
 	local W, D, H, loftY = 26, 18, 16, 10
-	local red = { 170, 60, 50 }
+	local red = { 88, 66, 48 } -- the dark inside skin; the red boards outside are the dressing
 	for _, w in ipairs({ { 0, D / 2, W, 1 }, { -W / 2, 0, 1, D }, { W / 2, 0, 1, D } }) do
 		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, x + w[1], H / 2, z + w[2])), Vector3.new(w[3], H, w[4]), red, "WoodPlanks")
 	end
@@ -82,7 +86,8 @@ function Landmarks.barnLoft(ctx, x, z)
 		MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, x + side * (W / 4 + 2), H / 2, z - D / 2)), Vector3.new(W / 2 - 4, H, 1), red, "WoodPlanks")
 	end
 	MapKit.wall(ctx, CFrame.new(MapKit.at(ctx, x, H - 2, z - D / 2)), Vector3.new(8, 4, 1), red, "WoodPlanks")
-	part(ctx, { Name = "Roof", Size = Vector3.new(W + 2, 1, D + 2), CFrame = CFrame.new(MapKit.at(ctx, x, H + 0.5, z)), Color = { 90, 70, 60 }, Material = "Slate" })
+	part(ctx, { Name = "Roof", Size = Vector3.new(W + 2, 1, D + 2), CFrame = CFrame.new(MapKit.at(ctx, x, H + 0.5, z)), Color = { 60, 50, 44 }, Material = "Slate" })
+	Skins.barn(ctx, x, z, W, D, H)
 	block(ctx, Vector3.new(W - 2, 1, D / 2), x, loftY, z + D / 4) -- the loft, across the back half
 	for i, b in ipairs({ { -8, -4, 2.5 }, { -3, -6, 5 }, { 2, -4, 7.5 } }) do -- bales stacked up to it
 		for lv = 1, i do
@@ -96,6 +101,7 @@ function Landmarks.windmill(ctx, x, z)
 	FarmProps.windmill(ctx, x, z)
 	local h = 12
 	part(ctx, { Name = "Balcony", Shape = "Cylinder", Size = Vector3.new(1, 15, 15), CFrame = CFrame.new(MapKit.at(ctx, x, h - 0.5, z)) * CFrame.Angles(0, 0, math.rad(90)), Color = WOOD, Material = "WoodPlanks" })
+	Skins.windmill(ctx, x, z, h)
 	spiral(ctx, x, z, 10, h - 2.2, 3, { 170, 168, 160 }, "Slate")
 	return top(ctx, x + 6, h, z)
 end
@@ -108,6 +114,7 @@ function Landmarks.waterTower(ctx, x, z)
 	part(ctx, { Name = "Tank", Shape = "Cylinder", Size = Vector3.new(6, 8, 8), CFrame = CFrame.new(MapKit.at(ctx, x, h + 3, z)) * CFrame.Angles(0, 0, math.rad(90)), Color = WOOD, Material = "WoodPlanks" })
 	block(ctx, Vector3.new(9, 1, 9), x, h + 6.5, z, DARK)
 	ladder(ctx, x + 4.6, z, h + 6.5)
+	Skins.waterTower(ctx, x, z, h)
 	return top(ctx, x - 1.5, h + 6.5, z)
 end
 

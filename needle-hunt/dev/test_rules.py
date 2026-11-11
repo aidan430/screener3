@@ -523,6 +523,13 @@ class BoxOpenings(unittest.TestCase):
             self.assertIn(call, walls)
         self.assertIn("function MazeWalls.hedge", walls)
 
+    def test_landmark_dressing_adds_nothing_to_bump_into(self):
+        skins = (SERVER / "LandmarkSkins.luau").read_text()
+        self.assertNotIn("MapKit.part(", skins, "dressing goes through WallKit.deco (no collisions) or MapKit.lamp")
+        marks = (SERVER / "Landmarks.luau").read_text()
+        for call in ("Skins.silo(", "Skins.lookout(", "Skins.barn(", "Skins.windmill(", "Skins.waterTower("):
+            self.assertIn(call, marks)
+
     def test_start_up_never_waits_on_one_system(self):
         main = (SERVER / "Main.server.luau").read_text()
         self.assertIn("waited < 5", main, "a slow start-up step can't stop rounds or the Practice Yard starting")
