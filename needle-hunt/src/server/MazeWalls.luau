@@ -13,6 +13,7 @@
 --   stalls      the backs of market stalls under striped awnings (Hay Market)
 --   tents       fairground tents and booths in candy stripes (County Fair)
 local MapKit = require(script.Parent.MapKit)
+local WallKit = require(script.Parent.WallKit) -- the dressing: leaves, lumps, cap stones
 
 local MazeWalls = {}
 
@@ -24,28 +25,28 @@ end
 function MazeWalls.vines(ctx, a, b, height, T)
 	local cf, l = along(a, b)
 	local len = l + T
-	MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T, height, len), CFrame = cf * CFrame.new(0, height / 2, 0), Color = { 52, 120, 48 }, Material = "LeafyGrass" })
-	for i = 0, math.floor(len / 3.2) do -- lumpy leaves and twisting vines over it
-		local z = -len / 2 + 1.2 + i * 3.2
-		local s = ctx.rng:NextNumber(2.2, 3.2)
-		MapKit.part(ctx, { Name = "Leaves", Shape = "Ball", Size = Vector3.one * s, CFrame = cf * CFrame.new(ctx.rng:NextNumber(-0.4, 0.4), height - 0.4 + ctx.rng:NextNumber(-0.3, 0.4), z), Color = { 70, 150, 58 }, Material = "LeafyGrass", CanCollide = false })
-		for _, side in ipairs({ -1, 1 }) do
-			if ctx.rng:NextNumber() < 0.6 then
-				MapKit.part(ctx, { Name = "Vine", Shape = "Cylinder", Size = Vector3.new(height * 0.9, 0.5, 0.5), CFrame = cf * CFrame.new(side * (T / 2 + 0.15), height / 2, z) * CFrame.Angles(0, 0, math.rad(90 + ctx.rng:NextNumber(-25, 25))), Color = { 40, 104, 40 }, Material = "Grass", CanCollide = false, CanQuery = false })
-			end
-		end
-	end
+	MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T, height, len), CFrame = cf * CFrame.new(0, height / 2, 0), Color = WallKit.tone(ctx, { 44, 84, 40 }, 0.06), Material = "LeafyGrass" })
+	WallKit.trellis(ctx, cf, len, height, T)
+end
+
+-- A clipped hedge (server/MazeKit's "hedge" style comes here).
+function MazeWalls.hedge(ctx, a, b, height, T)
+	local cf, l = along(a, b)
+	local len = l + T
+	MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T, height, len), CFrame = cf * CFrame.new(0, height / 2, 0), Color = WallKit.tone(ctx, { 46, 82, 42 }, 0.06), Material = "LeafyGrass" })
+	WallKit.hedge(ctx, cf, len, height, T)
 end
 
 function MazeWalls.corn(ctx, a, b, height, T)
 	local cf, l = along(a, b)
 	local len = l + T
-	MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T * 0.8, height * 0.85, len), CFrame = cf * CFrame.new(0, height * 0.425, 0), Color = { 196, 168, 70 }, Material = "Grass" })
+	MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T * 0.8, height * 0.85, len), CFrame = cf * CFrame.new(0, height * 0.425, 0), Color = { 122, 112, 60 }, Material = "Grass" })
+	WallKit.corn(ctx, cf, len, height, T)
 	for i = 0, math.floor(len / 1.4) do -- stalks, each with leaves, a cob and a tassel
 		local z = -len / 2 + 0.5 + i * 1.4
 		local x = ctx.rng:NextNumber(-0.6, 0.6)
 		local h = height + ctx.rng:NextNumber(0.5, 2)
-		MapKit.part(ctx, { Name = "Stalk", Size = Vector3.new(0.35, h, 0.35), CFrame = cf * CFrame.new(x, h / 2, z), Color = { 214, 186, 82 }, Material = "Grass", CanCollide = false, CanQuery = false })
+		MapKit.part(ctx, { Name = "Stalk", Size = Vector3.new(0.35, h, 0.35), CFrame = cf * CFrame.new(x, h / 2, z) * CFrame.Angles(math.rad(ctx.rng:NextNumber(-4, 4)), 0, math.rad(ctx.rng:NextNumber(-4, 4))), Color = WallKit.tone(ctx, if i % 3 == 0 then { 128, 138, 66 } else { 196, 170, 92 }, 0.1), Material = "Grass", CanCollide = false, CanQuery = false, CastShadow = i % 2 == 0 })
 		MapKit.part(ctx, { Name = "Tassel", Size = Vector3.new(0.9, 0.9, 0.2), CFrame = cf * CFrame.new(x, h + 0.2, z) * CFrame.Angles(0, 0, math.rad(45)), Color = { 236, 204, 110 }, Material = "Grass", CanCollide = false, CanQuery = false })
 		if ctx.rng:NextNumber() < 0.45 then
 			local side = if ctx.rng:NextNumber() < 0.5 then -1 else 1
@@ -78,10 +79,12 @@ function MazeWalls.stone(ctx, a, b, height, T)
 		for i = 0, n - 1 do -- blocks, each row shifted half a block and a little rough
 			local z = -len / 2 + s / 2 + i * s + (if row == 1 and i < n - 1 then s / 2 else 0)
 			local shade = ctx.rng:NextInteger(150, 182)
-			MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T + 0.6, stoneH / 2, s - 0.08), CFrame = cf * CFrame.new(0, stoneH / 4 + row * stoneH / 2, z) * CFrame.Angles(0, ctx.rng:NextNumber(-0.04, 0.04), 0), Color = { shade, shade, shade + 6 }, Material = "Slate" })
+			MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T + 0.6, stoneH / 2, s - 0.08), CFrame = cf * CFrame.new(0, stoneH / 4 + row * stoneH / 2, z) * CFrame.Angles(0, ctx.rng:NextNumber(-0.04, 0.04), 0), Color = { shade - 8, shade - 10, shade - 16 }, Material = "Slate" })
 		end
 	end
-	MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T, height - stoneH, len), CFrame = cf * CFrame.new(0, stoneH + (height - stoneH) / 2, 0), Color = { 66, 128, 56 }, Material = "LeafyGrass" })
+	MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T, height - stoneH, len), CFrame = cf * CFrame.new(0, stoneH + (height - stoneH) / 2, 0), Color = WallKit.tone(ctx, { 48, 84, 42 }, 0.06), Material = "LeafyGrass" })
+	WallKit.stone(ctx, cf, len, stoneH, T)
+	WallKit.hedge(ctx, cf, len, height - stoneH, T, stoneH, 0.67)
 end
 
 function MazeWalls.stonehedge(ctx, a, b, height, T)
@@ -89,7 +92,9 @@ function MazeWalls.stonehedge(ctx, a, b, height, T)
 		MazeWalls.stone(ctx, a, b, height, T)
 	else
 		local cf, l = along(a, b)
-		MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T, height, l + T), CFrame = cf * CFrame.new(0, height / 2, 0), Color = { 62, 124, 54 }, Material = "LeafyGrass" })
+		MapKit.part(ctx, { Name = "MazeWall", Size = Vector3.new(T, height, l + T), CFrame = cf * CFrame.new(0, height / 2, 0), Color = WallKit.tone(ctx, { 46, 82, 42 }, 0.06), Material = "LeafyGrass" })
+		WallKit.hedge(ctx, cf, l + T, height, T)
+		WallKit.footings(ctx, cf, l + T, T)
 	end
 end
 

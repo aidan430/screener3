@@ -513,6 +513,16 @@ class BoxOpenings(unittest.TestCase):
         self.assertEqual(play % 4, 0, "on the terrain grid")
         self.assertIn("Landscape.floor(ctx)", (SERVER / "MapsBig.luau").read_text())
 
+    def test_wall_dressing_is_only_to_look_at(self):
+        kit = (SERVER / "WallKit.luau").read_text()
+        self.assertIn("props.CanCollide, props.CanQuery, props.CanTouch, props.CastShadow = false, false, false", kit, "dressing never blocks a corridor, a click or a throw")
+        self.assertIn("ctx.decoRng", kit, "its own random numbers: the mazes and chests don't change")
+        self.assertNotIn("ctx.rng", kit.split("local function rng(ctx)")[1].split("end", 1)[1])
+        walls = (SERVER / "MazeWalls.luau").read_text()
+        for call in ("WallKit.hedge(", "WallKit.stone(", "WallKit.trellis(", "WallKit.corn("):
+            self.assertIn(call, walls)
+        self.assertIn("function MazeWalls.hedge", walls)
+
     def test_start_up_never_waits_on_one_system(self):
         main = (SERVER / "Main.server.luau").read_text()
         self.assertIn("waited < 5", main, "a slow start-up step can't stop rounds or the Practice Yard starting")

@@ -665,4 +665,11 @@ with muddy ruts. Round the arena a frame of fields, low hills and a ridge is bui
 (it hides where the world stops), with dirt lanes running on from the road ends; the lobby gets a
 few mounds beyond its hedge. Only the play square is cleared between rounds.
 
+**Walls** (`server/WallKit.luau`, called by `server/MazeWalls`): each wall keeps its solid core and
+gets dressing that only looks: hedges have leafy panels proud of each face, a dark foot, lumps and
+sprigs that break the straight top; dry-stone walls have cap stones, moss, ivy and the odd fallen
+stone under their hedge; the vines are a bean-and-gourd trellis with posts, a rail and leaf slabs;
+the corn has leaning stalks in mixed green and gold, long leaves and soil ridges. Colours vary a
+little from wall to wall. The smallest pieces sit in a `Fine` folder in the arena.
+
 **Studs** are switched off for this look (`Config.Studs.on`): they need plain Plastic.
