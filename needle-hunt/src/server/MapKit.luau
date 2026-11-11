@@ -83,8 +83,11 @@ end
 -- mid-air), a tall hedge you can see all the way round the play area (half sizes halfX, halfZ),
 -- and invisible walls on top of it up to 200 studs, so nobody walks, jumps or flies off. Neither
 -- can be clicked through to (they ignore clicks and raycasts).
-function MapKit.edges(ctx, halfX, halfZ, colour)
-	MapKit.part(ctx, { Name = "Countryside", Size = Vector3.new(900, 2, 900), CFrame = CFrame.new(MapKit.at(ctx, 0, -1.1, 0)), Color = colour, Material = "Grass", CanQuery = false })
+function MapKit.edges(ctx, halfX, halfZ, colour, land)
+	if land then -- terrain runs on beyond the hedge (server/Landscape): no flat countryside part
+		colour = nil
+	end
+	local _ = colour and MapKit.part(ctx, { Name = "Countryside", Size = Vector3.new(900, 2, 900), CFrame = CFrame.new(MapKit.at(ctx, 0, -1.1, 0)), Color = colour, Material = "Grass", CanQuery = false })
 	for _, w in ipairs({ { 0, -halfZ, halfX * 2 + 3, 3 }, { 0, halfZ, halfX * 2 + 3, 3 }, { -halfX, 0, 3, halfZ * 2 + 3 }, { halfX, 0, 3, halfZ * 2 + 3 } }) do
 		MapKit.part(ctx, { Name = "Hedge", Size = Vector3.new(w[3], 9, w[4]), CFrame = CFrame.new(MapKit.at(ctx, w[1], 4.5, w[2])), Color = { 52, 104, 52 }, Material = "LeafyGrass", CanQuery = false })
 		MapKit.part(ctx, { Name = "Edge", Size = Vector3.new(w[3], 200, w[4]), CFrame = CFrame.new(MapKit.at(ctx, w[1], 109, w[2])), Transparency = 1, CanQuery = false, CastShadow = false })
@@ -138,9 +141,10 @@ function MapKit.haystack(ctx, x, z, radius, height)
 	end
 end
 
--- Clears the terrain haystacks round `centre` (the arena, between rounds).
+-- Clears the arena's terrain round `centre` between rounds: the last map's haystacks and terrain
+-- floor (exactly the play square, so server/Landscape's frame of hills round it stays).
 function MapKit.clearTerrain(centre)
-	workspace.Terrain:FillBlock(CFrame.new(centre + Vector3.new(0, 40, 0)), Vector3.new(340, 100, 340), Enum.Material.Air)
+	workspace.Terrain:FillBlock(CFrame.new(centre + Vector3.new(0, 44, 0)), Vector3.new(376, 120, 376), Enum.Material.Air)
 end
 
 function MapKit.crate(ctx, x, y, z, size, climb)

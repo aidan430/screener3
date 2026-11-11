@@ -78,4 +78,19 @@ Look.presets = {
 		wind = { 0, 0, 0 } }),
 }
 
+-- The land (server/Landscape): terrain colours; Hayfield Farm's floor materials by quarter style
+-- (corn, vines, hedge, stonehedge) and its roads; the frame of fields and hills round the arena
+-- (from `inner` to `outer` studs out: `mounds` low hills at mound.at out, and a ridge of
+-- ridge.radius balls ridge.at out whose tops are ridge.top high, hiding the world's edge);
+-- the water; and the lobby's mounds. Sizes are studs, on the terrain's 4-stud grid.
+Look.Terrain = {
+	colours = { Grass = { 88, 124, 54 }, LeafyGrass = { 96, 118, 60 }, Ground = { 134, 108, 76 }, Mud = { 84, 66, 50 }, Cobblestone = { 150, 146, 136 }, Rock = { 112, 110, 104 } },
+	play = 188, depth = 16,
+	quarters = { corn = "Ground", vines = "Mud", hedge = "Grass", stonehedge = "LeafyGrass" },
+	yards = { corn = "Cobblestone", vines = "Ground", hedge = "Ground", stonehedge = "Cobblestone" }, yard = 14,
+	road = { half = 8, rut = 4, ring = { 156, 180 }, ringRuts = { { 160, 164 }, { 172, 176 } }, cross = 12 },
+	frame = { inner = 188, outer = 440, mounds = 24, mound = { at = { 290, 330 }, radius = 70, top = { 12, 24 }, lane = 40 }, ridge = { at = 392, radius = 90, top = 40, every = 96 } },
+	lobby = { mounds = 12, at = 150, radius = 46, top = { 14, 18, 22 } },
+}
+
 return Look

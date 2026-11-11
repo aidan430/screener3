@@ -500,6 +500,19 @@ class BoxOpenings(unittest.TestCase):
         for key in ("KeyCode.R", "ButtonL2", "MouseButton1Down"):
             self.assertIn(key, client, "the Thimble on keyboard, gamepad and touch")
 
+    def test_hayfield_farm_stands_on_terrain_that_clears_between_rounds(self):
+        land = (SERVER / "Landscape.luau").read_text()
+        self.assertIn('Name = "Ground"', land, "an invisible part floor stays for the chest spawner's rays")
+        self.assertIn("Config.Studs.on", land, "the studded floor comes back with the switch")
+        kit = (SERVER / "MapKit.luau").read_text()
+        clear = re.search(r"Vector3\.new\((\d+), \d+, (\d+)\), Enum\.Material\.Air", kit)
+        look = (SHARED / "ConfigLook.luau").read_text()
+        play = int(re.search(r"play = (\d+)", look).group(1))
+        self.assertEqual(int(clear.group(1)), play * 2, "clearing takes exactly the play square, not the hills round it")
+        self.assertEqual(int(re.search(r"inner = (\d+)", look).group(1)), play, "the frame starts where the play square ends")
+        self.assertEqual(play % 4, 0, "on the terrain grid")
+        self.assertIn("Landscape.floor(ctx)", (SERVER / "MapsBig.luau").read_text())
+
     def test_start_up_never_waits_on_one_system(self):
         main = (SERVER / "Main.server.luau").read_text()
         self.assertIn("waited < 5", main, "a slow start-up step can't stop rounds or the Practice Yard starting")

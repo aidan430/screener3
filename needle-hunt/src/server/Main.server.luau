@@ -39,6 +39,12 @@ for _, step in ipairs({
 	{ "HaystackModel", HaystackModel.load }, -- before the lobby, so its haystacks can use it
 	{ "Look", require(script.Parent.Look).init },
 	{ "Lobby", LobbyBuilder.build },
+	{ "Land", function() -- hills beyond the lobby's hedge, and (in the background) the land round the arena
+		local Landscape = require(script.Parent.Landscape)
+		local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
+		Landscape.lobby(Config.LobbyCentre)
+		task.spawn(Landscape.backdrop, Config.ArenaCentre)
+	end },
 	{ "AntiCheat", AntiCheat.init },
 	{ "Quests", QuestManager.init },
 	{ "Rewards", RewardManager.init },

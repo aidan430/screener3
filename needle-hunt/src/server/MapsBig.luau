@@ -9,6 +9,8 @@ local MapKit = require(script.Parent.MapKit)
 local MazeKit = require(script.Parent.MazeKit)
 local FarmProps = require(script.Parent.FarmProps)
 local Landmarks = require(script.Parent.Landmarks)
+local Landscape = require(script.Parent.Landscape)
+local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
 local inCell = require(script.Parent.MapsA).inCell
 
 local MapsBig = {}
@@ -50,14 +52,18 @@ local QUARTERS = {
 }
 
 function MapsBig.bigfarm(ctx)
-	MapKit.ground(ctx, HALF * 2 + 20, HALF * 2 + 20, ctx.def.ground, "Grass")
-	MapKit.edges(ctx, HALF, HALF, ctx.def.ground)
-	road(ctx, 0, 0, 20, HALF * 2 - 4) -- the two roads through the middle
-	road(ctx, 0, 0, HALF * 2 - 4, 20)
-	for _, s in ipairs({ -1, 1 }) do -- the ring road
-		road(ctx, 0, s * RING, HALF * 2 - 4, 24)
-		road(ctx, s * RING, 0, 24, HALF * 2 - 4)
+	local land = not Config.Studs.on -- terrain floor and hills (server/Landscape), or the classic studded parts
+	Landscape.floor(ctx)
+	MapKit.edges(ctx, HALF, HALF, ctx.def.ground, land)
+	if not land then
+		road(ctx, 0, 0, 20, HALF * 2 - 4) -- the two roads through the middle
+		road(ctx, 0, 0, HALF * 2 - 4, 20)
+		for _, s in ipairs({ -1, 1 }) do -- the ring road
+			road(ctx, 0, s * RING, HALF * 2 - 4, 24)
+			road(ctx, s * RING, 0, 24, HALF * 2 - 4)
+		end
 	end
+	local plan = { quarters = {} }
 	ctx.landmarks = {}
 	local all = { cells = {}, deadEnds = {}, rooms = {}, height = 10, size = 16 }
 	for _, q in ipairs(QUARTERS) do
@@ -69,7 +75,9 @@ function MapsBig.bigfarm(ctx)
 			table.move(maze[key], 1, #maze[key], #all[key] + 1, all[key])
 		end
 		table.insert(all.rooms, rooms[2] or rooms[1]) -- (the landmark's clearing is taken)
+		table.insert(plan.quarters, { style = q.style, x = q.x, z = q.z, half = 74, yards = { rooms[1], rooms[2] } })
 	end
+	Landscape.farm(ctx, plan)
 	table.insert(ctx.landmarks, Landmarks.waterTower(ctx, -RING, RING))
 	ctx.goldenSpot = Landmarks.hayTower(ctx, 0, 0)
 	for i = 0, 15 do -- apple trees and pines along the ring road's outer side

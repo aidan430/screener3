@@ -658,4 +658,11 @@ Realistic, MaterialService has Use2022Materials ticked, and set the Studio graph
 maximum (File, Studio Settings, Rendering, Editor Quality Level) to see it properly. The numbers
 were chosen on paper: tune them in Play mode.
 
+**The land** (`server/Landscape.luau`, numbers in `Config.Look.Terrain`): Hayfield Farm stands on
+smooth terrain: grass with moving blades in the orchard, bare earth in the corn, mud in the pumpkin
+patch, meadow on Windmill Hill, cobbled yards under the landmarks and at the crossroads, dirt roads
+with muddy ruts. Round the arena a frame of fields, low hills and a ridge is built once per server
+(it hides where the world stops), with dirt lanes running on from the road ends; the lobby gets a
+few mounds beyond its hedge. Only the play square is cleared between rounds.
+
 **Studs** are switched off for this look (`Config.Studs.on`): they need plain Plastic.
