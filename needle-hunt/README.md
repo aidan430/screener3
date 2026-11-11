@@ -685,4 +685,17 @@ roof with gables, a cupola with a weathervane and two lanterns inside; the windm
 stones, a door, windows and a balcony rail; the water tower has braces and iron hoops. The parts
 you climb are unchanged. Preview (shapes only): `previews/hayfield_realistic.png`.
 
+**Finishing touches** (`server/FarmDress.luau`, `server/Vista.luau`): every maze gate has a
+timber frame with a sign and pennant in its quarter's colour (corn gold, pumpkin orange, orchard
+red, mill blue) and a lantern; a balloon in the same colour floats high over each landmark, with a
+gold one over the Hay Tower; dust motes drift over the roads and yards and chaff over the corn.
+Beyond the hedge, down the four lanes: a red barn with twin silos, a farmhouse with lit windows
+and chimney smoke, three wind pumps, a pond with a jetty, fences, round bales and clumps of trees
+(built once per server; nobody can reach them).
+
+**Detail on weak devices** (`client/LookFx.luau`, `Config.Look.Tiers`): phones and tablets start
+on "mid" detail (the arena's smallest dressing is removed on that device); if the frame rate stays
+under 28 during a round the detail drops a step, and on "low" the drifting dust, the glow and the
+sun rays go too. On "high", the lobby and the results screen get a soft blur of the far distance.
+
 **Studs** are switched off for this look (`Config.Studs.on`): they need plain Plastic.

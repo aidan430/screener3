@@ -132,8 +132,14 @@ function MazeKit.build(ctx, o)
 			wall(ctx, o.style, at(w[1], w[2]), at(w[3], w[4]), o.height)
 		else -- gates in the outside wall (o.doors a side), so a maze can be one part of a bigger map
 			local n, gates, from = w[5], {}, nil
+			maze.gates = maze.gates or {} -- where each gate is (map-local), for the dressing
 			for _ = 1, o.doors do
-				gates[rng:NextInteger(2, n - 1)] = true
+				local at2 = rng:NextInteger(2, n - 1)
+				if not gates[at2] then
+					local t = (at2 - 0.5) / n
+					table.insert(maze.gates, { x = w[1] + (w[3] - w[1]) * t, z = w[2] + (w[4] - w[2]) * t, alongX = w[2] == w[4] })
+				end
+				gates[at2] = true
 			end
 			for i = 1, n + 1 do
 				if i <= n and not gates[i] and not from then

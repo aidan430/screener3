@@ -78,6 +78,11 @@ Look.presets = {
 		wind = { 0, 0, 0 } }),
 }
 
+-- Detail on each player's own device (client/LookFx): if the frame rate averaged over `window`
+-- seconds stays under `lowFps` during a round, the detail drops a step. blur: the lobby's soft
+-- far blur (depth of field): its strength, the distance in focus and how deep that band is.
+Look.Tiers = { window = 4, lowFps = 28, blur = { far = 0.15, focus = 120, radius = 50 } }
+
 -- The land (server/Landscape): terrain colours; Hayfield Farm's floor materials by quarter style
 -- (corn, vines, hedge, stonehedge) and its roads; the frame of fields and hills round the arena
 -- (from `inner` to `outer` studs out: `mounds` low hills at mound.at out, and a ridge of
@@ -90,6 +95,7 @@ Look.Terrain = {
 	yards = { corn = "Cobblestone", vines = "Ground", hedge = "Ground", stonehedge = "Cobblestone" }, yard = 14,
 	road = { half = 8, rut = 4, ring = { 156, 180 }, ringRuts = { { 160, 164 }, { 172, 176 } }, cross = 12 },
 	frame = { inner = 188, outer = 440, mounds = 24, mound = { at = { 290, 330 }, radius = 70, top = { 12, 24 }, lane = 40 }, ridge = { at = 392, radius = 90, top = 40, every = 96 } },
+	water = { x = -292, z = 0, radius = 20, depth = 5, colour = { 58, 92, 84 } },
 	lobby = { mounds = 12, at = 150, radius = 46, top = { 14, 18, 22 } },
 }
 

@@ -530,6 +530,24 @@ class BoxOpenings(unittest.TestCase):
         for call in ("Skins.silo(", "Skins.lookout(", "Skins.barn(", "Skins.windmill(", "Skins.waterTower("):
             self.assertIn(call, marks)
 
+    def test_farm_extras_and_low_detail_mode(self):
+        dress = (SERVER / "FarmDress.luau").read_text()
+        self.assertNotIn("MapKit.part(", dress, "gates, balloons and dust are dressing only")
+        self.assertIn("light.Brightness, light.Shadows = 0.9, false", dress, "gate lanterns cast no shadows")
+        big = (SERVER / "MapsBig.luau").read_text()
+        for call in ("FarmDress.gates(", "FarmDress.balloon(", "FarmDress.fx("):
+            self.assertIn(call, big)
+        self.assertIn("maze.gates", (SERVER / "MazeKit.luau").read_text())
+        self.assertIn("script.Parent.Vista).build(ctx)", (SERVER / "Landscape.luau").read_text(), "the far scenery is built once with the backdrop")
+        fx = (ROOT / "src" / "client" / "LookFx.luau").read_text()
+        self.assertIn('phase() == "countdown"', fx, "never prunes while the map is still arriving")
+        self.assertNotIn("FireServer", fx, "detail is each device's own business")
+        throw = (SERVER / "CombatThrow.luau").read_text()
+        self.assertIn('GetAttribute("Stance") == "slide"', throw, "a throw passes over a slider")
+        self.assertIn("backAt[player] = nil -- the try is spent", throw, "one catch try a throw")
+        for path in re.findall(r'"(rbxasset://sounds/[^"]+)"', CONFIG):
+            self.assertIn(path.rsplit("/", 1)[1], ("action_get_up.mp3", "volume_slider.ogg", "action_jump.mp3", "action_jump_land.mp3"), "only sounds that ship with Roblox")
+
     def test_start_up_never_waits_on_one_system(self):
         main = (SERVER / "Main.server.luau").read_text()
         self.assertIn("waited < 5", main, "a slow start-up step can't stop rounds or the Practice Yard starting")

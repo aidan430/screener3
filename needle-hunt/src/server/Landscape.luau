@@ -117,6 +117,16 @@ function Landscape.backdrop(centre)
 		Landscape.paint(ctx, -6, s * F.inner, 6, s * 300, "Ground")
 		Landscape.paint(ctx, s * F.inner, -6, s * 300, 6, "Ground")
 	end
+	local W = T.water -- a pond at the end of the -X lane
+	terrain():FillBall(MapKit.at(ctx, W.x, W.radius * 0.6, W.z), W.radius, Enum.Material.Air)
+	terrain():FillCylinder(CFrame.new(MapKit.at(ctx, W.x, -W.depth / 2 - 0.5, W.z)), W.depth, W.radius * 0.75, Enum.Material.Water)
+	terrain().WaterColor = Color3.fromRGB(W.colour[1], W.colour[2], W.colour[3])
+	terrain().WaterTransparency, terrain().WaterReflectance, terrain().WaterWaveSize, terrain().WaterWaveSpeed = 0.45, 0.6, 0.05, 6
+	local model = Instance.new("Model") -- and what stands on the land (server/Vista)
+	model.Name = "Backdrop"
+	model.Parent = workspace
+	ctx.model = model
+	require(script.Parent.Vista).build(ctx)
 end
 
 function Landscape.lobby(centre)

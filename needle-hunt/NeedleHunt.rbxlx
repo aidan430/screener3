@@ -562,6 +562,11 @@ Look.presets = {
 		wind = { 0, 0, 0 } }),
 }
 
+-- Detail on each player's own device (client/LookFx): if the frame rate averaged over `window`
+-- seconds stays under `lowFps` during a round, the detail drops a step. blur: the lobby's soft
+-- far blur (depth of field): its strength, the distance in focus and how deep that band is.
+Look.Tiers = { window = 4, lowFps = 28, blur = { far = 0.15, focus = 120, radius = 50 } }
+
 -- The land (server/Landscape): terrain colours; Hayfield Farm's floor materials by quarter style
 -- (corn, vines, hedge, stonehedge) and its roads; the frame of fields and hills round the arena
 -- (from `inner` to `outer` studs out: `mounds` low hills at mound.at out, and a ridge of
@@ -574,6 +579,7 @@ Look.Terrain = {
 	yards = { corn = "Cobblestone", vines = "Ground", hedge = "Ground", stonehedge = "Cobblestone" }, yard = 14,
 	road = { half = 8, rut = 4, ring = { 156, 180 }, ringRuts = { { 160, 164 }, { 172, 176 } }, cross = 12 },
 	frame = { inner = 188, outer = 440, mounds = 24, mound = { at = { 290, 330 }, radius = 70, top = { 12, 24 }, lane = 40 }, ridge = { at = 392, radius = 90, top = 40, every = 96 } },
+	water = { x = -292, z = 0, radius = 20, depth = 5, colour = { 58, 92, 84 } },
 	lobby = { mounds = 12, at = 150, radius = 46, top = { 14, 18, 22 } },
 }
 
@@ -4395,6 +4401,83 @@ return DataManager
 			</Item>
 			<Item class="ModuleScript" referent="RBX00042">
 				<Properties>
+					<string name="Name">FarmDress</string>
+					<ProtectedString name="Source"><![CDATA[-- Hayfield Farm's finishing touches (server/MapsBig calls these; all to look at only):
+--   gates    a timber frame over every gate in a maze's outside wall, with a sign plank and a
+--            pennant in the quarter's colour and a warm lantern, so you know which quarter you're
+--            walking into
+--   balloon  a balloon on a string high over a landmark, in its quarter's colour: a bearing from
+--            anywhere on the map
+--   fx       dust motes drifting in the sun over the roads and yards, chaff over the corn (a few
+--            invisible boxes with particle emitters, in the arena's "Fx" folder)
+local MapKit = require(script.Parent.MapKit)
+local WallKit = require(script.Parent.WallKit)
+
+local FarmDress = {}
+local deco = WallKit.deco
+local TIMBER = { 104, 88, 70 }
+
+function FarmDress.gates(ctx, maze, colour)
+	for _, g in ipairs(maze.gates or {}) do
+		-- the gate's frame: X along the wall line, Z through the gate
+		local cf = CFrame.new(MapKit.at(ctx, g.x, 0, g.z)) * CFrame.Angles(0, if g.alongX then 0 else math.rad(90), 0)
+		for _, side in ipairs({ -1, 1 }) do
+			deco(ctx, { Name = "GatePost", Size = Vector3.new(0.9, 12, 0.9), CFrame = cf * CFrame.new(side * 6.6, 6, 0), Color = WallKit.tone(ctx, TIMBER, 0.08), Material = "Wood" }, true)
+			deco(ctx, { Name = "GateBrace", Size = Vector3.new(2.4, 0.5, 0.5), CFrame = cf * CFrame.new(side * 5.7, 10.6, 0) * CFrame.Angles(0, 0, math.rad(side * 45)), Color = TIMBER, Material = "Wood" }, false, true)
+		end
+		deco(ctx, { Name = "GateLintel", Size = Vector3.new(14.6, 0.9, 0.7), CFrame = cf * CFrame.new(0, 11.6, 0), Color = WallKit.tone(ctx, TIMBER, 0.08), Material = "Wood" }, true)
+		deco(ctx, { Name = "GateSign", Size = Vector3.new(5, 2.2, 0.3), CFrame = cf * CFrame.new(0, 10, 0), Color = { colour[1] * 0.9, colour[2] * 0.9, colour[3] * 0.9 }, Material = "WoodPlanks" })
+		deco(ctx, { Name = "PennantPole", Size = Vector3.new(0.2, 2.4, 0.2), CFrame = cf * CFrame.new(6.6, 13.2, 0), Color = TIMBER, Material = "Wood" }, false, true)
+		deco(ctx, { Name = "Pennant", Size = Vector3.new(2.2, 1.2, 0.08), CFrame = cf * CFrame.new(5.4, 13.7, 0), Color = colour, Material = "Fabric" }, false, true)
+		local lamp = MapKit.lamp(ctx, (cf * CFrame.new(-6.6, 9.2, 0.9)).Position, { 255, 196, 120 }, 14)
+		lamp.Size, lamp.CanQuery, lamp.CanTouch, lamp.CastShadow = Vector3.new(0.7, 0.9, 0.7), false, false, false
+		local light = lamp:FindFirstChildOfClass("PointLight")
+		if light then
+			light.Brightness, light.Shadows = 0.9, false
+		end
+	end
+end
+
+function FarmDress.balloon(ctx, x, z, colour, height)
+	height = height or 70
+	deco(ctx, { Name = "BalloonString", Size = Vector3.new(0.12, height - 28, 0.12), CFrame = CFrame.new(MapKit.at(ctx, x, 28 + (height - 28) / 2, z)), Color = { 230, 226, 214 }, Material = "Fabric" }, false, true)
+	deco(ctx, { Name = "Balloon", Shape = "Ball", Size = Vector3.new(7, 8, 7), CFrame = CFrame.new(MapKit.at(ctx, x, height + 3.5, z)), Color = colour, Material = "SmoothPlastic" })
+	deco(ctx, { Name = "BalloonKnot", Size = Vector3.new(0.8, 0.8, 0.8), CFrame = CFrame.new(MapKit.at(ctx, x, height - 0.3, z)) * CFrame.Angles(0, 0, math.rad(45)), Color = colour, Material = "SmoothPlastic" }, false, true)
+end
+
+-- An invisible box that sheds slow particles through its volume.
+local function drift(ctx, folder, x, y, z, size, set)
+	local host = deco(ctx, { Name = "Drift", Size = size, CFrame = CFrame.new(MapKit.at(ctx, x, y, z)), Transparency = 1, Parent = folder })
+	host.Parent = folder
+	local e = Instance.new("ParticleEmitter")
+	e.Rate, e.Lifetime, e.Speed, e.SpreadAngle = set.rate, NumberRange.new(set.life[1], set.life[2]), NumberRange.new(0.2, 0.6), Vector2.new(180, 180)
+	e.Size = NumberSequence.new(set.size)
+	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, set.clear), NumberSequenceKeypoint.new(1, 1) })
+	e.Color = ColorSequence.new(Color3.fromRGB(set.colour[1], set.colour[2], set.colour[3]))
+	e.LightEmission, e.Drag, e.RotSpeed = set.glow, 1.5, NumberRange.new(-60, 60)
+	e.Parent = host
+end
+
+function FarmDress.fx(ctx)
+	local folder = Instance.new("Folder")
+	folder.Name = "Fx"
+	folder.Parent = ctx.model
+	local motes = { rate = 15, life = { 6, 10 }, size = 0.12, clear = 0.6, colour = { 255, 236, 190 }, glow = 0.6 }
+	for _, p in ipairs({ { 0, 0 }, { -82, -82 }, { 82, 82 }, { 0, 168 }, { 168, 0 } }) do -- the crossroads, two yards, two roads
+		drift(ctx, folder, p[1], 10, p[2], Vector3.new(80, 16, 80), motes)
+	end
+	local chaff = { rate = 6, life = { 5, 8 }, size = 0.25, clear = 0.3, colour = { 240, 220, 160 }, glow = 0.1 }
+	for _, p in ipairs({ { -110, -60 }, { -55, -110 } }) do -- over the corn
+		drift(ctx, folder, p[1], 12, p[2], Vector3.new(60, 6, 60), chaff)
+	end
+end
+
+return FarmDress
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00043">
+				<Properties>
 					<string name="Name">FarmProps</string>
 					<ProtectedString name="Source"><![CDATA[-- Farm props for the maps from the owner's Gemini sheets (server/MapsC): pumpkins, scarecrows,
 -- carts, a silo, crows on posts, picnic blankets, a lookout tower, apple trees and crates, a cider
@@ -4565,7 +4648,7 @@ return FarmProps
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00043">
+			<Item class="ModuleScript" referent="RBX00044">
 				<Properties>
 					<string name="Name">FarmProps2</string>
 					<ProtectedString name="Source"><![CDATA[-- More props for the maps from the Gemini sheets (server/MapsD): a snowy barn, snowy pines, a
@@ -4768,7 +4851,7 @@ return FarmProps2
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00044">
+			<Item class="ModuleScript" referent="RBX00045">
 				<Properties>
 					<string name="Name">GamePads</string>
 					<ProtectedString name="Source"><![CDATA[-- The game platforms in the lobby (Config.Pads; built by server/LobbyBuilder). Stand on one to join
@@ -4929,7 +5012,7 @@ return GamePads
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00045">
+			<Item class="ModuleScript" referent="RBX00046">
 				<Properties>
 					<string name="Name">GameServer</string>
 					<ProtectedString name="Source"><![CDATA[-- A game's own server: a private (reserved) server of this same place, made by a lobby game platform
@@ -5012,7 +5095,7 @@ return GameServer
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00046">
+			<Item class="ModuleScript" referent="RBX00047">
 				<Properties>
 					<string name="Name">HaystackModel</string>
 					<ProtectedString name="Source"><![CDATA[-- The owner's own haystack model (Config.Haystacks.model): loaded once with InsertService (it must
@@ -5066,7 +5149,7 @@ return HaystackModel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00047">
+			<Item class="ModuleScript" referent="RBX00048">
 				<Properties>
 					<string name="Name">LandmarkSkins</string>
 					<ProtectedString name="Source"><![CDATA[-- Dressing for Hayfield Farm's landmarks (server/Landmarks builds the parts you climb, then calls
@@ -5214,7 +5297,7 @@ return Skins
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00048">
+			<Item class="ModuleScript" referent="RBX00049">
 				<Properties>
 					<string name="Name">Landmarks</string>
 					<ProtectedString name="Source"><![CDATA[-- Climbable landmarks for a big map (server/MapsBig). Each is a challenge to reach, and returns the
@@ -5356,7 +5439,7 @@ return Landmarks
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00049">
+			<Item class="ModuleScript" referent="RBX0004A">
 				<Properties>
 					<string name="Name">Landscape</string>
 					<ProtectedString name="Source"><![CDATA[-- The land, in smooth terrain (Config.Look.Terrain): Hayfield Farm's floor (grass, bare earth, mud
@@ -5478,6 +5561,16 @@ function Landscape.backdrop(centre)
 		Landscape.paint(ctx, -6, s * F.inner, 6, s * 300, "Ground")
 		Landscape.paint(ctx, s * F.inner, -6, s * 300, 6, "Ground")
 	end
+	local W = T.water -- a pond at the end of the -X lane
+	terrain():FillBall(MapKit.at(ctx, W.x, W.radius * 0.6, W.z), W.radius, Enum.Material.Air)
+	terrain():FillCylinder(CFrame.new(MapKit.at(ctx, W.x, -W.depth / 2 - 0.5, W.z)), W.depth, W.radius * 0.75, Enum.Material.Water)
+	terrain().WaterColor = Color3.fromRGB(W.colour[1], W.colour[2], W.colour[3])
+	terrain().WaterTransparency, terrain().WaterReflectance, terrain().WaterWaveSize, terrain().WaterWaveSpeed = 0.45, 0.6, 0.05, 6
+	local model = Instance.new("Model") -- and what stands on the land (server/Vista)
+	model.Name = "Backdrop"
+	model.Parent = workspace
+	ctx.model = model
+	require(script.Parent.Vista).build(ctx)
 end
 
 function Landscape.lobby(centre)
@@ -5495,7 +5588,7 @@ return Landscape
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004A">
+			<Item class="ModuleScript" referent="RBX0004B">
 				<Properties>
 					<string name="Name">LeaderboardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Global leaderboards (Config.Boards), each an OrderedDataStore: most chests, most tag-outs,
@@ -5669,7 +5762,7 @@ return LeaderboardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004B">
+			<Item class="ModuleScript" referent="RBX0004C">
 				<Properties>
 					<string name="Name">LobbyBuilder</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby, built once at Config.LobbyCentre: a wooden plaza in a field, the animated title sign
@@ -5906,7 +5999,7 @@ return LobbyBuilder
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004C">
+			<Item class="ModuleScript" referent="RBX0004D">
 				<Properties>
 					<string name="Name">LobbyDecor</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's dressing (LobbyBuilder calls build once): a lawn crossed by cobbled paths (spawn to
@@ -6013,7 +6106,7 @@ return LobbyDecor
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004D">
+			<Item class="ModuleScript" referent="RBX0004E">
 				<Properties>
 					<string name="Name">LobbyShowOff</string>
 					<ProtectedString name="Source"><![CDATA[-- Show off (Remotes.ShowOff): hold your showcase needle (or your best) up over your head for a
@@ -6082,7 +6175,7 @@ return LobbyShowOff
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004E">
+			<Item class="ModuleScript" referent="RBX0004F">
 				<Properties>
 					<string name="Name">LobbySocial</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's social side: showing off collections.
@@ -6362,7 +6455,7 @@ return LobbySocial
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004F">
+			<Item class="ModuleScript" referent="RBX00050">
 				<Properties>
 					<string name="Name">Look</string>
 					<ProtectedString name="Source"><![CDATA[-- The look of the world, from Config.Look's presets: the sun, sky, haze (Atmosphere), clouds, glow
@@ -6502,7 +6595,7 @@ return Look
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Script" referent="RBX00050">
+			<Item class="Script" referent="RBX00051">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Starts A Needle in a Haystack on the server. Systems that react to a player's save loading are
@@ -6600,7 +6693,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00051">
+			<Item class="ModuleScript" referent="RBX00052">
 				<Properties>
 					<string name="Name">MapKit</string>
 					<ProtectedString name="Source"><![CDATA[-- The building kit for maps (server/MapsA, MapsB): ground, hay bales, haystacks, crates, fences,
@@ -6833,7 +6926,7 @@ return MapKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00052">
+			<Item class="ModuleScript" referent="RBX00053">
 				<Properties>
 					<string name="Name">MapsA</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Classic Haystack Field (a hedge maze), Barn Interior (a maze of stall walls) and
@@ -6962,7 +7055,7 @@ return MapsA
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00053">
+			<Item class="ModuleScript" referent="RBX00054">
 				<Properties>
 					<string name="Name">MapsB</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Night Forest (a thicket maze) and Abandoned Attic (a maze of stacked boxes under
@@ -7061,7 +7154,7 @@ return MapsB
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00054">
+			<Item class="ModuleScript" referent="RBX00055">
 				<Properties>
 					<string name="Name">MapsBig</string>
 					<ProtectedString name="Source"><![CDATA[-- Hayfield Farm: one big map (about 360 studs across, several times the others). Four farm quarters,
@@ -7076,6 +7169,7 @@ local MazeKit = require(script.Parent.MazeKit)
 local FarmProps = require(script.Parent.FarmProps)
 local Landmarks = require(script.Parent.Landmarks)
 local Landscape = require(script.Parent.Landscape)
+local FarmDress = require(script.Parent.FarmDress)
 local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
 local inCell = require(script.Parent.MapsA).inCell
 
@@ -7094,22 +7188,22 @@ local function scatter(ctx, maze, n, margin, fn)
 end
 
 local QUARTERS = {
-	{ style = "corn", x = -Q, z = -Q, landmark = "silo", props = function(ctx, maze, room)
+	{ colour = { 236, 196, 60 }, style = "corn", x = -Q, z = -Q, landmark = "silo", props = function(ctx, maze, room)
 		FarmProps.cart(ctx, room.x, room.z, "hay")
 		FarmProps.scarecrow(ctx, room.x + 6, room.z + 5, { 60, 120, 140 })
 		scatter(ctx, maze, 6, 3, function(x, z) FarmProps.crowPost(ctx, x, z) end)
 		scatter(ctx, maze, 8, 2.5, function(x, z) MapKit.bale(ctx, x, 0, z, ctx.rng:NextNumber() * 3) end)
 	end },
-	{ style = "vines", x = Q, z = -Q, landmark = "lookout", props = function(ctx, maze, room)
+	{ colour = { 232, 128, 40 }, style = "vines", x = Q, z = -Q, landmark = "lookout", props = function(ctx, maze, room)
 		FarmProps.patch(ctx, room.x, room.z, 9, 7)
 		FarmProps.cart(ctx, room.x + 6, room.z - 6, "pumpkins")
 		scatter(ctx, maze, 18, 2, function(x, z) FarmProps.pumpkin(ctx, x, z) end)
 	end },
-	{ style = "hedge", x = -Q, z = Q, landmark = "barnLoft", props = function(ctx, maze, room)
+	{ colour = { 170, 44, 40 }, style = "hedge", x = -Q, z = Q, landmark = "barnLoft", props = function(ctx, maze, room)
 		FarmProps.ciderPress(ctx, room.x, room.z)
 		scatter(ctx, maze, 10, 3, function(x, z) FarmProps.appleCrates(ctx, x, z) end)
 	end },
-	{ style = "stonehedge", x = Q, z = Q, landmark = "windmill", props = function(ctx, maze, room)
+	{ colour = { 70, 110, 170 }, style = "stonehedge", x = Q, z = Q, landmark = "windmill", props = function(ctx, maze, room)
 		for _ = 1, 5 do
 			FarmProps.flourSack(ctx, room.x + ctx.rng:NextNumber(-7, 7), room.z + ctx.rng:NextNumber(-7, 7))
 		end
@@ -7137,6 +7231,8 @@ function MapsBig.bigfarm(ctx)
 		local rooms = maze.rooms
 		table.insert(ctx.landmarks, Landmarks[q.landmark](ctx, rooms[1].x, rooms[1].z))
 		q.props(ctx, maze, rooms[2] or rooms[1])
+		FarmDress.gates(ctx, maze, q.colour) -- a frame, sign and lantern at every gate, in the quarter's colour
+		FarmDress.balloon(ctx, rooms[1].x, rooms[1].z, q.colour) -- and a balloon high over its landmark
 		for _, key in ipairs({ "cells", "deadEnds" }) do
 			table.move(maze[key], 1, #maze[key], #all[key] + 1, all[key])
 		end
@@ -7144,6 +7240,8 @@ function MapsBig.bigfarm(ctx)
 		table.insert(plan.quarters, { style = q.style, x = q.x, z = q.z, half = 74, yards = { rooms[1], rooms[2] } })
 	end
 	Landscape.farm(ctx, plan)
+	FarmDress.balloon(ctx, 0, 0, { 255, 205, 70 }, 80)
+	FarmDress.fx(ctx)
 	table.insert(ctx.landmarks, Landmarks.waterTower(ctx, -RING, RING))
 	ctx.goldenSpot = Landmarks.hayTower(ctx, 0, 0)
 	for i = 0, 15 do -- apple trees and pines along the ring road's outer side
@@ -7171,7 +7269,7 @@ return MapsBig
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00055">
+			<Item class="ModuleScript" referent="RBX00056">
 				<Properties>
 					<string name="Name">MapsC</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders from the owner's Gemini map sheets: Pumpkin Patch, Harvest Corn Maze, Sunflower
@@ -7322,7 +7420,7 @@ return MapsC
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00056">
+			<Item class="ModuleScript" referent="RBX00057">
 				<Properties>
 					<string name="Name">MapsD</string>
 					<ProtectedString name="Source"><![CDATA[-- More maps from the owner's Gemini sheets: Frozen Farm, Rainy Greenhouse, Duck Pond Marsh, Hay
@@ -7479,7 +7577,7 @@ return MapsD
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00057">
+			<Item class="ModuleScript" referent="RBX00058">
 				<Properties>
 					<string name="Name">MatchXp</string>
 					<ProtectedString name="Source"><![CDATA[-- The match's stats and its end (Config.MatchXp, Config.Rewards): counted while the round runs
@@ -7558,7 +7656,7 @@ return MatchXp
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00058">
+			<Item class="ModuleScript" referent="RBX00059">
 				<Properties>
 					<string name="Name">MazeKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Mazes for the maps: a grid of cells carved into a maze (a random depth-first walk, so every cell
@@ -7695,8 +7793,14 @@ function MazeKit.build(ctx, o)
 			wall(ctx, o.style, at(w[1], w[2]), at(w[3], w[4]), o.height)
 		else -- gates in the outside wall (o.doors a side), so a maze can be one part of a bigger map
 			local n, gates, from = w[5], {}, nil
+			maze.gates = maze.gates or {} -- where each gate is (map-local), for the dressing
 			for _ = 1, o.doors do
-				gates[rng:NextInteger(2, n - 1)] = true
+				local at2 = rng:NextInteger(2, n - 1)
+				if not gates[at2] then
+					local t = (at2 - 0.5) / n
+					table.insert(maze.gates, { x = w[1] + (w[3] - w[1]) * t, z = w[2] + (w[4] - w[2]) * t, alongX = w[2] == w[4] })
+				end
+				gates[at2] = true
 			end
 			for i = 1, n + 1 do
 				if i <= n and not gates[i] and not from then
@@ -7783,7 +7887,7 @@ return MazeKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00059">
+			<Item class="ModuleScript" referent="RBX0005A">
 				<Properties>
 					<string name="Name">MazeWalls</string>
 					<ProtectedString name="Source"><![CDATA[-- More maze wall styles (server/MazeKit uses these when a map asks for one; it has its own
@@ -7982,7 +8086,7 @@ return MazeWalls
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005A">
+			<Item class="ModuleScript" referent="RBX0005B">
 				<Properties>
 					<string name="Name">OneOfOne</string>
 					<ProtectedString name="Source"><![CDATA[-- The 1 of 1s (Config.OneOfOne). A chest rolls for each (roll); the first player to roll one claims it
@@ -8102,7 +8206,7 @@ return OneOfOne
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005B">
+			<Item class="ModuleScript" referent="RBX0005C">
 				<Properties>
 					<string name="Name">PadPortal</string>
 					<ProtectedString name="Source"><![CDATA[-- One lobby game platform (LobbyBuilder builds Config.Pads.count of them; server/GamePads runs them):
@@ -8179,7 +8283,7 @@ return PadPortal
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005C">
+			<Item class="ModuleScript" referent="RBX0005D">
 				<Properties>
 					<string name="Name">Powerups</string>
 					<ProtectedString name="Source"><![CDATA[-- Power-ups on the maps (Config.Powerups). When a round's search starts, glowing orbs float in
@@ -8360,7 +8464,7 @@ return Powerups
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005D">
+			<Item class="ModuleScript" referent="RBX0005E">
 				<Properties>
 					<string name="Name">Practice</string>
 					<ProtectedString name="Source"><![CDATA[-- The Time Trial in the Practice Yard (Config.Practice). From the lobby (the Practice stall, or
@@ -8615,7 +8719,7 @@ return Practice
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005E">
+			<Item class="ModuleScript" referent="RBX0005F">
 				<Properties>
 					<string name="Name">PracticeYard</string>
 					<ProtectedString name="Source"><![CDATA[-- Builds one player's Practice Yard for a Time Trial (server/Practice, Config.Practice): a hedged
@@ -8756,7 +8860,7 @@ return PracticeYard
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005F">
+			<Item class="ModuleScript" referent="RBX00060">
 				<Properties>
 					<string name="Name">QuestManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Daily quests: three a day, the same for everyone (shared/Quests.forDay). Progress is saved;
@@ -8824,7 +8928,7 @@ return QuestManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00060">
+			<Item class="ModuleScript" referent="RBX00061">
 				<Properties>
 					<string name="Name">Requests</string>
 					<ProtectedString name="Source"><![CDATA[-- Small requests from players, checked on the server: a hint (Remotes.Hint) and saving their
@@ -8887,7 +8991,7 @@ return Requests
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00061">
+			<Item class="ModuleScript" referent="RBX00062">
 				<Properties>
 					<string name="Name">RewardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Every coin and XP point is given here, on the server: chests, places, playing a round to the
@@ -9033,7 +9137,7 @@ return RewardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00062">
+			<Item class="ModuleScript" referent="RBX00063">
 				<Properties>
 					<string name="Name">Rewind</string>
 					<ProtectedString name="Source"><![CDATA[-- Where everyone was over the last second (Config.HitCheck.history), so a poke can be checked
@@ -9098,7 +9202,7 @@ return Rewind
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00063">
+			<Item class="ModuleScript" referent="RBX00064">
 				<Properties>
 					<string name="Name">RoundExtras</string>
 					<ProtectedString name="Source"><![CDATA[-- What runs alongside a round's search, started and stopped together by server/RoundManager:
@@ -9132,7 +9236,7 @@ return RoundExtras
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00064">
+			<Item class="ModuleScript" referent="RBX00065">
 				<Properties>
 					<string name="Name">RoundManager</string>
 					<ProtectedString name="Source"><![CDATA[-- A round, all on the server, for a group of players (RoundManager.play: a game platform's
@@ -9416,7 +9520,7 @@ return RoundManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00065">
+			<Item class="ModuleScript" referent="RBX00066">
 				<Properties>
 					<string name="Name">ShopManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Cosmetics and purchases. With Haystack Coins: buy a cosmetic (Remotes.Shop "buy"), and wear
@@ -9673,7 +9777,7 @@ return ShopManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00066">
+			<Item class="ModuleScript" referent="RBX00067">
 				<Properties>
 					<string name="Name">Stance</string>
 					<ProtectedString name="Source"><![CDATA[-- Crouching and sliding, the server's side (Config.Stance). Each player's device moves its own
@@ -9766,7 +9870,7 @@ return Stance
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00067">
+			<Item class="ModuleScript" referent="RBX00068">
 				<Properties>
 					<string name="Name">Streaks</string>
 					<ProtectedString name="Source"><![CDATA[-- Tag-out streaks, the Marked player and the tag-out feed (Config.Streak), called by server/Combat
@@ -9900,7 +10004,7 @@ return Streaks
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00068">
+			<Item class="ModuleScript" referent="RBX00069">
 				<Properties>
 					<string name="Name">TradeManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Trading needles between two players in the lobby (Config.Trading). Remotes.Trade asks; the
@@ -10166,7 +10270,112 @@ return TradeManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00069">
+			<Item class="ModuleScript" referent="RBX0006A">
+				<Properties>
+					<string name="Name">Vista</string>
+					<ProtectedString name="Source"><![CDATA[-- What you see beyond Hayfield Farm's hedge, down the four lanes that run on from the road ends
+-- (built once a server by server/Landscape.backdrop, on its flat fields): a red barn with twin
+-- silos, a farmhouse with a lit window and a smoking chimney, three wind pumps, a pond with a
+-- jetty, post-and-rail fences along the lanes, round bales and clumps of far trees. Sized a little
+-- over life so it reads from across the map. Nobody can reach any of it.
+local MapKit = require(script.Parent.MapKit)
+local WallKit = require(script.Parent.WallKit)
+
+local Vista = {}
+local deco = WallKit.deco
+
+local function box(ctx, name, size, x, y, z, colour, material, shadow)
+	return deco(ctx, { Name = name, Size = size, CFrame = CFrame.new(MapKit.at(ctx, x, y, z)), Color = colour, Material = material }, shadow)
+end
+
+local function drum(ctx, name, height, diameter, x, y, z, colour, material)
+	return deco(ctx, { Name = name, Shape = "Cylinder", Size = Vector3.new(height, diameter, diameter), CFrame = CFrame.new(MapKit.at(ctx, x, y, z)) * CFrame.Angles(0, 0, math.rad(90)), Color = colour, Material = material }, true)
+end
+
+local function tree(ctx, x, z, h)
+	box(ctx, "FarTrunk", Vector3.new(1.6, h, 1.6), x, h / 2, z, { 86, 66, 48 }, "Wood", true)
+	local green = WallKit.tone(ctx, { 78, 110, 48 }, 0.15)
+	for _, turn in ipairs({ 0, 45 }) do
+		deco(ctx, { Name = "FarLeaves", Size = Vector3.new(9, 8, 9), CFrame = CFrame.new(MapKit.at(ctx, x, h + 2, z)) * CFrame.Angles(0, math.rad(turn), 0), Color = green, Material = "LeafyGrass" }, turn == 0)
+	end
+end
+
+local function pitched(ctx, x, y, z, width, depth, colour) -- a roof: two slabs meeting at a ridge along X
+	for _, side in ipairs({ -1, 1 }) do
+		deco(ctx, { Name = "FarRoof", Size = Vector3.new(width, 0.5, depth / 2 / math.cos(math.rad(34)) + 0.6), CFrame = CFrame.new(MapKit.at(ctx, x, y + depth / 4 * math.tan(math.rad(34)), z + side * depth / 4)) * CFrame.Angles(math.rad(side * 34), 0, 0), Color = colour, Material = "Metal" }, true)
+	end
+end
+
+function Vista.build(ctx)
+	local r = Random.new(11)
+	-- the red barn and twin silos, down the -Z lane
+	box(ctx, "FarBarn", Vector3.new(36, 16, 24), 0, 8, -304, { 142, 52, 44 }, "WoodPlanks", true)
+	pitched(ctx, 0, 16, -304, 38, 26, { 132, 136, 138 })
+	box(ctx, "FarBarnDoor", Vector3.new(10, 11, 0.4), 0, 5.5, -291.8, { 232, 226, 210 }, "WoodPlanks")
+	for _, s in ipairs({ { 26, 24, 9 }, { 36, 18, 8 } }) do
+		drum(ctx, "FarSilo", s[2], s[3], s[1], s[2] / 2, -306, { 150, 156, 160 }, "Metal")
+		deco(ctx, { Name = "FarSiloCap", Shape = "Ball", Size = Vector3.new(s[3], s[3] * 0.6, s[3]), CFrame = CFrame.new(MapKit.at(ctx, s[1], s[2], -306)), Color = { 128, 134, 140 }, Material = "Metal" })
+	end
+	-- the farmhouse, down the +Z lane
+	box(ctx, "FarHouse", Vector3.new(22, 12, 16), 0, 6, 304, { 226, 220, 204 }, "Plaster", true)
+	pitched(ctx, 0, 12, 304, 24, 18, { 96, 84, 78 })
+	box(ctx, "FarChimney", Vector3.new(2.4, 7, 2.4), 7, 17, 304, { 132, 84, 70 }, "Brick", true)
+	box(ctx, "FarDoor", Vector3.new(2.6, 5, 0.3), 0, 2.5, 295.8, { 70, 52, 38 }, "WoodPlanks")
+	for _, wx in ipairs({ -6.5, 6.5 }) do
+		box(ctx, "FarWindow", Vector3.new(2.6, 3, 0.3), wx, 7, 295.8, { 255, 196, 120 }, "Neon")
+	end
+	local smoke = Instance.new("ParticleEmitter")
+	smoke.Rate, smoke.Lifetime, smoke.Speed, smoke.SpreadAngle = 3, NumberRange.new(5, 8), NumberRange.new(3, 4), Vector2.new(8, 8)
+	smoke.Size = NumberSequence.new(1.5, 6)
+	smoke.Transparency = NumberSequence.new(0.5, 1)
+	smoke.Color, smoke.Drag = ColorSequence.new(Color3.fromRGB(210, 206, 200)), 1
+	smoke.EmissionDirection = Enum.NormalId.Top
+	smoke.Parent = box(ctx, "FarChimneyTop", Vector3.new(1.6, 0.2, 1.6), 7, 20.7, 304, { 60, 56, 54 }, "Slate")
+	tree(ctx, -22, 300, 26)
+	-- three wind pumps, down the +X lane
+	for _, p in ipairs({ { 300, -18 }, { 306, 6 }, { 296, 26 } }) do
+		for _, leg in ipairs({ { -1.6, -1.6 }, { 1.6, -1.6 }, { -1.6, 1.6 }, { 1.6, 1.6 } }) do
+			box(ctx, "PumpLeg", Vector3.new(0.4, 18, 0.4), p[1] + leg[1], 9, p[2] + leg[2], { 96, 100, 104 }, "Metal")
+		end
+		for i = 0, 5 do
+			deco(ctx, { Name = "PumpBlade", Size = Vector3.new(0.15, 6.4, 0.7), CFrame = CFrame.new(MapKit.at(ctx, p[1] - 2, 18.5, p[2])) * CFrame.Angles(math.rad(i * 30), 0, 0), Color = { 150, 156, 160 }, Material = "Metal" })
+		end
+		box(ctx, "PumpVane", Vector3.new(4, 1.6, 0.15), p[1] + 2, 18.5, p[2], { 128, 44, 38 }, "Metal")
+	end
+	-- the pond's jetty, down the -X lane (server/Landscape fills the water)
+	for i = 0, 7 do
+		box(ctx, "Jetty", Vector3.new(2.2, 0.3, 5), -262 - i * 2.4, 0.6, 0, WallKit.tone(ctx, { 112, 96, 80 }, 0.1), "WoodPlanks")
+	end
+	for _, s in ipairs({ -1, 1 }) do -- fences along the lanes, round bales in the fields, far trees
+		for i = 0, 9 do
+			local d = 192 + i * 8
+			for _, side in ipairs({ -8, 8 }) do
+				box(ctx, "FarPost", Vector3.new(0.6, 4, 0.6), side, 2, s * d, { 112, 96, 80 }, "Wood")
+				box(ctx, "FarPost", Vector3.new(0.6, 4, 0.6), s * d, 2, side, { 112, 96, 80 }, "Wood")
+				if i % 2 == 0 and i < 9 then
+					box(ctx, "FarRail", Vector3.new(0.25, 0.4, 16), side, 3, s * (d + 8), { 104, 88, 70 }, "Wood")
+					box(ctx, "FarRail", Vector3.new(16, 0.4, 0.25), s * (d + 8), 3, side, { 104, 88, 70 }, "Wood")
+				end
+			end
+		end
+		for _ = 1, 10 do
+			drum(ctx, "FarBale", 5, 5, s * r:NextNumber(40, 170), 2.5, s * r:NextNumber(196, 228), { 214, 180, 90 }, "Grass").CFrame *= CFrame.Angles(math.rad(90), r:NextNumber(0, 3), 0)
+		end
+		for _ = 1, 9 do -- clumps of trees on the flat fields beside the map
+			local cx, cz = s * r:NextNumber(60, 180), -s * r:NextNumber(204, 240)
+			for _ = 1, r:NextInteger(2, 4) do
+				tree(ctx, cx + r:NextNumber(-10, 10), cz + r:NextNumber(-8, 8), r:NextNumber(14, 22))
+				tree(ctx, cz + r:NextNumber(-8, 8), cx + r:NextNumber(-10, 10), r:NextNumber(14, 22))
+			end
+		end
+	end
+end
+
+return Vista
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX0006B">
 				<Properties>
 					<string name="Name">WallKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Dressing for maze walls (server/MazeWalls builds each wall's solid core, then calls these):
@@ -10310,24 +10519,24 @@ return WallKit
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerStorage" referent="RBX0006A">
+	<Item class="ServerStorage" referent="RBX0006C">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX0006B">
+	<Item class="StarterPlayer" referent="RBX0006D">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX0006C">
+		<Item class="StarterPlayerScripts" referent="RBX0006E">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX0006D">
+			<Item class="Folder" referent="RBX0006F">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX0006E">
+				<Item class="ModuleScript" referent="RBX00070">
 					<Properties>
 						<string name="Name">Aim</string>
 						<ProtectedString name="Source"><![CDATA[-- Your aim settings (Settings, Aim; Config.Aim): mouse sensitivity, field of view, and the reticle
@@ -10440,7 +10649,7 @@ return Aim
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006F">
+				<Item class="ModuleScript" referent="RBX00071">
 					<Properties>
 						<string name="Name">AimAssist</string>
 						<ProtectedString name="Source"><![CDATA[-- Who a poke is aimed at: of the players (and your Time Trial's dummies) within `range`, roughly
@@ -10503,7 +10712,7 @@ return AimAssist
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00070">
+				<Item class="ModuleScript" referent="RBX00072">
 					<Properties>
 						<string name="Name">BoxReel</string>
 						<ProtectedString name="Source"><![CDATA[-- The box opening on your screen: a strip of needle cards slides along under a gold marker,
@@ -10606,7 +10815,7 @@ return BoxReel
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00071">
+				<Item class="ModuleScript" referent="RBX00073">
 					<Properties>
 						<string name="Name">BoxScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Boxes screen: each box with its price (coins; the dearer ones also Robux), a key button
@@ -10811,7 +11020,7 @@ return BoxScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00072">
+				<Item class="ModuleScript" referent="RBX00074">
 					<Properties>
 						<string name="Name">CombatFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Needle combat on your screen (server/Combat decides every hit):
@@ -10978,7 +11187,7 @@ return CombatFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00073">
+				<Item class="ModuleScript" referent="RBX00075">
 					<Properties>
 						<string name="Name">CooldownBars</string>
 						<ProtectedString name="Source"><![CDATA[-- POKE and THROW bars, top left under the DASH bar (client/DashFx), in the same style: each empties
@@ -11030,7 +11239,7 @@ return CooldownBars
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00074">
+				<Item class="ModuleScript" referent="RBX00076">
 					<Properties>
 						<string name="Name">DashFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Dashing (Config.Dash): C, B on a controller, or the Dash button on a phone. Your character
@@ -11152,7 +11361,7 @@ return DashFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00075">
+				<Item class="ModuleScript" referent="RBX00077">
 					<Properties>
 						<string name="Name">Effects</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback you can see and hear, on your own screen only: sounds, a burst of particles where a
@@ -11234,7 +11443,7 @@ return Effects
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00076">
+				<Item class="ModuleScript" referent="RBX00078">
 					<Properties>
 						<string name="Name">FeedFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The tag-out feed, top right beside the menu (server/Streaks sends every tag-out to everyone; Config.Streak.feed):
@@ -11318,7 +11527,7 @@ return FeedFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00077">
+				<Item class="ModuleScript" referent="RBX00079">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: your coins and level (with an XP bar) at the top left; the round's
@@ -11470,7 +11679,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00078">
+				<Item class="ModuleScript" referent="RBX0007A">
 					<Properties>
 						<string name="Name">KeyHints</string>
 						<ProtectedString name="Source"><![CDATA[-- What each key does, for players on a keyboard: a small guide low on the left, above the Show off
@@ -11530,7 +11739,7 @@ return KeyHints
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00079">
+				<Item class="ModuleScript" referent="RBX0007B">
 					<Properties>
 						<string name="Name">LobbyUi</string>
 						<ProtectedString name="Source"><![CDATA[-- The lobby, on your screen:
@@ -11628,7 +11837,91 @@ return LobbyUi
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX0007A">
+				<Item class="ModuleScript" referent="RBX0007C">
+					<Properties>
+						<string name="Name">LookFx</string>
+						<ProtectedString name="Source"><![CDATA[-- The look, tuned on your own device (Config.Look.Tiers). Nothing here is sent to the server.
+--   Detail: phones and tablets start on "mid", everything else on "high". If the frame rate stays
+--   low during a round the tier drops one step (it never climbs back in the same session). On
+--   "mid" the arena's smallest dressing (its Fine folder) is removed on your device; on "low" the
+--   drifting dust (its Fx folder) goes too, and the glow and sun rays are switched off for you.
+--   A soft blur of the far distance (depth of field) in the lobby and on the results screen, on
+--   "high" only.
+local Lighting = game:GetService("Lighting")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local LookFx = {}
+local T = Config.Look.Tiers
+local ORDER = { "high", "mid", "low" }
+local tier = 1
+local blur
+
+local function prune() -- drop what this tier doesn't draw from the arena (on this device only)
+	local arena = workspace:FindFirstChild("Arena")
+	for i, name in ipairs({ "Fine", "Fx" }) do
+		local folder = arena and arena:FindFirstChild(name)
+		if folder and tier > i then
+			folder:Destroy()
+		end
+	end
+	for _, class in ipairs({ "BloomEffect", "SunRaysEffect" }) do
+		local effect = Lighting:FindFirstChildOfClass(class)
+		if effect and tier >= 3 then
+			effect.Enabled = false
+		end
+	end
+end
+
+local function phase()
+	return ReplicatedStorage:GetAttribute("Phase")
+end
+
+function LookFx.start()
+	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+		tier = 2
+	end
+	blur = Instance.new("DepthOfFieldEffect")
+	blur.FarIntensity, blur.NearIntensity, blur.FocusDistance, blur.InFocusRadius = T.blur.far, 0, T.blur.focus, T.blur.radius
+	blur.Enabled = false
+	blur.Parent = workspace.CurrentCamera
+	ReplicatedStorage:GetAttributeChangedSignal("Phase"):Connect(function()
+		if phase() == "countdown" then -- the server has finished building: now it's safe to prune
+			prune()
+		end
+	end)
+	local frames, since = 0, os.clock()
+	RunService.RenderStepped:Connect(function()
+		frames += 1
+		local now = os.clock()
+		if now - since >= T.window then
+			local rate = frames / (now - since)
+			frames, since = 0, now
+			local playing = phase() == "countdown" or phase() == "search"
+			if playing and rate < T.lowFps and tier < #ORDER then
+				tier += 1
+				prune()
+			end
+		end
+		local inRound = Players.LocalPlayer:GetAttribute("InRound") == true
+		blur.Enabled = tier == 1 and (not inRound or phase() == "results")
+	end)
+end
+
+-- "high", "mid" or "low".
+function LookFx.tier()
+	return ORDER[tier]
+end
+
+return LookFx
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="LocalScript" referent="RBX0007D">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- Starts the client: the whole UI (UIController). The client only shows things and asks the
@@ -11638,7 +11931,7 @@ UIController.start()
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007B">
+				<Item class="ModuleScript" referent="RBX0007E">
 					<Properties>
 						<string name="Name">Mover</string>
 						<ProtectedString name="Source"><![CDATA[-- A short push along the ground on your own character (your device moves it): the poke's lunge
@@ -11698,7 +11991,7 @@ return Mover
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007C">
+				<Item class="ModuleScript" referent="RBX0007F">
 					<Properties>
 						<string name="Name">MovesFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The poke, the Power Poke and the Thimble on your own device (Config.Combo, Power, Guard, Lunge,
@@ -11909,7 +12202,7 @@ return MovesFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007D">
+				<Item class="ModuleScript" referent="RBX00080">
 					<Properties>
 						<string name="Name">NeedleView</string>
 						<ProtectedString name="Source"><![CDATA[-- A needle in 3D inside the UI: a ViewportFrame with the needle (shared/NeedleLook) lit and
@@ -11961,7 +12254,7 @@ return NeedleView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007E">
+				<Item class="ModuleScript" referent="RBX00081">
 					<Properties>
 						<string name="Name">PowerupFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Power-ups on your screen (server/Powerups decides; Remotes.Powerup says what you got):
@@ -12095,7 +12388,7 @@ return PowerupFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007F">
+				<Item class="ModuleScript" referent="RBX00082">
 					<Properties>
 						<string name="Name">PracticeFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The Time Trial on your screen (server/Practice decides everything): the Practice window (your
@@ -12259,7 +12552,7 @@ return PracticeFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00080">
+				<Item class="ModuleScript" referent="RBX00083">
 					<Properties>
 						<string name="Name">Results</string>
 						<ProtectedString name="Source"><![CDATA[-- The round's big moments on screen: the 3, 2, 1; CHEST OPENED! when you open one (coins, or a
@@ -12419,7 +12712,7 @@ return Results
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00081">
+				<Item class="ModuleScript" referent="RBX00084">
 					<Properties>
 						<string name="Name">Screens</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop and Inventory screens. The Shop sells cosmetics for Haystack Coins (needle skins,
@@ -12610,7 +12903,7 @@ return Screens
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00082">
+				<Item class="ModuleScript" referent="RBX00085">
 					<Properties>
 						<string name="Name">Screens2</string>
 						<ProtectedString name="Source"><![CDATA[-- The Quests, Leaderboard and Settings screens (Settings: sound and effects toggles, and Aim).
@@ -12807,7 +13100,7 @@ return Screens2
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00083">
+				<Item class="ModuleScript" referent="RBX00086">
 					<Properties>
 						<string name="Name">Screens3</string>
 						<ProtectedString name="Source"><![CDATA[-- The Collection screen: every needle you've found, by type, shown in 3D with its rarity, value
@@ -12944,7 +13237,7 @@ return Screens3
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00084">
+				<Item class="ModuleScript" referent="RBX00087">
 					<Properties>
 						<string name="Name">StanceFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Crouching and sliding (Config.Stance): Left Ctrl or V, L3 on a controller, or the CROUCH button
@@ -13176,7 +13469,7 @@ return StanceFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00085">
+				<Item class="ModuleScript" referent="RBX00088">
 					<Properties>
 						<string name="Name">StreakFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Tag-outs and streaks on your screen (server/Combat decides them; Config.Streak):
@@ -13279,7 +13572,7 @@ return StreakFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00086">
+				<Item class="ModuleScript" referent="RBX00089">
 					<Properties>
 						<string name="Name">ThrowFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Throwing your needle on your screen (server/CombatThrow decides): Q, or the Throw button while
@@ -13410,7 +13703,7 @@ return ThrowFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00087">
+				<Item class="ModuleScript" referent="RBX0008A">
 					<Properties>
 						<string name="Name">TradeScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Trade screen (server/TradeManager decides everything). Not trading: everyone in the server
@@ -13605,7 +13898,7 @@ return TradeScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00088">
+				<Item class="ModuleScript" referent="RBX0008B">
 					<Properties>
 						<string name="Name">UIController</string>
 						<ProtectedString name="Source"><![CDATA[-- Puts the whole UI together: one ScreenGui with the HUD, the round moments (Results), and the
@@ -13634,6 +13927,7 @@ local ThrowFx = require(script.Parent.ThrowFx)
 local DashFx = require(script.Parent.DashFx)
 local StanceFx = require(script.Parent.StanceFx)
 local MovesFx = require(script.Parent.MovesFx)
+local LookFx = require(script.Parent.LookFx)
 local CooldownBars = require(script.Parent.CooldownBars)
 local TradeScreen = require(script.Parent.TradeScreen)
 local ViewModel = require(script.Parent.ViewModel)
@@ -13730,6 +14024,7 @@ function UIController.start()
 	DashFx.start(gui)
 	StanceFx.start(gui)
 	MovesFx.start(gui)
+	LookFx.start()
 	CooldownBars.start(gui)
 	ViewModel.start()
 	StreakFx.start(gui)
@@ -13768,7 +14063,7 @@ return UIController
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00089">
+				<Item class="ModuleScript" referent="RBX0008C">
 					<Properties>
 						<string name="Name">UiKit</string>
 						<ProtectedString name="Source"><![CDATA[-- The UI's look in one place: a clean, modern dark-glass style with warm gold accents, big
@@ -13908,7 +14203,7 @@ return UiKit
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0008A">
+				<Item class="ModuleScript" referent="RBX0008D">
 					<Properties>
 						<string name="Name">ViewModel</string>
 						<ProtectedString name="Source"><![CDATA[-- First person: your forearm, your hand and your needle drawn in front of the camera. Only you
@@ -14069,7 +14364,7 @@ return ViewModel
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0008B">
+				<Item class="ModuleScript" referent="RBX0008E">
 					<Properties>
 						<string name="Name">ViewModelMotion</string>
 						<ProtectedString name="Source"><![CDATA[-- The first-person view's sense of movement: breathing, the walk, the lag when you turn, the dip
@@ -14173,7 +14468,7 @@ return Motion
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0008C">
+				<Item class="ModuleScript" referent="RBX0008F">
 					<Properties>
 						<string name="Name">ViewModelPose</string>
 						<ProtectedString name="Source"><![CDATA[-- The first-person view's placement maths and nothing else: where the arms, the hands' boxes and
@@ -14381,7 +14676,7 @@ return Pose
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0008D">
+				<Item class="ModuleScript" referent="RBX00090">
 					<Properties>
 						<string name="Name">ViewModelRig</string>
 						<ProtectedString name="Source"><![CDATA[-- Builds the first-person view's parts and moves them: both forearms and sleeves
@@ -14557,11 +14852,11 @@ return ViewModelRig
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX0008E">
+	<Item class="Workspace" referent="RBX00091">
 		<Properties>
 			<string name="Name">Workspace</string>
 		</Properties>
-		<Item class="Terrain" referent="RBX0008F">
+		<Item class="Terrain" referent="RBX00092">
 			<Properties>
 				<string name="Name">Terrain</string>
 				<bool name="Decoration">true</bool>
@@ -14569,7 +14864,7 @@ return ViewModelRig
 			</Properties>
 		</Item>
 	</Item>
-	<Item class="Lighting" referent="RBX00090">
+	<Item class="Lighting" referent="RBX00093">
 		<Properties>
 			<string name="Name">Lighting</string>
 			<token name="Technology">4</token>
@@ -14578,7 +14873,7 @@ return ViewModelRig
 			<bool name="GlobalShadows">true</bool>
 		</Properties>
 	</Item>
-	<Item class="MaterialService" referent="RBX00091">
+	<Item class="MaterialService" referent="RBX00094">
 		<Properties>
 			<string name="Name">MaterialService</string>
 			<bool name="Use2022Materials">true</bool>
