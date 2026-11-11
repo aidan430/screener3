@@ -133,7 +133,8 @@ Config.Dash = { speed = 55, seconds = 0.22, cooldown = 3 }
 -- Classic studs (server/MapKit): parts with these names (floors, walls, platforms) are made plain
 -- Plastic with studs on top and inlets underneath (Roblox draws studs on Plastic only). Parts in a
 -- `keep` material (see-through glass and ice) stay as they are. Props keep their own materials.
-Config.Studs = { on = true, names = { "Ground", "Countryside", "Road", "Plaza", "Path", "PadPaving", "PadRim", "Deck", "StartPad", "MazeWall", "Hedge", "Wall", "Perch", "Step", "Climb", "Shelf" }, keep = { "Glass", "Ice" } }
+-- Off while the maps go for a realistic look (studs need plain Plastic); `on = true` brings them back.
+Config.Studs = { on = false, names = { "Ground", "Countryside", "Road", "Plaza", "Path", "PadPaving", "PadRim", "Deck", "StartPad", "MazeWall", "Hedge", "Wall", "Perch", "Step", "Climb", "Shelf" }, keep = { "Glass", "Ice" } }
 
 Config.NeedleTool = { grip = { 0, 180, 90 }, scale = 1.6 }
 
@@ -275,5 +276,7 @@ Config.Aim = {
 
 Config.Practice = { seconds = 180, countdown = 3, dummies = 8, moving = 3, hearts = 3, chests = 5, perch = { 3.5, 7 },
 	size = 100, centre = Vector3.new(-700, 0, 0), spacing = 180, backAfter = 10 }
+
+Config.Look = require(script.Parent.ConfigLook) -- the sun, sky, haze and wind presets
 
 return Config

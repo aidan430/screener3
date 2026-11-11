@@ -35,6 +35,7 @@ end
 
 for _, step in ipairs({
 	{ "HaystackModel", HaystackModel.load }, -- before the lobby, so its haystacks can use it
+	{ "Look", require(script.Parent.Look).init },
 	{ "Lobby", LobbyBuilder.build },
 	{ "AntiCheat", AntiCheat.init },
 	{ "Quests", QuestManager.init },

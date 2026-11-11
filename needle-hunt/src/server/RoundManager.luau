@@ -8,7 +8,6 @@
 -- The phase is published as attributes on ReplicatedStorage (Phase, EndsAt, MapName,
 -- Difficulty, Modifiers, Golden, ChestsLeft, ChestCount) and announced with Remotes.RoundState.
 -- The search phase is still called "search" (the name other scripts check).
-local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -24,6 +23,7 @@ local Powerups = require(script.Parent.Powerups) -- a chest's power-up is used a
 local RewardManager = require(script.Parent.RewardManager)
 local AntiCheat = require(script.Parent.AntiCheat)
 local MapKit = require(script.Parent.MapKit)
+local Look = require(script.Parent.Look)
 local RoundExtras = require(script.Parent.RoundExtras)
 local LobbyBuilder = require(script.Parent.LobbyBuilder)
 local builders = require(script.Parent.MapsA)
@@ -54,17 +54,6 @@ local function phase(name, seconds, extra)
 	ReplicatedStorage:SetAttribute("Phase", name)
 	ReplicatedStorage:SetAttribute("EndsAt", now() + (seconds or 0))
 	Remotes.RoundState:FireAllClients({ phase = name, endsAt = now() + (seconds or 0), extra = extra })
-end
-
-local function light(spec, dim)
-	for key, value in pairs(spec) do
-		Lighting[key] = if type(value) == "table" then Color3.fromRGB(value[1], value[2], value[3]) else value
-	end
-	if dim and dim > 0 then
-		Lighting.Brightness *= 1 - dim
-		Lighting.Ambient = Lighting.Ambient:Lerp(Color3.new(0, 0, 0), dim)
-		Lighting.OutdoorAmbient = Lighting.OutdoorAmbient:Lerp(Color3.new(0, 0, 0), dim)
-	end
 end
 
 local function humanoid(player)
@@ -171,12 +160,12 @@ local function playRound(group)
 	round.chests, round.chestsLeft = chests, #chests
 	ReplicatedStorage:SetAttribute("ChestCount", #chests)
 	ReplicatedStorage:SetAttribute("ChestsLeft", #chests)
-	light(def.lighting, diff.dim + (if mods.lowlight then 0.45 else 0))
+	Look.apply(def.look, diff.dim + (if mods.lowlight then 0.45 else 0))
 	-- move everyone in
 	if #list == 0 or #chests == 0 then
 		round = nil
 		ChestSpawner.clear()
-		light(Maps.lobbyLighting)
+		Look.apply(Maps.lobbyLook)
 		model:Destroy()
 		MapKit.clearTerrain(Config.ArenaCentre)
 		return
@@ -224,7 +213,7 @@ local function playRound(group)
 	round = nil
 	model:Destroy()
 	MapKit.clearTerrain(Config.ArenaCentre)
-	light(Maps.lobbyLighting)
+	Look.apply(Maps.lobbyLook)
 end
 
 -- The round in play (nil between rounds), for server/Requests.
@@ -250,7 +239,7 @@ function RoundManager.start()
 			end
 		end)
 	end)
-	light(Maps.lobbyLighting)
+	Look.apply(Maps.lobbyLook)
 	phase("waiting", 0)
 end
 
@@ -279,7 +268,7 @@ function RoundManager.play(group)
 		round = nil
 		ChestSpawner.clear()
 		RoundExtras.stop()
-		light(Maps.lobbyLighting)
+		Look.apply(Maps.lobbyLook)
 	end
 	playing = false
 	phase("waiting", 0)

@@ -110,7 +110,36 @@
       }
     },
     "Workspace": {
-      "$className": "Workspace"
+      "$className": "Workspace",
+      "Terrain": {
+        "$className": "Terrain",
+        "$properties": {
+          "Decoration": true,
+          "GrassLength": {
+            "float": 0.4
+          }
+        }
+      }
+    },
+    "Lighting": {
+      "$className": "Lighting",
+      "$properties": {
+        "Technology": {
+          "token": 4
+        },
+        "LightingStyle": {
+          "token": 0
+        },
+        "PrioritizeLightingQuality": true,
+        "GlobalShadows": true
+      }
+    },
+    "MaterialService": {
+      "$className": "MaterialService",
+      "$properties": {
+        "Use2022Materials": true,
+        "Use2022MaterialsXml": true
+      }
     }
   }
 }

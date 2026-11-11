@@ -438,6 +438,27 @@ class BoxOpenings(unittest.TestCase):
         self.assertIn("Enum.SurfaceType.Studs", kit)
         self.assertIn("Enum.Material.Plastic", kit, "Roblox only draws studs on Plastic")
 
+    def test_every_map_has_a_look_and_the_place_file_asks_for_realistic_lighting(self):
+        look = (SHARED / "ConfigLook.luau").read_text()
+        presets = set(re.findall(r"^\t(\w+) = preset\(", look, re.M))
+        self.assertGreaterEqual(len(presets), 6)
+        maps = (SHARED / "Maps.luau").read_text()
+        used = re.findall(r'look = "(\w+)"', maps)
+        self.assertEqual(len(used), len(re.findall(r'\{ id = "', maps)), "every map names a look")
+        self.assertTrue(set(used) <= presets, "every look a map names exists")
+        self.assertIn(re.search(r'Maps.lobbyLook = "(\w+)"', maps).group(1), presets)
+        for t in re.findall(r"Threshold = ([\d.]+)", look):
+            self.assertGreater(float(t), 1, "below 1 everything glows")
+        import json
+        tree = json.loads((ROOT / "default.project.json").read_text())["tree"]
+        self.assertEqual(tree["Lighting"]["$properties"]["LightingStyle"], {"token": 0}, "Realistic: scripts can't set it")
+        self.assertTrue(tree["Workspace"]["Terrain"]["$properties"]["Decoration"], "3D grass on terrain")
+        self.assertTrue(tree["MaterialService"]["$properties"]["Use2022Materials"])
+        code = (SERVER / "Look.luau").read_text()
+        for never in ("Lighting.LightingStyle =", "Lighting.Technology =", ".Decoration =", "Use2022Materials ="):
+            self.assertNotIn(never, code, "scripts can't write this: it would throw")
+        self.assertIn("Look.apply(def.look", (SERVER / "RoundManager.luau").read_text())
+
     def test_start_up_never_waits_on_one_system(self):
         main = (SERVER / "Main.server.luau").read_text()
         self.assertIn("waited < 5", main, "a slow start-up step can't stop rounds or the Practice Yard starting")

@@ -324,7 +324,8 @@ Config.Dash = { speed = 55, seconds = 0.22, cooldown = 3 }
 -- Classic studs (server/MapKit): parts with these names (floors, walls, platforms) are made plain
 -- Plastic with studs on top and inlets underneath (Roblox draws studs on Plastic only). Parts in a
 -- `keep` material (see-through glass and ice) stay as they are. Props keep their own materials.
-Config.Studs = { on = true, names = { "Ground", "Countryside", "Road", "Plaza", "Path", "PadPaving", "PadRim", "Deck", "StartPad", "MazeWall", "Hedge", "Wall", "Perch", "Step", "Climb", "Shelf" }, keep = { "Glass", "Ice" } }
+-- Off while the maps go for a realistic look (studs need plain Plastic); `on = true` brings them back.
+Config.Studs = { on = false, names = { "Ground", "Countryside", "Road", "Plaza", "Path", "PadPaving", "PadRim", "Deck", "StartPad", "MazeWall", "Hedge", "Wall", "Perch", "Step", "Climb", "Shelf" }, keep = { "Glass", "Ice" } }
 
 Config.NeedleTool = { grip = { 0, 180, 90 }, scale = 1.6 }
 
@@ -467,11 +468,100 @@ Config.Aim = {
 Config.Practice = { seconds = 180, countdown = 3, dummies = 8, moving = 3, hearts = 3, chests = 5, perch = { 3.5, 7 },
 	size = 100, centre = Vector3.new(-700, 0, 0), spacing = 180, backAfter = 10 }
 
+Config.Look = require(script.Parent.ConfigLook) -- the sun, sky, haze and wind presets
+
 return Config
 ]]></ProtectedString>
 				</Properties>
 			</Item>
 			<Item class="ModuleScript" referent="RBX00005">
+				<Properties>
+					<string name="Name">ConfigLook</string>
+					<ProtectedString name="Source"><![CDATA[-- The look of the world (server/Look): the sun, sky, haze, clouds, glow, colour grade and wind for
+-- each kind of map, as presets. A map names one in shared/Maps (`look = "harvest"`); the lobby uses
+-- Maps.lobbyLook. Config.luau merges this in as Config.Look. Colours are { r, g, b }.
+-- These are starting points chosen on paper: tune them in Studio (Play, graphics level at maximum).
+--
+-- The place file (default.project.json) sets what scripts cannot: realistic lighting, the modern
+-- materials and 3D grass on terrain. Look only warns if that didn't load.
+local Look = {}
+
+-- sunElevation (degrees above the horizon): if given, Look picks the clock time between Sun.from
+-- and Sun.to whose sun is nearest that height (a low sun would black out the maze corridors).
+Look.Sun = { from = 12.5, to = 17.5, step = 0.05 }
+
+-- A darker round (the difficulty's dim, plus a Low Light round): per 1.0 of dim, exposure drops by
+-- `exposure`, both ambients lose `ambient` of themselves, the haze thickens by `density`, colour
+-- fades by `saturation` and the tint moves `tint` of the way to `tintTo`.
+Look.Dim = { exposure = 1.6, ambient = 0.5, density = 0.1, saturation = 0.15, tint = 0.5, tintTo = { 200, 214, 255 } }
+
+-- The wind gusts: every `every` seconds (a random time between the two) it is the preset's wind
+-- times a random amount between `strength`'s two numbers. It moves grass, clouds and particles.
+Look.Gust = { every = { 6, 10 }, strength = { 0.7, 1.3 } }
+
+Look.Sky = { SunAngularSize = 14, MoonAngularSize = 9, StarCount = 3000 }
+
+local function preset(t)
+	return t
+end
+
+Look.presets = {
+	harvest = preset({ ClockTime = 15, sunElevation = 36, Brightness = 3, ExposureCompensation = 0.05, ShadowSoftness = 0.2,
+		Ambient = { 58, 54, 62 }, OutdoorAmbient = { 108, 104, 116 }, ColorShift_Top = { 52, 32, 10 },
+		atmosphere = { Density = 0.3, Offset = 0.25, Haze = 1.5, Glare = 0.3, Color = { 228, 198, 148 }, Decay = { 116, 104, 120 } },
+		clouds = { Cover = 0.52, Density = 0.35, Color = { 255, 240, 222 } },
+		bloom = { Intensity = 0.6, Size = 28, Threshold = 1.7 },
+		grade = { Contrast = 0.12, Saturation = 0.08, TintColor = { 255, 245, 232 } },
+		sunRays = { Intensity = 0.1, Spread = 0.6 }, wind = { 9, 0, 4 } }),
+	gold = preset({ ClockTime = 16.2, Brightness = 3, ExposureCompensation = 0.1, ShadowSoftness = 0.25,
+		Ambient = { 58, 52, 62 }, OutdoorAmbient = { 104, 98, 112 }, ColorShift_Top = { 60, 38, 12 },
+		atmosphere = { Density = 0.3, Offset = 0.25, Haze = 1.6, Glare = 0.35, Color = { 232, 196, 140 }, Decay = { 120, 98, 110 } },
+		clouds = { Cover = 0.55, Density = 0.35, Color = { 255, 236, 214 } },
+		bloom = { Intensity = 0.8, Size = 28, Threshold = 1.8 },
+		grade = { Contrast = 0.12, Saturation = 0.1, TintColor = { 255, 244, 230 } },
+		sunRays = { Intensity = 0.12, Spread = 0.6 }, wind = { 9, 0, 4 } }),
+	noon = preset({ ClockTime = 13.5, Brightness = 3, ExposureCompensation = 0, ShadowSoftness = 0.15,
+		Ambient = { 60, 62, 66 }, OutdoorAmbient = { 95, 100, 108 }, ColorShift_Top = { 12, 8, 0 },
+		atmosphere = { Density = 0.28, Offset = 0.25, Haze = 0.6, Glare = 0.1, Color = { 199, 206, 214 }, Decay = { 106, 112, 125 } },
+		clouds = { Cover = 0.5, Density = 0.3, Color = { 255, 255, 255 } },
+		bloom = { Intensity = 0.5, Size = 24, Threshold = 2 },
+		grade = { Contrast = 0.08, Saturation = 0.05, TintColor = { 255, 255, 255 } },
+		sunRays = { Intensity = 0.05, Spread = 0.4 }, wind = { 6, 0, 3 } }),
+	overcast = preset({ ClockTime = 12.5, Brightness = 1.3, ExposureCompensation = 0.25, ShadowSoftness = 1,
+		Ambient = { 96, 100, 106 }, OutdoorAmbient = { 150, 154, 160 }, ColorShift_Top = { 0, 0, 0 },
+		atmosphere = { Density = 0.42, Offset = 0.1, Haze = 2.4, Glare = 0, Color = { 190, 196, 204 }, Decay = { 120, 126, 134 } },
+		clouds = { Cover = 0.92, Density = 0.55, Color = { 200, 204, 210 } },
+		bloom = { Intensity = 0.3, Size = 24, Threshold = 2 },
+		grade = { Contrast = 0.05, Saturation = -0.12, TintColor = { 236, 242, 255 } },
+		wind = { 12, 0, 5 } }),
+	dusk = preset({ ClockTime = 17.5, Brightness = 2.4, ExposureCompensation = 0.25, ShadowSoftness = 0.4,
+		Ambient = { 70, 54, 66 }, OutdoorAmbient = { 124, 96, 104 }, ColorShift_Top = { 110, 56, 18 },
+		atmosphere = { Density = 0.36, Offset = 0.3, Haze = 2.2, Glare = 0.8, Color = { 250, 170, 120 }, Decay = { 96, 70, 120 } },
+		clouds = { Cover = 0.6, Density = 0.4, Color = { 255, 190, 150 } },
+		bloom = { Intensity = 0.9, Size = 32, Threshold = 1.6 },
+		grade = { Contrast = 0.14, Saturation = 0.14, TintColor = { 255, 232, 214 } },
+		sunRays = { Intensity = 0.2, Spread = 0.7 }, wind = { 5, 0, 2 } }),
+	night = preset({ ClockTime = 0.5, Brightness = 1.6, ExposureCompensation = 0.6, ShadowSoftness = 0.5,
+		Ambient = { 38, 46, 72 }, OutdoorAmbient = { 64, 76, 112 }, ColorShift_Top = { 0, 8, 30 },
+		atmosphere = { Density = 0.42, Offset = 0.1, Haze = 1.2, Glare = 0, Color = { 60, 74, 110 }, Decay = { 20, 26, 44 } },
+		clouds = { Cover = 0.35, Density = 0.3, Color = { 120, 130, 160 } },
+		bloom = { Intensity = 1, Size = 30, Threshold = 1.2 },
+		grade = { Contrast = 0.1, Saturation = -0.1, TintColor = { 214, 226, 255 } },
+		wind = { 3, 0, 1 } }),
+	interior = preset({ ClockTime = 15, Brightness = 2, ExposureCompensation = 0.4, ShadowSoftness = 0.5,
+		Ambient = { 104, 88, 70 }, OutdoorAmbient = { 120, 104, 86 }, ColorShift_Top = { 40, 26, 8 },
+		atmosphere = { Density = 0.2, Offset = 0, Haze = 0.8, Glare = 0, Color = { 190, 160, 120 }, Decay = { 90, 76, 60 } },
+		clouds = { Cover = 0.4, Density = 0.3, Color = { 255, 255, 255 } },
+		bloom = { Intensity = 0.6, Size = 24, Threshold = 1.6 },
+		grade = { Contrast = 0.08, Saturation = 0, TintColor = { 255, 240, 220 } },
+		wind = { 0, 0, 0 } }),
+}
+
+return Look
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00006">
 				<Properties>
 					<string name="Name">Cosmetics</string>
 					<ProtectedString name="Source"><![CDATA[-- Cosmetics for Haystack Coins: looks only, never an advantage. Needles are not sold here: every
@@ -526,7 +616,7 @@ return Cosmetics
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00006">
+			<Item class="ModuleScript" referent="RBX00007">
 				<Properties>
 					<string name="Name">FirstPerson</string>
 					<ProtectedString name="Source"><![CDATA[-- The first-person view of your needle (client/ViewModel): the arms and the needle drawn in
@@ -573,7 +663,7 @@ return {
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00007">
+			<Item class="ModuleScript" referent="RBX00008">
 				<Properties>
 					<string name="Name">FirstPersonRig</string>
 					<ProtectedString name="Source"><![CDATA[-- The rest of the first-person view (client/ViewModel): everything the Needle Hand Rig tool
@@ -681,72 +771,74 @@ return {
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00008">
+			<Item class="ModuleScript" referent="RBX00009">
 				<Properties>
 					<string name="Name">Maps</string>
 					<ProtectedString name="Source"><![CDATA[-- The maps: what each is called, its light and its colours. server/MapsA and server/MapsB build
 -- them (`builder` names the function) and list their hiding spots as they place each prop, so
 -- every spot sits on a real surface in reach. Add a map: a line here plus a builder.
---   lighting: Lighting's ClockTime, Brightness, Ambient, OutdoorAmbient, FogEnd, FogColor.
+--   look: the name of a preset in shared/ConfigLook (sun, sky, haze, clouds, grade): server/Look.
+--   lighting: the old plain light, kept for the dev previews (dev/preview/render.html) only.
 --   straw: the colour of loose straw (and of a camouflaged needle); clutter tints vary round it.
 local Maps = {}
 
 Maps.list = {
 	-- the big map (server/MapsBig): duration = its round length, powerups = orbs about, landmarkChests =
 	-- how many chests go up on its climbable landmarks (the rest deep in its mazes)
-	{ id = "bigfarm", name = "Hayfield Farm", builder = "bigfarm", weight = 20, duration = 300, powerups = 18, landmarkChests = 3,
+	{ id = "bigfarm", name = "Hayfield Farm", builder = "bigfarm", look = "harvest", weight = 20, duration = 300, powerups = 18, landmarkChests = 3,
 		lighting = { ClockTime = 14.5, Brightness = 2.7, Ambient = { 124, 118, 102 }, OutdoorAmbient = { 158, 150, 130 }, FogEnd = 1400, FogColor = { 205, 226, 246 } },
 		straw = { 226, 188, 92 }, ground = { 100, 158, 72 } },
-	{ id = "field", name = "Classic Haystack Field", builder = "field", weight = 25,
+	{ id = "field", name = "Classic Haystack Field", builder = "field", look = "noon", weight = 25,
 		lighting = { ClockTime = 14, Brightness = 2.6, Ambient = { 120, 116, 104 }, OutdoorAmbient = { 150, 146, 134 }, FogEnd = 900, FogColor = { 200, 225, 245 } },
 		straw = { 226, 188, 92 }, ground = { 104, 160, 76 } },
-	{ id = "barn", name = "Barn Interior", builder = "barn", weight = 20,
+	{ id = "barn", name = "Barn Interior", builder = "barn", look = "interior", weight = 20,
 		lighting = { ClockTime = 13, Brightness = 1.4, Ambient = { 120, 96, 70 }, OutdoorAmbient = { 110, 90, 66 }, FogEnd = 400, FogColor = { 120, 96, 70 } },
 		straw = { 214, 172, 80 }, ground = { 120, 86, 56 } },
-	{ id = "sunset", name = "Farm at Sunset", builder = "sunset", weight = 20,
+	{ id = "sunset", name = "Farm at Sunset", builder = "sunset", look = "dusk", weight = 20,
 		lighting = { ClockTime = 17.7, Brightness = 2.2, Ambient = { 130, 96, 80 }, OutdoorAmbient = { 170, 120, 96 }, FogEnd = 700, FogColor = { 250, 170, 120 } },
 		straw = { 232, 170, 84 }, ground = { 120, 150, 70 } },
-	{ id = "forest", name = "Night Forest", builder = "forest", weight = 15,
+	{ id = "forest", name = "Night Forest", builder = "forest", look = "night", weight = 15,
 		lighting = { ClockTime = 0.5, Brightness = 1.1, Ambient = { 70, 80, 110 }, OutdoorAmbient = { 90, 100, 140 }, FogEnd = 260, FogColor = { 30, 40, 64 } },
 		straw = { 196, 170, 100 }, ground = { 52, 84, 52 } },
-	{ id = "attic", name = "Abandoned Attic", builder = "attic", weight = 20,
+	{ id = "attic", name = "Abandoned Attic", builder = "attic", look = "interior", weight = 20,
 		lighting = { ClockTime = 15, Brightness = 1.2, Ambient = { 110, 100, 90 }, OutdoorAmbient = { 100, 92, 84 }, FogEnd = 300, FogColor = { 110, 100, 90 } },
 		straw = { 206, 176, 112 }, ground = { 112, 86, 64 } },
 	-- from the owner's Gemini map sheets (server/MapsC)
-	{ id = "pumpkin", name = "Pumpkin Patch", builder = "pumpkin", weight = 15,
+	{ id = "pumpkin", name = "Pumpkin Patch", builder = "pumpkin", look = "gold", weight = 15,
 		lighting = { ClockTime = 15, Brightness = 2.6, Ambient = { 124, 116, 100 }, OutdoorAmbient = { 156, 146, 128 }, FogEnd = 900, FogColor = { 205, 225, 245 } },
 		straw = { 226, 188, 92 }, ground = { 96, 156, 70 } },
-	{ id = "corn", name = "Harvest Corn Maze", builder = "corn", weight = 15,
+	{ id = "corn", name = "Harvest Corn Maze", builder = "corn", look = "gold", weight = 15,
 		lighting = { ClockTime = 15.5, Brightness = 2.7, Ambient = { 132, 120, 96 }, OutdoorAmbient = { 168, 150, 118 }, FogEnd = 900, FogColor = { 220, 226, 236 } },
 		straw = { 232, 196, 96 }, ground = { 170, 140, 84 } },
-	{ id = "sunflower", name = "Sunflower Labyrinth", builder = "sunflower", weight = 15,
+	{ id = "sunflower", name = "Sunflower Labyrinth", builder = "sunflower", look = "noon", weight = 15,
 		lighting = { ClockTime = 13, Brightness = 2.8, Ambient = { 126, 120, 100 }, OutdoorAmbient = { 160, 152, 128 }, FogEnd = 900, FogColor = { 210, 230, 248 } },
 		straw = { 226, 188, 92 }, ground = { 150, 112, 72 } },
-	{ id = "orchard", name = "Apple Orchard", builder = "orchard", weight = 15,
+	{ id = "orchard", name = "Apple Orchard", builder = "orchard", look = "noon", weight = 15,
 		lighting = { ClockTime = 12.5, Brightness = 2.7, Ambient = { 120, 120, 104 }, OutdoorAmbient = { 150, 154, 134 }, FogEnd = 900, FogColor = { 205, 228, 248 } },
 		straw = { 222, 190, 100 }, ground = { 104, 164, 74 } },
-	{ id = "windmill", name = "Windmill Hill", builder = "windmill", weight = 15,
+	{ id = "windmill", name = "Windmill Hill", builder = "windmill", look = "gold", weight = 15,
 		lighting = { ClockTime = 16, Brightness = 2.6, Ambient = { 128, 118, 100 }, OutdoorAmbient = { 160, 148, 126 }, FogEnd = 900, FogColor = { 214, 226, 240 } },
 		straw = { 226, 188, 92 }, ground = { 104, 158, 76 } },
 	-- the second batch (server/MapsD)
-	{ id = "frozen", name = "Frozen Farm", builder = "frozen", weight = 15,
+	{ id = "frozen", name = "Frozen Farm", builder = "frozen", look = "overcast", weight = 15,
 		lighting = { ClockTime = 13, Brightness = 2.4, Ambient = { 140, 146, 160 }, OutdoorAmbient = { 176, 184, 200 }, FogEnd = 900, FogColor = { 226, 236, 248 } },
 		straw = { 226, 196, 120 }, ground = { 236, 242, 250 } },
-	{ id = "greenhouse", name = "Rainy Greenhouse", builder = "greenhouse", weight = 15,
+	{ id = "greenhouse", name = "Rainy Greenhouse", builder = "greenhouse", look = "overcast", weight = 15,
 		lighting = { ClockTime = 11, Brightness = 2.0, Ambient = { 120, 128, 132 }, OutdoorAmbient = { 148, 158, 166 }, FogEnd = 900, FogColor = { 196, 210, 220 } },
 		straw = { 214, 184, 104 }, ground = { 150, 150, 156 } },
-	{ id = "marsh", name = "Duck Pond Marsh", builder = "marsh", weight = 15,
+	{ id = "marsh", name = "Duck Pond Marsh", builder = "marsh", look = "overcast", weight = 15,
 		lighting = { ClockTime = 14, Brightness = 2.6, Ambient = { 118, 124, 106 }, OutdoorAmbient = { 150, 158, 136 }, FogEnd = 900, FogColor = { 206, 228, 236 } },
 		straw = { 214, 184, 104 }, ground = { 150, 112, 76 } },
-	{ id = "market", name = "Hay Market", builder = "market", weight = 15,
+	{ id = "market", name = "Hay Market", builder = "market", look = "noon", weight = 15,
 		lighting = { ClockTime = 14.5, Brightness = 2.7, Ambient = { 128, 120, 102 }, OutdoorAmbient = { 162, 152, 128 }, FogEnd = 900, FogColor = { 214, 228, 244 } },
 		straw = { 226, 188, 92 }, ground = { 200, 170, 120 } },
-	{ id = "fair", name = "County Fair", builder = "fair", weight = 15,
+	{ id = "fair", name = "County Fair", builder = "fair", look = "noon", weight = 15,
 		lighting = { ClockTime = 15, Brightness = 2.8, Ambient = { 130, 122, 112 }, OutdoorAmbient = { 166, 156, 144 }, FogEnd = 900, FogColor = { 218, 230, 248 } },
 		straw = { 226, 188, 92 }, ground = { 214, 186, 140 } },
 }
 
 -- The lobby's light, between rounds.
+Maps.lobbyLook = "noon"
 Maps.lobbyLighting = { ClockTime = 14.5, Brightness = 2.5, Ambient = { 120, 116, 104 }, OutdoorAmbient = { 150, 146, 134 }, FogEnd = 1200, FogColor = { 200, 225, 245 } }
 
 local byId = {}
@@ -762,7 +854,7 @@ return Maps
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00009">
+			<Item class="ModuleScript" referent="RBX0000A">
 				<Properties>
 					<string name="Name">NeedleAura</string>
 					<ProtectedString name="Source"><![CDATA[-- The Heirloom aura (Config.Aura): every needle of an Heirloom shape gives off energy, in its own
@@ -857,7 +949,7 @@ return NeedleAura
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0000A">
+			<Item class="ModuleScript" referent="RBX0000B">
 				<Properties>
 					<string name="Name">NeedleLook</string>
 					<ProtectedString name="Source"><![CDATA[-- Builds a needle of any type in any skin out of parts (shared/Needles): for the NEEDLE FOUND!
@@ -1143,7 +1235,7 @@ return NeedleLook
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0000B">
+			<Item class="ModuleScript" referent="RBX0000C">
 				<Properties>
 					<string name="Name">NeedleSkins</string>
 					<ProtectedString name="Source"><![CDATA[-- More needle skins (sheets 6-10 of the skin brief): food, nature, materials, space and magic,
@@ -1210,7 +1302,7 @@ return {
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0000C">
+			<Item class="ModuleScript" referent="RBX0000D">
 				<Properties>
 					<string name="Name">NeedleTypes</string>
 					<ProtectedString name="Source"><![CDATA[-- The needle types: each needle's shape (drawn by shared/NeedleLook; the newer ones are data in
@@ -1319,7 +1411,7 @@ return {
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0000D">
+			<Item class="ModuleScript" referent="RBX0000E">
 				<Properties>
 					<string name="Name">Needles</string>
 					<ProtectedString name="Source"><![CDATA[-- The needle collection. Everyone hunts the same plain needle (fair); when you find it, it turns
@@ -1576,7 +1668,7 @@ return Needles
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0000E">
+			<Item class="ModuleScript" referent="RBX0000F">
 				<Properties>
 					<string name="Name">Quests</string>
 					<ProtectedString name="Source"><![CDATA[-- Daily quests: every day (UTC) everyone gets the same three, picked from this pool, so the
@@ -1641,7 +1733,7 @@ return Quests
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0000F">
+			<Item class="ModuleScript" referent="RBX00010">
 				<Properties>
 					<string name="Name">Robux</string>
 					<ProtectedString name="Source"><![CDATA[-- What the shop's Robux section says about each item (server/ShopManager does the giving; the
@@ -1674,7 +1766,7 @@ return Robux
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00010">
+			<Item class="ModuleScript" referent="RBX00011">
 				<Properties>
 					<string name="Name">Rules</string>
 					<ProtectedString name="Source"><![CDATA[-- The game's arithmetic in one place, shared by the server (which decides) and the client
@@ -1767,7 +1859,7 @@ return Rules
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00011">
+			<Item class="ModuleScript" referent="RBX00012">
 				<Properties>
 					<string name="Name">ShapesA</string>
 					<ProtectedString name="Source"><![CDATA[-- Needle shapes, part 1: needle shapes kept as data. Made by dev/shapes.py: change them there and run it.
@@ -2031,7 +2123,7 @@ return {
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00012">
+			<Item class="ModuleScript" referent="RBX00013">
 				<Properties>
 					<string name="Name">ShapesB</string>
 					<ProtectedString name="Source"><![CDATA[-- Needle shapes, part 2: needle shapes kept as data. Made by dev/shapes.py: change them there and run it.
@@ -2293,7 +2385,7 @@ return {
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00013">
+			<Item class="ModuleScript" referent="RBX00014">
 				<Properties>
 					<string name="Name">ShapesC</string>
 					<ProtectedString name="Source"><![CDATA[-- Needle shapes, part 3: needle shapes kept as data. Made by dev/shapes.py: change them there and run it.
@@ -2523,161 +2615,161 @@ return {
 				</Properties>
 			</Item>
 		</Item>
-		<Item class="Folder" referent="RBX00014">
+		<Item class="Folder" referent="RBX00015">
 			<Properties>
 				<string name="Name">Remotes</string>
 			</Properties>
-			<Item class="RemoteEvent" referent="RBX00015">
+			<Item class="RemoteEvent" referent="RBX00016">
 				<Properties>
 					<string name="Name">RoundState</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00016">
+			<Item class="RemoteEvent" referent="RBX00017">
 				<Properties>
 					<string name="Name">Found</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00017">
+			<Item class="RemoteEvent" referent="RBX00018">
 				<Properties>
 					<string name="Name">Notify</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00018">
+			<Item class="RemoteEvent" referent="RBX00019">
 				<Properties>
 					<string name="Name">Profile</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00019">
+			<Item class="RemoteEvent" referent="RBX0001A">
 				<Properties>
 					<string name="Name">SaveSettings</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX0001A">
+			<Item class="RemoteFunction" referent="RBX0001B">
 				<Properties>
 					<string name="Name">Shop</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX0001B">
+			<Item class="RemoteFunction" referent="RBX0001C">
 				<Properties>
 					<string name="Name">Hint</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX0001C">
+			<Item class="RemoteFunction" referent="RBX0001D">
 				<Properties>
 					<string name="Name">Boards</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX0001D">
+			<Item class="RemoteFunction" referent="RBX0001E">
 				<Properties>
 					<string name="Name">Collection</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0001E">
+			<Item class="RemoteEvent" referent="RBX0001F">
 				<Properties>
 					<string name="Name">ShowOff</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX0001F">
+			<Item class="RemoteFunction" referent="RBX00020">
 				<Properties>
 					<string name="Name">LobbyInfo</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00020">
+			<Item class="RemoteEvent" referent="RBX00021">
 				<Properties>
 					<string name="Name">Powerup</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00021">
+			<Item class="RemoteFunction" referent="RBX00022">
 				<Properties>
 					<string name="Name">Box</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00022">
+			<Item class="RemoteEvent" referent="RBX00023">
 				<Properties>
 					<string name="Name">BoxResult</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00023">
+			<Item class="RemoteEvent" referent="RBX00024">
 				<Properties>
 					<string name="Name">Poke</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00024">
+			<Item class="RemoteEvent" referent="RBX00025">
 				<Properties>
 					<string name="Name">Hit</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00025">
+			<Item class="RemoteEvent" referent="RBX00026">
 				<Properties>
 					<string name="Name">Inspect</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00026">
+			<Item class="RemoteFunction" referent="RBX00027">
 				<Properties>
 					<string name="Name">Trade</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00027">
+			<Item class="RemoteEvent" referent="RBX00028">
 				<Properties>
 					<string name="Name">TradeState</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00028">
+			<Item class="RemoteEvent" referent="RBX00029">
 				<Properties>
 					<string name="Name">Throw</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00029">
+			<Item class="RemoteEvent" referent="RBX0002A">
 				<Properties>
 					<string name="Name">Thrown</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0002A">
+			<Item class="RemoteEvent" referent="RBX0002B">
 				<Properties>
 					<string name="Name">Dash</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX0002B">
+			<Item class="RemoteFunction" referent="RBX0002C">
 				<Properties>
 					<string name="Name">Practice</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0002C">
+			<Item class="RemoteEvent" referent="RBX0002D">
 				<Properties>
 					<string name="Name">PracticeState</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0002D">
+			<Item class="RemoteEvent" referent="RBX0002E">
 				<Properties>
 					<string name="Name">TagOut</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0002E">
+			<Item class="RemoteEvent" referent="RBX0002F">
 				<Properties>
 					<string name="Name">Feed</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX0002F">
+			<Item class="RemoteFunction" referent="RBX00030">
 				<Properties>
 					<string name="Name">Queue</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00030">
+			<Item class="RemoteEvent" referent="RBX00031">
 				<Properties>
 					<string name="Name">Announce</string>
 				</Properties>
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerScriptService" referent="RBX00031">
+	<Item class="ServerScriptService" referent="RBX00032">
 		<Properties>
 			<string name="Name">ServerScriptService</string>
 		</Properties>
-		<Item class="Folder" referent="RBX00032">
+		<Item class="Folder" referent="RBX00033">
 			<Properties>
 				<string name="Name">Server</string>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX00033">
+			<Item class="ModuleScript" referent="RBX00034">
 				<Properties>
 					<string name="Name">AntiCheat</string>
 					<ProtectedString name="Source"><![CDATA[-- Basic anti-exploit: every Config.AntiCheat.checkEvery seconds, each character's position is
@@ -2763,7 +2855,7 @@ return AntiCheat
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00034">
+			<Item class="ModuleScript" referent="RBX00035">
 				<Properties>
 					<string name="Name">BoxManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Box openings (Config.Boxes, shared/Boxes). Boxes open through Remotes.Box with coins ("open") or
@@ -2918,7 +3010,7 @@ return BoxManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00035">
+			<Item class="ModuleScript" referent="RBX00036">
 				<Properties>
 					<string name="Name">ChestSpawner</string>
 					<ProtectedString name="Source"><![CDATA[-- The chests each round (Config.Chests), made to be fought over. They go in the dead ends furthest
@@ -3218,7 +3310,7 @@ return ChestSpawner
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00036">
+			<Item class="ModuleScript" referent="RBX00037">
 				<Properties>
 					<string name="Name">CollectionManager</string>
 					<ProtectedString name="Source"><![CDATA[-- The needle collection, on the server. Needles come from boxes (server/BoxManager: coins, keys
@@ -3303,7 +3395,7 @@ return CollectionManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00037">
+			<Item class="ModuleScript" referent="RBX00038">
 				<Properties>
 					<string name="Name">Combat</string>
 					<ProtectedString name="Source"><![CDATA[-- Needle combat. Everyone carries their showcase needle as a tool (the "Needle", rebuilt when the
@@ -3558,7 +3650,7 @@ return Combat
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00038">
+			<Item class="ModuleScript" referent="RBX00039">
 				<Properties>
 					<string name="Name">CombatThrow</string>
 					<ProtectedString name="Source"><![CDATA[-- Throwing your needle (Config.Throw). The client sends where it's aiming (Remotes.Throw); the
@@ -3657,7 +3749,7 @@ return CombatThrow
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00039">
+			<Item class="ModuleScript" referent="RBX0003A">
 				<Properties>
 					<string name="Name">Dash</string>
 					<ProtectedString name="Source"><![CDATA[-- Dashing (Config.Dash; the dash itself is client/DashFx, since each player's device moves its
@@ -3690,7 +3782,7 @@ return Dash
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003A">
+			<Item class="ModuleScript" referent="RBX0003B">
 				<Properties>
 					<string name="Name">DataManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Player data: loaded on join, cached for the session, saved with UpdateAsync on an autosave
@@ -3969,7 +4061,7 @@ return DataManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003B">
+			<Item class="ModuleScript" referent="RBX0003C">
 				<Properties>
 					<string name="Name">FarmProps</string>
 					<ProtectedString name="Source"><![CDATA[-- Farm props for the maps from the owner's Gemini sheets (server/MapsC): pumpkins, scarecrows,
@@ -4141,7 +4233,7 @@ return FarmProps
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003C">
+			<Item class="ModuleScript" referent="RBX0003D">
 				<Properties>
 					<string name="Name">FarmProps2</string>
 					<ProtectedString name="Source"><![CDATA[-- More props for the maps from the Gemini sheets (server/MapsD): a snowy barn, snowy pines, a
@@ -4344,7 +4436,7 @@ return FarmProps2
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003D">
+			<Item class="ModuleScript" referent="RBX0003E">
 				<Properties>
 					<string name="Name">GamePads</string>
 					<ProtectedString name="Source"><![CDATA[-- The game platforms in the lobby (Config.Pads; built by server/LobbyBuilder). Stand on one to join
@@ -4505,7 +4597,7 @@ return GamePads
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003E">
+			<Item class="ModuleScript" referent="RBX0003F">
 				<Properties>
 					<string name="Name">GameServer</string>
 					<ProtectedString name="Source"><![CDATA[-- A game's own server: a private (reserved) server of this same place, made by a lobby game platform
@@ -4588,7 +4680,7 @@ return GameServer
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003F">
+			<Item class="ModuleScript" referent="RBX00040">
 				<Properties>
 					<string name="Name">HaystackModel</string>
 					<ProtectedString name="Source"><![CDATA[-- The owner's own haystack model (Config.Haystacks.model): loaded once with InsertService (it must
@@ -4642,7 +4734,7 @@ return HaystackModel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00040">
+			<Item class="ModuleScript" referent="RBX00041">
 				<Properties>
 					<string name="Name">Landmarks</string>
 					<ProtectedString name="Source"><![CDATA[-- Climbable landmarks for a big map (server/MapsBig). Each is a challenge to reach, and returns the
@@ -4777,7 +4869,7 @@ return Landmarks
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00041">
+			<Item class="ModuleScript" referent="RBX00042">
 				<Properties>
 					<string name="Name">LeaderboardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Global leaderboards (Config.Boards), each an OrderedDataStore: most chests, most tag-outs,
@@ -4951,7 +5043,7 @@ return LeaderboardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00042">
+			<Item class="ModuleScript" referent="RBX00043">
 				<Properties>
 					<string name="Name">LobbyBuilder</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby, built once at Config.LobbyCentre: a wooden plaza in a field, the animated title sign
@@ -5188,7 +5280,7 @@ return LobbyBuilder
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00043">
+			<Item class="ModuleScript" referent="RBX00044">
 				<Properties>
 					<string name="Name">LobbyDecor</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's dressing (LobbyBuilder calls build once): a lawn crossed by cobbled paths (spawn to
@@ -5295,7 +5387,7 @@ return LobbyDecor
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00044">
+			<Item class="ModuleScript" referent="RBX00045">
 				<Properties>
 					<string name="Name">LobbyShowOff</string>
 					<ProtectedString name="Source"><![CDATA[-- Show off (Remotes.ShowOff): hold your showcase needle (or your best) up over your head for a
@@ -5364,7 +5456,7 @@ return LobbyShowOff
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00045">
+			<Item class="ModuleScript" referent="RBX00046">
 				<Properties>
 					<string name="Name">LobbySocial</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's social side: showing off collections.
@@ -5644,7 +5736,147 @@ return LobbySocial
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Script" referent="RBX00046">
+			<Item class="ModuleScript" referent="RBX00047">
+				<Properties>
+					<string name="Name">Look</string>
+					<ProtectedString name="Source"><![CDATA[-- The look of the world, from Config.Look's presets: the sun, sky, haze (Atmosphere), clouds, glow
+-- (Bloom), colour grade, sun rays and wind. Look.init makes those once; Look.apply(name, dim)
+-- switches preset (server/RoundManager: a map's look for its round, the lobby's between rounds).
+-- Everything here is set on the server and copies to every player. Realistic lighting, the modern
+-- materials and terrain grass come from the place file (scripts can't set them): init warns if the
+-- lighting didn't load that way.
+local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local L = Config.Look
+
+local Look = {}
+local fx = {} -- atmosphere, clouds, bloom, grade, sunRays
+local solved = {} -- [preset] = { clock, sun (a unit vector towards the sun, or nil) }
+local wind = Vector3.zero
+local rng = Random.new()
+
+local function rgb(c)
+	return Color3.fromRGB(c[1], c[2], c[3])
+end
+
+local function make(class, parent)
+	local found = parent:FindFirstChildOfClass(class)
+	if found then
+		return found
+	end
+	local made = Instance.new(class)
+	made.Parent = parent
+	return made
+end
+
+-- Sets each key of `values` on `instance` (a { r, g, b } becomes a colour).
+local function set(instance, values)
+	for key, value in pairs(values) do
+		instance[key] = if type(value) == "table" then rgb(value) else value
+	end
+end
+
+local function sunAt(clock)
+	Lighting.ClockTime = clock
+	local ok, dir = pcall(Lighting.GetSunDirection, Lighting)
+	return if ok and typeof(dir) == "Vector3" then dir else nil
+end
+
+-- The clock time (and the sun's direction then) for a preset: the one whose sun is nearest
+-- sunElevation if it asks for a height, else its own ClockTime.
+local function solve(p)
+	local clock, sun = p.ClockTime, sunAt(p.ClockTime)
+	if p.sunElevation and sun then
+		local best = math.huge
+		local t = L.Sun.from
+		while t <= L.Sun.to do
+			local dir = sunAt(t)
+			local off = if dir then math.abs(math.deg(math.asin(math.clamp(dir.Y, -1, 1))) - p.sunElevation) else math.huge
+			if off < best then
+				best, clock, sun = off, t, dir
+			end
+			t += L.Sun.step
+		end
+	end
+	return { clock = clock, sun = sun }
+end
+
+-- The direction towards the sun in a preset (a unit vector), or nil if it couldn't be read.
+function Look.sunFor(name)
+	return solved[name] and solved[name].sun
+end
+
+-- Switches to a preset. dim (0 and up) darkens it: a harder difficulty, a Low Light round.
+function Look.apply(name, dim)
+	if not fx.atmosphere then -- asked before start-up got to it
+		Look.init()
+	end
+	local p = L.presets[name] or L.presets.noon
+	local s = solved[name] or solved.noon or { clock = p.ClockTime }
+	dim = dim or 0
+	local D = L.Dim
+	Lighting.ClockTime = s.clock
+	Lighting.Brightness, Lighting.ShadowSoftness = p.Brightness, p.ShadowSoftness
+	Lighting.ExposureCompensation = p.ExposureCompensation - D.exposure * dim
+	local keep = 1 - D.ambient * math.min(dim, 1)
+	local ambient, outdoor = rgb(p.Ambient), rgb(p.OutdoorAmbient)
+	Lighting.Ambient = Color3.new(ambient.R * keep, ambient.G * keep, ambient.B * keep) -- before OutdoorAmbient: the engine keeps that at least as bright
+	Lighting.OutdoorAmbient = Color3.new(outdoor.R * keep, outdoor.G * keep, outdoor.B * keep)
+	Lighting.ColorShift_Top = rgb(p.ColorShift_Top)
+	set(fx.atmosphere, p.atmosphere)
+	fx.atmosphere.Density = math.min(1, p.atmosphere.Density + D.density * dim)
+	set(fx.clouds, p.clouds)
+	set(fx.bloom, p.bloom)
+	set(fx.grade, p.grade)
+	fx.grade.Brightness = 0
+	fx.grade.Saturation = p.grade.Saturation - D.saturation * dim
+	fx.grade.TintColor = rgb(p.grade.TintColor):Lerp(rgb(D.tintTo), math.min(1, D.tint * dim))
+	fx.sunRays.Enabled = p.sunRays ~= nil
+	if p.sunRays then
+		set(fx.sunRays, p.sunRays)
+	end
+	wind = Vector3.new(p.wind[1], p.wind[2], p.wind[3])
+	workspace.GlobalWind = wind
+end
+
+function Look.init()
+	if fx.atmosphere then
+		return
+	end
+	Lighting.GlobalShadows = true
+	Lighting.EnvironmentDiffuseScale, Lighting.EnvironmentSpecularScale = 1, 1
+	Lighting.ColorShift_Bottom = Color3.new(0, 0, 0)
+	fx.atmosphere = make("Atmosphere", Lighting)
+	set(make("Sky", Lighting), L.Sky)
+	fx.bloom = make("BloomEffect", Lighting)
+	fx.grade = make("ColorCorrectionEffect", Lighting)
+	fx.sunRays = make("SunRaysEffect", Lighting)
+	fx.clouds = make("Clouds", workspace.Terrain)
+	local ok, style = pcall(function()
+		return Lighting.LightingStyle
+	end)
+	if ok and style ~= Enum.LightingStyle.Realistic then
+		warn("[Look] the place file's lighting did not load as Realistic: see README, The realistic look")
+	end
+	for name, p in pairs(L.presets) do
+		solved[name] = solve(p)
+	end
+	Look.apply("noon")
+	task.spawn(function() -- gusts
+		while true do
+			task.wait(rng:NextNumber(L.Gust.every[1], L.Gust.every[2]))
+			workspace.GlobalWind = wind * rng:NextNumber(L.Gust.strength[1], L.Gust.strength[2])
+		end
+	end)
+end
+
+return Look
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="Script" referent="RBX00048">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Starts A Needle in a Haystack on the server. Systems that react to a player's save loading are
@@ -5684,6 +5916,7 @@ end
 
 for _, step in ipairs({
 	{ "HaystackModel", HaystackModel.load }, -- before the lobby, so its haystacks can use it
+	{ "Look", require(script.Parent.Look).init },
 	{ "Lobby", LobbyBuilder.build },
 	{ "AntiCheat", AntiCheat.init },
 	{ "Quests", QuestManager.init },
@@ -5731,7 +5964,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00047">
+			<Item class="ModuleScript" referent="RBX00049">
 				<Properties>
 					<string name="Name">MapKit</string>
 					<ProtectedString name="Source"><![CDATA[-- The building kit for maps (server/MapsA, MapsB): ground, hay bales, haystacks, crates, fences,
@@ -5960,7 +6193,7 @@ return MapKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00048">
+			<Item class="ModuleScript" referent="RBX0004A">
 				<Properties>
 					<string name="Name">MapsA</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Classic Haystack Field (a hedge maze), Barn Interior (a maze of stall walls) and
@@ -6089,7 +6322,7 @@ return MapsA
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00049">
+			<Item class="ModuleScript" referent="RBX0004B">
 				<Properties>
 					<string name="Name">MapsB</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Night Forest (a thicket maze) and Abandoned Attic (a maze of stacked boxes under
@@ -6188,7 +6421,7 @@ return MapsB
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004A">
+			<Item class="ModuleScript" referent="RBX0004C">
 				<Properties>
 					<string name="Name">MapsBig</string>
 					<ProtectedString name="Source"><![CDATA[-- Hayfield Farm: one big map (about 360 studs across, several times the others). Four farm quarters,
@@ -6290,7 +6523,7 @@ return MapsBig
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004B">
+			<Item class="ModuleScript" referent="RBX0004D">
 				<Properties>
 					<string name="Name">MapsC</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders from the owner's Gemini map sheets: Pumpkin Patch, Harvest Corn Maze, Sunflower
@@ -6441,7 +6674,7 @@ return MapsC
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004C">
+			<Item class="ModuleScript" referent="RBX0004E">
 				<Properties>
 					<string name="Name">MapsD</string>
 					<ProtectedString name="Source"><![CDATA[-- More maps from the owner's Gemini sheets: Frozen Farm, Rainy Greenhouse, Duck Pond Marsh, Hay
@@ -6598,7 +6831,7 @@ return MapsD
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004D">
+			<Item class="ModuleScript" referent="RBX0004F">
 				<Properties>
 					<string name="Name">MatchXp</string>
 					<ProtectedString name="Source"><![CDATA[-- The match's stats and its end (Config.MatchXp, Config.Rewards): counted while the round runs
@@ -6677,7 +6910,7 @@ return MatchXp
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004E">
+			<Item class="ModuleScript" referent="RBX00050">
 				<Properties>
 					<string name="Name">MazeKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Mazes for the maps: a grid of cells carved into a maze (a random depth-first walk, so every cell
@@ -6902,7 +7135,7 @@ return MazeKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004F">
+			<Item class="ModuleScript" referent="RBX00051">
 				<Properties>
 					<string name="Name">MazeWalls</string>
 					<ProtectedString name="Source"><![CDATA[-- More maze wall styles (server/MazeKit uses these when a map asks for one; it has its own
@@ -7096,7 +7329,7 @@ return MazeWalls
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00050">
+			<Item class="ModuleScript" referent="RBX00052">
 				<Properties>
 					<string name="Name">OneOfOne</string>
 					<ProtectedString name="Source"><![CDATA[-- The 1 of 1s (Config.OneOfOne). A chest rolls for each (roll); the first player to roll one claims it
@@ -7216,7 +7449,7 @@ return OneOfOne
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00051">
+			<Item class="ModuleScript" referent="RBX00053">
 				<Properties>
 					<string name="Name">PadPortal</string>
 					<ProtectedString name="Source"><![CDATA[-- One lobby game platform (LobbyBuilder builds Config.Pads.count of them; server/GamePads runs them):
@@ -7293,7 +7526,7 @@ return PadPortal
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00052">
+			<Item class="ModuleScript" referent="RBX00054">
 				<Properties>
 					<string name="Name">Powerups</string>
 					<ProtectedString name="Source"><![CDATA[-- Power-ups on the maps (Config.Powerups). When a round's search starts, glowing orbs float in
@@ -7474,7 +7707,7 @@ return Powerups
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00053">
+			<Item class="ModuleScript" referent="RBX00055">
 				<Properties>
 					<string name="Name">Practice</string>
 					<ProtectedString name="Source"><![CDATA[-- The Time Trial in the Practice Yard (Config.Practice). From the lobby (the Practice stall, or
@@ -7729,7 +7962,7 @@ return Practice
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00054">
+			<Item class="ModuleScript" referent="RBX00056">
 				<Properties>
 					<string name="Name">PracticeYard</string>
 					<ProtectedString name="Source"><![CDATA[-- Builds one player's Practice Yard for a Time Trial (server/Practice, Config.Practice): a hedged
@@ -7870,7 +8103,7 @@ return PracticeYard
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00055">
+			<Item class="ModuleScript" referent="RBX00057">
 				<Properties>
 					<string name="Name">QuestManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Daily quests: three a day, the same for everyone (shared/Quests.forDay). Progress is saved;
@@ -7938,7 +8171,7 @@ return QuestManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00056">
+			<Item class="ModuleScript" referent="RBX00058">
 				<Properties>
 					<string name="Name">Requests</string>
 					<ProtectedString name="Source"><![CDATA[-- Small requests from players, checked on the server: a hint (Remotes.Hint) and saving their
@@ -8001,7 +8234,7 @@ return Requests
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00057">
+			<Item class="ModuleScript" referent="RBX00059">
 				<Properties>
 					<string name="Name">RewardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Every coin and XP point is given here, on the server: chests, places, playing a round to the
@@ -8147,7 +8380,7 @@ return RewardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00058">
+			<Item class="ModuleScript" referent="RBX0005A">
 				<Properties>
 					<string name="Name">RoundExtras</string>
 					<ProtectedString name="Source"><![CDATA[-- What runs alongside a round's search, started and stopped together by server/RoundManager:
@@ -8181,7 +8414,7 @@ return RoundExtras
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00059">
+			<Item class="ModuleScript" referent="RBX0005B">
 				<Properties>
 					<string name="Name">RoundManager</string>
 					<ProtectedString name="Source"><![CDATA[-- A round, all on the server, for a group of players (RoundManager.play: a game platform's
@@ -8194,7 +8427,6 @@ return RoundExtras
 -- The phase is published as attributes on ReplicatedStorage (Phase, EndsAt, MapName,
 -- Difficulty, Modifiers, Golden, ChestsLeft, ChestCount) and announced with Remotes.RoundState.
 -- The search phase is still called "search" (the name other scripts check).
-local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -8210,6 +8442,7 @@ local Powerups = require(script.Parent.Powerups) -- a chest's power-up is used a
 local RewardManager = require(script.Parent.RewardManager)
 local AntiCheat = require(script.Parent.AntiCheat)
 local MapKit = require(script.Parent.MapKit)
+local Look = require(script.Parent.Look)
 local RoundExtras = require(script.Parent.RoundExtras)
 local LobbyBuilder = require(script.Parent.LobbyBuilder)
 local builders = require(script.Parent.MapsA)
@@ -8240,17 +8473,6 @@ local function phase(name, seconds, extra)
 	ReplicatedStorage:SetAttribute("Phase", name)
 	ReplicatedStorage:SetAttribute("EndsAt", now() + (seconds or 0))
 	Remotes.RoundState:FireAllClients({ phase = name, endsAt = now() + (seconds or 0), extra = extra })
-end
-
-local function light(spec, dim)
-	for key, value in pairs(spec) do
-		Lighting[key] = if type(value) == "table" then Color3.fromRGB(value[1], value[2], value[3]) else value
-	end
-	if dim and dim > 0 then
-		Lighting.Brightness *= 1 - dim
-		Lighting.Ambient = Lighting.Ambient:Lerp(Color3.new(0, 0, 0), dim)
-		Lighting.OutdoorAmbient = Lighting.OutdoorAmbient:Lerp(Color3.new(0, 0, 0), dim)
-	end
 end
 
 local function humanoid(player)
@@ -8357,12 +8579,12 @@ local function playRound(group)
 	round.chests, round.chestsLeft = chests, #chests
 	ReplicatedStorage:SetAttribute("ChestCount", #chests)
 	ReplicatedStorage:SetAttribute("ChestsLeft", #chests)
-	light(def.lighting, diff.dim + (if mods.lowlight then 0.45 else 0))
+	Look.apply(def.look, diff.dim + (if mods.lowlight then 0.45 else 0))
 	-- move everyone in
 	if #list == 0 or #chests == 0 then
 		round = nil
 		ChestSpawner.clear()
-		light(Maps.lobbyLighting)
+		Look.apply(Maps.lobbyLook)
 		model:Destroy()
 		MapKit.clearTerrain(Config.ArenaCentre)
 		return
@@ -8410,7 +8632,7 @@ local function playRound(group)
 	round = nil
 	model:Destroy()
 	MapKit.clearTerrain(Config.ArenaCentre)
-	light(Maps.lobbyLighting)
+	Look.apply(Maps.lobbyLook)
 end
 
 -- The round in play (nil between rounds), for server/Requests.
@@ -8436,7 +8658,7 @@ function RoundManager.start()
 			end
 		end)
 	end)
-	light(Maps.lobbyLighting)
+	Look.apply(Maps.lobbyLook)
 	phase("waiting", 0)
 end
 
@@ -8465,7 +8687,7 @@ function RoundManager.play(group)
 		round = nil
 		ChestSpawner.clear()
 		RoundExtras.stop()
-		light(Maps.lobbyLighting)
+		Look.apply(Maps.lobbyLook)
 	end
 	playing = false
 	phase("waiting", 0)
@@ -8476,7 +8698,7 @@ return RoundManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005A">
+			<Item class="ModuleScript" referent="RBX0005C">
 				<Properties>
 					<string name="Name">ShopManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Cosmetics and purchases. With Haystack Coins: buy a cosmetic (Remotes.Shop "buy"), and wear
@@ -8733,7 +8955,7 @@ return ShopManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005B">
+			<Item class="ModuleScript" referent="RBX0005D">
 				<Properties>
 					<string name="Name">Streaks</string>
 					<ProtectedString name="Source"><![CDATA[-- Tag-out streaks, the Marked player and the tag-out feed (Config.Streak), called by server/Combat
@@ -8867,7 +9089,7 @@ return Streaks
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005C">
+			<Item class="ModuleScript" referent="RBX0005E">
 				<Properties>
 					<string name="Name">TradeManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Trading needles between two players in the lobby (Config.Trading). Remotes.Trade asks; the
@@ -9135,24 +9357,24 @@ return TradeManager
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerStorage" referent="RBX0005D">
+	<Item class="ServerStorage" referent="RBX0005F">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX0005E">
+	<Item class="StarterPlayer" referent="RBX00060">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX0005F">
+		<Item class="StarterPlayerScripts" referent="RBX00061">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX00060">
+			<Item class="Folder" referent="RBX00062">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX00061">
+				<Item class="ModuleScript" referent="RBX00063">
 					<Properties>
 						<string name="Name">Aim</string>
 						<ProtectedString name="Source"><![CDATA[-- Your aim settings (Settings, Aim; Config.Aim): mouse sensitivity, field of view, and the reticle
@@ -9265,7 +9487,7 @@ return Aim
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00062">
+				<Item class="ModuleScript" referent="RBX00064">
 					<Properties>
 						<string name="Name">BoxReel</string>
 						<ProtectedString name="Source"><![CDATA[-- The box opening on your screen: a strip of needle cards slides along under a gold marker,
@@ -9368,7 +9590,7 @@ return BoxReel
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00063">
+				<Item class="ModuleScript" referent="RBX00065">
 					<Properties>
 						<string name="Name">BoxScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Boxes screen: each box with its price (coins; the dearer ones also Robux), a key button
@@ -9573,7 +9795,7 @@ return BoxScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00064">
+				<Item class="ModuleScript" referent="RBX00066">
 					<Properties>
 						<string name="Name">CombatFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Needle combat on your screen (server/Combat decides every hit):
@@ -9775,7 +9997,7 @@ return CombatFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00065">
+				<Item class="ModuleScript" referent="RBX00067">
 					<Properties>
 						<string name="Name">CooldownBars</string>
 						<ProtectedString name="Source"><![CDATA[-- POKE and THROW bars, top left under the DASH bar (client/DashFx), in the same style: each empties
@@ -9827,7 +10049,7 @@ return CooldownBars
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00066">
+				<Item class="ModuleScript" referent="RBX00068">
 					<Properties>
 						<string name="Name">DashFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Dashing (Config.Dash): C, B on a controller, or the Dash button on a phone. Your character
@@ -9948,7 +10170,7 @@ return DashFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00067">
+				<Item class="ModuleScript" referent="RBX00069">
 					<Properties>
 						<string name="Name">Effects</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback you can see and hear, on your own screen only: sounds, a burst of particles where a
@@ -10030,7 +10252,7 @@ return Effects
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00068">
+				<Item class="ModuleScript" referent="RBX0006A">
 					<Properties>
 						<string name="Name">FeedFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The tag-out feed, top right beside the menu (server/Streaks sends every tag-out to everyone; Config.Streak.feed):
@@ -10114,7 +10336,7 @@ return FeedFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00069">
+				<Item class="ModuleScript" referent="RBX0006B">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: your coins and level (with an XP bar) at the top left; the round's
@@ -10266,7 +10488,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006A">
+				<Item class="ModuleScript" referent="RBX0006C">
 					<Properties>
 						<string name="Name">KeyHints</string>
 						<ProtectedString name="Source"><![CDATA[-- What each key does, for players on a keyboard: a small guide low on the left, above the Show off
@@ -10323,7 +10545,7 @@ return KeyHints
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006B">
+				<Item class="ModuleScript" referent="RBX0006D">
 					<Properties>
 						<string name="Name">LobbyUi</string>
 						<ProtectedString name="Source"><![CDATA[-- The lobby, on your screen:
@@ -10421,7 +10643,7 @@ return LobbyUi
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX0006C">
+				<Item class="LocalScript" referent="RBX0006E">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- Starts the client: the whole UI (UIController). The client only shows things and asks the
@@ -10431,7 +10653,7 @@ UIController.start()
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006D">
+				<Item class="ModuleScript" referent="RBX0006F">
 					<Properties>
 						<string name="Name">NeedleView</string>
 						<ProtectedString name="Source"><![CDATA[-- A needle in 3D inside the UI: a ViewportFrame with the needle (shared/NeedleLook) lit and
@@ -10483,7 +10705,7 @@ return NeedleView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006E">
+				<Item class="ModuleScript" referent="RBX00070">
 					<Properties>
 						<string name="Name">PowerupFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Power-ups on your screen (server/Powerups decides; Remotes.Powerup says what you got):
@@ -10617,7 +10839,7 @@ return PowerupFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006F">
+				<Item class="ModuleScript" referent="RBX00071">
 					<Properties>
 						<string name="Name">PracticeFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The Time Trial on your screen (server/Practice decides everything): the Practice window (your
@@ -10781,7 +11003,7 @@ return PracticeFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00070">
+				<Item class="ModuleScript" referent="RBX00072">
 					<Properties>
 						<string name="Name">Results</string>
 						<ProtectedString name="Source"><![CDATA[-- The round's big moments on screen: the 3, 2, 1; CHEST OPENED! when you open one (coins, or a
@@ -10941,7 +11163,7 @@ return Results
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00071">
+				<Item class="ModuleScript" referent="RBX00073">
 					<Properties>
 						<string name="Name">Screens</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop and Inventory screens. The Shop sells cosmetics for Haystack Coins (needle skins,
@@ -11132,7 +11354,7 @@ return Screens
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00072">
+				<Item class="ModuleScript" referent="RBX00074">
 					<Properties>
 						<string name="Name">Screens2</string>
 						<ProtectedString name="Source"><![CDATA[-- The Quests, Leaderboard and Settings screens (Settings: sound and effects toggles, and Aim).
@@ -11329,7 +11551,7 @@ return Screens2
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00073">
+				<Item class="ModuleScript" referent="RBX00075">
 					<Properties>
 						<string name="Name">Screens3</string>
 						<ProtectedString name="Source"><![CDATA[-- The Collection screen: every needle you've found, by type, shown in 3D with its rarity, value
@@ -11466,7 +11688,7 @@ return Screens3
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00074">
+				<Item class="ModuleScript" referent="RBX00076">
 					<Properties>
 						<string name="Name">StreakFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Tag-outs and streaks on your screen (server/Combat decides them; Config.Streak):
@@ -11569,7 +11791,7 @@ return StreakFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00075">
+				<Item class="ModuleScript" referent="RBX00077">
 					<Properties>
 						<string name="Name">ThrowFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Throwing your needle on your screen (server/CombatThrow decides): Q, or the Throw button while
@@ -11687,7 +11909,7 @@ return ThrowFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00076">
+				<Item class="ModuleScript" referent="RBX00078">
 					<Properties>
 						<string name="Name">TradeScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Trade screen (server/TradeManager decides everything). Not trading: everyone in the server
@@ -11882,7 +12104,7 @@ return TradeScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00077">
+				<Item class="ModuleScript" referent="RBX00079">
 					<Properties>
 						<string name="Name">UIController</string>
 						<ProtectedString name="Source"><![CDATA[-- Puts the whole UI together: one ScreenGui with the HUD, the round moments (Results), and the
@@ -12041,7 +12263,7 @@ return UIController
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00078">
+				<Item class="ModuleScript" referent="RBX0007A">
 					<Properties>
 						<string name="Name">UiKit</string>
 						<ProtectedString name="Source"><![CDATA[-- The UI's look in one place: a clean, modern dark-glass style with warm gold accents, big
@@ -12181,7 +12403,7 @@ return UiKit
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00079">
+				<Item class="ModuleScript" referent="RBX0007B">
 					<Properties>
 						<string name="Name">ViewModel</string>
 						<ProtectedString name="Source"><![CDATA[-- First person: your forearm, your hand and your needle drawn in front of the camera. Only you
@@ -12342,7 +12564,7 @@ return ViewModel
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007A">
+				<Item class="ModuleScript" referent="RBX0007C">
 					<Properties>
 						<string name="Name">ViewModelMotion</string>
 						<ProtectedString name="Source"><![CDATA[-- The first-person view's sense of movement: breathing, the walk, the lag when you turn, the dip
@@ -12441,7 +12663,7 @@ return Motion
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007B">
+				<Item class="ModuleScript" referent="RBX0007D">
 					<Properties>
 						<string name="Name">ViewModelPose</string>
 						<ProtectedString name="Source"><![CDATA[-- The first-person view's placement maths and nothing else: where the arms, the hands' boxes and
@@ -12647,7 +12869,7 @@ return Pose
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0007C">
+				<Item class="ModuleScript" referent="RBX0007E">
 					<Properties>
 						<string name="Name">ViewModelRig</string>
 						<ProtectedString name="Source"><![CDATA[-- Builds the first-person view's parts and moves them: both forearms and sleeves
@@ -12823,9 +13045,32 @@ return ViewModelRig
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX0007D">
+	<Item class="Workspace" referent="RBX0007F">
 		<Properties>
 			<string name="Name">Workspace</string>
+		</Properties>
+		<Item class="Terrain" referent="RBX00080">
+			<Properties>
+				<string name="Name">Terrain</string>
+				<bool name="Decoration">true</bool>
+				<float name="GrassLength">0.4</float>
+			</Properties>
+		</Item>
+	</Item>
+	<Item class="Lighting" referent="RBX00081">
+		<Properties>
+			<string name="Name">Lighting</string>
+			<token name="Technology">4</token>
+			<token name="LightingStyle">0</token>
+			<bool name="PrioritizeLightingQuality">true</bool>
+			<bool name="GlobalShadows">true</bool>
+		</Properties>
+	</Item>
+	<Item class="MaterialService" referent="RBX00082">
+		<Properties>
+			<string name="Name">MaterialService</string>
+			<bool name="Use2022Materials">true</bool>
+			<bool name="Use2022MaterialsXml">true</bool>
 		</Properties>
 	</Item>
 </roblox>

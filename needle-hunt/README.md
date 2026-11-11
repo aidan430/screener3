@@ -621,3 +621,20 @@ The previews led to these fixes:
 - the attic roof slopes the right way
 - each game platform shows its count (0/10) and status above it
 - windows open a little lower, clear of the round banner
+
+## The realistic look
+
+**Lighting and sky** (`server/Look.luau`, presets in `shared/ConfigLook.luau`, merged in as
+`Config.Look`): every map names a look in `shared/Maps` (`look = "harvest"`), and the lobby uses
+`Maps.lobbyLook`. A look sets the sun (for Hayfield Farm, a height of 36 degrees so the maze
+corridors keep a lit strip), the sky, haze, clouds, glow, colour grade, sun rays and wind. Harder
+and Low Light rounds darken it. Looks: harvest (Hayfield Farm), gold, noon (the lobby), overcast,
+dusk, night, interior.
+
+**What the place file sets** (`default.project.json`; scripts can't): realistic lighting, the
+modern materials, and 3D grass on terrain. Check once in Studio: Lighting's LightingStyle reads
+Realistic, MaterialService has Use2022Materials ticked, and set the Studio graphics level to
+maximum (File, Studio Settings, Rendering, Editor Quality Level) to see it properly. The numbers
+were chosen on paper: tune them in Play mode.
+
+**Studs** are switched off for this look (`Config.Studs.on`): they need plain Plastic.

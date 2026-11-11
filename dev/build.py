@@ -215,7 +215,7 @@ def material_textures(tree: Node) -> None:
     def text(name: str) -> str:
         m = re.search(rf'^Config\.{name} = "([^"]*)"', config, re.M)
         return m.group(1) if m else ""
-    service = Node("MaterialService", "MaterialService")
+    service = tree.child("MaterialService") or Node("MaterialService", "MaterialService")  # one the project declares, or a new one
     service.props["Use2022Materials"] = True
     for prefix, name, override, token in TEXTURES:
         colour = text(f"{prefix}Texture")
@@ -233,7 +233,7 @@ def material_textures(tree: Node) -> None:
         if text(f"{prefix}Normal"):
             variant.props["NormalMap"] = {"content": text(f"{prefix}Normal")}
         service.children.append(variant)
-    if service.children:
+    if service.children and service not in tree.children:
         tree.children.append(service)
 
 
