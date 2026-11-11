@@ -471,6 +471,12 @@ Click or tap to poke the nearest player in front of you.
 - **Dash:** press C (B on a controller, or the Dash button on a phone) for a quick burst forward,
   along the way you're moving (or facing). Every 3 seconds; works anywhere (`Config.Dash`). The
   DASH bar under your hearts empties when you dash and refills; full and bright means ready.
+- **Crouch and slide:** Left Ctrl or V (L3 on a controller, the Crouch button on a phone). Standing
+  still or walking slowly, you crouch: half speed, lower, and your name tag is hidden. Running on
+  the ground, you slide for 0.6 s, fast at first (your walk speed + 14, never over 44) and easing
+  off, at most every 1.5 s. Press again, jump or dash to stand; you stay down if there's no room
+  overhead. Others see your legs fold. Numbers: `Config.Stance` (`shared/ConfigMoves.luau`); code:
+  `client/StanceFx`, `server/Stance`.
 - **Cooldowns:** a poke every 0.7 s (`Config.Combat.cooldown`), a throw every 4 s
   (`Config.Throw.cooldown`), and no pokes for 1.2 s while your needle is flying. The server enforces
   them; in a round, POKE and THROW bars under the DASH bar refill as each comes back.

@@ -91,6 +91,9 @@
         },
         "Announce": {
           "$className": "RemoteEvent"
+        },
+        "Stance": {
+          "$className": "RemoteEvent"
         }
       }
     },

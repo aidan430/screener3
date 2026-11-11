@@ -459,6 +459,22 @@ class BoxOpenings(unittest.TestCase):
             self.assertNotIn(never, code, "scripts can't write this: it would throw")
         self.assertIn("Look.apply(def.look", (SERVER / "RoundManager.luau").read_text())
 
+    def test_crouch_and_slide_are_bounded_and_wired(self):
+        moves = (SHARED / "ConfigMoves.luau").read_text()
+        slide = dict((k, float(v)) for k, v in re.findall(r"(\w+) = (-?[\d.]+)", re.search(r"slide = \{([^}]*)\}", moves).group(1)))
+        top_ac = float(re.search(r"maxSpeed = (\d+)", CONFIG).group(1))
+        self.assertLess(slide["top"], 0.8 * top_ac, "a slide never looks like a speed cheat")
+        self.assertLess(slide["seconds"], slide["cooldown"])
+        self.assertLess(float(re.search(r"crouchSpeed = ([\d.]+)", moves).group(1)), 1)
+        server = (SERVER / "Stance.luau").read_text()
+        self.assertIn('stance ~= "stand" and stance ~= "crouch" and stance ~= "slide"', server, "only the three stances")
+        self.assertIn("S.server.rate", server, "the remote can't be spammed")
+        client = (ROOT / "src" / "client" / "StanceFx.luau").read_text()
+        for key in ("LeftControl", "ButtonL3", "button.Activated"):
+            self.assertIn(key, client, "keyboard, gamepad and touch")
+        self.assertIn("Spherecast", client, "you only stand where there is room")
+        self.assertIn('"Stance"', (ROOT / "default.project.json").read_text())
+
     def test_start_up_never_waits_on_one_system(self):
         main = (SERVER / "Main.server.luau").read_text()
         self.assertIn("waited < 5", main, "a slow start-up step can't stop rounds or the Practice Yard starting")

@@ -20,6 +20,7 @@ local BoxManager = require(script.Parent.BoxManager)
 local Combat = require(script.Parent.Combat)
 local CombatThrow = require(script.Parent.CombatThrow)
 local Dash = require(script.Parent.Dash)
+local Stance = require(script.Parent.Stance)
 local OneOfOne = require(script.Parent.OneOfOne)
 local TradeManager = require(script.Parent.TradeManager)
 local Practice = require(script.Parent.Practice)
@@ -49,6 +50,7 @@ for _, step in ipairs({
 	{ "Combat", Combat.init },
 	{ "Throw", CombatThrow.init },
 	{ "Dash", Dash.init },
+	{ "Stance", Stance.init },
 	{ "OneOfOne", OneOfOne.init },
 	{ "Trading", TradeManager.init },
 	{ "Practice", Practice.init },

@@ -39,6 +39,7 @@ local function dash()
 	end
 	dir = Vector3.new(dir.X, 0, dir.Z).Unit
 	last = os.clock()
+	require(script.Parent.StanceFx).stand() -- a dash stands you up
 	-- a push along the ground for a moment; gravity and jumping carry on as normal
 	local attachment = Instance.new("Attachment")
 	attachment.Parent = root

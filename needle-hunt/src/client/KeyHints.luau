@@ -13,6 +13,7 @@ local KEYS = {
 	{ "Click", "Poke with your needle" },
 	{ "Q", "Throw your needle" },
 	{ "C", "Dash" },
+	{ "Ctrl or V", "Crouch; slide if running" },
 	{ "Hold E", "Open a chest" },
 	{ "F", "Inspect your needle" },
 	{ "Space", "Jump" },
