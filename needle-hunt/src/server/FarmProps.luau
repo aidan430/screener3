@@ -152,7 +152,7 @@ function FarmProps.windmill(ctx, x, z)
 		local weld = Instance.new("WeldConstraint")
 		weld.Part0, weld.Part1, weld.Parent = hub, sail, sail
 	end
-	TweenService:Create(hub, TweenInfo.new(12, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { CFrame = hub.CFrame * CFrame.Angles(math.pi * 2 - 0.001, 0, 0) }):Play()
+	MapKit.spin(hub, 12)
 	MapKit.spotsOn(ctx, tower, 0, 5)
 	return tower
 end

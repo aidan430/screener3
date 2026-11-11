@@ -29,22 +29,22 @@ local function scatter(ctx, maze, n, margin, fn)
 end
 
 local QUARTERS = {
-	{ colour = { 236, 196, 60 }, style = "corn", x = -Q, z = -Q, landmark = "silo", props = function(ctx, maze, room)
+	{ colour = { 236, 196, 60 }, icon = "corn", style = "corn", x = -Q, z = -Q, landmark = "silo", props = function(ctx, maze, room)
 		FarmProps.cart(ctx, room.x, room.z, "hay")
 		FarmProps.scarecrow(ctx, room.x + 6, room.z + 5, { 60, 120, 140 })
 		scatter(ctx, maze, 6, 3, function(x, z) FarmProps.crowPost(ctx, x, z) end)
 		scatter(ctx, maze, 8, 2.5, function(x, z) MapKit.bale(ctx, x, 0, z, ctx.rng:NextNumber() * 3) end)
 	end },
-	{ colour = { 232, 128, 40 }, style = "vines", x = Q, z = -Q, landmark = "lookout", props = function(ctx, maze, room)
+	{ colour = { 232, 128, 40 }, icon = "pumpkin", style = "vines", x = Q, z = -Q, landmark = "lookout", props = function(ctx, maze, room)
 		FarmProps.patch(ctx, room.x, room.z, 9, 7)
 		FarmProps.cart(ctx, room.x + 6, room.z - 6, "pumpkins")
 		scatter(ctx, maze, 18, 2, function(x, z) FarmProps.pumpkin(ctx, x, z) end)
 	end },
-	{ colour = { 170, 44, 40 }, style = "hedge", x = -Q, z = Q, landmark = "barnLoft", props = function(ctx, maze, room)
+	{ colour = { 170, 44, 40 }, icon = "apple", style = "hedge", x = -Q, z = Q, landmark = "barnLoft", props = function(ctx, maze, room)
 		FarmProps.ciderPress(ctx, room.x, room.z)
 		scatter(ctx, maze, 10, 3, function(x, z) FarmProps.appleCrates(ctx, x, z) end)
 	end },
-	{ colour = { 70, 110, 170 }, style = "stonehedge", x = Q, z = Q, landmark = "windmill", props = function(ctx, maze, room)
+	{ colour = { 70, 110, 170 }, icon = "mill", style = "stonehedge", x = Q, z = Q, landmark = "windmill", props = function(ctx, maze, room)
 		for _ = 1, 5 do
 			FarmProps.flourSack(ctx, room.x + ctx.rng:NextNumber(-7, 7), room.z + ctx.rng:NextNumber(-7, 7))
 		end
@@ -72,7 +72,7 @@ function MapsBig.bigfarm(ctx)
 		local rooms = maze.rooms
 		table.insert(ctx.landmarks, Landmarks[q.landmark](ctx, rooms[1].x, rooms[1].z))
 		q.props(ctx, maze, rooms[2] or rooms[1])
-		FarmDress.gates(ctx, maze, q.colour) -- a frame, sign and lantern at every gate, in the quarter's colour
+		FarmDress.gates(ctx, maze, q.colour, q.icon) -- a frame, sign and lantern at every gate, in the quarter's colour
 		FarmDress.balloon(ctx, rooms[1].x, rooms[1].z, q.colour) -- and a balloon high over its landmark
 		for _, key in ipairs({ "cells", "deadEnds" }) do
 			table.move(maze[key], 1, #maze[key], #all[key] + 1, all[key])

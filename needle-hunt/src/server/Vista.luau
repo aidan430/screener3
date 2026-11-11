@@ -62,10 +62,28 @@ function Vista.build(ctx)
 		for _, leg in ipairs({ { -1.6, -1.6 }, { 1.6, -1.6 }, { -1.6, 1.6 }, { 1.6, 1.6 } }) do
 			box(ctx, "PumpLeg", Vector3.new(0.4, 18, 0.4), p[1] + leg[1], 9, p[2] + leg[2], { 96, 100, 104 }, "Metal")
 		end
-		for i = 0, 5 do
-			deco(ctx, { Name = "PumpBlade", Size = Vector3.new(0.15, 6.4, 0.7), CFrame = CFrame.new(MapKit.at(ctx, p[1] - 2, 18.5, p[2])) * CFrame.Angles(math.rad(i * 30), 0, 0), Color = { 150, 156, 160 }, Material = "Metal" })
+		local hub = deco(ctx, { Name = "PumpHub", Size = Vector3.new(0.8, 0.8, 0.8), CFrame = CFrame.new(MapKit.at(ctx, p[1] - 2, 18.5, p[2])), Color = { 96, 100, 104 }, Material = "Metal" })
+		for i = 0, 5 do -- the wheel: six full-width blades welded to a hub that turns
+			MapKit.weld(hub, deco(ctx, { Name = "PumpBlade", Size = Vector3.new(0.15, 6.4, 0.7), CFrame = hub.CFrame * CFrame.Angles(math.rad(i * 30), 0, 0), Color = { 150, 156, 160 }, Material = "Metal" }))
 		end
+		MapKit.spin(hub, 6)
 		box(ctx, "PumpVane", Vector3.new(4, 1.6, 0.15), p[1] + 2, 18.5, p[2], { 128, 44, 38 }, "Metal")
+	end
+	-- mist lying on the pond
+	local mist = Instance.new("ParticleEmitter")
+	mist.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	mist.Rate, mist.Lifetime, mist.Speed, mist.SpreadAngle = 1.5, NumberRange.new(12, 18), NumberRange.new(0.2, 0.5), Vector2.new(180, 180)
+	mist.Size = NumberSequence.new(18, 30)
+	mist.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.92), NumberSequenceKeypoint.new(1, 1) })
+	mist.Color, mist.Drag = ColorSequence.new(Color3.fromRGB(226, 232, 236)), 1
+	mist.Parent = deco(ctx, { Name = "PondMist", Size = Vector3.new(40, 2, 40), CFrame = CFrame.new(MapKit.at(ctx, -292, 2, 0)), Transparency = 1 })
+	-- three birds circling high over the farm
+	for i = 1, 3 do
+		local radius = 100 + i * 18
+		local hub = deco(ctx, { Name = "BirdHub", Size = Vector3.one, CFrame = CFrame.new(MapKit.at(ctx, 0, 84 + i * 6, 0)) * CFrame.Angles(0, i * 2.1, 0), Transparency = 1 })
+		MapKit.weld(hub, deco(ctx, { Name = "Bird", Size = Vector3.new(0.5, 0.4, 1.6), CFrame = hub.CFrame * CFrame.new(radius, 0, 0), Color = { 40, 40, 44 }, Material = "SmoothPlastic" }))
+		MapKit.weld(hub, deco(ctx, { Name = "BirdWings", Size = Vector3.new(4.4, 0.12, 0.8), CFrame = hub.CFrame * CFrame.new(radius, 0.1, 0.1), Color = { 50, 50, 56 }, Material = "SmoothPlastic" }))
+		MapKit.spin(hub, 46 + i * 9, "y")
 	end
 	-- the pond's jetty, down the -X lane (server/Landscape fills the water)
 	for i = 0, 7 do

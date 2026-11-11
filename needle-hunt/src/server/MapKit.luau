@@ -187,6 +187,28 @@ function MapKit.tree(ctx, x, z, height, leaf)
 	end
 end
 
+-- Turns an anchored part round its own X axis (or Y: axis = "y") for ever, once every `seconds`;
+-- anything welded to it turns too. Done as a chain of third-turns: a tween takes the short way
+-- round, so one tween of a whole turn would not move at all.
+function MapKit.spin(part, seconds, axis)
+	local third = if axis == "y" then CFrame.Angles(0, math.pi * 2 / 3, 0) else CFrame.Angles(math.pi * 2 / 3, 0, 0)
+	local function step()
+		if part.Parent then
+			local tween = TweenService:Create(part, TweenInfo.new(seconds / 3, Enum.EasingStyle.Linear), { CFrame = part.CFrame * third })
+			tween.Completed:Connect(step)
+			tween:Play()
+		end
+	end
+	step()
+end
+
+-- Welds an unanchored `part` to `hub`, so it follows when the hub is moved or spun.
+function MapKit.weld(hub, part)
+	part.Anchored, part.Massless = false, true
+	local w = Instance.new("WeldConstraint")
+	w.Part0, w.Part1, w.Parent = hub, part, part
+end
+
 -- A lamp: a small glowing block with a warm light.
 function MapKit.lamp(ctx, pos, colour, range)
 	local p = MapKit.part(ctx, { Name = "Lamp", Size = Vector3.new(0.8, 1.2, 0.8), CFrame = CFrame.new(pos), Color = colour or { 255, 200, 120 }, Material = "Neon", CanCollide = false })

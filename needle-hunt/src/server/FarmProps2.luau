@@ -14,10 +14,7 @@ local function p(ctx, props)
 	return MapKit.part(ctx, props)
 end
 
-local function spin(part, seconds, axis) -- turns forever, slowly (anything welded to it turns too)
-	local turn = if axis == "y" then CFrame.Angles(0, math.pi * 2 - 0.001, 0) else CFrame.Angles(math.pi * 2 - 0.001, 0, 0)
-	TweenService:Create(part, TweenInfo.new(seconds, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { CFrame = part.CFrame * turn }):Play()
-end
+local spin = MapKit.spin -- turns forever, slowly (anything welded to it turns too)
 
 local function weld(hub, part)
 	part.Anchored = false

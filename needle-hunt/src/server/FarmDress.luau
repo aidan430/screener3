@@ -1,5 +1,6 @@
 -- Hayfield Farm's finishing touches (server/MapsBig calls these; all to look at only):
---   gates    a timber frame over every gate in a maze's outside wall, with a sign plank and a
+--   gates    a timber frame over every gate in a maze's outside wall, with a sign plank (its
+--            quarter's picture on both faces) and a
 --            pennant in the quarter's colour and a warm lantern, so you know which quarter you're
 --            walking into
 --   balloon  a balloon on a string high over a landmark, in its quarter's colour: a bearing from
@@ -13,7 +14,32 @@ local FarmDress = {}
 local deco = WallKit.deco
 local TIMBER = { 104, 88, 70 }
 
-function FarmDress.gates(ctx, maze, colour)
+-- A quarter's picture on a gate sign, in three small pieces: a corn cob, a pumpkin, an apple or
+-- a windmill's sails. `face` is the sign's frame, shifted to stand just proud of one side.
+local function icon(ctx, face, kind)
+	local function bit(shape, size, x, y, colour, turn)
+		deco(ctx, { Name = "SignIcon", Shape = shape, Size = size, CFrame = face * CFrame.new(x, y, 0) * CFrame.Angles(0, 0, math.rad(turn or 0)), Color = colour, Material = "SmoothPlastic" }, false, true)
+	end
+	if kind == "corn" then
+		bit("Block", Vector3.new(0.6, 1.5, 0.3), 0, 0, { 250, 214, 70 }, 20)
+		bit("Block", Vector3.new(0.3, 1.2, 0.2), -0.45, -0.2, { 96, 140, 60 }, 50)
+		bit("Block", Vector3.new(0.3, 1.2, 0.2), 0.45, -0.2, { 96, 140, 60 }, -10)
+	elseif kind == "pumpkin" then
+		bit("Ball", Vector3.new(1.5, 1.2, 0.5), 0, -0.1, { 232, 128, 40 })
+		bit("Block", Vector3.new(0.2, 0.5, 0.2), 0, 0.65, { 80, 110, 50 })
+		bit("Block", Vector3.new(0.12, 1.1, 0.52), 0, -0.1, { 196, 100, 30 })
+	elseif kind == "apple" then
+		bit("Ball", Vector3.new(1.3, 1.3, 0.5), 0, -0.1, { 200, 40, 44 })
+		bit("Block", Vector3.new(0.14, 0.5, 0.14), 0, 0.7, { 90, 62, 40 }, 10)
+		bit("Block", Vector3.new(0.6, 0.25, 0.14), 0.35, 0.8, { 90, 150, 60 }, 20)
+	else -- the mill
+		bit("Block", Vector3.new(0.3, 1.9, 0.2), 0, 0, { 240, 236, 224 }, 45)
+		bit("Block", Vector3.new(0.3, 1.9, 0.2), 0, 0, { 240, 236, 224 }, -45)
+		bit("Block", Vector3.new(0.4, 0.4, 0.3), 0, 0, { 90, 70, 54 })
+	end
+end
+
+function FarmDress.gates(ctx, maze, colour, picture)
 	for _, g in ipairs(maze.gates or {}) do
 		-- the gate's frame: X along the wall line, Z through the gate
 		local cf = CFrame.new(MapKit.at(ctx, g.x, 0, g.z)) * CFrame.Angles(0, if g.alongX then 0 else math.rad(90), 0)
@@ -23,6 +49,9 @@ function FarmDress.gates(ctx, maze, colour)
 		end
 		deco(ctx, { Name = "GateLintel", Size = Vector3.new(14.6, 0.9, 0.7), CFrame = cf * CFrame.new(0, 11.6, 0), Color = WallKit.tone(ctx, TIMBER, 0.08), Material = "Wood" }, true)
 		deco(ctx, { Name = "GateSign", Size = Vector3.new(5, 2.2, 0.3), CFrame = cf * CFrame.new(0, 10, 0), Color = { colour[1] * 0.9, colour[2] * 0.9, colour[3] * 0.9 }, Material = "WoodPlanks" })
+		for _, side in ipairs({ -1, 1 }) do -- the quarter's picture on both faces
+			icon(ctx, cf * CFrame.new(0, 10, side * 0.25), picture)
+		end
 		deco(ctx, { Name = "PennantPole", Size = Vector3.new(0.2, 2.4, 0.2), CFrame = cf * CFrame.new(6.6, 13.2, 0), Color = TIMBER, Material = "Wood" }, false, true)
 		deco(ctx, { Name = "Pennant", Size = Vector3.new(2.2, 1.2, 0.08), CFrame = cf * CFrame.new(5.4, 13.7, 0), Color = colour, Material = "Fabric" }, false, true)
 		local lamp = MapKit.lamp(ctx, (cf * CFrame.new(-6.6, 9.2, 0.9)).Position, { 255, 196, 120 }, 14)

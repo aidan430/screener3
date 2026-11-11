@@ -548,6 +548,15 @@ class BoxOpenings(unittest.TestCase):
         for path in re.findall(r'"(rbxasset://sounds/[^"]+)"', CONFIG):
             self.assertIn(path.rsplit("/", 1)[1], ("action_get_up.mp3", "volume_slider.ogg", "action_jump.mp3", "action_jump_land.mp3"), "only sounds that ship with Roblox")
 
+    def test_spinning_props_really_turn(self):
+        kit = (SERVER / "MapKit.luau").read_text()
+        self.assertIn("math.pi * 2 / 3", kit, "a third of a turn at a time: a tween of a whole turn would not move")
+        for name in ("FarmProps.luau", "FarmProps2.luau", "Vista.luau"):
+            code = (SERVER / name).read_text()
+            self.assertNotIn("math.pi * 2 - 0.001", code, name + ": a whole-turn tween stands still")
+            self.assertIn("spin", code)
+        self.assertIn("icon(ctx", (SERVER / "FarmDress.luau").read_text(), "gate signs carry their quarter's picture")
+
     def test_start_up_never_waits_on_one_system(self):
         main = (SERVER / "Main.server.luau").read_text()
         self.assertIn("waited < 5", main, "a slow start-up step can't stop rounds or the Practice Yard starting")

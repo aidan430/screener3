@@ -691,7 +691,9 @@ red, mill blue) and a lantern; a balloon in the same colour floats high over eac
 gold one over the Hay Tower; dust motes drift over the roads and yards and chaff over the corn.
 Beyond the hedge, down the four lanes: a red barn with twin silos, a farmhouse with lit windows
 and chimney smoke, three wind pumps, a pond with a jetty, fences, round bales and clumps of trees
-(built once per server; nobody can reach them).
+(built once per server; nobody can reach them). The wind pumps turn, mist lies on the pond and
+three birds circle high over the farm. Gate signs carry their quarter's picture (a corn cob, a
+pumpkin, an apple, a mill's sails). Anything that spins uses `MapKit.spin`.
 
 **Detail on weak devices** (`client/LookFx.luau`, `Config.Look.Tiers`): phones and tablets start
 on "mid" detail (the arena's smallest dressing is removed on that device); if the frame rate stays
