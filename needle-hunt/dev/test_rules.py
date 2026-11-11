@@ -461,22 +461,70 @@ class BoxOpenings(unittest.TestCase):
         self.assertNotIn("Flicker", aura, "the aura is steady: nothing flashes")
         self.assertIn("Config.Aura = {", CONFIG)
 
+    @staticmethod
+    def _anim(text: str, name: str):
+        """An animation's length and key times, from a rig module's text."""
+        block = text[text.index(f"\t\t{name} = {{"):]
+        block = block[: block.index("\n\t\t} },")]
+        return float(re.search(r"length = ([\d.]+)", block).group(1)), [float(t) for t in re.findall(r"\{ t = ([\d.]+),", block)], block
+
     def test_first_person_rig_is_complete_and_wired(self):
         fp = (SHARED / "FirstPerson.luau").read_text()
         for name in ("inspect", "jab", "throw"):
-            block = fp[fp.index(f"\t\t{name} = {{"):]
-            block = block[: block.index("\n\t\t} },")]
-            length = float(re.search(r"length = ([\d.]+)", block).group(1))
-            times = [float(t) for t in re.findall(r"\{ t = ([\d.]+),", block)]
+            length, times, block = self._anim(fp, name)
             self.assertEqual(times[0], 0, name + " starts at the hold pose")
             self.assertAlmostEqual(times[-1], length, msg=name + " ends at its length")
             self.assertEqual(times, sorted(times), name + " keys in order")
+            for row in re.findall(r"(?:right|left|needle) = \{([^}]*)\}", block):
+                self.assertEqual(len(row.split(",")), 6, name + ": every row is x, y, z, rx, ry, rz")
+        self.assertLessEqual(self._anim(fp, "jab")[0], table("Combat")["cooldown"], "a jab is over before the next poke")
         view = (ROOT / "src" / "client" / "ViewModel.luau").read_text()
         self.assertIn('GetAttribute("Key")', view)
         self.assertIn('SetAttribute("Key"', (SERVER / "Combat.luau").read_text(), "the tool says which needle it is")
         self.assertIn('ViewModel.play("inspect")', (ROOT / "src" / "client" / "CombatFx.luau").read_text())
         self.assertIn('ViewModel.play("throw")', (ROOT / "src" / "client" / "ThrowFx.luau").read_text())
         self.assertIn("ViewModel.start()", (ROOT / "src" / "client" / "UIController.luau").read_text())
+
+    def test_first_person_hand_grip_motion_and_extra_animations(self):
+        fp, rig = (SHARED / "FirstPerson.luau").read_text(), (SHARED / "FirstPersonRig.luau").read_text()
+        client = ROOT / "src" / "client"
+        view, parts, motion = [(client / f"ViewModel{n}.luau").read_text() for n in ("", "Rig", "Motion")]
+        for name in ("equip", "catch"):  # the animations the rig tool doesn't make
+            length, times, _ = self._anim(rig, name)
+            self.assertEqual(times[0], 0)
+            self.assertAlmostEqual(times[-1], length, msg=name + " ends at its length")
+            self.assertEqual(times, sorted(times), name + " keys in order")
+            self.assertIn(f'ViewModel.play("{name}")', view)
+        self.assertIn("Pose.merge({ FP.anims, Rig.anims })", view, "animations come from a list of modules")
+        # a hand: a palm, a thumb and four fingers, each box with a size and a place, the fingers able to open
+        hand = rig[rig.index("\thand = {"):rig.index("\tleft = {")]
+        boxes = [dict(re.findall(r'(\w+) = ("[^"]*"|\{[^{}]*\})', line)) for line in hand.splitlines() if line.strip().startswith("{ name")]
+        names = {b["name"].strip('"') for b in boxes}
+        self.assertTrue({"Palm", "Thumb1", "Thumb2", "Index1", "Middle1", "Ring1", "Pinky1"} <= names, "a palm, a thumb and four fingers")
+        for b in boxes:
+            self.assertTrue({"size", "pos", "rot", "colour"} <= set(b), f"{b['name']} has a size, a place and a colour")
+            self.assertIn(b["colour"], ('"skin"', '"sleeve"'))
+        self.assertGreaterEqual(sum("open = {" in line for line in hand.splitlines()), 8, "the fingers and thumb open when the needle is away")
+        self.assertIn('colour = "sleeve"', rig[rig.index("\tcuff = {"):rig.index("\thand = {")], "a sleeve cuff")
+        # the grip rule and the framing
+        num = lambda key, text=rig: float(re.search(rf"\b{key} = (-?[\d.]+)", text).group(1))
+        self.assertTrue(0 < num("back") < num("minLength") <= num("maxLength"), "gripped near its back end; lengths clamped")
+        self.assertTrue(60 <= num("refFov") <= 100 and num("pivot") > 0)
+        self.assertLess(num("release"), self._anim(fp, "throw")[0], "the needle leaves the hand during the throw")
+        self.assertGreater(num("near"), 0)
+        for layer in ("breathe", "walk", "turn", "land", "air", "away", "wall"):
+            self.assertRegex(rig, rf"\n\t\t{layer} = \{{", f"motion.{layer}")
+        # wired: one BulkMoveTo a frame, parts nothing can touch, a wall ray, the first-person lock, the thrown needle hidden
+        self.assertEqual((view + parts + motion).count("workspace:BulkMoveTo("), 1, "one BulkMoveTo call moves the view")
+        self.assertIn("part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch, part.CastShadow = true, false, false, false, false", parts)
+        self.assertIn("workspace:Raycast", motion)
+        self.assertIn("LockFirstPerson", view)
+        for attribute in ('"InRound"', '"Practicing"', '"NeedleAway"'):
+            self.assertIn(attribute, view)
+        self.assertIn("camera.FieldOfView", view, "the framing follows the field of view")
+        for text in (view, parts, motion):  # every tunable number is data: the code has only 0 to 3, the sleeve guards and named constants
+            code = "\n".join(line.split("--")[0] for line in text.splitlines() if not re.match(r"\s*local [A-Z_]+ = ", line))
+            self.assertEqual(sorted(set(re.findall(r"(?<![\w.\"])\d+\.?\d*", code)) - {"0", "1", "2", "3", "0.01", "0.98", "0.001"}), [], "numbers belong in FirstPerson or FirstPersonRig")
 
     def test_series_skins_only_from_their_box(self):
         series = {x["series"] for x in SKINS if "series" in x}

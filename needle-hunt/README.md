@@ -477,11 +477,32 @@ Click or tap to poke the nearest player in front of you.
 - **Inspect:** press F (or the Inspect button) with the Needle out: it lifts and turns in your
   hand, and everyone sees it. Works in the lobby too.
 - If the needle points the wrong way in your hand, turn it with `Config.NeedleTool.grip`.
-- **First person:** zoomed all the way in, you see your own arms holding the needle
-  (`client/ViewModel`), posed and animated from `shared/FirstPerson.luau`: the hold, the inspect,
-  the jab and the throw. The arms take your character's skin colour. Everyone else still sees the
-  Needle tool in your hand. Design a new rig in the Needle Hand Rig artifact and save it to its
-  shelf (or paste its Luau over `shared/FirstPerson.luau`).
+- **First person:** in a round and in the Practice Yard the camera is locked to first person (the
+  lobby keeps the usual camera; zoom all the way in there to see it too). You see your own forearm
+  and sleeve cuff, and a hand with a palm, a thumb and fingers closed in a fist round the needle near
+  its eye end, thumb on top, the point aimed towards the reticle (`client/ViewModel`). The whole view
+  is drawn small and close to the camera (`view.scale` in `shared/FirstPersonRig.luau`) so it stays
+  out of walls. Every needle is held the same
+  distance from its back end and sized so a pin isn't a speck and a knitting needle stays on
+  screen. The view breathes, bobs as you walk, lags a little when you turn, dips when you land,
+  pulls the needle in and stands it up against a wall, and keeps its framing at any field of view.
+  A poke is a quick stab at the reticle; a throw winds back and lets go, the hand stays empty until
+  the needle is back and then catches it; Inspect brings it in for a look. The arm takes your
+  character's skin colour. Everyone else still sees the Needle tool in your hand.
+  - `shared/FirstPerson.luau`: the hold pose, the arm's size, the bob and sway amounts and the
+    inspect, jab and throw. Design a new rig in the Needle Hand Rig artifact and save it to its
+    shelf (or paste its Luau over this file).
+  - `shared/FirstPersonRig.luau`: everything that tool doesn't know, as data: the wrist, the
+    hand's boxes, the grip rule, the motion layers, and the equip and catch animations.
+  - `client/ViewModelPose` is the placement maths, `ViewModelRig` builds and moves the parts (one
+    `BulkMoveTo` a frame), `ViewModelMotion` works out how you're moving.
+  - **Preview outside Studio:** `node dev/preview/shoot_viewmodel.js [rigDir] [outDir]` renders the
+    standard sheets (the hold with five needles, four fields of view, each animation, the motion
+    extremes, walls, the hand on its own) for a folder holding the two rig files. It reads the real
+    modules and builds the real needles with `lupa` (`dev/preview/viewmodel_data.py`), checks its
+    JavaScript copy of the maths (`dev/preview/viewmodel_pose.js`) against `client/ViewModelPose`
+    itself, and runs the real view for a few seconds with a stand-in player, so what it draws is
+    what the game places. Needs playwright and a `three.min.js` (r128) next to `viewmodel.html`.
 
 All the numbers are in `Config.Combat`.
 

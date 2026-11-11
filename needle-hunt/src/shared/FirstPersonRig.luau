@@ -21,13 +21,15 @@ return {
 	-- camera's axis by pivot * (1 - tan(refFov / 2) / tan(fov / 2)), which looks exactly like
 	-- scaling it by tan(fov / 2) about a point `pivot` studs ahead: keep pivot near the grip's depth.
 	-- firstPerson: the view shows when the camera is within this many studs of your head.
-	view = { refFov = 70, pivot = 1.3, firstPerson = 1.5 },
+	-- scale: the whole view is drawn this much smaller and that much nearer the camera. It looks
+	-- the same on screen but stays out of walls: every other number here is at full size.
+	view = { refFov = 70, pivot = 1.3, firstPerson = 1.5, scale = 0.4 },
 	-- skin: the colour when your character has none. sleeveWidth: the sleeve is this much wider
 	-- than the arm (FirstPerson.arm.size).
 	look = { skin = { 234, 184, 146 }, skinMaterial = "SmoothPlastic", sleeveMaterial = "Fabric", sleeveWidth = 1.08 },
 	-- The hand hangs from the wrist, the wrist from the forearm's hand end. FirstPerson.pose.needle
 	-- is in the hand's frame, so the needle follows the wrist.
-	wrist = { pos = { 0, 0, 0 }, rot = { 15, 0, -15 } },
+	wrist = { pos = { 0, 0, 0 }, rot = { 0, 0, -40 } },
 	-- Boxes that stay on the forearm, from its hand end (+Y runs up the arm).
 	--   colour: "skin", "sleeve" (FirstPerson.arm.sleeveColour) or { r, g, b }; shade multiplies it
 	--   (under 1 darker, over 1 lighter); shape = "Ball" or "Cylinder" (along X) if not a block.
@@ -46,8 +48,8 @@ return {
 		{ name = "Ring2", colour = "skin", shade = 0.95, size = { 0.094, 0.2, 0.105 }, pos = { -0.049, -0.323, -0.066 }, rot = { 190, 0, 0 }, open = { pos = { -0.049, -0.644, -0.031 }, rot = { 45, 0, 0 } } },
 		{ name = "Pinky1", colour = "skin", shade = 0.95, size = { 0.094, 0.2, 0.115 }, pos = { -0.148, -0.409, 0.006 }, rot = { 82, 0, 0 }, open = { pos = { -0.148, -0.489, 0.071 }, rot = { 20, 0, 0 } } },
 		{ name = "Pinky2", colour = "skin", shade = 0.9, size = { 0.094, 0.18, 0.105 }, pos = { -0.148, -0.33, -0.048 }, rot = { 190, 0, 0 }, open = { pos = { -0.148, -0.618, -0.017 }, rot = { 45, 0, 0 } } },
-		{ name = "Thumb1", colour = "skin", shade = 0.97, size = { 0.12, 0.25, 0.13 }, pos = { 0.245, -0.13, -0.03 }, rot = { 0, 0, 14 }, open = { pos = { 0.27, -0.12, -0.03 }, rot = { 0, 0, 35 } } },
-		{ name = "Thumb2", colour = "skin", shade = 0.92, size = { 0.105, 0.21, 0.11 }, pos = { 0.285, -0.335, -0.03 }, rot = { 0, 0, -6 }, open = { pos = { 0.375, -0.29, -0.03 }, rot = { 0, 0, 30 } } },
+		{ name = "Thumb1", colour = "skin", shade = 0.97, size = { 0.12, 0.2, 0.12 }, pos = { 0.21, -0.3, -0.03 }, rot = { 0, 0, -40 }, open = { pos = { 0.27, -0.12, -0.03 }, rot = { 0, 0, 35 } } },
+		{ name = "Thumb2", colour = "skin", shade = 0.92, size = { 0.105, 0.17, 0.105 }, pos = { 0.33, -0.4, -0.03 }, rot = { 0, 0, -30 }, open = { pos = { 0.375, -0.29, -0.03 }, rot = { 0, 0, 30 } } },
 	},
 	-- The left hand holds nothing: how open it is (0 a fist, 1 open). Its hold (FirstPerson.pose.left)
 	-- is the right's mirror image 1.3 studs lower, out of view: lift it with `left` rows.
@@ -55,7 +57,7 @@ return {
 	-- The grip rule, for every needle whatever its shape: the point `back` studs along from the
 	-- needle's back end sits at FirstPerson.pose.needle in the hand, and the needle is scaled so
 	-- its whole length is between minLength and maxLength.
-	grip = { back = 0.3, minLength = 1.3, maxLength = 1.8 },
+	grip = { back = 0.45, minLength = 1.7, maxLength = 2.1 },
 	-- A throw: the needle leaves the hand `release` seconds into FirstPerson's throw. The hand is
 	-- empty until the server brings it back, or `wait` seconds on if the server never took the throw.
 	throw = { release = 0.24, wait = 0.6 },
@@ -81,7 +83,7 @@ return {
 		-- a wall: one ray from the camera to where the needle's point would be. Weight 0 when the
 		-- wall is `margin` beyond the point, 1 when it is `near` studs from the camera; in at
 		-- rateIn a second, out at rateOut. The rows pull the hand in and stand the needle up.
-		wall = { margin = 0.6, near = 0.6, rateIn = 28, rateOut = 9, right = { -0.33, -0.62, -0.12, 80, 0, 0 } },
+		wall = { margin = 0.4, near = 0.5, rateIn = 28, rateOut = 9, right = { 0.15, -0.3, 0.6, 0, 0, 0 }, wrist = { 0, 0, 0, 0, 0, 70 } },
 	},
 	-- Animations, like FirstPerson.anims (keys may also carry a wrist row). ViewModel plays
 	-- equip when the view comes up and catch when a thrown needle is back in the hand.

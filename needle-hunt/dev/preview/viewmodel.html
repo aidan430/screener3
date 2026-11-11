@@ -1,0 +1,234 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>First-person view preview</title>
+<style>html,body{margin:0;background:#111;color:#ddd;font:14px sans-serif}canvas{display:block}</style></head>
+<body>
+<script src="three.min.js"></script>
+<script src="viewmodel_data.js"></script>
+<script src="viewmodel_pose.js"></script>
+<script>
+// The first-person view as the game places it, drawn with three.js r128 over a simple round:
+// ground, a hedge corridor, sky, another player 14 studs ahead, and the HUD that matters for
+// framing (hearts at 16,104; the reticle at the middle). 1280 x 720, any field of view.
+//   placement: viewmodel_pose.js (the mirror of client/ViewModelPose.luau); this page only does
+//   what client/ViewModelRig.luau does with Instances: one box per part, at camera * fit * place.
+//   data: viewmodel_data.js (window.VM_DATA), written by viewmodel_data.py from the real modules.
+// Open it as viewmodel.html?needle=sewing:steel&fov=70&anim=jab&t=0.08 for one frame, or let
+// shoot_viewmodel.js call VM.sheet(name) for the standard sheets.
+const D = window.VM_DATA, FP = D.fp, Rig = D.rig, W = 1280, H = 720;
+const list = v => Array.isArray(v) ? v : [];
+const CUFF = list(Rig.cuff), HAND = list(Rig.hand), ANIMS = Pose.merge([FP.anims || {}, Rig.anims || {}]);
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H); renderer.outputEncoding = THREE.sRGBEncoding; renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+const lin = c => new THREE.Color(c[0] / 255, c[1] / 255, c[2] / 255).convertSRGBToLinear();
+const EYE = new THREE.Vector3(0, 4.75, 0); // a Roblox character's eye height
+
+/* ---------- the round behind the view ---------- */
+function backdrop(scene, wallAt) {
+  scene.background = new THREE.Color(0x9cc8f0).convertSRGBToLinear();
+  scene.fog = new THREE.Fog(scene.background, 90, 260);
+  scene.add(new THREE.HemisphereLight(0xe8f2ff, 0x8a8468, 0.95));
+  const sun = new THREE.DirectionalLight(0xfff2d8, 0.9); sun.position.set(8, 30, 6); sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -40, right: 40, top: 40, bottom: -40, near: 1, far: 120 }); sun.shadow.bias = -0.0005;
+  sun.target.position.set(0, 0, -20); scene.add(sun, sun.target);
+  const box = (w, h, d, x, y, z, c, rough) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color: lin(c), roughness: rough || 0.9 })); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; scene.add(m); return m; };
+  box(400, 1, 400, 0, -0.5, -60, [112, 152, 84]);                     // grass
+  box(11, 1, 400, 0, -0.47, -60, [196, 168, 118]);                    // the path between the hedges
+  for (const s of [-1, 1]) for (let i = 0; i < 9; i++) box(3, 8 + (i % 3) * 0.5, 15.6, s * 7.2, 4, 12 - i * 16, i % 2 ? [78, 128, 66] : [88, 140, 72]); // hedges
+  box(17.4, 9, 3, 0, 4.5, -124, [82, 132, 68]);                       // the corridor's far end
+  for (const [x, z] of [[-3.6, -9], [3.2, -22], [-2.8, -34]]) box(2.6, 2, 2.6, x, 1, z, [222, 190, 104]); // hay bales
+  const P = (w, h, d, x, y, z, c, parent) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color: lin(c), roughness: 0.8 })); m.position.set(x, y, z); m.castShadow = true; parent.add(m); return m; };
+  const g = new THREE.Group(), SKIN = [234, 184, 146], SHIRT = [196, 64, 50], PANTS = [52, 62, 98]; // another player, facing you
+  P(0.95, 2, 1, -0.5, 1, 0, PANTS, g); P(0.95, 2, 1, 0.5, 1, 0, PANTS, g); P(2, 2, 1, 0, 3, 0, SHIRT, g); P(1.25, 1.2, 1.2, 0, 4.6, 0, SKIN, g);
+  const left = new THREE.Group(); left.position.set(-1.5, 4, 0); left.rotation.x = 0.12; g.add(left); P(1, 2, 1, 0, -1, 0, SKIN, left); P(1.02, 0.9, 1.02, 0, -0.45, 0, SHIRT, left);
+  const right = new THREE.Group(); right.position.set(1.5, 4, 0); right.rotation.x = Math.PI / 2; g.add(right); P(1, 2, 1, 0, -1, 0, SKIN, right); P(1.02, 0.9, 1.02, 0, -0.45, 0, SHIRT, right);
+  P(0.12, 0.12, 2.6, 1.5, 4, -3.3, [200, 205, 215], g);               // their needle
+  for (const s of [-1, 1]) P(0.14, 0.2, 0.02, s * 0.28, 4.72, -0.61, [34, 34, 34], g); // eyes
+  g.position.set(0.6, 0, -14); g.rotation.y = Math.PI + 0.2; scene.add(g);
+  if (wallAt) { // a barn wall square across the view, wallAt studs from the camera
+    box(60, 24, 1, 0, 6, -wallAt - 0.5, [150, 72, 58], 0.95);
+    for (let i = -14; i <= 14; i++) box(0.12, 24, 0.06, i * 2 + 0.4, 6, -wallAt + 0.02, [116, 52, 42], 1);
+  }
+}
+
+/* ---------- the view itself: what client/ViewModelRig.luau builds, one mesh per part ---------- */
+const GEO = { Block: new THREE.BoxGeometry(1, 1, 1), Ball: new THREE.SphereGeometry(0.5, 24, 16), Cylinder: new THREE.CylinderGeometry(0.5, 0.5, 1, 24).rotateZ(-Math.PI / 2) };
+function material(colour, name, transparency) {
+  const m = { color: colour, roughness: 0.55, metalness: 0 };
+  if (name === 'Metal' || name === 'DiamondPlate' || name === 'Foil') { m.metalness = 0.75; m.roughness = 0.3; }
+  if (name === 'Neon') { m.emissive = colour; m.emissiveIntensity = 0.75; }
+  if (name === 'Glass' || name === 'Ice') { m.roughness = 0.08; m.metalness = 0.1; m.transparent = true; m.opacity = 0.82; }
+  if (name === 'Wood' || name === 'Fabric' || name === 'Sand' || name === 'Slate') m.roughness = 0.9;
+  if (name === 'ForceField') { m.emissive = colour; m.emissiveIntensity = 1; m.transparent = true; m.opacity = 0.1; m.depthWrite = false; m.blending = THREE.AdditiveBlending; } // an Heirloom's energy skin: a faint glow
+  if (transparency > 0 && name !== 'ForceField') { m.transparent = true; m.opacity = Math.min(m.opacity || 1, 1 - transparency); }
+  return new THREE.MeshStandardMaterial(m);
+}
+function put(scene, world, cf, size, mat, shape) {
+  const mesh = new THREE.Mesh(GEO[shape] || GEO.Block, mat), c = CF.mul(world, cf);
+  const e = new THREE.Matrix4().set(c.m[0], c.m[1], c.m[2], c.p[0], c.m[3], c.m[4], c.m[5], c.p[1], c.m[6], c.m[7], c.m[8], c.p[2], 0, 0, 0, 1);
+  mesh.matrixAutoUpdate = false; mesh.matrix.copy(e.multiply(new THREE.Matrix4().makeScale(size[0], size[1], size[2]))); mesh.receiveShadow = true;
+  scene.add(mesh); return mesh;
+}
+const shade = (c, k) => c.map(v => Math.min(255, v * (k || 1)));
+function colourOf(part, skin) { // "skin", "sleeve" or { r, g, b }, times its shade
+  const base = part.colour === 'sleeve' ? FP.arm.sleeveColour : Array.isArray(part.colour) ? part.colour : skin;
+  return shade(base, part.shade);
+}
+// Every part of the view, in the order client/ViewModelRig.luau builds them, each at its place in
+// camera space (before the field of view's fit): { name, cf, size, colour, material, shape }.
+// s: { key, fov, anim, t, w, open, hidden, wallAt, skin }.
+function parts(s) {
+  const needle = D.needles[s.key], look = Rig.look || {}, skin = s.skin || look.skin || [234, 184, 146];
+  const playing = s.anim ? Pose.sample(ANIMS[s.anim], s.t) : null;
+  const w = Object.assign({ breath: 0, step: 0, dip: 0, swayX: 0, swayY: 0, land: 0, air: 0, away: 0, wall: 0 }, s.w || {});
+  const fit = Pose.fit(Rig, s.fov);
+  let f = Pose.frames(FP, Rig, Pose.offsets(FP, Rig, playing, w), needle), reach = null;
+  if (s.wallAt) { // as client/ViewModel: one ray from the camera to where the point would be with no wall
+    const tip = CF.point(CF.mul(fit, f.needle), [needle.front, 0, 0]).map(x => x * Rig.view.scale);
+    reach = Math.hypot(tip[0], tip[1], tip[2]);
+    w.wall = Pose.wall(Rig, reach, s.wallAt / (-tip[2] / reach)); // the wall is the plane z = -wallAt
+    f = Pose.frames(FP, Rig, Pose.offsets(FP, Rig, playing, w), needle);
+  }
+  const list = [], size = FP.arm.size, sl = Math.min(FP.arm.sleeve, 0.98), wide = look.sleeveWidth || 1.08;
+  for (const [side, arm, end, hand, sign] of [['right', f.right, f.endRight, f.handRight, 1], ['left', f.left, f.endLeft, f.handLeft, -1]]) {
+    const hide = s.study && side === 'left';
+    list.push({ name: 'Part', cf: arm, size, colour: skin, material: look.skinMaterial, hide });
+    if (sl > 0.01) list.push({ name: 'Part', cf: CF.mul(arm, CF.new(0, size[1] / 2 - size[1] * sl / 2 + 0.001, 0)), size: [size[0] * wide, size[1] * sl, size[2] * wide], colour: FP.arm.sleeveColour, material: look.sleeveMaterial, hide });
+    const open = side === 'right' ? (s.open === undefined ? w.away : s.open) : (Rig.left || {}).open || 0;
+    for (const [boxes, frame] of [[CUFF, end], [HAND, hand]]) for (const part of boxes)
+      list.push({ name: 'Part', cf: CF.mul(frame, Pose.box(part, open, sign)), size: part.size, colour: colourOf(part, skin), material: part.colour === 'sleeve' ? look.sleeveMaterial : look.skinMaterial, shape: part.shape, hide });
+  }
+  for (const p of needle.parts) list.push({ name: p.name, cf: CF.mul(f.needle, { p: p.pos, m: p.rot }), size: p.size, colour: p.color, material: p.material, shape: p.shape, transparency: p.transparency, hide: s.hidden || p.transparency >= 1 });
+  return { list, f, fit, w, needle, reach };
+}
+// Draws them. Returns where the needle's point and grip ended up, for the checks.
+// The whole view shrunk towards the camera (FirstPersonRig.view.scale), as client/ViewModelRig.move does.
+const S = Rig.view.scale, small = (fit, cf) => { const l = CF.mul(fit, cf); return { p: l.p.map(v => v * S), m: l.m }; };
+function view(scene, cameraCF, s) {
+  const v = parts(s);
+  for (const p of v.list) if (!p.hide) put(scene, cameraCF, small(v.fit, p.cf), p.size.map(x => x * S), material(lin(p.colour), p.material, p.transparency), p.shape);
+  const tip = CF.point(CF.mul(v.fit, v.f.needle), [v.needle.front, 0, 0]).map(x => x * S), grip = CF.point(CF.mul(v.fit, v.f.needle), [v.needle.back + Rig.grip.back, 0, 0]).map(x => x * S);
+  return { tip, grip, wall: v.w.wall, reach: v.reach, hand: CF.mul(cameraCF, small(v.fit, v.f.handRight)), gripWorld: CF.point(cameraCF, grip) };
+}
+const project = (p, fov) => { const t = Math.tan(fov * Math.PI / 360); return [W / 2 + p[0] / (-p[2] * t * W / H) * W / 2, H / 2 - p[1] / (-p[2] * t) * H / 2]; };
+
+/* ---------- one frame, with the HUD ---------- */
+function hud(g) {
+  g.font = 'bold 36px sans-serif'; g.textBaseline = 'top'; g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = 3; g.fillStyle = '#f05a6e';
+  ['♥', '♥', '♥'].forEach((h, i) => g.fillText(h, 16 + i * 28, 104)); g.shadowBlur = 0;
+  g.save(); g.translate(W / 2, H / 2);
+  for (const [colour, width] of [['#000', 4], ['#fff', 2]]) { g.strokeStyle = colour; g.lineWidth = width; g.beginPath(); for (const [x1, y1, x2, y2] of [[-12, 0, -5, 0], [5, 0, 12, 0], [0, -12, 0, -5], [0, 5, 0, 12]]) { g.moveTo(x1, y1); g.lineTo(x2, y2); } g.stroke(); }
+  g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = 1; g.beginPath(); g.arc(0, 0, 2.5, 0, 7); g.fill(); g.stroke(); g.restore();
+}
+function frame(s) {
+  s = Object.assign({ key: Object.keys(D.needles)[0], fov: 70 }, s);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(s.study ? 30 : s.fov, W / H, 0.1, 600); camera.position.copy(EYE);
+  const placed = view(scene, CF.new(EYE.x, EYE.y, EYE.z), s);
+  if (s.study) { // the right hand on its own, looked at from a direction given in the hand's own axes
+    scene.background = new THREE.Color(0x8a93a3).convertSRGBToLinear();
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x777777, 0.85)); const sun = new THREE.DirectionalLight(0xffffff, 0.9); sun.position.set(-14, 30, 12); scene.add(sun);
+    const m = placed.hand.m, turn = v => new THREE.Vector3(m[0] * v[0] + m[1] * v[1] + m[2] * v[2], m[3] * v[0] + m[4] * v[1] + m[5] * v[2], m[6] * v[0] + m[7] * v[1] + m[8] * v[2]);
+    const at = new THREE.Vector3(...placed.gripWorld); camera.up.copy(turn(s.study.up)); camera.position.copy(at).add(turn(s.study.from).normalize().multiplyScalar(3.1)); camera.lookAt(at);
+  } else backdrop(scene, s.wallAt);
+  camera.updateMatrixWorld();
+  renderer.render(scene, camera);
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d');
+  g.drawImage(renderer.domElement, 0, 0); if (!s.study) hud(g);
+  scene.traverse(o => { if (o.isMesh && o.geometry !== GEO.Block && o.geometry !== GEO.Ball && o.geometry !== GEO.Cylinder) o.geometry.dispose(); if (o.isMesh) o.material.dispose(); });
+  placed.tipPx = project(placed.tip, s.fov).map(Math.round); placed.gripPx = project(placed.grip, s.fov).map(Math.round);
+  return { canvas: cv, placed };
+}
+
+/* ---------- the standard sheets ---------- */
+const KEYS = Object.keys(D.needles), MAIN = D.needles['sewing:steel'] ? 'sewing:steel' : KEYS[0];
+const spread = (name, n, extra) => { const a = ANIMS[name]; if (!a) return []; return Array.from({ length: n }, (_, i) => Object.assign({ label: `${name}  ${(a.length * i / n).toFixed(2)} s of ${a.length}`, anim: name, t: a.length * i / n }, extra && extra(a.length * i / n))); };
+const awayAt = (t) => 1 - Math.exp(-((Rig.motion.away || {}).rate || 8) * Math.max(t, 0)); // as the game eases it
+const release = (Rig.throw || {}).release || 0;
+const SHEETS = {
+  needles: () => KEYS.map(key => ({ label: `${key}  hold, fov 70`, key })),
+  fov: () => [60, 70, 90, 100].map(fov => ({ label: `fov ${fov}`, fov })),
+  jab: () => spread('jab', 6),
+  throw: () => spread('throw', 6, t => t >= release ? { hidden: true, w: { away: awayAt(t - release) } } : {})
+    .concat([{ label: 'needle away: the empty hand', hidden: true, w: { away: 1 } }], spread('catch', 5, t => ({ w: { away: 1 - awayAt(t) } }))),
+  inspect: () => spread('inspect', 6),
+  equip: () => spread('equip', 6),
+  motion: () => [
+    { label: 'walk: stride left (step -1)', w: { step: -1, dip: 0 } }, { label: 'walk: foot down (dip 1)', w: { step: 0, dip: 1 } }, { label: 'walk: stride right (step 1)', w: { step: 1, dip: 0 } },
+    { label: 'hard turn left (sway +max)', w: { swayX: Rig.motion.turn.max } }, { label: 'hard turn right (sway -max)', w: { swayX: -Rig.motion.turn.max } }, { label: 'landing: the bottom of the dip', w: { land: 1 } },
+    { label: 'breathing in (breath 1)', w: { breath: 1 } }, { label: 'breathing out (breath -1)', w: { breath: -1 } }, { label: 'in the air (air 1)', w: { air: 1 } },
+  ],
+  wall: () => [0.6, 1.2, 2.5].map(d => ({ label: `a wall ${d} studs away`, wallAt: d })),
+  hand: () => D.legacy ? [] : [['from the thumb side (+x)', [1, -0.25, 0.15], [0, 0, 1]], ['from the back of the hand (+z)', [0.2, -0.3, 1], [0, 1, 0]], ['from the palm side (-z)', [0.2, -0.3, -1], [0, 1, 0]],
+    ['from the fingertips (-y)', [0.25, -1, 0.3], [0, 0, 1]], ['from the little finger (-x)', [-1, -0.3, 0.2], [0, 0, 1]], ['open (needle away), from the palm side', [0.3, -0.4, -1], [0, 1, 0], 1]]
+    .map(([label, from, up, open]) => ({ label: 'the right hand ' + label, study: { from, up }, open: open || 0, hidden: !!open })),
+};
+function sheet(name) {
+  const tiles = SHEETS[name]().map(s => Object.assign({ key: MAIN, fov: 70 }, s));
+  if (!tiles.length) return null; // an old rig has no equip or catch
+  const cols = tiles.length === 4 ? 2 : Math.min(3, tiles.length), rows = Math.ceil(tiles.length / cols), TW = 640, TH = 360, BAR = 26, TOP = 34;
+  const cv = document.createElement('canvas'); cv.width = cols * TW; cv.height = TOP + rows * (TH + BAR); const g = cv.getContext('2d');
+  g.fillStyle = '#16181d'; g.fillRect(0, 0, cv.width, cv.height);
+  g.fillStyle = '#fff'; g.font = 'bold 18px sans-serif'; g.textBaseline = 'middle'; g.fillText(`${name}.png   first-person view   ${D.legacy ? 'OLD RIG   ' : ''}${D.rigDir}`, 10, TOP / 2);
+  const notes = [];
+  tiles.forEach((s, i) => {
+    const x = (i % cols) * TW, y = TOP + Math.floor(i / cols) * (TH + BAR), f = frame(s);
+    g.drawImage(f.canvas, x, y + BAR, TW, TH);
+    g.fillStyle = '#262a33'; g.fillRect(x, y, TW - 2, BAR); g.fillStyle = '#e8eaf0'; g.font = '15px sans-serif';
+    const extra = s.wallAt ? `   wall weight ${f.placed.wall.toFixed(2)}, point ${(-f.placed.tip[2]).toFixed(2)} studs ahead` : '';
+    g.fillText(s.label + extra, x + 8, y + BAR / 2);
+    notes.push({ label: s.label, tipPx: f.placed.tipPx, gripPx: f.placed.gripPx, tipDepth: +(-f.placed.tip[2]).toFixed(3), wall: +f.placed.wall.toFixed(3) });
+  });
+  return { url: cv.toDataURL('image/png'), notes };
+}
+
+/* ---------- is this page still the game's maths? ---------- */
+function parity() {
+  let worst = 0; const bad = [];
+  const cmp = (a, b, what) => { const flatA = [].concat(a), flatB = [].concat(b); flatA.forEach((v, i) => { const d = Math.abs(v - flatB[i]); if (!(d <= worst)) worst = d; if (!(d < 1e-6) && bad.length < 5) bad.push(what); }); };
+  for (const c of D.parity) {
+    const e = c.expect, n = D.needles[c.key], playing = c.anim ? Pose.sample(ANIMS[c.anim], ANIMS[c.anim].length * c.frac) : null;
+    const off = Pose.offsets(FP, Rig, playing, c.w), f = Pose.frames(FP, Rig, off, n);
+    for (const part of ['right', 'left', 'needle']) cmp(off[part], e.off[part], 'offsets.' + part);
+    for (const k in f) cmp(CF.flat(f[k]), e.frames[k], 'frames.' + k);
+    CUFF.concat(HAND).forEach((part, i) => { cmp(CF.flat(Pose.box(part, c.open, 1)), e.boxes[i][0], 'box ' + part.name); cmp(CF.flat(Pose.box(part, c.open, -1)), e.boxes[i][1], 'left box ' + part.name); });
+    cmp(CF.flat(Pose.fit(Rig, c.fov)), e.fit, 'fit'); cmp(Pose.landing(Rig, c.since, 0.8), e.landing, 'landing'); cmp(Pose.wall(Rig, c.reach, c.distance), e.wall, 'wall');
+    cmp(Pose.walk(c.frac * 12, 0.7), [e.step, e.dip], 'walk');
+  }
+  for (const key of KEYS) if (!D.legacy) cmp(Pose.measure(D.needles[key].parts), [D.needles[key].back, D.needles[key].front], 'measure ' + key);
+  return { worst, bad, cases: D.parity.length };
+}
+
+// Does the point stay out of the wall? Every needle, a wall square on at every distance from wall.near to 4 studs.
+function wallCheck() {
+  let worst = -Infinity, at = null;
+  for (const key of KEYS) for (let d = Rig.motion.wall.near; d <= 4; d += 0.05) {
+    const scene = new THREE.Scene(), placed = view(scene, CF.new(0, 0, 0), { key, fov: 70, wallAt: d });
+    scene.traverse(o => { if (o.isMesh) o.material.dispose(); });
+    const through = -placed.tip[2] - d; if (through > worst) { worst = through; at = `${key} at ${d.toFixed(2)} studs`; }
+  }
+  return { worst, at };
+}
+// Is the drawing still the game's? VM_DATA.game.hold is every part the real client/ViewModelRig built and
+// placed for the hold (run by viewmodel_data.py, two frames in): the same parts, sizes, colours and places here.
+function gameCheck() {
+  const G = D.game, mine = parts({ key: G.key, fov: 70, w: { breath: Math.sin(2 / 60 * Rig.motion.breathe.speed) } }), world = CF.new(0, 5, 0);
+  let worst = 0; const bad = [];
+  if (mine.list.length !== G.hold.length) return { worst: Infinity, bad: [`the game built ${G.hold.length} parts, the page ${mine.list.length}`], parts: G.hold.length };
+  mine.list.forEach((p, i) => {
+    const g = G.hold[i], cf = CF.flat(CF.mul(world, small(mine.fit, p.cf)));
+    const d = Math.max(...cf.map((v, k) => Math.abs(v - g.cf[k])), ...p.size.map((v, k) => Math.abs(v * S - g.size[k])), ...p.colour.map((v, k) => Math.abs(v - g.colour[k]) / 255));
+    if (d > worst) worst = d; if (d > 1e-4 && bad.length < 5) bad.push(`part ${i + 1} (${g.name})`);
+  });
+  return { worst, bad, parts: G.hold.length };
+}
+window.VM = { sheet, frame, parity, wallCheck, gameCheck, sheets: Object.keys(SHEETS), needles: KEYS };
+const Q = new URLSearchParams(location.search);
+if (!Q.get('quiet')) { // one frame, from the address
+  const s = { key: Q.get('needle') || MAIN, fov: +(Q.get('fov') || 70) };
+  if (Q.get('anim')) { s.anim = Q.get('anim'); s.t = +(Q.get('t') || 0); }
+  if (Q.get('wall')) s.wallAt = +Q.get('wall');
+  renderer.domElement.style.display = 'none'; document.body.appendChild(frame(s).canvas);
+}
+window.READY = true;
+</script></body></html>

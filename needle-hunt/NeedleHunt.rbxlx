@@ -536,32 +536,37 @@ return Cosmetics
 -- { t, right = { x, y, z, rx, ry, rz }, left = {...}, needle = {...} }, eased between keys.
 return {
 	pose = {
-		right = { pos = { 0.85, -0.82, -0.9 }, rot = { 138, 0, -30 } },
-		left = { pos = { -0.85, -1.44, -1.17 }, rot = { 103, 0, 30 } },
-		needle = { pos = { 0.04, -0.3, 0 }, rot = { 0, 0, -72 } },
+		right = { pos = { 1.382, -0.385, -0.759 }, rot = { -148, 62, -122.8 } },
+		left = { pos = { -1.382, -1.685, -0.759 }, rot = { -148, -62, 122.8 } },
+		needle = { pos = { 0.1, -0.365, -0.045 }, rot = { 0, 0, -30 } },
 	},
-	arm = { size = { 0.3, 1.6, 0.3 }, sleeve = 0.5, sleeveColour = { 70, 110, 170 } },
-	needleLook = { scale = 0.45, fat = 1.6 },
-	motion = { bob = 0.05, bobSpeed = 8, sway = 0.08 },
+	arm = { size = { 0.3, 1.5, 0.25 }, sleeve = 0.93, sleeveColour = { 70, 110, 170 } },
+	needleLook = { scale = 0.45, fat = 1.3 },
+	motion = { bob = 0.045, bobSpeed = 9, sway = 0.08 },
 	anims = {
 		inspect = { length = 6, keys = {
 			{ t = 0, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
-			{ t = 0.75, right = { 0, -0.1, 0, 10, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0.16, -0.78, -0.55, 393, -168, 140 } },
-			{ t = 2.91, right = { 0, 0.12, 0, -10, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0.47, -0.16, 0.39, 0, 365, 383 } },
-			{ t = 3.3, right = { 0, 0.15, 0, -12, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0.4, 0, 0, 0, 360 } },
-			{ t = 3.6, right = { 0, -0.08, 0, 8, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 360 } },
-			{ t = 6, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 360 } },
+			{ t = 0.7, right = { -0.35, 0.05, 0.25, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 8 } },
+			{ t = 2.2, right = { -0.4, 0.08, 0.3, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, -10 } },
+			{ t = 3.4, right = { -0.35, 0.06, 0.25, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 10 } },
+			{ t = 4, right = { -0.38, 0.08, 0.27, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, -6 } },
+			{ t = 4.6, right = { -0.35, 0.05, 0.25, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 6 } },
+			{ t = 5.2, right = { -0.35, 0.05, 0.25, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 6, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
 		} },
-		jab = { length = 0.3, keys = {
+		jab = { length = 0.34, keys = {
 			{ t = 0, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
-			{ t = 0.08, right = { -0.1, 0.12, -0.6, -8, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
-			{ t = 0.3, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.05, right = { 0.07, -0.04, 0.16, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.12, right = { -0.4, 0.23, -0.74, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.18, right = { -0.35, 0.2, -0.64, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.34, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
 		} },
-		throw = { length = 0.4, keys = {
+		throw = { length = 0.5, keys = {
 			{ t = 0, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
-			{ t = 0.131, right = { 0.1, 0.25, 0.1, 25, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
-			{ t = 0.218, right = { -0.1, 0.05, -0.4, -20, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
-			{ t = 0.4, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.14, right = { 0.18, 0.2, 0.5, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.24, right = { -0.3, 0.2, -0.6, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.34, right = { -0.38, 0.1, -0.7, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.5, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
 		} },
 	},
 }
@@ -569,6 +574,114 @@ return {
 				</Properties>
 			</Item>
 			<Item class="ModuleScript" referent="RBX00007">
+				<Properties>
+					<string name="Name">FirstPersonRig</string>
+					<ProtectedString name="Source"><![CDATA[-- The rest of the first-person view (client/ViewModel): everything the Needle Hand Rig tool
+-- doesn't know. The tool writes shared/FirstPerson.luau (the arms' and the needle's hold pose, the
+-- arm's size, the bob and sway amounts, and the inspect, jab and throw); this file is hand-edited
+-- data: the wrist, the hand's boxes, the grip rule, the extra motion and the extra animations.
+-- Check any change on the preview sheets: node dev/preview/shoot_viewmodel.js (see its header).
+--
+-- Studs and degrees. Camera space: +X right, +Y up, -Z ahead. A "row" is six numbers
+-- { x, y, z, rx, ry, rz } added to a pose: x y z to its pos, rx ry rz to its rot (CFrame.Angles
+-- order: rx turns about the parent's X, rz about the part's own Z). A layer or key may leave a
+-- part's row out. With the hold as it is now:
+--   right, left: a forearm about its centre, in camera space. -z reaches ahead, +rx tips the
+--     hand and the needle's point up, +rz swings them to the left.
+--   needle: the needle in the hand, about its grip point. -rx tips its point up (to the back of
+--     the hand), ry spins it about its own length, +rz swings its point to the thumb side.
+--   wrist: the right hand about the wrist (only here, not in FirstPerson's animations).
+--     +rx bends it down, ry rolls it about the forearm, +rz swings it to the thumb side.
+-- The hand's own axes (the right hand; the left is its mirror image): -Y to the fingertips,
+-- +X the thumb side, +Z the back of the hand.
+return {
+	-- The framing is made at refFov. At another field of view the whole view slides along the
+	-- camera's axis by pivot * (1 - tan(refFov / 2) / tan(fov / 2)), which looks exactly like
+	-- scaling it by tan(fov / 2) about a point `pivot` studs ahead: keep pivot near the grip's depth.
+	-- firstPerson: the view shows when the camera is within this many studs of your head.
+	-- scale: the whole view is drawn this much smaller and that much nearer the camera. It looks
+	-- the same on screen but stays out of walls: every other number here is at full size.
+	view = { refFov = 70, pivot = 1.3, firstPerson = 1.5, scale = 0.4 },
+	-- skin: the colour when your character has none. sleeveWidth: the sleeve is this much wider
+	-- than the arm (FirstPerson.arm.size).
+	look = { skin = { 234, 184, 146 }, skinMaterial = "SmoothPlastic", sleeveMaterial = "Fabric", sleeveWidth = 1.08 },
+	-- The hand hangs from the wrist, the wrist from the forearm's hand end. FirstPerson.pose.needle
+	-- is in the hand's frame, so the needle follows the wrist.
+	wrist = { pos = { 0, 0, 0 }, rot = { 0, 0, -40 } },
+	-- Boxes that stay on the forearm, from its hand end (+Y runs up the arm).
+	--   colour: "skin", "sleeve" (FirstPerson.arm.sleeveColour) or { r, g, b }; shade multiplies it
+	--   (under 1 darker, over 1 lighter); shape = "Ball" or "Cylinder" (along X) if not a block.
+	cuff = {
+		{ name = "Cuff", colour = "sleeve", shade = 1.15, size = { 0.37, 0.11, 0.31 }, pos = { 0, 0.15, 0 }, rot = { 0, 0, 0 } },
+	},
+	-- The hand's boxes, from the wrist: pos is a box's centre, its long side is Y. `open` is the
+	-- same box with the hand open (the needle thrown): boxes ease between the two.
+	hand = {
+		{ name = "Palm", colour = "skin", size = { 0.4, 0.37, 0.16 }, pos = { 0, -0.175, 0 }, rot = { 0, 0, 0 } },
+		{ name = "Index1", colour = "skin", shade = 1, size = { 0.094, 0.22, 0.115 }, pos = { 0.148, -0.41, -0.004 }, rot = { 82, 0, 0 }, open = { pos = { 0.148, -0.498, 0.067 }, rot = { 20, 0, 0 } } },
+		{ name = "Index2", colour = "skin", shade = 0.95, size = { 0.094, 0.2, 0.105 }, pos = { 0.148, -0.323, -0.066 }, rot = { 190, 0, 0 }, open = { pos = { 0.148, -0.644, -0.031 }, rot = { 45, 0, 0 } } },
+		{ name = "Middle1", colour = "skin", shade = 0.95, size = { 0.094, 0.23, 0.115 }, pos = { 0.049, -0.411, -0.009 }, rot = { 82, 0, 0 }, open = { pos = { 0.049, -0.503, 0.066 }, rot = { 20, 0, 0 } } },
+		{ name = "Middle2", colour = "skin", shade = 0.9, size = { 0.094, 0.21, 0.105 }, pos = { 0.049, -0.319, -0.075 }, rot = { 190, 0, 0 }, open = { pos = { 0.049, -0.657, -0.038 }, rot = { 45, 0, 0 } } },
+		{ name = "Ring1", colour = "skin", shade = 1, size = { 0.094, 0.22, 0.115 }, pos = { -0.049, -0.41, -0.004 }, rot = { 82, 0, 0 }, open = { pos = { -0.049, -0.498, 0.067 }, rot = { 20, 0, 0 } } },
+		{ name = "Ring2", colour = "skin", shade = 0.95, size = { 0.094, 0.2, 0.105 }, pos = { -0.049, -0.323, -0.066 }, rot = { 190, 0, 0 }, open = { pos = { -0.049, -0.644, -0.031 }, rot = { 45, 0, 0 } } },
+		{ name = "Pinky1", colour = "skin", shade = 0.95, size = { 0.094, 0.2, 0.115 }, pos = { -0.148, -0.409, 0.006 }, rot = { 82, 0, 0 }, open = { pos = { -0.148, -0.489, 0.071 }, rot = { 20, 0, 0 } } },
+		{ name = "Pinky2", colour = "skin", shade = 0.9, size = { 0.094, 0.18, 0.105 }, pos = { -0.148, -0.33, -0.048 }, rot = { 190, 0, 0 }, open = { pos = { -0.148, -0.618, -0.017 }, rot = { 45, 0, 0 } } },
+		{ name = "Thumb1", colour = "skin", shade = 0.97, size = { 0.12, 0.2, 0.12 }, pos = { 0.21, -0.3, -0.03 }, rot = { 0, 0, -40 }, open = { pos = { 0.27, -0.12, -0.03 }, rot = { 0, 0, 35 } } },
+		{ name = "Thumb2", colour = "skin", shade = 0.92, size = { 0.105, 0.17, 0.105 }, pos = { 0.33, -0.4, -0.03 }, rot = { 0, 0, -30 }, open = { pos = { 0.375, -0.29, -0.03 }, rot = { 0, 0, 30 } } },
+	},
+	-- The left hand holds nothing: how open it is (0 a fist, 1 open). Its hold (FirstPerson.pose.left)
+	-- is the right's mirror image 1.3 studs lower, out of view: lift it with `left` rows.
+	left = { open = 0.7 },
+	-- The grip rule, for every needle whatever its shape: the point `back` studs along from the
+	-- needle's back end sits at FirstPerson.pose.needle in the hand, and the needle is scaled so
+	-- its whole length is between minLength and maxLength.
+	grip = { back = 0.45, minLength = 1.7, maxLength = 2.1 },
+	-- A throw: the needle leaves the hand `release` seconds into FirstPerson's throw. The hand is
+	-- empty until the server brings it back, or `wait` seconds on if the server never took the throw.
+	throw = { release = 0.24, wait = 0.6 },
+	-- Motion: each layer's rows times its weight, added to the hold and whatever is playing.
+	motion = {
+		-- weight sin(time * speed): -1 to 1
+		breathe = { speed = 1.5, right = { 0, 0.014, 0.004, 0.6, 0, 0 }, needle = { 0, 0, 0, 0.8, 0, 0 } },
+		-- the walk, per stud of FirstPerson.motion.bob: step swings side to side (weight
+		-- sin(stride)), dip is each footfall (weight |cos(stride)|); eased in and out at `rate` a second.
+		-- You count as walking above `least` of full speed.
+		walk = { rate = 9, least = 0.1, step = { right = { 0.6, 0, 0, 0, 0, 30 }, left = { 0.6, 0, 0, 0, 0, 0 } }, dip = { right = { 0, -1, 0, -25, 0, 0 }, left = { 0, -1, 0, 0, 0, 0 } } },
+		-- turning: the view lags. sway (studs) = turn speed (radians a second) * FirstPerson.motion.sway
+		-- * gain, at most `max`, eased at `rate`; yaw rows per stud of sideways sway (turning left
+		-- is +), pitch rows per stud of up-and-down sway (looking up is -). A negative gain leads.
+		turn = { gain = 0.3, max = 0.12, rate = 10, yaw = { right = { 1, 0, 0, 0, 0, -30 }, left = { 1, 0, 0, 0, 0, 0 } }, pitch = { right = { 0, 1, 0, 30, 0, 0 }, left = { 0, 1, 0, 0, 0, 0 } } },
+		-- landing: a dip that bottoms out `time` seconds after touching down and eases away; full
+		-- strength from a fall of `speed` studs a second, never less than `least`
+		land = { time = 0.09, speed = 45, least = 0.3, right = { 0, -0.16, 0.03, -7, 0, 0 }, left = { 0, -0.16, 0, 0, 0, 0 } },
+		-- in the air (weight eased to 1 at `rate`)
+		air = { rate = 7, right = { 0, 0.05, 0, 3, 0, 0 }, left = { 0, 0.05, 0, 0, 0, 0 } },
+		-- the needle is away (weight eased to 1 at `rate`; the hand's boxes open by the same weight)
+		away = { rate = 14, right = { 0.05, -0.1, 0.06, -6, 0, 0 }, wrist = { 0, 0, 0, 8, 0, 0 } },
+		-- a wall: one ray from the camera to where the needle's point would be. Weight 0 when the
+		-- wall is `margin` beyond the point, 1 when it is `near` studs from the camera; in at
+		-- rateIn a second, out at rateOut. The rows pull the hand in and stand the needle up.
+		wall = { margin = 0.4, near = 0.5, rateIn = 28, rateOut = 9, right = { 0.15, -0.3, 0.6, 0, 0, 0 }, wrist = { 0, 0, 0, 0, 0, 70 } },
+	},
+	-- Animations, like FirstPerson.anims (keys may also carry a wrist row). ViewModel plays
+	-- equip when the view comes up and catch when a thrown needle is back in the hand.
+	anims = {
+		equip = { length = 0.45, keys = {
+			{ t = 0, right = { 0.2, -0.6, 0.2, -22, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.3, right = { -0.02, 0.04, -0.03, 3, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.45, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+		} },
+		catch = { length = 0.4, keys = {
+			{ t = 0, right = { -0.18, 0.2, -0.3, 8, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.12, right = { -0.05, 0.03, 0.08, -4, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+			{ t = 0.4, right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 } },
+		} },
+	},
+}
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX00008">
 				<Properties>
 					<string name="Name">Maps</string>
 					<ProtectedString name="Source"><![CDATA[-- The maps: what each is called, its light and its colours. server/MapsA and server/MapsB build
@@ -649,7 +762,7 @@ return Maps
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00008">
+			<Item class="ModuleScript" referent="RBX00009">
 				<Properties>
 					<string name="Name">NeedleAura</string>
 					<ProtectedString name="Source"><![CDATA[-- The Heirloom aura (Config.Aura): every needle of an Heirloom shape gives off energy, in its own
@@ -744,7 +857,7 @@ return NeedleAura
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00009">
+			<Item class="ModuleScript" referent="RBX0000A">
 				<Properties>
 					<string name="Name">NeedleLook</string>
 					<ProtectedString name="Source"><![CDATA[-- Builds a needle of any type in any skin out of parts (shared/Needles): for the NEEDLE FOUND!
@@ -1030,7 +1143,7 @@ return NeedleLook
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0000A">
+			<Item class="ModuleScript" referent="RBX0000B">
 				<Properties>
 					<string name="Name">NeedleSkins</string>
 					<ProtectedString name="Source"><![CDATA[-- More needle skins (sheets 6-10 of the skin brief): food, nature, materials, space and magic,
@@ -1097,7 +1210,7 @@ return {
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0000B">
+			<Item class="ModuleScript" referent="RBX0000C">
 				<Properties>
 					<string name="Name">NeedleTypes</string>
 					<ProtectedString name="Source"><![CDATA[-- The needle types: each needle's shape (drawn by shared/NeedleLook; the newer ones are data in
@@ -1206,7 +1319,7 @@ return {
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0000C">
+			<Item class="ModuleScript" referent="RBX0000D">
 				<Properties>
 					<string name="Name">Needles</string>
 					<ProtectedString name="Source"><![CDATA[-- The needle collection. Everyone hunts the same plain needle (fair); when you find it, it turns
@@ -1463,7 +1576,7 @@ return Needles
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0000D">
+			<Item class="ModuleScript" referent="RBX0000E">
 				<Properties>
 					<string name="Name">Quests</string>
 					<ProtectedString name="Source"><![CDATA[-- Daily quests: every day (UTC) everyone gets the same three, picked from this pool, so the
@@ -1528,7 +1641,7 @@ return Quests
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0000E">
+			<Item class="ModuleScript" referent="RBX0000F">
 				<Properties>
 					<string name="Name">Robux</string>
 					<ProtectedString name="Source"><![CDATA[-- What the shop's Robux section says about each item (server/ShopManager does the giving; the
@@ -1561,7 +1674,7 @@ return Robux
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0000F">
+			<Item class="ModuleScript" referent="RBX00010">
 				<Properties>
 					<string name="Name">Rules</string>
 					<ProtectedString name="Source"><![CDATA[-- The game's arithmetic in one place, shared by the server (which decides) and the client
@@ -1654,7 +1767,7 @@ return Rules
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00010">
+			<Item class="ModuleScript" referent="RBX00011">
 				<Properties>
 					<string name="Name">ShapesA</string>
 					<ProtectedString name="Source"><![CDATA[-- Needle shapes, part 1: needle shapes kept as data. Made by dev/shapes.py: change them there and run it.
@@ -1918,7 +2031,7 @@ return {
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00011">
+			<Item class="ModuleScript" referent="RBX00012">
 				<Properties>
 					<string name="Name">ShapesB</string>
 					<ProtectedString name="Source"><![CDATA[-- Needle shapes, part 2: needle shapes kept as data. Made by dev/shapes.py: change them there and run it.
@@ -2180,7 +2293,7 @@ return {
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00012">
+			<Item class="ModuleScript" referent="RBX00013">
 				<Properties>
 					<string name="Name">ShapesC</string>
 					<ProtectedString name="Source"><![CDATA[-- Needle shapes, part 3: needle shapes kept as data. Made by dev/shapes.py: change them there and run it.
@@ -2410,161 +2523,161 @@ return {
 				</Properties>
 			</Item>
 		</Item>
-		<Item class="Folder" referent="RBX00013">
+		<Item class="Folder" referent="RBX00014">
 			<Properties>
 				<string name="Name">Remotes</string>
 			</Properties>
-			<Item class="RemoteEvent" referent="RBX00014">
+			<Item class="RemoteEvent" referent="RBX00015">
 				<Properties>
 					<string name="Name">RoundState</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00015">
+			<Item class="RemoteEvent" referent="RBX00016">
 				<Properties>
 					<string name="Name">Found</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00016">
+			<Item class="RemoteEvent" referent="RBX00017">
 				<Properties>
 					<string name="Name">Notify</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00017">
+			<Item class="RemoteEvent" referent="RBX00018">
 				<Properties>
 					<string name="Name">Profile</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00018">
+			<Item class="RemoteEvent" referent="RBX00019">
 				<Properties>
 					<string name="Name">SaveSettings</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00019">
+			<Item class="RemoteFunction" referent="RBX0001A">
 				<Properties>
 					<string name="Name">Shop</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX0001A">
+			<Item class="RemoteFunction" referent="RBX0001B">
 				<Properties>
 					<string name="Name">Hint</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX0001B">
+			<Item class="RemoteFunction" referent="RBX0001C">
 				<Properties>
 					<string name="Name">Boards</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX0001C">
+			<Item class="RemoteFunction" referent="RBX0001D">
 				<Properties>
 					<string name="Name">Collection</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0001D">
+			<Item class="RemoteEvent" referent="RBX0001E">
 				<Properties>
 					<string name="Name">ShowOff</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX0001E">
+			<Item class="RemoteFunction" referent="RBX0001F">
 				<Properties>
 					<string name="Name">LobbyInfo</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0001F">
+			<Item class="RemoteEvent" referent="RBX00020">
 				<Properties>
 					<string name="Name">Powerup</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00020">
+			<Item class="RemoteFunction" referent="RBX00021">
 				<Properties>
 					<string name="Name">Box</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00021">
+			<Item class="RemoteEvent" referent="RBX00022">
 				<Properties>
 					<string name="Name">BoxResult</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00022">
+			<Item class="RemoteEvent" referent="RBX00023">
 				<Properties>
 					<string name="Name">Poke</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00023">
+			<Item class="RemoteEvent" referent="RBX00024">
 				<Properties>
 					<string name="Name">Hit</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00024">
+			<Item class="RemoteEvent" referent="RBX00025">
 				<Properties>
 					<string name="Name">Inspect</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX00025">
+			<Item class="RemoteFunction" referent="RBX00026">
 				<Properties>
 					<string name="Name">Trade</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00026">
+			<Item class="RemoteEvent" referent="RBX00027">
 				<Properties>
 					<string name="Name">TradeState</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00027">
+			<Item class="RemoteEvent" referent="RBX00028">
 				<Properties>
 					<string name="Name">Throw</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00028">
+			<Item class="RemoteEvent" referent="RBX00029">
 				<Properties>
 					<string name="Name">Thrown</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX00029">
+			<Item class="RemoteEvent" referent="RBX0002A">
 				<Properties>
 					<string name="Name">Dash</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX0002A">
+			<Item class="RemoteFunction" referent="RBX0002B">
 				<Properties>
 					<string name="Name">Practice</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0002B">
+			<Item class="RemoteEvent" referent="RBX0002C">
 				<Properties>
 					<string name="Name">PracticeState</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0002C">
+			<Item class="RemoteEvent" referent="RBX0002D">
 				<Properties>
 					<string name="Name">TagOut</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0002D">
+			<Item class="RemoteEvent" referent="RBX0002E">
 				<Properties>
 					<string name="Name">Feed</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteFunction" referent="RBX0002E">
+			<Item class="RemoteFunction" referent="RBX0002F">
 				<Properties>
 					<string name="Name">Queue</string>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0002F">
+			<Item class="RemoteEvent" referent="RBX00030">
 				<Properties>
 					<string name="Name">Announce</string>
 				</Properties>
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerScriptService" referent="RBX00030">
+	<Item class="ServerScriptService" referent="RBX00031">
 		<Properties>
 			<string name="Name">ServerScriptService</string>
 		</Properties>
-		<Item class="Folder" referent="RBX00031">
+		<Item class="Folder" referent="RBX00032">
 			<Properties>
 				<string name="Name">Server</string>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX00032">
+			<Item class="ModuleScript" referent="RBX00033">
 				<Properties>
 					<string name="Name">AntiCheat</string>
 					<ProtectedString name="Source"><![CDATA[-- Basic anti-exploit: every Config.AntiCheat.checkEvery seconds, each character's position is
@@ -2650,7 +2763,7 @@ return AntiCheat
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00033">
+			<Item class="ModuleScript" referent="RBX00034">
 				<Properties>
 					<string name="Name">BoxManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Box openings (Config.Boxes, shared/Boxes). Boxes open through Remotes.Box with coins ("open") or
@@ -2805,7 +2918,7 @@ return BoxManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00034">
+			<Item class="ModuleScript" referent="RBX00035">
 				<Properties>
 					<string name="Name">ChestSpawner</string>
 					<ProtectedString name="Source"><![CDATA[-- The chests each round (Config.Chests), made to be fought over. They go in the dead ends furthest
@@ -3105,7 +3218,7 @@ return ChestSpawner
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00035">
+			<Item class="ModuleScript" referent="RBX00036">
 				<Properties>
 					<string name="Name">CollectionManager</string>
 					<ProtectedString name="Source"><![CDATA[-- The needle collection, on the server. Needles come from boxes (server/BoxManager: coins, keys
@@ -3190,7 +3303,7 @@ return CollectionManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00036">
+			<Item class="ModuleScript" referent="RBX00037">
 				<Properties>
 					<string name="Name">Combat</string>
 					<ProtectedString name="Source"><![CDATA[-- Needle combat. Everyone carries their showcase needle as a tool (the "Needle", rebuilt when the
@@ -3445,7 +3558,7 @@ return Combat
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00037">
+			<Item class="ModuleScript" referent="RBX00038">
 				<Properties>
 					<string name="Name">CombatThrow</string>
 					<ProtectedString name="Source"><![CDATA[-- Throwing your needle (Config.Throw). The client sends where it's aiming (Remotes.Throw); the
@@ -3544,7 +3657,7 @@ return CombatThrow
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00038">
+			<Item class="ModuleScript" referent="RBX00039">
 				<Properties>
 					<string name="Name">Dash</string>
 					<ProtectedString name="Source"><![CDATA[-- Dashing (Config.Dash; the dash itself is client/DashFx, since each player's device moves its
@@ -3577,7 +3690,7 @@ return Dash
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00039">
+			<Item class="ModuleScript" referent="RBX0003A">
 				<Properties>
 					<string name="Name">DataManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Player data: loaded on join, cached for the session, saved with UpdateAsync on an autosave
@@ -3856,7 +3969,7 @@ return DataManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003A">
+			<Item class="ModuleScript" referent="RBX0003B">
 				<Properties>
 					<string name="Name">FarmProps</string>
 					<ProtectedString name="Source"><![CDATA[-- Farm props for the maps from the owner's Gemini sheets (server/MapsC): pumpkins, scarecrows,
@@ -4028,7 +4141,7 @@ return FarmProps
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003B">
+			<Item class="ModuleScript" referent="RBX0003C">
 				<Properties>
 					<string name="Name">FarmProps2</string>
 					<ProtectedString name="Source"><![CDATA[-- More props for the maps from the Gemini sheets (server/MapsD): a snowy barn, snowy pines, a
@@ -4231,7 +4344,7 @@ return FarmProps2
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003C">
+			<Item class="ModuleScript" referent="RBX0003D">
 				<Properties>
 					<string name="Name">GamePads</string>
 					<ProtectedString name="Source"><![CDATA[-- The game platforms in the lobby (Config.Pads; built by server/LobbyBuilder). Stand on one to join
@@ -4392,7 +4505,7 @@ return GamePads
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003D">
+			<Item class="ModuleScript" referent="RBX0003E">
 				<Properties>
 					<string name="Name">GameServer</string>
 					<ProtectedString name="Source"><![CDATA[-- A game's own server: a private (reserved) server of this same place, made by a lobby game platform
@@ -4475,7 +4588,7 @@ return GameServer
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003E">
+			<Item class="ModuleScript" referent="RBX0003F">
 				<Properties>
 					<string name="Name">HaystackModel</string>
 					<ProtectedString name="Source"><![CDATA[-- The owner's own haystack model (Config.Haystacks.model): loaded once with InsertService (it must
@@ -4529,7 +4642,7 @@ return HaystackModel
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0003F">
+			<Item class="ModuleScript" referent="RBX00040">
 				<Properties>
 					<string name="Name">Landmarks</string>
 					<ProtectedString name="Source"><![CDATA[-- Climbable landmarks for a big map (server/MapsBig). Each is a challenge to reach, and returns the
@@ -4664,7 +4777,7 @@ return Landmarks
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00040">
+			<Item class="ModuleScript" referent="RBX00041">
 				<Properties>
 					<string name="Name">LeaderboardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Global leaderboards (Config.Boards), each an OrderedDataStore: most chests, most tag-outs,
@@ -4838,7 +4951,7 @@ return LeaderboardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00041">
+			<Item class="ModuleScript" referent="RBX00042">
 				<Properties>
 					<string name="Name">LobbyBuilder</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby, built once at Config.LobbyCentre: a wooden plaza in a field, the animated title sign
@@ -5075,7 +5188,7 @@ return LobbyBuilder
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00042">
+			<Item class="ModuleScript" referent="RBX00043">
 				<Properties>
 					<string name="Name">LobbyDecor</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's dressing (LobbyBuilder calls build once): a lawn crossed by cobbled paths (spawn to
@@ -5182,7 +5295,7 @@ return LobbyDecor
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00043">
+			<Item class="ModuleScript" referent="RBX00044">
 				<Properties>
 					<string name="Name">LobbyShowOff</string>
 					<ProtectedString name="Source"><![CDATA[-- Show off (Remotes.ShowOff): hold your showcase needle (or your best) up over your head for a
@@ -5251,7 +5364,7 @@ return LobbyShowOff
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00044">
+			<Item class="ModuleScript" referent="RBX00045">
 				<Properties>
 					<string name="Name">LobbySocial</string>
 					<ProtectedString name="Source"><![CDATA[-- The lobby's social side: showing off collections.
@@ -5531,7 +5644,7 @@ return LobbySocial
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Script" referent="RBX00045">
+			<Item class="Script" referent="RBX00046">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Starts A Needle in a Haystack on the server. Systems that react to a player's save loading are
@@ -5618,7 +5731,7 @@ end
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00046">
+			<Item class="ModuleScript" referent="RBX00047">
 				<Properties>
 					<string name="Name">MapKit</string>
 					<ProtectedString name="Source"><![CDATA[-- The building kit for maps (server/MapsA, MapsB): ground, hay bales, haystacks, crates, fences,
@@ -5847,7 +5960,7 @@ return MapKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00047">
+			<Item class="ModuleScript" referent="RBX00048">
 				<Properties>
 					<string name="Name">MapsA</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Classic Haystack Field (a hedge maze), Barn Interior (a maze of stall walls) and
@@ -5976,7 +6089,7 @@ return MapsA
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00048">
+			<Item class="ModuleScript" referent="RBX00049">
 				<Properties>
 					<string name="Name">MapsB</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders: Night Forest (a thicket maze) and Abandoned Attic (a maze of stacked boxes under
@@ -6075,7 +6188,7 @@ return MapsB
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00049">
+			<Item class="ModuleScript" referent="RBX0004A">
 				<Properties>
 					<string name="Name">MapsBig</string>
 					<ProtectedString name="Source"><![CDATA[-- Hayfield Farm: one big map (about 360 studs across, several times the others). Four farm quarters,
@@ -6177,7 +6290,7 @@ return MapsBig
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004A">
+			<Item class="ModuleScript" referent="RBX0004B">
 				<Properties>
 					<string name="Name">MapsC</string>
 					<ProtectedString name="Source"><![CDATA[-- Map builders from the owner's Gemini map sheets: Pumpkin Patch, Harvest Corn Maze, Sunflower
@@ -6328,7 +6441,7 @@ return MapsC
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004B">
+			<Item class="ModuleScript" referent="RBX0004C">
 				<Properties>
 					<string name="Name">MapsD</string>
 					<ProtectedString name="Source"><![CDATA[-- More maps from the owner's Gemini sheets: Frozen Farm, Rainy Greenhouse, Duck Pond Marsh, Hay
@@ -6485,7 +6598,7 @@ return MapsD
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004C">
+			<Item class="ModuleScript" referent="RBX0004D">
 				<Properties>
 					<string name="Name">MatchXp</string>
 					<ProtectedString name="Source"><![CDATA[-- The match's stats and its end (Config.MatchXp, Config.Rewards): counted while the round runs
@@ -6564,7 +6677,7 @@ return MatchXp
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004D">
+			<Item class="ModuleScript" referent="RBX0004E">
 				<Properties>
 					<string name="Name">MazeKit</string>
 					<ProtectedString name="Source"><![CDATA[-- Mazes for the maps: a grid of cells carved into a maze (a random depth-first walk, so every cell
@@ -6789,7 +6902,7 @@ return MazeKit
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004E">
+			<Item class="ModuleScript" referent="RBX0004F">
 				<Properties>
 					<string name="Name">MazeWalls</string>
 					<ProtectedString name="Source"><![CDATA[-- More maze wall styles (server/MazeKit uses these when a map asks for one; it has its own
@@ -6983,7 +7096,7 @@ return MazeWalls
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0004F">
+			<Item class="ModuleScript" referent="RBX00050">
 				<Properties>
 					<string name="Name">OneOfOne</string>
 					<ProtectedString name="Source"><![CDATA[-- The 1 of 1s (Config.OneOfOne). A chest rolls for each (roll); the first player to roll one claims it
@@ -7103,7 +7216,7 @@ return OneOfOne
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00050">
+			<Item class="ModuleScript" referent="RBX00051">
 				<Properties>
 					<string name="Name">PadPortal</string>
 					<ProtectedString name="Source"><![CDATA[-- One lobby game platform (LobbyBuilder builds Config.Pads.count of them; server/GamePads runs them):
@@ -7180,7 +7293,7 @@ return PadPortal
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00051">
+			<Item class="ModuleScript" referent="RBX00052">
 				<Properties>
 					<string name="Name">Powerups</string>
 					<ProtectedString name="Source"><![CDATA[-- Power-ups on the maps (Config.Powerups). When a round's search starts, glowing orbs float in
@@ -7361,7 +7474,7 @@ return Powerups
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00052">
+			<Item class="ModuleScript" referent="RBX00053">
 				<Properties>
 					<string name="Name">Practice</string>
 					<ProtectedString name="Source"><![CDATA[-- The Time Trial in the Practice Yard (Config.Practice). From the lobby (the Practice stall, or
@@ -7616,7 +7729,7 @@ return Practice
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00053">
+			<Item class="ModuleScript" referent="RBX00054">
 				<Properties>
 					<string name="Name">PracticeYard</string>
 					<ProtectedString name="Source"><![CDATA[-- Builds one player's Practice Yard for a Time Trial (server/Practice, Config.Practice): a hedged
@@ -7757,7 +7870,7 @@ return PracticeYard
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00054">
+			<Item class="ModuleScript" referent="RBX00055">
 				<Properties>
 					<string name="Name">QuestManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Daily quests: three a day, the same for everyone (shared/Quests.forDay). Progress is saved;
@@ -7825,7 +7938,7 @@ return QuestManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00055">
+			<Item class="ModuleScript" referent="RBX00056">
 				<Properties>
 					<string name="Name">Requests</string>
 					<ProtectedString name="Source"><![CDATA[-- Small requests from players, checked on the server: a hint (Remotes.Hint) and saving their
@@ -7888,7 +8001,7 @@ return Requests
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00056">
+			<Item class="ModuleScript" referent="RBX00057">
 				<Properties>
 					<string name="Name">RewardManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Every coin and XP point is given here, on the server: chests, places, playing a round to the
@@ -8034,7 +8147,7 @@ return RewardManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00057">
+			<Item class="ModuleScript" referent="RBX00058">
 				<Properties>
 					<string name="Name">RoundExtras</string>
 					<ProtectedString name="Source"><![CDATA[-- What runs alongside a round's search, started and stopped together by server/RoundManager:
@@ -8068,7 +8181,7 @@ return RoundExtras
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00058">
+			<Item class="ModuleScript" referent="RBX00059">
 				<Properties>
 					<string name="Name">RoundManager</string>
 					<ProtectedString name="Source"><![CDATA[-- A round, all on the server, for a group of players (RoundManager.play: a game platform's
@@ -8363,7 +8476,7 @@ return RoundManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX00059">
+			<Item class="ModuleScript" referent="RBX0005A">
 				<Properties>
 					<string name="Name">ShopManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Cosmetics and purchases. With Haystack Coins: buy a cosmetic (Remotes.Shop "buy"), and wear
@@ -8620,7 +8733,7 @@ return ShopManager
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005A">
+			<Item class="ModuleScript" referent="RBX0005B">
 				<Properties>
 					<string name="Name">Streaks</string>
 					<ProtectedString name="Source"><![CDATA[-- Tag-out streaks, the Marked player and the tag-out feed (Config.Streak), called by server/Combat
@@ -8754,7 +8867,7 @@ return Streaks
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX0005B">
+			<Item class="ModuleScript" referent="RBX0005C">
 				<Properties>
 					<string name="Name">TradeManager</string>
 					<ProtectedString name="Source"><![CDATA[-- Trading needles between two players in the lobby (Config.Trading). Remotes.Trade asks; the
@@ -9022,24 +9135,24 @@ return TradeManager
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerStorage" referent="RBX0005C">
+	<Item class="ServerStorage" referent="RBX0005D">
 		<Properties>
 			<string name="Name">ServerStorage</string>
 		</Properties>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX0005D">
+	<Item class="StarterPlayer" referent="RBX0005E">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX0005E">
+		<Item class="StarterPlayerScripts" referent="RBX0005F">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX0005F">
+			<Item class="Folder" referent="RBX00060">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX00060">
+				<Item class="ModuleScript" referent="RBX00061">
 					<Properties>
 						<string name="Name">Aim</string>
 						<ProtectedString name="Source"><![CDATA[-- Your aim settings (Settings, Aim; Config.Aim): mouse sensitivity, field of view, and the reticle
@@ -9152,7 +9265,7 @@ return Aim
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00061">
+				<Item class="ModuleScript" referent="RBX00062">
 					<Properties>
 						<string name="Name">BoxReel</string>
 						<ProtectedString name="Source"><![CDATA[-- The box opening on your screen: a strip of needle cards slides along under a gold marker,
@@ -9255,7 +9368,7 @@ return BoxReel
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00062">
+				<Item class="ModuleScript" referent="RBX00063">
 					<Properties>
 						<string name="Name">BoxScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Boxes screen: each box with its price (coins; the dearer ones also Robux), a key button
@@ -9460,7 +9573,7 @@ return BoxScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00063">
+				<Item class="ModuleScript" referent="RBX00064">
 					<Properties>
 						<string name="Name">CombatFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Needle combat on your screen (server/Combat decides every hit):
@@ -9662,7 +9775,7 @@ return CombatFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00064">
+				<Item class="ModuleScript" referent="RBX00065">
 					<Properties>
 						<string name="Name">CooldownBars</string>
 						<ProtectedString name="Source"><![CDATA[-- POKE and THROW bars, top left under the DASH bar (client/DashFx), in the same style: each empties
@@ -9714,7 +9827,7 @@ return CooldownBars
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00065">
+				<Item class="ModuleScript" referent="RBX00066">
 					<Properties>
 						<string name="Name">DashFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Dashing (Config.Dash): C, B on a controller, or the Dash button on a phone. Your character
@@ -9835,7 +9948,7 @@ return DashFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00066">
+				<Item class="ModuleScript" referent="RBX00067">
 					<Properties>
 						<string name="Name">Effects</string>
 						<ProtectedString name="Source"><![CDATA[-- Feedback you can see and hear, on your own screen only: sounds, a burst of particles where a
@@ -9917,7 +10030,7 @@ return Effects
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00067">
+				<Item class="ModuleScript" referent="RBX00068">
 					<Properties>
 						<string name="Name">FeedFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The tag-out feed, top right beside the menu (server/Streaks sends every tag-out to everyone; Config.Streak.feed):
@@ -10001,7 +10114,7 @@ return FeedFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00068">
+				<Item class="ModuleScript" referent="RBX00069">
 					<Properties>
 						<string name="Name">Hud</string>
 						<ProtectedString name="Source"><![CDATA[-- The always-on screen: your coins and level (with an XP bar) at the top left; the round's
@@ -10153,7 +10266,7 @@ return Hud
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00069">
+				<Item class="ModuleScript" referent="RBX0006A">
 					<Properties>
 						<string name="Name">KeyHints</string>
 						<ProtectedString name="Source"><![CDATA[-- What each key does, for players on a keyboard: a small guide low on the left, above the Show off
@@ -10210,7 +10323,7 @@ return KeyHints
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006A">
+				<Item class="ModuleScript" referent="RBX0006B">
 					<Properties>
 						<string name="Name">LobbyUi</string>
 						<ProtectedString name="Source"><![CDATA[-- The lobby, on your screen:
@@ -10308,7 +10421,7 @@ return LobbyUi
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="LocalScript" referent="RBX0006B">
+				<Item class="LocalScript" referent="RBX0006C">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- Starts the client: the whole UI (UIController). The client only shows things and asks the
@@ -10318,7 +10431,7 @@ UIController.start()
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006C">
+				<Item class="ModuleScript" referent="RBX0006D">
 					<Properties>
 						<string name="Name">NeedleView</string>
 						<ProtectedString name="Source"><![CDATA[-- A needle in 3D inside the UI: a ViewportFrame with the needle (shared/NeedleLook) lit and
@@ -10370,7 +10483,7 @@ return NeedleView
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006D">
+				<Item class="ModuleScript" referent="RBX0006E">
 					<Properties>
 						<string name="Name">PowerupFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Power-ups on your screen (server/Powerups decides; Remotes.Powerup says what you got):
@@ -10504,7 +10617,7 @@ return PowerupFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006E">
+				<Item class="ModuleScript" referent="RBX0006F">
 					<Properties>
 						<string name="Name">PracticeFx</string>
 						<ProtectedString name="Source"><![CDATA[-- The Time Trial on your screen (server/Practice decides everything): the Practice window (your
@@ -10668,7 +10781,7 @@ return PracticeFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX0006F">
+				<Item class="ModuleScript" referent="RBX00070">
 					<Properties>
 						<string name="Name">Results</string>
 						<ProtectedString name="Source"><![CDATA[-- The round's big moments on screen: the 3, 2, 1; CHEST OPENED! when you open one (coins, or a
@@ -10828,7 +10941,7 @@ return Results
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00070">
+				<Item class="ModuleScript" referent="RBX00071">
 					<Properties>
 						<string name="Name">Screens</string>
 						<ProtectedString name="Source"><![CDATA[-- The Shop and Inventory screens. The Shop sells cosmetics for Haystack Coins (needle skins,
@@ -11019,7 +11132,7 @@ return Screens
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00071">
+				<Item class="ModuleScript" referent="RBX00072">
 					<Properties>
 						<string name="Name">Screens2</string>
 						<ProtectedString name="Source"><![CDATA[-- The Quests, Leaderboard and Settings screens (Settings: sound and effects toggles, and Aim).
@@ -11216,7 +11329,7 @@ return Screens2
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00072">
+				<Item class="ModuleScript" referent="RBX00073">
 					<Properties>
 						<string name="Name">Screens3</string>
 						<ProtectedString name="Source"><![CDATA[-- The Collection screen: every needle you've found, by type, shown in 3D with its rarity, value
@@ -11353,7 +11466,7 @@ return Screens3
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00073">
+				<Item class="ModuleScript" referent="RBX00074">
 					<Properties>
 						<string name="Name">StreakFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Tag-outs and streaks on your screen (server/Combat decides them; Config.Streak):
@@ -11456,7 +11569,7 @@ return StreakFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00074">
+				<Item class="ModuleScript" referent="RBX00075">
 					<Properties>
 						<string name="Name">ThrowFx</string>
 						<ProtectedString name="Source"><![CDATA[-- Throwing your needle on your screen (server/CombatThrow decides): Q, or the Throw button while
@@ -11574,7 +11687,7 @@ return ThrowFx
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00075">
+				<Item class="ModuleScript" referent="RBX00076">
 					<Properties>
 						<string name="Name">TradeScreen</string>
 						<ProtectedString name="Source"><![CDATA[-- The Trade screen (server/TradeManager decides everything). Not trading: everyone in the server
@@ -11769,7 +11882,7 @@ return TradeScreen
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00076">
+				<Item class="ModuleScript" referent="RBX00077">
 					<Properties>
 						<string name="Name">UIController</string>
 						<ProtectedString name="Source"><![CDATA[-- Puts the whole UI together: one ScreenGui with the HUD, the round moments (Results), and the
@@ -11928,7 +12041,7 @@ return UIController
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00077">
+				<Item class="ModuleScript" referent="RBX00078">
 					<Properties>
 						<string name="Name">UiKit</string>
 						<ProtectedString name="Source"><![CDATA[-- The UI's look in one place: a clean, modern dark-glass style with warm gold accents, big
@@ -12068,113 +12181,42 @@ return UiKit
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX00078">
+				<Item class="ModuleScript" referent="RBX00079">
 					<Properties>
 						<string name="Name">ViewModel</string>
-						<ProtectedString name="Source"><![CDATA[-- First person: your arms and your needle drawn in front of the camera, posed and animated from
--- shared/FirstPerson (made in the Needle Hand Rig artifact). Only you see these; everyone else
--- sees the Needle tool in your character's hand (server/Combat), which is hidden on your own
--- screen while you're in first person. Plays the inspect (F), jab (a poke) and throw (Q).
+						<ProtectedString name="Source"><![CDATA[-- First person: your forearm, your hand and your needle drawn in front of the camera. Only you
+-- see these; everyone else sees the Needle tool in your character's hand (server/Combat), which
+-- is hidden on your own screen while you're in first person.
+--   the pose and the inspect, jab and throw: shared/FirstPerson (made in the Needle Hand Rig tool)
+--   the hand, the grip, the motion, equip and catch: shared/FirstPersonRig
+--   where things go: ViewModelPose | the parts: ViewModelRig | how you're moving: ViewModelMotion
+-- The view comes up with "equip"; a throw empties the hand until the needle is back ("catch").
+-- In a round and in the Practice Yard the camera is locked to first person.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local FP = require(Shared:WaitForChild("FirstPerson"))
-local Needles = require(Shared:WaitForChild("Needles"))
-local NeedleLook = require(Shared:WaitForChild("NeedleLook"))
+local Rig = require(Shared:WaitForChild("FirstPersonRig"))
+local Pose = require(script.Parent.ViewModelPose)
+local ViewModelRig = require(script.Parent.ViewModelRig)
+local Motion = require(script.Parent.ViewModelMotion)
 
 local player = Players.LocalPlayer
 local ViewModel = {}
-local rig = nil -- { model, right, left, needle, key }
+-- Every animation ViewModel.play knows, by name. To add a set (combat moves, say), add that
+-- module's anims table to this list: a later table wins a name.
+local ANIMS = Pose.merge({ FP.anims, Rig.anims })
+local view = nil -- ViewModelRig's parts for the needle in hand
 local playing = nil -- { name, start }
-local lastYaw, sway, hiddenTool = nil, 0, nil
-local ZERO = { 0, 0, 0, 0, 0, 0 }
+local showing = false -- the view is up
+local flight = nil -- the needle is out of the hand: when the throw let go (os.clock), or "away" once the server says so
+local wasGone = false
+local hiddenTool = nil
 
-local function v3(t)
-	return Vector3.new(t[1], t[2], t[3])
-end
-
--- pos + the offset's first three, rot + its last three (degrees), as the artifact does it
-local function place(base, off, extra)
-	local p = v3(base.pos) + Vector3.new(off[1], off[2], off[3]) + (extra or Vector3.zero)
-	return CFrame.new(p) * CFrame.Angles(math.rad(base.rot[1] + off[4]), math.rad(base.rot[2] + off[5]), math.rad(base.rot[3] + off[6]))
-end
-
-local function block(model, size, colour, material)
-	local p = Instance.new("Part")
-	p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
-	p.Size, p.Color, p.Material = size, colour, material
-	p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
-	p.Parent = model
-	return p
-end
-
-local function skinColour(character)
-	local colours = character:FindFirstChildOfClass("BodyColors")
-	if colours then
-		return colours.RightArmColor3
-	end
-	local arm = character:FindFirstChild("RightLowerArm") or character:FindFirstChild("Right Arm")
-	return if arm then arm.Color else Color3.fromRGB(234, 184, 146)
-end
-
-local function makeArm(model, colour)
-	local size, s = v3(FP.arm.size), math.min(FP.arm.sleeve, 0.98)
-	local arm = { skin = block(model, size, colour, Enum.Material.SmoothPlastic), half = size.Y / 2 }
-	if s > 0.01 then
-		arm.sleeve = block(model, Vector3.new(size.X * 1.08, size.Y * s, size.Z * 1.08), Color3.fromRGB(table.unpack(FP.arm.sleeveColour)), Enum.Material.Fabric)
-		arm.sleeveAt = CFrame.new(0, size.Y / 2 - size.Y * s / 2 + 0.001, 0)
-	end
-	return arm
-end
-
-local function build(character, key)
-	if rig then
-		rig.model:Destroy()
-	end
-	local typeId, skinId = Needles.split(key)
-	local model = Instance.new("Model")
-	model.Name = "NeedleViewModel"
-	local colour = skinColour(character)
-	rig = { model = model, key = key, right = makeArm(model, colour), left = makeArm(model, colour) }
-	rig.needle = NeedleLook.build(typeId or "sewing", skinId or "steel", FP.needleLook.scale, FP.needleLook.fat)
-	rig.needle.Parent = model
-	rig.emitters = {}
-	for _, e in ipairs(rig.needle:GetDescendants()) do
-		if e:IsA("ParticleEmitter") then -- an Heirloom's aura, sparkles: they stay with the hand
-			e.LockedToPart = true
-			table.insert(rig.emitters, e)
-		end
-	end
-	model.Parent = workspace.CurrentCamera
-end
-
--- The offsets at time t of an animation: between the two keys around t, eased (as in the artifact).
-local function sample(anim, t)
-	local keys = anim.keys
-	local a, b = keys[1], keys[#keys]
-	for i = 1, #keys - 1 do
-		if t >= keys[i].t and t <= keys[i + 1].t then
-			a, b = keys[i], keys[i + 1]
-			break
-		end
-	end
-	local f = if b.t > a.t then math.clamp((t - a.t) / (b.t - a.t), 0, 1) else 0
-	f = f * f * (3 - 2 * f)
-	local out = {}
-	for _, part in ipairs({ "right", "left", "needle" }) do
-		local row = {}
-		for i = 1, 6 do
-			row[i] = a[part][i] + (b[part][i] - a[part][i]) * f
-		end
-		out[part] = row
-	end
-	return out
-end
-
--- Your own Needle tool, hidden on your screen while you're in first person (the arms hold the one you
--- see). Set every frame, so nothing else (the camera's own scripts, a rebuilt tool) can undo it.
+-- Your own Needle tool, hidden on your screen while you're in first person (the hand holds the one
+-- you see). Set every frame, so nothing else (the camera's own scripts, a rebuilt tool) can undo it.
 local function setToolHidden(tool)
 	if hiddenTool == tool and tool == nil then
 		return
@@ -12191,69 +12233,92 @@ local function setToolHidden(tool)
 	hiddenTool = tool
 end
 
+-- Is the needle out of the hand? From the moment the throw lets go of it until the server has
+-- brought it back (NeedleAway cleared), or throw.wait later if the server never took the throw.
+local function needleGone(now)
+	if player:GetAttribute("NeedleAway") == true then
+		flight = "away"
+	elseif flight == "away" or (flight and now - flight > Rig.throw.wait) then
+		flight = nil
+	end
+	return flight ~= nil
+end
+
 local function step(dt)
 	local camera = workspace.CurrentCamera
 	local character = player.Character
 	local head = character and character:FindFirstChild("Head")
 	local tool = character and character:FindFirstChild("Needle")
-	local firstPerson = head and (camera.CFrame.Position - head.Position).Magnitude < 1.5
+	local firstPerson = head and (camera.CFrame.Position - head.Position).Magnitude < Rig.view.firstPerson
 	if not (tool and firstPerson) then
 		setToolHidden(nil)
-		if rig then
-			rig.model.Parent = nil
+		if view then
+			view.model.Parent = nil
 		end
+		showing = false
 		return
 	end
 	setToolHidden(tool)
 	local key = tool:GetAttribute("Key") or "sewing:steel"
-	if not rig or rig.key ~= key then
-		build(character, key)
+	if not view or view.key ~= key then -- a new needle in hand
+		if view then
+			view.model:Destroy()
+		end
+		view = ViewModelRig.build(character, key)
+		showing = false
 	end
-	rig.model.Parent = camera
-	-- moving: a bob while walking, and the arms lag a little when you turn
-	local look = camera.CFrame.LookVector
-	local yaw = math.atan2(-look.X, -look.Z)
-	local turn = if lastYaw then (yaw - lastYaw + math.pi) % (2 * math.pi) - math.pi else 0
-	lastYaw = yaw
-	sway += (math.clamp(-turn / math.max(dt, 1 / 240) * FP.motion.sway * 0.25, -0.25, 0.25) - sway) * math.min(1, dt * 12)
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	local walking = humanoid and humanoid.MoveDirection.Magnitude > 0.1 and humanoid.FloorMaterial ~= Enum.Material.Air
-	local now, bob = os.clock(), if walking then FP.motion.bob else 0
-	local move = Vector3.new(math.sin(now * FP.motion.bobSpeed) * bob * 0.5 + sway, -math.abs(math.cos(now * FP.motion.bobSpeed)) * bob, 0)
-	local off = { right = ZERO, left = ZERO, needle = ZERO }
+	view.model.Parent = camera
+	if not showing then -- it rises into view
+		showing = true
+		Motion.reset()
+		ViewModel.play("equip")
+	end
+
+	local now = os.clock()
+	local rows, holding = nil, false
 	if playing then
-		local anim = FP.anims[playing.name]
-		local t = now - playing.start
+		local anim, t = ANIMS[playing.name], now - playing.start
+		if playing.name == "throw" then -- it stays in the hand until the throw lets go (where throws count)
+			holding = t < Rig.throw.release or not (player:GetAttribute("InRound") or player:GetAttribute("Practicing"))
+			if not holding and not flight then
+				flight = now
+			end
+		end
 		if t >= anim.length then
 			playing = nil
 		else
-			off = sample(anim, t)
+			rows = Pose.sample(anim, t)
 		end
 	end
-	for _, side in ipairs({ "right", "left" }) do
-		local arm, cf = rig[side], camera.CFrame * place(FP.pose[side], off[side], move)
-		arm.skin.CFrame = cf
-		if arm.sleeve then
-			arm.sleeve.CFrame = cf * arm.sleeveAt
-		end
-		arm.at = cf
+	local gone = needleGone(now) and not holding
+	if wasGone and not gone then
+		ViewModel.play("catch") -- back in the hand
 	end
-	local hand = rig.right.at * CFrame.new(0, -rig.right.half, 0)
-	rig.needle:PivotTo(hand * place(FP.pose.needle, off.needle))
-	local away = player:GetAttribute("NeedleAway") == true -- thrown: the hand is empty until it's back
-	for _, p in ipairs(rig.needle:GetDescendants()) do
-		if p:IsA("BasePart") and p.Name ~= "Root" then
-			p.LocalTransparencyModifier = if away then 1 else 0
-		end
+	wasGone = gone
+	ViewModelRig.showNeedle(view, not gone)
+
+	-- where everything goes: the hold, what's playing and how you're moving; then the wall, from
+	-- where the needle's point would otherwise be
+	local w = Motion.step(dt, camera, character:FindFirstChildOfClass("Humanoid"), character:FindFirstChild("HumanoidRootPart"), gone)
+	local fit = Pose.fit(Rig, camera.FieldOfView)
+	local frames = Pose.frames(FP, Rig, Pose.offsets(FP, Rig, rows, w), view.needle)
+	w.wall = Motion.wall(dt, camera, (fit * frames.needle * Vector3.new(view.needle.front, 0, 0)) * Rig.view.scale, character)
+	if w.wall > 0 then
+		frames = Pose.frames(FP, Rig, Pose.offsets(FP, Rig, rows, w), view.needle)
 	end
-	for _, e in ipairs(rig.emitters) do
-		e.Enabled = not away
-	end
+	ViewModelRig.move(view, camera.CFrame, fit, frames, w.away)
 end
 
--- Plays one of FirstPerson's animations ("inspect", "jab" or "throw") on your screen.
+-- First person only while you're in a round or the Practice Yard; the lobby keeps the usual camera.
+local function lockCamera()
+	local locked = player:GetAttribute("InRound") == true or player:GetAttribute("Practicing") == true
+	player.CameraMode = if locked then Enum.CameraMode.LockFirstPerson else Enum.CameraMode.Classic
+end
+
+-- Plays an animation on your screen by name: "inspect", "jab" or "throw" (shared/FirstPerson),
+-- "equip" or "catch" (shared/FirstPersonRig), or any other in ANIMS.
 function ViewModel.play(name)
-	if FP.anims[name] then
+	if ANIMS[name] then
 		playing = { name = name, start = os.clock() }
 	end
 end
@@ -12261,22 +12326,504 @@ end
 function ViewModel.start()
 	RunService:BindToRenderStep("NeedleViewModel", Enum.RenderPriority.Camera.Value + 1, step)
 	player.CharacterAdded:Connect(function()
-		if rig then
-			rig.model:Destroy()
-			rig = nil
+		if view then
+			view.model:Destroy()
+			view = nil
 		end
-		hiddenTool, playing = nil, nil
+		hiddenTool, playing, showing, flight, wasGone = nil, nil, false, nil, false
 	end)
+	for _, name in ipairs({ "InRound", "Practicing" }) do
+		player:GetAttributeChangedSignal(name):Connect(lockCamera)
+	end
+	lockCamera()
 end
 
 return ViewModel
 ]]></ProtectedString>
 					</Properties>
 				</Item>
+				<Item class="ModuleScript" referent="RBX0007A">
+					<Properties>
+						<string name="Name">ViewModelMotion</string>
+						<ProtectedString name="Source"><![CDATA[-- The first-person view's sense of movement: breathing, the walk, the lag when you turn, the dip
+-- when you land, the empty hand while the needle is away and how near a wall is. Each comes out
+-- as a weight for one of shared/FirstPersonRig.motion's layers; client/ViewModelPose.offsets
+-- turns the weights into rows. Every number is in FirstPerson.motion or FirstPersonRig.motion.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local FP = require(Shared:WaitForChild("FirstPerson"))
+local Rig = require(Shared:WaitForChild("FirstPersonRig"))
+local Pose = require(script.Parent.ViewModelPose)
+
+local Motion = {}
+local M = Rig.motion
+local SHORTEST = 1 / 240 -- a frame is never treated as shorter than this (turn speed divides by it)
+local s -- what carries over from frame to frame
+local params = RaycastParams.new()
+params.FilterType = Enum.RaycastFilterType.Exclude
+params.RespectCanCollide = true -- grass, orbs and other things you walk through don't count as walls
+
+-- Start again from rest (the view has just come up, or you have a new character).
+function Motion.reset()
+	s = { time = 0, stride = 0, walk = 0, swayX = 0, swayY = 0, air = 0, away = 0, wall = 0, fall = 0, inAir = false, w = {} }
+end
+Motion.reset()
+
+-- This frame's weights, all but the wall's (Motion.wall): see ViewModelPose.offsets.
+-- away: the needle is out of the hand.
+function Motion.step(dt, camera, humanoid, root, away)
+	local w = s.w
+	s.time += dt
+	w.breath = math.sin(s.time * M.breathe.speed)
+
+	local grounded = humanoid == nil or humanoid.FloorMaterial ~= Enum.Material.Air
+	local walking = humanoid ~= nil and grounded and humanoid.MoveDirection.Magnitude > M.walk.least
+	s.walk = Pose.ease(s.walk, if walking then 1 else 0, M.walk.rate, dt)
+	if walking then
+		s.stride += dt * FP.motion.bobSpeed
+	end
+	w.step, w.dip = Pose.walk(s.stride, s.walk)
+
+	-- turning: the view lags the camera (FirstPersonRig.motion.turn)
+	local look = camera.CFrame.LookVector
+	local yaw, pitch = math.atan2(-look.X, -look.Z), math.asin(math.clamp(look.Y, -1, 1))
+	local turned = if s.yaw then (yaw - s.yaw + math.pi) % (2 * math.pi) - math.pi else 0 -- left is +
+	local tilted = if s.pitch then pitch - s.pitch else 0 -- up is +
+	s.yaw, s.pitch = yaw, pitch
+	local perRadian = FP.motion.sway * M.turn.gain / math.max(dt, SHORTEST)
+	s.swayX = Pose.ease(s.swayX, math.clamp(turned * perRadian, -M.turn.max, M.turn.max), M.turn.rate, dt)
+	s.swayY = Pose.ease(s.swayY, math.clamp(-tilted * perRadian, -M.turn.max, M.turn.max), M.turn.rate, dt)
+	w.swayX, w.swayY = s.swayX, s.swayY
+
+	-- the air, and the dip when you land (harder after a longer fall)
+	if not grounded then
+		s.inAir = true
+		s.fall = math.max(s.fall, if root then -root.AssemblyLinearVelocity.Y else 0)
+	elseif s.inAir then
+		s.inAir = false
+		s.landed, s.power = s.time, math.clamp(s.fall / M.land.speed, M.land.least, 1)
+		s.fall = 0
+	end
+	s.air = Pose.ease(s.air, if grounded then 0 else 1, M.air.rate, dt)
+	w.air = s.air
+	w.land = if s.landed then Pose.landing(Rig, s.time - s.landed, s.power) else 0
+
+	s.away = Pose.ease(s.away, if away then 1 else 0, M.away.rate, dt)
+	w.away = s.away
+	w.wall = 0
+	return w
+end
+
+-- How far into the wall pose (0..1): one short ray from the camera to where the needle's point
+-- would be with no wall (tip, in camera space), past your own character and the view itself.
+-- Other players and dummies don't count: the needle is meant to reach them.
+function Motion.wall(dt, camera, tip, character)
+	local reach = tip.Magnitude
+	if s.ignoring ~= character then
+		s.ignoring = character
+		params.FilterDescendantsInstances = { character, camera }
+	end
+	local hit = workspace:Raycast(camera.CFrame.Position, camera.CFrame:VectorToWorldSpace(tip.Unit) * (reach + M.wall.margin), params)
+	local distance = nil
+	if hit then
+		local model = hit.Instance:FindFirstAncestorOfClass("Model")
+		if not (model and model:FindFirstChildOfClass("Humanoid")) then
+			distance = hit.Distance
+		end
+	end
+	local target = Pose.wall(Rig, reach, distance)
+	s.wall = Pose.ease(s.wall, target, if target > s.wall then M.wall.rateIn else M.wall.rateOut, dt)
+	return s.wall
+end
+
+return Motion
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX0007B">
+					<Properties>
+						<string name="Name">ViewModelPose</string>
+						<ProtectedString name="Source"><![CDATA[-- The first-person view's placement maths and nothing else: where the arms, the hands' boxes and
+-- the needle sit in front of the camera, from shared/FirstPerson and shared/FirstPersonRig. No
+-- Instances are made or moved here (client/ViewModelRig does that), so the preview page can mirror
+-- it line for line (dev/preview/viewmodel_pose.js) and dev/preview/viewmodel_data.py runs this very
+-- file outside Roblox to check the mirror. Keep it to plain maths on tables and CFrames.
+--   camera space: +X right, +Y up, -Z ahead (studs). Rows of six are { x, y, z, rx, ry, rz }:
+--   studs, then degrees in CFrame.Angles order, added to a pose's pos and rot.
+local Pose = {}
+
+local PARTS = { "right", "left", "needle", "wrist" }
+local ZERO = { 0, 0, 0, 0, 0, 0 }
+local SKIP = { Root = true, Aura = true, AuraShell = true } -- parts of a needle that aren't the needle
+
+local function at(pos, rot, side)
+	return CFrame.new(pos[1] * side, pos[2], pos[3]) * CFrame.Angles(math.rad(rot[1]), math.rad(rot[2]) * side, math.rad(rot[3]) * side)
+end
+
+-- A pose ({ pos, rot }) moved by a row of six: pos + its first three, rot + its last three.
+function Pose.place(base, off)
+	return CFrame.new(base.pos[1] + off[1], base.pos[2] + off[2], base.pos[3] + off[3])
+		* CFrame.Angles(math.rad(base.rot[1] + off[4]), math.rad(base.rot[2] + off[5]), math.rad(base.rot[3] + off[6]))
+end
+
+-- Every animation by name, from a list of anims tables (a later table wins a name).
+function Pose.merge(sources)
+	local anims = {}
+	for _, source in ipairs(sources) do
+		for name, anim in pairs(source) do
+			anims[name] = anim
+		end
+	end
+	return anims
+end
+
+-- The rows at time t of an animation: between the two keys around t, eased (as the rig tool does).
+function Pose.sample(anim, t)
+	local keys = anim.keys
+	local a, b = keys[1], keys[#keys]
+	for i = 1, #keys - 1 do
+		if t >= keys[i].t and t <= keys[i + 1].t then
+			a, b = keys[i], keys[i + 1]
+			break
+		end
+	end
+	local f = if b.t > a.t then math.clamp((t - a.t) / (b.t - a.t), 0, 1) else 0
+	f = f * f * (3 - 2 * f)
+	local out = {}
+	for _, part in ipairs(PARTS) do
+		local from, to, row = a[part], b[part], { 0, 0, 0, 0, 0, 0 }
+		if from and to then
+			for i = 1, 6 do
+				row[i] = from[i] + (to[i] - from[i]) * f
+			end
+		end
+		out[part] = row
+	end
+	return out
+end
+
+local function add(off, layer, weight)
+	if not layer or weight == 0 then
+		return
+	end
+	for _, part in ipairs(PARTS) do
+		local row, into = layer[part], off[part]
+		if row then
+			for i = 1, 6 do
+				into[i] += row[i] * weight
+			end
+		end
+	end
+end
+
+-- Everything that moves the hold pose this frame, as one set of rows: the animation playing
+-- (already sampled, or nil) plus each of FirstPersonRig.motion's layers times its weight.
+--   w.breath -1..1 | w.step -1..1 and w.dip 0..1 (the walk; times FirstPerson.motion.bob) |
+--   w.swayX, w.swayY studs | w.land, w.air, w.away, w.wall 0..1
+function Pose.offsets(FP, Rig, playing, w)
+	local off = { right = { 0, 0, 0, 0, 0, 0 }, left = { 0, 0, 0, 0, 0, 0 }, needle = { 0, 0, 0, 0, 0, 0 }, wrist = { 0, 0, 0, 0, 0, 0 } }
+	local M = Rig.motion
+	add(off, playing, 1)
+	add(off, M.breathe, w.breath)
+	add(off, M.walk.step, w.step * FP.motion.bob)
+	add(off, M.walk.dip, w.dip * FP.motion.bob)
+	add(off, M.turn.yaw, w.swayX)
+	add(off, M.turn.pitch, w.swayY)
+	add(off, M.land, w.land)
+	add(off, M.air, w.air)
+	add(off, M.away, w.away)
+	add(off, M.wall, w.wall)
+	return off
+end
+
+-- The walk's two weights at a point in the stride (radians), by how much you're walking (0..1).
+function Pose.walk(phase, amount)
+	return math.sin(phase) * amount, math.abs(math.cos(phase)) * amount
+end
+
+-- The landing dip `since` seconds after touching down: in over land.time, then easing away.
+function Pose.landing(Rig, since, strength)
+	local x = math.max(since, 0) / Rig.motion.land.time
+	return strength * x * math.exp(1 - x)
+end
+
+-- How far into the wall pose (0..1): `reach` is how far the needle's point is along the ray to
+-- it, `distance` how far along that ray a wall is (nil: none).
+function Pose.wall(Rig, reach, distance)
+	local W = Rig.motion.wall
+	if not distance then
+		return 0
+	end
+	return math.clamp((reach + W.margin - distance) / math.max(reach + W.margin - W.near, 0.01), 0, 1)
+end
+
+-- A value eased towards a target at `rate` a second, the same whatever the frame rate.
+function Pose.ease(value, target, rate, dt)
+	return value + (target - value) * (1 - math.exp(-rate * dt))
+end
+
+-- A built needle's back and front ends along its own X (the eye end and the point), from its
+-- parts' boxes: NeedleLook builds every needle along +X, whatever its shape.
+function Pose.measure(model)
+	local pivot = model:GetPivot()
+	local back, front = math.huge, -math.huge
+	for _, p in ipairs(model:GetDescendants()) do
+		if p:IsA("BasePart") and not SKIP[p.Name] then
+			local cf = pivot:ToObjectSpace(p.CFrame)
+			local x, y, z = cf.XVector, cf.YVector, cf.ZVector
+			local half = (math.abs(x.X) * p.Size.X + math.abs(y.X) * p.Size.Y + math.abs(z.X) * p.Size.Z) / 2
+			back, front = math.min(back, cf.X - half), math.max(front, cf.X + half)
+		end
+	end
+	return back, front
+end
+
+-- What to multiply a needle's size by so its length lands within FirstPersonRig.grip's limits
+-- (a pin isn't a speck, a knitting needle doesn't leave the screen).
+function Pose.lengthScale(Rig, back, front)
+	local length = math.max(front - back, 0.01)
+	return math.clamp(length, Rig.grip.minLength, Rig.grip.maxLength) / length
+end
+
+-- The needle at the size the grip rule gives: build(scale) makes one at a scale (NeedleLook's);
+-- it is measured, and made again at the right scale if its length is out of bounds.
+-- Returns the model, its back and front ends, and the scale it ended up at.
+function Pose.fitNeedle(FP, Rig, build)
+	local scale = FP.needleLook.scale
+	local model = build(scale)
+	local back, front = Pose.measure(model)
+	local k = Pose.lengthScale(Rig, back, front)
+	if math.abs(k - 1) > 0.001 then
+		model:Destroy()
+		scale *= k
+		model = build(scale)
+		back, front = Pose.measure(model)
+	end
+	return model, back, front, scale
+end
+
+-- Where everything is in camera space, at the reference field of view:
+--   right, left: each forearm's centre (FirstPerson.pose);
+--   endRight, endLeft: the forearm's hand end, same turn (the cuff's boxes hang here);
+--   handRight, handLeft: the hand, bent at the wrist (FirstPersonRig.wrist; the hand's boxes hang here);
+--   needle: the needle's own origin, set so the point grip.back along from its back end sits at
+--   FirstPerson.pose.needle in the right hand.
+-- needle: { back, front } as measured.
+function Pose.frames(FP, Rig, off, needle)
+	local half = FP.arm.size[2] / 2
+	local right, left = Pose.place(FP.pose.right, off.right), Pose.place(FP.pose.left, off.left)
+	local endRight, endLeft = right * CFrame.new(0, -half, 0), left * CFrame.new(0, -half, 0)
+	local handRight, handLeft = endRight * Pose.place(Rig.wrist, off.wrist), endLeft * at(Rig.wrist.pos, Rig.wrist.rot, -1)
+	local held = handRight * Pose.place(FP.pose.needle, off.needle) * CFrame.new(-(needle.back + Rig.grip.back), 0, 0)
+	return { right = right, left = left, endRight = endRight, endLeft = endLeft, handRight = handRight, handLeft = handLeft, needle = held }
+end
+
+-- One of the hand's (or the cuff's) boxes in its frame: its gripping place, eased to its open
+-- one by `open` (0..1; pos and rot go straight from one to the other). side: 1 the right hand,
+-- -1 the left, which is the right hand's mirror image (x, and the turns about y and z, flip).
+function Pose.box(part, open, side)
+	local pos, rot = part.pos, part.rot or ZERO
+	if part.open and open > 0 then
+		local toPos, toRot = part.open.pos or pos, part.open.rot or rot
+		pos = { pos[1] + (toPos[1] - pos[1]) * open, pos[2] + (toPos[2] - pos[2]) * open, pos[3] + (toPos[3] - pos[3]) * open }
+		rot = { rot[1] + (toRot[1] - rot[1]) * open, rot[2] + (toRot[2] - rot[2]) * open, rot[3] + (toRot[3] - rot[3]) * open }
+	end
+	return at(pos, rot, side)
+end
+
+-- The same framing at any field of view: the whole view slides along the camera's axis, nearer
+-- for a wide view and further for a narrow one. On screen that is exactly a view scaled by
+-- tan(fov / 2) / tan(refFov / 2) about a point view.pivot studs ahead (so offsets scale with
+-- tan(fov / 2)), but nothing is resized and a wide view doesn't reach further into walls.
+function Pose.fit(Rig, fov)
+	local k = math.tan(math.rad(fov) / 2) / math.tan(math.rad(Rig.view.refFov) / 2)
+	return CFrame.new(0, 0, Rig.view.pivot * (1 - 1 / k))
+end
+
+Pose.ZERO = ZERO
+
+return Pose
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX0007C">
+					<Properties>
+						<string name="Name">ViewModelRig</string>
+						<ProtectedString name="Source"><![CDATA[-- Builds the first-person view's parts and moves them: both forearms and sleeves
+-- (shared/FirstPerson), the cuffs and the hands' boxes (shared/FirstPersonRig) and the needle
+-- (shared/NeedleLook, at the size the grip rule gives), each at the place client/ViewModelPose
+-- works out. Every part is anchored and can't be touched, hit by a ray or cast a shadow, and one
+-- workspace:BulkMoveTo a frame moves the lot. dev/preview/viewmodel.html draws the same parts.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local FP = require(Shared:WaitForChild("FirstPerson"))
+local Rig = require(Shared:WaitForChild("FirstPersonRig"))
+local Needles = require(Shared:WaitForChild("Needles"))
+local NeedleLook = require(Shared:WaitForChild("NeedleLook"))
+local Pose = require(script.Parent.ViewModelPose)
+
+local ViewModelRig = {}
+-- which of ViewModelPose.frames' places each side's parts hang from
+local SIDES = {
+	{ arm = "right", cuff = "endRight", hand = "handRight", sign = 1 },
+	{ arm = "left", cuff = "endLeft", hand = "handLeft", sign = -1 },
+}
+
+local function v3(t)
+	return Vector3.new(t[1], t[2], t[3])
+end
+
+local function rgb(c)
+	return Color3.fromRGB(c[1], c[2], c[3])
+end
+
+local function skinColour(character)
+	local colours = character:FindFirstChildOfClass("BodyColors")
+	if colours then
+		return colours.RightArmColor3
+	end
+	local arm = character:FindFirstChild("RightLowerArm") or character:FindFirstChild("Right Arm")
+	return if arm then arm.Color else rgb(Rig.look.skin)
+end
+
+-- A box's colour: "skin", "sleeve" or { r, g, b }, times its shade.
+local function colourOf(def, skin)
+	local base = if def.colour == "sleeve" then rgb(FP.arm.sleeveColour) elseif type(def.colour) == "table" then rgb(def.colour) else skin
+	local k = def.shade or 1
+	return Color3.new(math.min(base.R * k, 1), math.min(base.G * k, 1), math.min(base.B * k, 1))
+end
+
+local function ghost(part) -- seen and nothing else
+	part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch, part.CastShadow = true, false, false, false, false
+end
+
+-- One part of the view: it hangs from `frame` (a name in ViewModelPose.frames) at `offset`.
+local function add(view, part, frame, offset)
+	local item = { part = part, frame = frame, offset = offset }
+	table.insert(view.items, item)
+	table.insert(view.parts, part)
+	return item
+end
+
+local function block(view, frame, offset, size, colour, material, shape)
+	local p = Instance.new("Part")
+	ghost(p)
+	if shape then
+		p.Shape = Enum.PartType[shape]
+	end
+	p.Size, p.Color, p.Material = size, colour, material
+	p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
+	p.Parent = view.model
+	return add(view, p, frame, offset)
+end
+
+local function arms(view, skin)
+	local size, sleeve, wide = v3(FP.arm.size), math.min(FP.arm.sleeve, 0.98), Rig.look.sleeveWidth
+	local skinMaterial, sleeveMaterial = Enum.Material[Rig.look.skinMaterial], Enum.Material[Rig.look.sleeveMaterial]
+	for _, side in ipairs(SIDES) do
+		block(view, side.arm, CFrame.identity, size, skin, skinMaterial)
+		if sleeve > 0.01 then -- from the elbow end down, a touch proud of the arm
+			block(view, side.arm, CFrame.new(0, size.Y / 2 - size.Y * sleeve / 2 + 0.001, 0), Vector3.new(size.X * wide, size.Y * sleeve, size.Z * wide), rgb(FP.arm.sleeveColour), sleeveMaterial)
+		end
+		local open = if side.sign == 1 then 0 else Rig.left.open
+		for _, set in ipairs({ { boxes = Rig.cuff, frame = side.cuff }, { boxes = Rig.hand, frame = side.hand } }) do
+			for _, def in ipairs(set.boxes) do
+				local item = block(view, set.frame, Pose.box(def, open, side.sign), v3(def.size), colourOf(def, skin), if def.colour == "sleeve" then sleeveMaterial else skinMaterial, def.shape)
+				if side.sign == 1 and def.open then -- the right hand's boxes that open when the needle is away
+					item.def = def
+					table.insert(view.fingers, item)
+				end
+			end
+		end
+	end
+end
+
+local function needle(view, typeId, skinId)
+	local model, back, front = Pose.fitNeedle(FP, Rig, function(scale)
+		local ok, built = pcall(NeedleLook.build, typeId, skinId, scale, FP.needleLook.fat)
+		return if ok then built else NeedleLook.build("sewing", skinId, scale, FP.needleLook.fat) -- never an empty hand
+	end)
+	view.needle = { back = back, front = front }
+	local pivot = model:GetPivot()
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") then
+			ghost(d)
+			add(view, d, "needle", pivot:ToObjectSpace(d.CFrame))
+			if d.Name ~= "Root" then
+				table.insert(view.needleParts, d)
+			end
+		elseif d:IsA("ParticleEmitter") or d:IsA("Light") then -- an Heirloom's aura, sparkles, a glow: they stay with the hand
+			if d:IsA("ParticleEmitter") then
+				d.LockedToPart = true
+			end
+			table.insert(view.effects, d)
+		end
+	end
+	model.Parent = view.model
+end
+
+-- The whole view for a character holding the needle `key` ("type:skin"), under the camera.
+function ViewModelRig.build(character, key)
+	local typeId, skinId = Needles.split(key)
+	local model = Instance.new("Model")
+	model.Name = "NeedleViewModel"
+	local view = { model = model, key = key, items = {}, parts = {}, cframes = {}, fingers = {}, open = 0, needleParts = {}, effects = {}, shown = true }
+	arms(view, skinColour(character))
+	needle(view, typeId or "sewing", skinId or "steel")
+	for _, part in ipairs(view.parts) do -- the whole view is drawn small and close (FirstPersonRig.view.scale)
+		part.Size *= Rig.view.scale
+	end
+	model.Parent = workspace.CurrentCamera
+	return view
+end
+
+-- Puts every part in its place for this frame. camera: the camera's CFrame; fit: the field of
+-- view's fit; frames: ViewModelPose.frames'; open: how open the right hand is (0..1). Everything
+-- is shrunk towards the camera by FirstPersonRig.view.scale: it looks the same on screen, but sits
+-- close enough that it doesn't reach into walls.
+function ViewModelRig.move(view, camera, fit, frames, open)
+	if open ~= view.open then
+		view.open = open
+		for _, item in ipairs(view.fingers) do
+			item.offset = Pose.box(item.def, open, 1)
+		end
+	end
+	local at = {}
+	for name, frame in pairs(frames) do
+		at[name] = fit * frame
+	end
+	local cframes, scale = view.cframes, Rig.view.scale
+	for i, item in ipairs(view.items) do
+		local cf = at[item.frame] * item.offset
+		cframes[i] = camera * (cf.Rotation + cf.Position * scale)
+	end
+	workspace:BulkMoveTo(view.parts, cframes, Enum.BulkMoveMode.FireCFrameChanged)
+end
+
+-- The needle in the hand, or not (thrown: the hand is empty until it's back).
+function ViewModelRig.showNeedle(view, shown)
+	if view.shown == shown then
+		return
+	end
+	view.shown = shown
+	for _, p in ipairs(view.needleParts) do
+		p.LocalTransparencyModifier = if shown then 0 else 1
+	end
+	for _, e in ipairs(view.effects) do
+		e.Enabled = shown
+	end
+end
+
+return ViewModelRig
+]]></ProtectedString>
+					</Properties>
+				</Item>
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX00079">
+	<Item class="Workspace" referent="RBX0007D">
 		<Properties>
 			<string name="Name">Workspace</string>
 		</Properties>
